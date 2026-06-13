@@ -1,0 +1,25 @@
+{
+  "window.titleBarStyle": "custom",
+  "editor.hardwareAcceleration": "on",
+
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/node_modules/**": true,
+    "archive/legacy-laravel/**": true,
+    "archive/**/*.zip": true
+  },
+
+  "search.exclude": {
+    "**/node_modules": true,
+    "archive/legacy-laravel": true
+  },
+
+  "editor.minimap.enabled": false,
+  "editor.smoothScrolling": false,
+  "workbench.list.smoothScrolling": false,
+  "editor.cursorSmoothCaretAnimation": "off",
+  "editor.hover.delay": 1000,
+  "editor.quickSuggestionsDelay": 500,
+  "search.maxResults": 5000,
+  "diffEditor.maxComputationTime": 5000
+}

@@ -1,0 +1,294 @@
+{
+  "version": 3,
+  "description": "Platform standard templates — SB/UV ink systems (not color-specific). Microns are starting defaults only; user always adjusts.",
+  "material_model": {
+    "layer_types": ["substrate", "ink", "adhesive"],
+    "ink_systems": {
+      "SB": {
+        "label": "Solvent Based",
+        "solid_percent": 30,
+        "solvent_mix_required": true,
+        "printing_web_class": "wide_web",
+        "notes": "Wide web printing → Ink SB + ink-to-solvent ratio block."
+      },
+      "UV": {
+        "label": "UV",
+        "solid_percent": 100,
+        "solvent_mix_required": false,
+        "printing_web_class": "narrow_web",
+        "notes": "Narrow web printing → Ink UV. No solvent block for ink."
+      }
+    },
+    "printing_web_class": {
+      "wide_web": { "label": "Wide Web printing", "ink_key": "ink-sb", "default": true },
+      "narrow_web": { "label": "Narrow Web printing", "ink_key": "ink-uv" }
+    },
+    "adhesive_systems": {
+      "SB": { "label": "Adhesive SB", "notes": "Solvent-based lamination adhesive — used in laminate stacks and Alu insert pattern." }
+    },
+    "global_inputs": {
+      "solvent_mix": "Not a layer — cost/kg + ink-to-solvent GSM ratio; only when stack has SB ink and/or SB adhesive"
+    }
+  },
+  "templates": [
+    {
+      "pebi_parent_pg": "Commercial Items Plain",
+      "name": "Commercial Items Plain",
+      "product_type": "pouch",
+      "material_class": "PE",
+      "structure_type": "Mono",
+      "substrate_origin": "PE",
+      "display_order": 10,
+      "default_dimensions": { "width_mm": 400, "length_mm": 550, "thickness_um": 45 },
+      "default_layers": [
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 45 }
+      ],
+      "default_processes": [
+        { "process_key": "extrusion", "enabled": true },
+        { "process_key": "slitting", "enabled": true },
+        { "process_key": "pouch_making", "enabled": true }
+      ]
+    },
+    {
+      "pebi_parent_pg": "Commercial Items Printed",
+      "name": "Commercial Items Printed",
+      "product_type": "pouch",
+      "material_class": "PE",
+      "structure_type": "Mono",
+      "substrate_origin": "PE",
+      "display_order": 20,
+      "default_dimensions": { "width_mm": 400, "length_mm": 550, "thickness_um": 47 },
+      "default_layers": [
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 45 },
+        { "layer_order": 2, "layer_type": "ink", "ref_material_key": "ink-sb", "default_micron": 2 }
+      ],
+      "default_printing_web_class": "wide_web",
+      "default_processes": [
+        { "process_key": "extrusion", "enabled": true },
+        { "process_key": "printing", "enabled": true },
+        { "process_key": "slitting", "enabled": true },
+        { "process_key": "pouch_making", "enabled": true }
+      ],
+      "solvent_mix_enabled": true
+    },
+    {
+      "pebi_parent_pg": "Industrial Items Plain",
+      "name": "Industrial Items Plain",
+      "product_type": "roll",
+      "material_class": "PE",
+      "structure_type": "Mono",
+      "substrate_origin": "PE",
+      "display_order": 30,
+      "default_dimensions": { "width_mm": 1000, "thickness_um": 50 },
+      "default_layers": [
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 50 }
+      ],
+      "default_processes": [
+        { "process_key": "extrusion", "enabled": true },
+        { "process_key": "slitting", "enabled": true }
+      ]
+    },
+    {
+      "pebi_parent_pg": "Industrial Items Printed",
+      "name": "Industrial Items Printed",
+      "product_type": "roll",
+      "material_class": "PE",
+      "structure_type": "Mono",
+      "substrate_origin": "PE",
+      "display_order": 40,
+      "default_dimensions": { "width_mm": 1000, "thickness_um": 52 },
+      "default_layers": [
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 50 },
+        { "layer_order": 2, "layer_type": "ink", "ref_material_key": "ink-sb", "default_micron": 2 }
+      ],
+      "default_printing_web_class": "wide_web",
+      "default_processes": [
+        { "process_key": "extrusion", "enabled": true },
+        { "process_key": "printing", "enabled": true },
+        { "process_key": "slitting", "enabled": true }
+      ],
+      "solvent_mix_enabled": true
+    },
+    {
+      "pebi_parent_pg": "Shrink Film Plain",
+      "name": "Shrink Film Plain",
+      "product_type": "roll",
+      "material_class": "PE",
+      "structure_type": "Mono",
+      "substrate_origin": "PE",
+      "display_order": 50,
+      "default_dimensions": { "width_mm": 500, "thickness_um": 30 },
+      "default_layers": [
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "ldpe-shrink", "default_micron": 30 }
+      ],
+      "default_processes": [
+        { "process_key": "extrusion", "enabled": true },
+        { "process_key": "slitting", "enabled": true }
+      ]
+    },
+    {
+      "pebi_parent_pg": "Shrink Film Printed",
+      "name": "Shrink Film Printed",
+      "product_type": "roll",
+      "material_class": "PE",
+      "structure_type": "Mono",
+      "substrate_origin": "PE",
+      "display_order": 60,
+      "default_dimensions": { "width_mm": 500, "thickness_um": 32 },
+      "default_layers": [
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "ldpe-shrink", "default_micron": 30 },
+        { "layer_order": 2, "layer_type": "ink", "ref_material_key": "ink-sb", "default_micron": 2 }
+      ],
+      "default_printing_web_class": "wide_web",
+      "default_processes": [
+        { "process_key": "extrusion", "enabled": true },
+        { "process_key": "printing", "enabled": true },
+        { "process_key": "slitting", "enabled": true }
+      ],
+      "solvent_mix_enabled": true
+    },
+    {
+      "pebi_parent_pg": "Wide Film",
+      "name": "Wide Film",
+      "product_type": "roll",
+      "material_class": "PE",
+      "structure_type": "Mono",
+      "substrate_origin": "PE",
+      "display_order": 70,
+      "default_dimensions": { "width_mm": 2000, "thickness_um": 80 },
+      "default_layers": [
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 80 }
+      ],
+      "default_processes": [
+        { "process_key": "extrusion", "enabled": true },
+        { "process_key": "slitting", "enabled": true }
+      ]
+    },
+    {
+      "pebi_parent_pg": "Mono Layer Printed",
+      "name": "Mono Layer Printed",
+      "product_type": "roll",
+      "material_class": "Non PE",
+      "structure_type": "Mono",
+      "substrate_origin": null,
+      "display_order": 80,
+      "default_dimensions": { "width_mm": 800, "thickness_um": 22 },
+      "default_layers": [
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "bopp", "default_micron": 20 },
+        { "layer_order": 2, "layer_type": "ink", "ref_material_key": "ink-sb", "default_micron": 2 }
+      ],
+      "ink_system_options": ["SB", "UV"],
+      "default_printing_web_class": "wide_web",
+      "default_processes": [
+        { "process_key": "printing", "enabled": true },
+        { "process_key": "slitting", "enabled": true }
+      ],
+      "solvent_mix_enabled": true
+    },
+    {
+      "pebi_parent_pg": "Shrink Sleeves",
+      "name": "Shrink Sleeves",
+      "product_type": "sleeve",
+      "material_class": "Non PE",
+      "structure_type": "Mono",
+      "substrate_origin": null,
+      "substrate_options": ["PET Shrink Film", "PVC Shrink Film"],
+      "display_order": 90,
+      "default_dimensions": {
+        "reel_width_mm": 600,
+        "cutoff_mm": 400,
+        "extra_printing_trim_mm": 30,
+        "number_of_ups": 1
+      },
+      "default_layers": [
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "pet-shrink", "default_micron": 40, "swappable_with": "pvc-shrink" },
+        { "layer_order": 2, "layer_type": "ink", "ref_material_key": "ink-sb", "default_micron": 2 }
+      ],
+      "ink_system_options": ["SB", "UV"],
+      "default_printing_web_class": "wide_web",
+      "default_processes": [
+        { "process_key": "printing", "enabled": true },
+        { "process_key": "slitting", "enabled": true },
+        { "process_key": "seaming", "enabled": true }
+      ],
+      "solvent_mix_enabled": true
+    },
+    {
+      "pebi_parent_pg": "Labels",
+      "name": "Labels",
+      "product_type": "roll",
+      "material_class": "Non PE",
+      "structure_type": "Mono",
+      "substrate_origin": null,
+      "display_order": 100,
+      "default_dimensions": { "width_mm": 250, "thickness_um": 22 },
+      "default_layers": [
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "bopp", "default_micron": 20 },
+        { "layer_order": 2, "layer_type": "ink", "ref_material_key": "ink-sb", "default_micron": 2 }
+      ],
+      "ink_system_options": ["SB", "UV"],
+      "default_printing_web_class": "wide_web",
+      "default_processes": [
+        { "process_key": "printing", "enabled": true },
+        { "process_key": "slitting", "enabled": true }
+      ],
+      "solvent_mix_enabled": true
+    },
+    {
+      "pebi_parent_pg": "Laminates",
+      "name": "Laminates",
+      "product_type": "roll",
+      "material_class": "Non PE",
+      "structure_type": "Multilayer",
+      "substrate_origin": null,
+      "display_order": 110,
+      "default_dimensions": { "width_mm": 800, "thickness_um": 67 },
+      "default_layers": [
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "pet-transparent", "default_micron": 12 },
+        { "layer_order": 2, "layer_type": "ink", "ref_material_key": "ink-sb", "default_micron": 2 },
+        { "layer_order": 3, "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 },
+        { "layer_order": 4, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 50 }
+      ],
+      "layer_expansion_hint": {
+        "label": "Add metallized barrier (typical triplex)",
+        "description": "Insert Adhesive SB + Aluminium + Adhesive SB between print side and PE sealant. Microns user-defined.",
+        "insert_before_layer_order": 4,
+        "suggested_layers": [
+          { "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 },
+          { "layer_type": "substrate", "ref_material_key": "alu-foil", "default_micron": 9 },
+          { "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 }
+        ],
+        "result_stack": "PET + Ink SB + Adhesive SB + [Adhesive SB + Alu + Adhesive SB] + LDPE"
+      },
+      "default_printing_web_class": "wide_web",
+      "default_processes": [
+        { "process_key": "printing", "enabled": true },
+        { "process_key": "lamination", "enabled": true },
+        { "process_key": "slitting", "enabled": true }
+      ],
+      "solvent_mix_enabled": true
+    }
+  ],
+  "ref_materials": [
+    { "key": "ldpe-natural", "name": "LDPE Natural", "layer_type": "substrate", "category": "Substrate", "subcategory": "PE Film", "density": 0.92, "solid_percent": 100, "default_waste": 3 },
+    { "key": "ldpe-white", "name": "LDPE White", "layer_type": "substrate", "category": "Substrate", "subcategory": "PE Film", "density": 0.92, "solid_percent": 100, "default_waste": 3 },
+    { "key": "ldpe-shrink", "name": "LDPE Shrink", "layer_type": "substrate", "category": "Substrate", "subcategory": "PE Film", "density": 0.92, "solid_percent": 100, "default_waste": 3 },
+    { "key": "pet-transparent", "name": "PET Transparent", "layer_type": "substrate", "category": "Substrate", "subcategory": "PET Film", "density": 1.38, "solid_percent": 100, "default_waste": 2 },
+    { "key": "pet-shrink", "name": "PET Shrink Film", "layer_type": "substrate", "category": "Substrate", "subcategory": "PET Film", "density": 1.38, "solid_percent": 100, "default_waste": 2 },
+    { "key": "pvc-shrink", "name": "PVC Shrink Film", "layer_type": "substrate", "category": "Substrate", "subcategory": "PVC Film", "density": 1.35, "solid_percent": 100, "default_waste": 2 },
+    { "key": "bopp", "name": "BOPP", "layer_type": "substrate", "category": "Substrate", "subcategory": "PP Film", "density": 0.91, "solid_percent": 100, "default_waste": 2 },
+    { "key": "cpp", "name": "CPP", "layer_type": "substrate", "category": "Substrate", "subcategory": "PP Film", "density": 0.91, "solid_percent": 100, "default_waste": 2 },
+    { "key": "alu-foil", "name": "Aluminium", "layer_type": "substrate", "category": "Substrate", "subcategory": "Foil", "density": 2.7, "solid_percent": 100, "default_waste": 2 },
+    { "key": "ink-sb", "name": "Ink SB", "layer_type": "ink", "category": "Ink", "subcategory": "Solvent Based", "ink_system": "SB", "density": 1.0, "solid_percent": 30, "default_waste": 5 },
+    { "key": "ink-uv", "name": "Ink UV", "layer_type": "ink", "category": "Ink", "subcategory": "UV", "ink_system": "UV", "density": 1.0, "solid_percent": 100, "default_waste": 5 },
+    { "key": "adhesive-sb", "name": "Adhesive SB", "layer_type": "adhesive", "category": "Adhesive", "subcategory": "Solvent Based", "adhesive_system": "SB", "density": 1.05, "solid_percent": 100, "default_waste": 3 },
+    { "key": "solvent-base", "name": "Solvent Base", "layer_type": "adhesive", "category": "Adhesive", "subcategory": "Solvent Base", "density": 0.9, "solid_percent": 0, "default_waste": 2 }
+  ],
+  "tenant_defaults": {
+    "solvent_mix_cost_per_kg": null,
+    "solvent_mix_gsm_ratio_denominator": 0.5,
+    "markup_percent": 15,
+    "plates_per_kg": 0,
+    "delivery_per_kg": 0
+  }
+}

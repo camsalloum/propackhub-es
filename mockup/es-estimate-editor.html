@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ProPackHub Estimation Studio — UI Mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy: #0F1F3D;
+      --navy-light: #1a2d4d;
+      --gold: #C8962A;
+      --gold-light: #e8b84a;
+      --slate: #F4F5F7;
+      --white: #FFFFFF;
+      --ink: #1A1D23;
+      --mist: #8A8E97;
+      --border: #E2E4E8;
+      --success: #1A7F5A;
+      --warning: #B8820A;
+      --layer-pet: #1D5FA3;
+      --layer-ink: #9B4CA0;
+      --layer-adh: #2E8B6E;
+      --layer-pe: #B85C2C;
+      --layer-alu: #8A8A8A;
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(15, 31, 61, 0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--slate);
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .display { font-family: 'DM Sans', sans-serif; }
+
+    /* Nav */
+    .nav {
+      background: var(--navy);
+      color: white;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-mark {
+      width: 28px; height: 28px;
+      background: var(--gold);
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+    }
+    .logo-mark svg { width: 16px; height: 16px; }
+    .nav-links { display: flex; gap: 4px; flex: 1; }
+    .nav-links a {
+      color: rgba(255,255,255,0.65);
+      text-decoration: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .nav-links a:hover { color: white; background: rgba(255,255,255,0.08); }
+    .nav-links a.active { color: white; background: rgba(255,255,255,0.12); }
+    .nav-user {
+      font-size: 13px;
+      color: rgba(255,255,255,0.8);
+      background: rgba(255,255,255,0.1);
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+
+    /* Tabs */
+    .view-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 16px 24px 0;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .view-tab {
+      padding: 10px 18px;
+      border: none;
+      background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--mist);
+      cursor: pointer;
+      border-radius: 8px 8px 0 0;
+      border-bottom: 2px solid transparent;
+    }
+    .view-tab.active {
+      color: var(--navy);
+      background: var(--white);
+      border-bottom-color: var(--gold);
+    }
+
+    /* Views */
+    .view { display: none; max-width: 1400px; margin: 0 auto; padding: 24px; }
+    .view.active { display: block; }
+
+    /* Editor layout */
+    .editor-grid {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 1024px) {
+      .editor-grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .card-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .card-head h3 {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .card-head p { font-size: 12px; color: var(--mist); margin-top: 2px; }
+    .card-body { padding: 20px; }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge-draft { background: #fef3cd; color: var(--warning); }
+
+    /* Segmented control */
+    .segmented {
+      display: inline-flex;
+      background: var(--slate);
+      border-radius: 10px;
+      padding: 3px;
+      border: 1px solid var(--border);
+    }
+    .segmented button {
+      border: none;
+      background: transparent;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--mist);
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .segmented button.active {
+      background: var(--white);
+      color: var(--navy);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    /* Layer table */
+    .layer-table { width: 100%; border-collapse: collapse; }
+    .layer-table th {
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--mist);
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+    }
+    .layer-table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .layer-table tr:last-child td { border-bottom: none; }
+    .layer-table tr:hover td { background: #fafbfc; }
+    .layer-table input {
+      width: 56px;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      text-align: right;
+    }
+    .type-pill {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .type-substrate { background: #dbeafe; color: #1D5FA3; }
+    .type-ink { background: #f3e8f5; color: #9B4CA0; }
+    .type-adhesive { background: #d1fae5; color: #2E8B6E; }
+
+    .btn-row { display: flex; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border); }
+    .btn {
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--navy);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--slate); }
+    .btn-gold {
+      background: var(--gold);
+      color: white;
+    }
+    .btn-gold:hover { background: var(--gold-light); }
+
+    /* Laminate visualizer */
+    .sidebar { position: sticky; top: 72px; }
+    .stack-viz {
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 240px;
+    }
+    .stack-band {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      transition: flex 0.3s ease;
+    }
+    .stack-band span.mono { opacity: 0.85; font-weight: 400; }
+
+    .price-hero {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 42px;
+      font-weight: 700;
+      color: var(--gold);
+      line-height: 1;
+      margin: 8px 0;
+    }
+    .price-hero small {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--mist);
+    }
+    .breakdown-bar {
+      display: flex;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+    .breakdown-bar span { display: block; height: 100%; }
+    .breakdown-legend {
+      display: flex;
+      gap: 16px;
+      font-size: 11px;
+      color: var(--mist);
+    }
+    .breakdown-legend i {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 2px;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+
+    .solvent-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      transition: opacity 0.25s, max-height 0.25s;
+    }
+    .solvent-panel.hidden { display: none; }
+    .field label {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--mist);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .field input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+    }
+
+    /* Slabs */
+    .slab-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+    }
+    .slab-row:last-child { border-bottom: none; }
+    .slab-row input {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+    }
+    .slab-total { font-weight: 600; color: var(--navy); }
+
+    /* Template picker */
+    .template-section { margin-bottom: 28px; }
+    .template-section h4 {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--mist);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+    .template-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+    .template-card {
+      background: var(--white);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .template-card:hover {
+      border-color: var(--gold);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+    .template-card.selected {
+      border-color: var(--gold);
+      background: #fffbf0;
+    }
+    .mini-stack {
+      height: 48px;
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+    }
+    .mini-stack div { flex: 1; }
+    .template-card h5 {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .template-card span { font-size: 11px; color: var(--mist); }
+
+    .hero-banner {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+      color: white;
+      padding: 20px 24px;
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .hero-banner h2 {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .hero-banner p { font-size: 13px; opacity: 0.75; margin-top: 4px; }
+    .compare-tag {
+      background: rgba(200, 150, 42, 0.25);
+      color: var(--gold-light);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .admin-only { display: block; }
+    body.rep-mode .admin-only { display: none !important; }
+    body.rep-mode .col-cost { display: none; }
+    body.rep-mode .price-subline,
+    body.rep-mode .breakdown-bar,
+    body.rep-mode .breakdown-legend { display: none; }
+
+    .mobile-footer {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      z-index: 200;
+      box-shadow: 0 -4px 20px rgba(15,31,61,0.1);
+    }
+    .mobile-footer .price-hero { font-size: 28px; margin: 0; }
+    @media (max-width: 768px) {
+      .editor-grid { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      body.rep-mode .mobile-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      body.rep-mode { padding-bottom: 80px; }
+      .view-tabs { overflow-x: auto; }
+    }
+
+    /* Mobile mockup tab — phone frame */
+    .phone-stage {
+      display: flex;
+      justify-content: center;
+      padding: 24px;
+      background: linear-gradient(160deg, #e8ecf2 0%, var(--slate) 100%);
+      min-height: calc(100vh - 120px);
+    }
+    .phone {
+      width: 375px;
+      max-width: 100%;
+      background: var(--white);
+      border-radius: 36px;
+      border: 10px solid #1a1d23;
+      box-shadow: 0 24px 60px rgba(15,31,61,0.2);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 780px;
+      position: relative;
+    }
+    .phone-notch {
+      height: 28px;
+      background: #1a1d23;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .phone-notch span {
+      width: 80px; height: 6px;
+      background: #333;
+      border-radius: 3px;
+    }
+    .phone-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--navy);
+      color: white;
+    }
+    .phone-header h3 { font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; }
+    .phone-header p { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+    .phone-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      padding-bottom: 88px;
+    }
+    .phone-stack-preview {
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 56px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+    }
+    .phone-stack-preview div { flex: 1; font-size: 0; }
+    .layer-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 12px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      min-height: 64px;
+      touch-action: pan-y;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+    .layer-card.dragging { opacity: 0.6; transform: scale(0.98); }
+    .layer-card .drag {
+      color: var(--mist);
+      font-size: 18px;
+      cursor: grab;
+      padding: 4px;
+      user-select: none;
+    }
+    .layer-card-body { flex: 1; min-width: 0; }
+    .layer-card-body .layer-name {
+      font-weight: 600;
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .layer-card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .layer-card .card-actions {
+      display: flex;
+      gap: 4px;
+    }
+    .icon-btn {
+      width: 44px; height: 44px;
+      border: none;
+      background: var(--slate);
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      color: var(--navy);
+    }
+    .icon-btn.danger { color: #c0392b; background: #fdecea; }
+    .phone-add-btn {
+      width: 100%;
+      padding: 14px;
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      background: transparent;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--navy);
+      cursor: pointer;
+      margin-top: 4px;
+      min-height: 48px;
+    }
+    .phone-add-btn:active { background: var(--slate); }
+    .phone-segmented { margin-bottom: 12px; }
+    .phone-segmented .segmented { width: 100%; display: flex; }
+    .phone-segmented .segmented button { flex: 1; font-size: 11px; padding: 10px 6px; }
+    .phone-sticky {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+    }
+    .phone-sticky .price-hero { font-size: 26px; margin: 0; }
+    .sheet-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,31,61,0.45);
+      z-index: 500;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .sheet-backdrop.open { display: flex; }
+    .sheet {
+      background: var(--white);
+      width: 100%;
+      max-width: 420px;
+      border-radius: 20px 20px 0 0;
+      padding: 20px;
+      max-height: 70vh;
+      overflow-y: auto;
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .sheet h4 {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .sheet .sheet-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+    }
+    .sheet .sheet-actions .btn { flex: 1; padding: 14px; }
+    .material-option {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      background: var(--white);
+      font-size: 14px;
+      cursor: pointer;
+      min-height: 48px;
+    }
+    .material-option:active { background: var(--slate); }
+    .micron-input-lg {
+      width: 100%;
+      padding: 16px;
+      font-size: 28px;
+      font-family: 'JetBrains Mono', monospace;
+      text-align: center;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body class="rep-mode">
+
+<nav class="nav">
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#0F1F3D" stroke-width="2.5">
+        <rect x="3" y="5" width="18" height="3" rx="1"/><rect x="3" y="10.5" width="18" height="2" rx="1" opacity="0.7"/>
+        <rect x="3" y="15" width="18" height="4" rx="1"/>
+      </svg>
+    </div>
+    Estimation Studio
+  </div>
+  <div class="nav-links">
+    <a href="#">Dashboard</a>
+    <a href="#">Customers</a>
+    <a href="#" class="active">Estimates</a>
+    <a href="#">Library</a>
+    <a href="#">Settings</a>
+  </div>
+  <div class="nav-user">Sarah · Sales</div>
+</nav>
+
+<div class="view-tabs">
+  <button class="view-tab active" data-view="editor">Estimate Editor</button>
+  <button class="view-tab" data-view="templates">Template Picker</button>
+  <button class="view-tab" data-view="mobile">Mobile editor</button>
+  <button class="view-tab" data-view="settings">Team & Visibility</button>
+</div>
+
+<!-- ESTIMATE EDITOR -->
+<div id="view-editor" class="view active">
+  <div class="hero-banner">
+    <div>
+      <h2>QT-2026-00142 · Acme Snacks — Laminates duplex</h2>
+      <p>Industrial Design Studio · live pricing · Laravel-simple workflow</p>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div class="segmented" id="visibilityToggle">
+        <button type="button" class="active" data-vis="rep">Sales rep view</button>
+        <button type="button" data-vis="admin">Admin view</button>
+      </div>
+      <span class="compare-tag">Same webapp · desktop + mobile PWA</span>
+    </div>
+  </div>
+
+  <div class="editor-grid">
+    <div class="main-col">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h3>Structure</h3>
+            <p>Layer stack · microns editable · instant recalc</p>
+          </div>
+          <div>
+            <span class="badge badge-draft">Draft</span>
+          </div>
+        </div>
+        <div class="card-head" style="border-top:none;padding-top:0;background:#fafbfc">
+          <div>
+            <p style="font-size:12px;font-weight:600;color:var(--ink);margin:0">Printing web class</p>
+          </div>
+          <div class="segmented" id="webClassToggle">
+            <button type="button" class="active" data-web="wide">Wide Web · SB</button>
+            <button type="button" data-web="narrow">Narrow Web · UV</button>
+          </div>
+        </div>
+        <table class="layer-table">
+          <thead>
+            <tr><th>#</th><th>Type</th><th>Material</th><th>µ</th><th class="col-cost">AED/kg</th><th class="col-cost">AED/m²</th></tr>
+          </thead>
+          <tbody id="layerRows"></tbody>
+        </table>
+        <div class="btn-row">
+          <button class="btn btn-ghost">+ Add layer</button>
+          <button class="btn btn-ghost" id="addAluBtn">Add metallized barrier</button>
+        </div>
+      </div>
+
+      <div class="card admin-only" id="solventCard">
+        <div class="card-head"><h3>Solvent-mix</h3><p>SB printing only</p></div>
+        <div class="card-body solvent-panel" id="solventPanel">
+          <div class="field"><label>Solvent-mix cost / kg</label><input value="4.20" /></div>
+          <div class="field"><label>Ink-to-solvent ratio</label><input value="0.50" /></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Dimensions</h3><p>Roll · 800mm web</p></div>
+        <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+          <div class="field"><label>Roll width mm</label><input value="800" /></div>
+          <div class="field"><label>Cut-off mm</label><input value="600" /></div>
+          <div class="field"><label>Trim mm</label><input value="20" /></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Quantity slabs</h3><p>Selling price tiers</p></div>
+        <div class="card-body">
+          <div class="slab-row"><input value="1,000" /><input value="12.48" class="mono" /><span class="slab-total mono">AED 12,480</span></div>
+          <div class="slab-row"><input value="2,000" /><input value="11.90" class="mono" /><span class="slab-total mono">AED 23,800</span></div>
+          <div class="slab-row"><input value="5,000" /><input value="11.20" class="mono" /><span class="slab-total mono">AED 56,000</span></div>
+        </div>
+      </div>
+
+      <div class="card admin-only">
+        <div class="card-head"><h3>Markup & extras</h3><p>Hidden from sales rep</p></div>
+        <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+          <div class="field"><label>Markup %</label><input value="15" /></div>
+          <div class="field"><label>Plates / kg</label><input value="0" /></div>
+          <div class="field"><label>Delivery / kg</label><input value="0" /></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <div class="card">
+        <div class="card-head"><h3>Laminate stack</h3></div>
+        <div class="card-body">
+          <div class="stack-viz" id="stackViz"></div>
+          <div style="display:flex;gap:24px;margin-top:16px">
+            <div><p style="font-size:11px;color:var(--mist);text-transform:uppercase;font-weight:600">Total GSM</p><p class="mono display" style="font-size:20px;font-weight:600">78.4</p></div>
+            <div><p style="font-size:11px;color:var(--mist);text-transform:uppercase;font-weight:600">Total µ</p><p class="mono display" style="font-size:20px;font-weight:600" id="totalMicron">67</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--mist);font-weight:600">Selling price</p>
+          <div class="price-hero display" id="salePrice">AED 12.48 <small>/ kg</small></div>
+          <p style="font-size:12px;color:var(--mist)" class="price-subline admin-only">RM 9.80 + markup 15% + plates + delivery</p>
+          <div class="breakdown-bar admin-only">
+            <span style="width:78%;background:var(--layer-pet)"></span>
+            <span style="width:4%;background:var(--mist)"></span>
+            <span style="width:15%;background:var(--gold)"></span>
+          </div>
+          <div class="breakdown-legend admin-only">
+            <span><i style="background:var(--layer-pet)"></i>Material 78%</span>
+            <span><i style="background:var(--mist)"></i>Waste 4%</span>
+            <span><i style="background:var(--gold)"></i>Markup 15%</span>
+          </div>
+          <button class="btn btn-gold" style="width:100%;margin-top:20px;padding:14px">Generate Proposal PDF</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mobile-footer">
+  <div>
+    <p style="font-size:10px;color:var(--mist);text-transform:uppercase;font-weight:600;margin:0">Selling price</p>
+    <div class="price-hero display" id="mobileSalePrice">AED 12.48 <small>/ kg</small></div>
+  </div>
+  <button class="btn btn-gold" style="padding:12px 20px">PDF</button>
+</div>
+
+<!-- TEMPLATE PICKER -->
+<div id="view-templates" class="view">
+  <div class="card" style="padding:20px;margin-bottom:20px">
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
+      <div class="field" style="flex:1;min-width:200px"><label>Customer</label><input value="Acme Snacks Ltd" /></div>
+      <div class="field" style="flex:1;min-width:200px"><label>Job name</label><input value="Chips duplex laminate" /></div>
+      <button class="btn btn-gold">Continue</button>
+    </div>
+  </div>
+
+  <div class="template-section">
+    <h4>A · PE Mono</h4>
+    <div class="template-grid">
+      <div class="template-card"><div class="mini-stack"><div style="background:var(--layer-pe);flex:3"></div></div><h5>Commercial Plain</h5><span>Pouch · PE</span></div>
+      <div class="template-card selected"><div class="mini-stack"><div style="background:var(--layer-pe);flex:3"></div><div style="background:var(--layer-ink);flex:0.3"></div></div><h5>Commercial Printed</h5><span>Pouch · SB ink</span></div>
+      <div class="template-card"><div class="mini-stack"><div style="background:var(--layer-pe);flex:3"></div></div><h5>Industrial Plain</h5><span>Roll</span></div>
+      <div class="template-card"><div class="mini-stack"><div style="background:var(--layer-pe);flex:3"></div><div style="background:var(--layer-ink);flex:0.3"></div></div><h5>Shrink Printed</h5><span>Roll · SB</span></div>
+    </div>
+  </div>
+
+  <div class="template-section">
+    <h4>C · Non PE Multilayer</h4>
+    <div class="template-grid">
+      <div class="template-card">
+        <div class="mini-stack">
+          <div style="background:var(--layer-pet);flex:0.5"></div>
+          <div style="background:var(--layer-ink);flex:0.15"></div>
+          <div style="background:var(--layer-adh);flex:0.2"></div>
+          <div style="background:var(--layer-pe);flex:2"></div>
+        </div>
+        <h5>Laminates</h5><span>Duplex PET/PE</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- MOBILE EDITOR (phone mockup) -->
+<div id="view-mobile" class="view">
+  <div style="text-align:center;padding:16px 24px 0;color:var(--mist);font-size:13px">
+    Touch-first layer cards · bottom sheets · 375px QA target · same data as desktop tab
+  </div>
+  <div class="phone-stage">
+    <div class="phone" id="phoneMockup">
+      <div class="phone-notch"><span></span></div>
+      <div class="phone-header">
+        <h3>QT-2026-00142</h3>
+        <p>Acme Snacks · Laminates · Sales rep view</p>
+      </div>
+      <div class="phone-scroll">
+        <div class="phone-stack-preview" id="phoneStackPreview"></div>
+        <div class="phone-segmented">
+          <div class="segmented" id="phoneWebToggle">
+            <button type="button" class="active" data-web="wide">Wide · SB</button>
+            <button type="button" data-web="narrow">Narrow · UV</button>
+          </div>
+        </div>
+        <div id="phoneLayerCards"></div>
+        <button type="button" class="phone-add-btn" id="phoneAddLayer">+ Add layer</button>
+        <button type="button" class="phone-add-btn" id="phoneAddAlu" style="margin-top:8px;border-style:solid">Add metallized barrier</button>
+      </div>
+      <div class="phone-sticky">
+        <div>
+          <p style="font-size:9px;color:var(--mist);text-transform:uppercase;font-weight:600;margin:0">Selling price</p>
+          <div class="price-hero display" id="phoneSalePrice">AED 12.48 <small>/ kg</small></div>
+        </div>
+        <button class="btn btn-gold" style="padding:12px 18px">PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom sheet (shared) -->
+<div class="sheet-backdrop" id="sheetBackdrop">
+  <div class="sheet" id="sheetContent" onclick="event.stopPropagation()"></div>
+</div>
+
+<!-- TEAM & VISIBILITY -->
+<div id="view-settings" class="view">
+  <div class="hero-banner">
+    <div>
+      <h2>Settings → Team & visibility</h2>
+      <p>Admin configures what each user sees · Decision #20</p>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-head"><h3>Default profile for new users</h3><p>Sales rep safe defaults</p></div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;font-size:13px">
+        <label><input type="checkbox" checked disabled /> Structure & microns</label>
+        <label><input type="checkbox" checked disabled /> Selling price</label>
+        <label><input type="checkbox" /> Material cost/kg</label>
+        <label><input type="checkbox" /> Markup %</label>
+        <label><input type="checkbox" /> Cost breakdown</label>
+        <label><input type="checkbox" /> Operations</label>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h3>Team</h3></div>
+    <table class="layer-table">
+      <thead><tr><th>Name</th><th>Role</th><th>Visibility</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>Camille</td><td>tenant_admin</td><td>Full</td><td></td></tr>
+        <tr><td>Sarah</td><td>user</td><td>Sales rep default</td><td><button class="btn btn-ghost">Customize</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const LAYERS = {
+    wide: [
+      { name: 'PET Transparent', type: 'substrate', micron: 12, cost: 8.70, color: 'var(--layer-pet)' },
+      { name: 'Ink SB', type: 'ink', micron: 2, cost: 12.00, color: 'var(--layer-ink)' },
+      { name: 'Adhesive SB', type: 'adhesive', micron: 3, cost: 6.50, color: 'var(--layer-adh)' },
+      { name: 'LDPE Natural', type: 'substrate', micron: 50, cost: 2.10, color: 'var(--layer-pe)' },
+    ],
+    narrow: [
+      { name: 'PET Transparent', type: 'substrate', micron: 12, cost: 8.70, color: 'var(--layer-pet)' },
+      { name: 'Ink UV', type: 'ink', micron: 2, cost: 14.50, color: 'var(--layer-ink)' },
+      { name: 'Adhesive SB', type: 'adhesive', micron: 3, cost: 6.50, color: 'var(--layer-adh)' },
+      { name: 'LDPE Natural', type: 'substrate', micron: 50, cost: 2.10, color: 'var(--layer-pe)' },
+    ],
+  };
+  let webClass = 'wide';
+  let layers = [...LAYERS.wide];
+  let aluAdded = false;
+  let repMode = true;
+
+  function applyVisibility() {
+    document.body.classList.toggle('rep-mode', repMode);
+    document.querySelectorAll('#visibilityToggle button').forEach(b => {
+      b.classList.toggle('active', (b.dataset.vis === 'rep') === repMode);
+    });
+  }
+
+  function render() {
+    const total = layers.reduce((s, l) => s + l.micron, 0);
+    document.getElementById('totalMicron').textContent = total;
+    const priceHtml = webClass === 'wide'
+      ? 'AED 12.48 <small>/ kg</small>' : 'AED 12.92 <small>/ kg</small>';
+    document.getElementById('salePrice').innerHTML = priceHtml;
+    const mobileEl = document.getElementById('mobileSalePrice');
+    if (mobileEl) mobileEl.innerHTML = priceHtml;
+
+    document.getElementById('layerRows').innerHTML = layers.map((l, i) => `
+      <tr>
+        <td class="mono">${i + 1}</td>
+        <td><span class="type-pill type-${l.type}">${l.type}</span></td>
+        <td>${l.name}</td>
+        <td><input type="number" value="${l.micron}" onchange="layers[${i}].micron=+this.value;render()" /></td>
+        ${repMode ? '' : `<td class="mono col-cost">${l.cost.toFixed(2)}</td><td class="mono col-cost">${(l.micron * 0.004).toFixed(3)}</td>`}
+      </tr>
+    `).join('');
+
+    document.getElementById('stackViz').innerHTML = layers.map(l => `
+      <div class="stack-band" style="flex:${l.micron};background:${l.color}">
+        <span>${l.name}</span><span class="mono">${l.micron}µ</span>
+      </div>
+    `).join('');
+
+    const solvent = document.getElementById('solventCard');
+    if (solvent) solvent.style.display = (!repMode && webClass === 'wide') ? 'block' : 'none';
+    renderMobile();
+  }
+
+  function renderMobile() {
+    const preview = document.getElementById('phoneStackPreview');
+    const cards = document.getElementById('phoneLayerCards');
+    const phonePrice = document.getElementById('phoneSalePrice');
+    if (!preview || !cards) return;
+
+    const priceHtml = webClass === 'wide'
+      ? 'AED 12.48 <small>/ kg</small>' : 'AED 12.92 <small>/ kg</small>';
+    if (phonePrice) phonePrice.innerHTML = priceHtml;
+
+    preview.innerHTML = layers.map(l =>
+      `<div style="flex:${l.micron};background:${l.color}"></div>`
+    ).join('');
+
+    cards.innerHTML = layers.map((l, i) => `
+      <div class="layer-card" data-idx="${i}">
+        <span class="drag" title="Long-press to reorder">≡</span>
+        <div class="layer-card-body">
+          <div class="layer-name">${l.name}</div>
+          <div class="layer-card-meta">
+            <span class="type-pill type-${l.type}">${l.type}</span>
+            <span class="mono">${l.micron} µ</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button type="button" class="icon-btn" data-edit="${i}" title="Edit">✎</button>
+          <button type="button" class="icon-btn danger" data-del="${i}" title="Delete">✕</button>
+        </div>
+      </div>
+    `).join('');
+
+    cards.querySelectorAll('[data-edit]').forEach(btn => {
+      btn.addEventListener('click', () => openEditSheet(+btn.dataset.edit));
+    });
+    cards.querySelectorAll('[data-del]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (layers.length <= 1) return;
+        if (confirm('Remove this layer?')) {
+          layers.splice(+btn.dataset.del, 1);
+          render();
+        }
+      });
+    });
+  }
+
+  function openSheet(html) {
+    document.getElementById('sheetContent').innerHTML = html;
+    document.getElementById('sheetBackdrop').classList.add('open');
+  }
+  function closeSheet() {
+    document.getElementById('sheetBackdrop').classList.remove('open');
+  }
+  window.closeSheet = closeSheet;
+  document.getElementById('sheetBackdrop').addEventListener('click', closeSheet);
+
+  function openEditSheet(idx) {
+    const l = layers[idx];
+    openSheet(`
+      <h4>Edit layer</h4>
+      <p style="font-size:13px;color:var(--mist);margin-bottom:8px">${l.name}</p>
+      <label style="font-size:11px;text-transform:uppercase;color:var(--mist);font-weight:600">Micron (µ)</label>
+      <input type="number" class="micron-input-lg" id="sheetMicron" value="${l.micron}" />
+      <div class="sheet-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeSheet()">Cancel</button>
+        <button type="button" class="btn btn-gold" id="sheetSaveMicron">Save</button>
+      </div>
+    `);
+    document.getElementById('sheetSaveMicron').onclick = () => {
+      layers[idx].micron = +document.getElementById('sheetMicron').value || l.micron;
+      closeSheet();
+      render();
+    };
+  }
+
+  function openAddSheet() {
+    openSheet(`
+      <h4>Add layer</h4>
+      <p style="font-size:13px;color:var(--mist);margin-bottom:12px">Choose type then material</p>
+      <button type="button" class="material-option" data-add="substrate" data-name="PET Transparent">Substrate — PET Transparent</button>
+      <button type="button" class="material-option" data-add="adhesive" data-name="Adhesive SB">Adhesive — Adhesive SB</button>
+      <button type="button" class="material-option" data-add="substrate" data-name="Aluminium">Substrate — Aluminium</button>
+      <button type="button" class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="closeSheet()">Cancel</button>
+    `);
+    document.querySelectorAll('.material-option').forEach(btn => {
+      btn.onclick = () => {
+        const type = btn.dataset.add;
+        const colors = { substrate: 'var(--layer-pet)', ink: 'var(--layer-ink)', adhesive: 'var(--layer-adh)' };
+        layers.push({
+          name: btn.dataset.name,
+          type,
+          micron: type === 'substrate' ? 12 : 3,
+          cost: 5,
+          color: colors[type] || 'var(--layer-pet)',
+        });
+        closeSheet();
+        render();
+      };
+    });
+  }
+
+  document.getElementById('phoneAddLayer')?.addEventListener('click', openAddSheet);
+  document.getElementById('phoneAddAlu')?.addEventListener('click', () => {
+    document.getElementById('addAluBtn')?.click();
+  });
+  document.getElementById('phoneWebToggle')?.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    document.querySelectorAll('#phoneWebToggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('#webClassToggle button').forEach(b => {
+      b.classList.toggle('active', b.dataset.web === btn.dataset.web);
+    });
+    webClass = btn.dataset.web;
+    if (!aluAdded) layers = [...LAYERS[webClass]];
+    else {
+      const ink = layers.find(l => l.type === 'ink');
+      if (ink) ink.name = webClass === 'wide' ? 'Ink SB' : 'Ink UV';
+    }
+    render();
+  });
+
+  document.getElementById('webClassToggle').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    document.querySelectorAll('#webClassToggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    webClass = btn.dataset.web;
+    layers = aluAdded ? layers : [...LAYERS[webClass]];
+    if (aluAdded) {
+      const ink = layers.find(l => l.type === 'ink');
+      if (ink) ink.name = webClass === 'wide' ? 'Ink SB' : 'Ink UV';
+    }
+    render();
+  });
+
+  document.getElementById('addAluBtn').addEventListener('click', () => {
+    if (aluAdded) return;
+    const peIdx = layers.findIndex(l => l.name.includes('LDPE'));
+    const insert = [
+      { name: 'Adhesive SB', type: 'adhesive', micron: 3, cost: 6.50, color: 'var(--layer-adh)' },
+      { name: 'Aluminium', type: 'substrate', micron: 9, cost: 18.00, color: 'var(--layer-alu)' },
+      { name: 'Adhesive SB', type: 'adhesive', micron: 3, cost: 6.50, color: 'var(--layer-adh)' },
+    ];
+    layers.splice(peIdx, 0, ...insert);
+    aluAdded = true;
+    render();
+  });
+
+  document.querySelectorAll('.view-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('view-' + tab.dataset.view).classList.add('active');
+    });
+  });
+
+  document.getElementById('visibilityToggle').addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    repMode = btn.dataset.vis === 'rep';
+    applyVisibility();
+    render();
+  });
+
+  applyVisibility();
+  render();
+</script>
+</body>
+</html>

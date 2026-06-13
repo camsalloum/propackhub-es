@@ -1,0 +1,8 @@
+node_modules/
+.env
+*.log
+.DS_Store
+
+# Legacy Laravel full tree — reference only on disk, not in git (use COSTING_NOTES.md)
+archive/legacy-laravel/propackhub-complete-backup 2/
+archive/PPH-small.zip

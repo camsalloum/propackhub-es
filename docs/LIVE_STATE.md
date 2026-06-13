@@ -6,7 +6,7 @@
 
 - **Phase:** Planning complete; build spec approved; no application code yet
 - **Workspace:** Migrated to `D:\ProPackHub\apps\estimation-studio\`
-- **Git:** Local repo initialized; push to `propackhub-es` when GitHub repo is created
+- **Git:** Pushed to `https://github.com/camsalloum/propackhub-es.git` (main)
 
 ## Next
 

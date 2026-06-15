@@ -1,9 +1,10 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { getDatabase, schema } from '../db';
-import { extractTenantFromRequest } from '../utils/auth';
+import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { calculateEstimate, type Estimate as EngineEstimate } from '@es/engine';
+import { applyVisibilityToEstimate } from '../utils/visibility';
 
 const EstimateCreateSchema = z.object({
   customerId: z.string().uuid().optional(),
@@ -57,6 +58,7 @@ export async function getEstimatesRoute(
   try {
     await request.jwtVerify();
     const tenantId = extractTenantFromRequest(request);
+    const user = extractUserFromRequest(request);
     const db = getDatabase();
 
     const estimates = await db
@@ -65,7 +67,12 @@ export async function getEstimatesRoute(
       .where(eq(schema.estimates.tenantId, tenantId))
       .orderBy(desc(schema.estimates.createdAt));
 
-    return reply.send(estimates);
+    // Apply visibility profile
+    const visibleEstimates = estimates.map(est => 
+      applyVisibilityToEstimate(est, user.role)
+    );
+
+    return reply.send(visibleEstimates);
   } catch (error: any) {
     console.error('Get estimates error:', error);
     return reply.status(500).send({ error: 'Failed to fetch estimates' });

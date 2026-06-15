@@ -2,4 +2,4 @@
 
 | DATE | AGENT | Summary | Files | Tech debt |
 |------|-------|---------|-------|-----------|
-| 2026-06-13 | Cursor | Migrated to D:\ProPackHub\apps\estimation-studio; docs in docs/; legacy in archive/ | AGENT.md, README.md, docs/* | — |
+| 2026-06-14 | Cursor | Workspace review fixes: ES doc drift, auto memory protocol (rules + stop hooks), parent workspace rule | AGENT.md, docs/*, .cursor/* | — |

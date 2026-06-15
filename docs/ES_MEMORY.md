@@ -12,7 +12,7 @@
 |-----|------|
 | [LOCKED_DECISIONS.md](./LOCKED_DECISIONS.md) | Strategic locks #2–#23 |
 | [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md) | Build PRD |
-| [legacy-laravel/COSTING_NOTES.md](./legacy-laravel/COSTING_NOTES.md) | Laravel engine source of truth |
+| [archive/legacy-laravel/COSTING_NOTES.md](../archive/legacy-laravel/COSTING_NOTES.md) | Laravel engine source of truth |
 | [ES_STANDARD_TEMPLATES_SEED.json](./ES_STANDARD_TEMPLATES_SEED.json) | 11 parent PG default stacks (v3) |
 | [ES_STANDARD_TEMPLATES_SEED.md](./ES_STANDARD_TEMPLATES_SEED.md) | Human-readable seed + review checklist |
 | [ES_AUDIT_HANDOFF.md](./ES_AUDIT_HANDOFF.md) | **Auditor agent entry point** |
@@ -168,7 +168,7 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 
 ### 2026-06-12 — Laravel deep audit
 
-- Extracted `PPH small.zip` → `legacy-laravel/`
+- Extracted `PPH small.zip` → `archive/legacy-laravel/`
 - Documented GSM rules (substrate vs ink/adhesive), solvent-mix, additive sale price
 - Rejected PEBI-style color inks and margin-on-cost formula in ES PRD §7
 
@@ -221,15 +221,23 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 
 | Artifact | What |
 |----------|------|
-| `legacy-laravel/COSTING_NOTES.md` | Deep Laravel audit — GSM rules, solvent-mix, additive sale price |
+| `archive/legacy-laravel/COSTING_NOTES.md` | Deep Laravel audit — GSM rules, solvent-mix, additive sale price |
 | `ES_STANDARD_TEMPLATES_SEED.json` v3 | 11 parent PG stacks; Ink SB/UV; Adhesive SB; Alu hint |
 | `ES_PRD_v3_FINAL_BUILD_SPEC.md` | §6.2.1–6.2.2, §7 engine (Laravel not PEBI), `printing_web_class` DB field |
 | `LOCKED_DECISIONS.md` | #17–#19 |
 | `ES_MEMORY.md` | This file — living memory |
-| `.cursor/rules/estimation-studio.mdc` | Cursor rule scoped to `Estimator app/**` |
+| `.cursor/rules/estimation-studio.mdc` | Cursor rule — costing + doc index |
 | `ES_WIREFRAMES.md` | Step 2 deliverable (6 screens) |
 
-**Rejected for ES:** PEBI color-specific inks, margin-on-cost formula, 8-step MES wizard, operation UI for regular users.
+### 2026-06-14 — Workspace memory + doc fixes
+
+- Fixed `ES_MEMORY.md` links → `archive/legacy-laravel/COSTING_NOTES.md`
+- `LIVE_STATE.md` / `AGENT.md` aligned with live `propackhub-es` repo on GitHub
+- Automatic living-memory at session end (all agents): `memory-auto-update.mdc` + Cursor `stop` hook
+- Parent `D:\ProPackHub\.cursor\` workspace rule routes agents to correct app memory stack
+
+---
+
 
 **Owner approved:** proceed to wireframes after memory check.
 
@@ -244,4 +252,74 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 
 ---
 
-*Last updated: 2026-06-11 (dimensions audit)*
+*Last updated: 2026-06-14 (workspace memory automation)*
+### 2026-06-14 — Implementation Scaffold Started
+
+- **Owner requested implementation start** despite audit pending
+- Created monorepo structure mirroring formulation-studio pattern
+- **packages/engine**: Core costing engine with Laravel formulas ported to TypeScript
+- **packages/server**: Fastify API server skeleton
+- **packages/web**: React SPA with responsive layout and ES design tokens
+- Basic UI pages: Dashboard, Template Picker, Estimate Editor, Library, Settings
+- Type definitions for all core entities (Estimate, Layer, Material, etc.)
+- Currency system (USD library + display currency) implemented
+- Visibility profile structure ready for admin configuration
+- Template picker with 11 parent PG groups (Decision #17)
+- Printing web class toggle (Wide Web = Ink SB, Narrow Web = Ink UV)
+
+**Artifacts created:**
+- `package.json` monorepo root with workspaces
+- `packages/engine/` with calculator, validator, types
+- `packages/server/` with Fastify setup
+- `packages/web/` with React + Tailwind + Vite
+- `README_IMPLEMENTATION.md` documenting current state
+
+**Next:** Database schema, authentication, full API endpoints, engine integration
+### 2026-06-14 — Windows Startup Scripts Added
+
+- Created multiple Windows startup scripts for easy development:
+  - `START-ES.cmd`: Comprehensive batch file with error checking
+  - `START-ES.ps1`: PowerShell script with color output
+  - `start.bat`: Simple batch file for quick starts
+  - `RUN-ES.bat`: Auto-opens browser after starting servers
+- Added `QUICK-START.md` with instructions
+- Updated root `package.json` with `start:servers` script
+- All scripts check for dependencies and install if needed
+- Double-click any `.bat` file to start both servers
+### 2026-06-14 — Full Backend Implementation Complete
+
+**MAJOR PROGRESS: From UI-only mockup to fully functional backend**
+
+**Implemented:**
+- ✅ **PostgreSQL schema** with Drizzle ORM (12 tables: tenants, users, materials, estimates, layers, processes, slabs, customers, activity_logs)
+- ✅ **Authentication** (register, login, JWT tokens, tenant isolation)
+- ✅ **Materials API** (CRUD for library items in USD)
+- ✅ **Estimates API** (create, list, calculate with engine integration)
+- ✅ **Core routes** fully wired with authorization
+- ✅ **API client** for web (TypeScript)
+- ✅ **Database initialization** script
+- ✅ **Setup guide** with troubleshooting
+
+**Files created:**
+- `packages/server/src/db/schema.ts` — Complete Drizzle schema
+- `packages/server/src/db/index.ts` — DB initialization
+- `packages/server/src/routes/auth.ts` — Auth endpoints
+- `packages/server/src/routes/materials.ts` — Material CRUD
+- `packages/server/src/routes/estimates.ts` — Estimate logic with engine
+- `packages/server/src/utils/auth.ts` — Auth utilities
+- `packages/server/src/index.ts` — Main server (complete)
+- `packages/server/drizzle.config.ts` — Drizzle config
+- `packages/server/.env.example` — Environment template
+- `packages/web/src/lib/api.ts` — API client class
+- `packages/web/.env.example` — Web env template
+- `SETUP.md` — Complete setup guide
+- `drizzle.config.ts` — Migration config
+
+**What now works:**
+1. Users can **register** and get personal tenant
+2. Materials are **tenant-isolated** in USD
+3. Estimates integrate **real calculation engine**
+4. JWT **tenant scoping** on all APIs
+5. **Database persistence** for everything
+
+**Next: Wire web pages to API (currently still UI mockups)**

@@ -29,4 +29,4 @@ alwaysApply: true
 - Locks: [docs/LOCKED_DECISIONS.md](docs/LOCKED_DECISIONS.md)
 - Templates seed: [docs/ES_STANDARD_TEMPLATES_SEED.json](docs/ES_STANDARD_TEMPLATES_SEED.json)
 
-After material/costing decisions in chat, append a dated entry to **docs/ES_MEMORY.md** session log.
+After material/costing decisions in chat, append a dated entry to **docs/ES_MEMORY.md** session log (automatic at session end per `AGENT.md` §2).

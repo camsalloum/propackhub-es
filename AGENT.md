@@ -15,8 +15,15 @@
 
 - **Name:** ProPackHub Estimation Studio
 - **Not** PEBI MES `/estimator` — mirrors legacy Laravel estimator only
-- **Planned repo:** `https://github.com/camsalloum/propackhub-es.git` (create on GitHub when pushing)
+- **Repo:** `https://github.com/camsalloum/propackhub-es.git` (main — docs pushed 2026-06-13)
 
-## Session end
+## Session end (automatic)
 
-When owner says **"update memory"**: append `docs/ES_MEMORY.md` session log and `docs/SESSION_LOG.md`.
+At the end of any session with code or doc changes (all agents / IDEs):
+
+1. Append dated bullets to `docs/ES_MEMORY.md` session log
+2. Append `docs/SESSION_LOG.md`
+3. Update `docs/LIVE_STATE.md`
+4. Say: **"Memory updated. [N] files changed."**
+
+Skip for read-only Q&A with no file edits.

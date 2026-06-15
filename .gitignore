@@ -1,8 +1,52 @@
+# Dependencies
 node_modules/
-.env
-*.log
-.DS_Store
+.pnp
+.pnp.js
 
-# Legacy Laravel full tree — reference only on disk, not in git (use COSTING_NOTES.md)
-archive/legacy-laravel/propackhub-complete-backup 2/
-archive/PPH-small.zip
+# Testing
+coverage/
+
+# Production
+build/
+dist/
+
+# Misc
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local development
+packages/server/.env
+packages/server/db.sqlite
+packages/server/database.sqlite
+packages/server/init-db.js
+
+# Database files
+*.sql
+
+# Package manager specific
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+packages/*/dist/
+packages/*/build/
+packages/*/.turbo/
+
+# Logs
+*.log
+logs/

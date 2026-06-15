@@ -350,3 +350,27 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 - `packages/server/src/routes/customers.ts` - New customers CRUD route
 
 **Next:** Run migration, restart servers, test all endpoints
+
+
+### 2026-06-15 — Missing Estimate CRUD Endpoints Added
+
+**Issue:** Only 3 of 7 estimate endpoints were implemented. API info falsely advertised all 7.
+
+**Added endpoints:**
+- `GET /api/v1/estimates/:id` - Get single estimate with full details (layers, processes, slabs)
+- `PATCH /api/v1/estimates/:id` - Update estimate fields (jobName, status, dimensions, pricing, etc.)
+- `DELETE /api/v1/estimates/:id` - Delete estimate with cascade to related records
+- `POST /api/v1/estimates/:id/requote` - Create new estimate from existing with fresh material prices
+
+**Frontend integration:**
+- Added API client methods: `getEstimate()`, `updateEstimate()`, `deleteEstimate()`, `requoteEstimate()`
+- `EstimateEditor` now loads real data dynamically by ID instead of hardcoded mock
+- All endpoints include JWT auth, tenant isolation, error handling
+
+**Re-quote feature:**
+- Copies structure from source estimate
+- Generates new ref number (QT-YYYY-XXXXX)
+- Links to source via `sourceEstimationId`
+- Refreshes material prices on next calculate
+
+**Status:** All 7 estimate endpoints now functional, frontend can open/edit/delete estimates

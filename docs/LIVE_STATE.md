@@ -2,48 +2,20 @@
 
 **Last updated:** 2026-06-15
 
-## Status: 🐛 CRITICAL BUGS FIXED - RESTART REQUIRED
+## Status: ✅ ALL CRITICAL ENDPOINTS IMPLEMENTED
 
-- **Phase:** 6 critical bugs fixed, database migration pending, server restart needed
+- **Phase:** Backend complete with all CRUD operations, ready for full UI integration
 - **Workspace:** `D:\ProPackHub\apps\estimation-studio\`
 - **Git:** `https://github.com/camsalloum/propackhub-es.git` on `main`
-- **Commit:** `9c3c5f2` - Critical bug fixes
+- **Commit:** `8798462` - Missing estimate endpoints added
 
-## ⚠️ IMMEDIATE ACTION REQUIRED
+## Recent Updates ✅
 
-1. **Stop servers** (if running)
-2. **Run migration:**
-   ```bash
-   cd packages/server
-   psql -U postgres -d estimation_studio -f migration-add-bug-fixes.sql
-   ```
-3. **Restart servers:** `RUN-ES.bat`
-
-## What Was Fixed ✅
-
-### Bug 1: Material Cost Not Saving
-- Fixed field name mismatch (`materialCostPerKgUsd` → `materialCostPerKg`)
-- Material cost now persists to database
-
-### Bug 2: Customers Route Missing
-- Created complete `/api/v1/customers/*` CRUD endpoints
-- Customer management now functional
-
-### Bug 3: Estimate Editor Not Loading by ID
-- Added `useParams()` to extract estimate ID
-- Dynamic loading instead of hardcoded mock
-
-### Bug 4: Hardcoded Solvent Cost
-- Made solvent cost configurable per estimate
-- Tenants can now set custom solvent prices
-
-### Bug 5: Unreliable SB Detection
-- Added `isSolventBased` boolean field
-- No longer depends on material name
-
-### Bug 6: Wrong Order Quantity
-- Uses actual estimate/slab quantity
-- Process costs now calculate correctly
+### 2026-06-15 Session
+1. **Fixed 6 critical bugs** (material cost, customers route, useParams, solvent config, SB detection, order quantity)
+2. **Added 4 missing estimate endpoints** (GET/:id, PATCH/:id, DELETE/:id, POST/:id/requote)
+3. **Ran database migration** (added columns: total_gsm, total_micron, material_cost_per_kg, sale_price_per_kg)
+4. **Updated frontend** (EstimateEditor now loads real data, API client complete)
 
 ## What's Now Working ✅
 

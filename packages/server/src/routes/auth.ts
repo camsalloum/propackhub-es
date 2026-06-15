@@ -4,6 +4,7 @@ import { getDatabase, schema } from '../db';
 import { hashPassword, verifyPassword, TokenPayload } from '../utils/auth';
 import { eq, and } from 'drizzle-orm';
 import { seedMaterialsForTenant } from '../db/seed-materials';
+import { fetchExchangeRate } from '../utils/fx-rates';
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -41,13 +42,24 @@ export async function registerRoute(
       return reply.status(409).send({ error: 'User already exists' });
     }
 
-    // Create tenant
+    // Fetch current exchange rate for display currency
+    let exchangeRate = 1.0;
+    try {
+      exchangeRate = await fetchExchangeRate(displayCurrency);
+    } catch (error) {
+      console.error('Failed to fetch FX rate, using 1.0:', error);
+      // Continue with default rate
+    }
+
+    // Create tenant with fetched exchange rate
     const [tenant] = await db
       .insert(schema.tenants)
       .values({
         name: tenantName,
         type: tenantType,
         displayCurrency,
+        exchangeRateUsdToDisplay: exchangeRate.toString(),
+        useAutoFx: true, // Enable auto-refresh by default
       })
       .returning();
 

@@ -106,12 +106,28 @@ export class ApiClient {
     return this.request<any[]>('GET', '/api/v1/estimates');
   }
 
+  getEstimate(id: string) {
+    return this.request<any>('GET', `/api/v1/estimates/${id}`);
+  }
+
   createEstimate(estimate: any) {
     return this.request<any>('POST', '/api/v1/estimates', estimate);
   }
 
+  updateEstimate(id: string, updates: any) {
+    return this.request<any>('PATCH', `/api/v1/estimates/${id}`, updates);
+  }
+
+  deleteEstimate(id: string) {
+    return this.request('DELETE', `/api/v1/estimates/${id}`);
+  }
+
   calculateEstimate(id: string) {
     return this.request<any>('POST', `/api/v1/estimates/${id}/calculate`);
+  }
+
+  requoteEstimate(id: string) {
+    return this.request<any>('POST', `/api/v1/estimates/${id}/requote`);
   }
 }
 

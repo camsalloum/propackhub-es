@@ -20,31 +20,13 @@ const EstimateEditor = () => {
   const fetchEstimate = async (estimateId: string) => {
     try {
       setLoading(true);
-      // TODO: Implement GET /api/v1/estimates/:id endpoint
-      // const data = await apiClient.getEstimate(estimateId);
-      // setEstimate(data);
-      // setLayers(data.layers || []);
-      
-      // Mock data for now
-      setEstimate({
-        id: estimateId,
-        jobName: 'Chips duplex laminate',
-        customer: 'Acme Snacks Ltd',
-        status: 'draft',
-        totalGsm: 78.4,
-        totalMicron: 67,
-        salePricePerKg: 12.48,
-        displayCurrency: 'AED'
-      });
-      
-      setLayers([
-        { id: 1, type: 'substrate', material: 'PET Transparent', micron: 12, gsm: 16.56, costPerKg: 8.70 },
-        { id: 2, type: 'ink', material: 'Ink SB', micron: 2, gsm: 0.6, costPerKg: 12.00 },
-        { id: 3, type: 'adhesive', material: 'Adhesive SB', micron: 3, gsm: 3.0, costPerKg: 6.50 },
-        { id: 4, type: 'substrate', material: 'LDPE Natural', micron: 50, gsm: 46.0, costPerKg: 2.10 },
-      ]);
+      const data = await apiClient.getEstimate(estimateId);
+      setEstimate(data);
+      setLayers(data.layers || []);
+      setPrintingWebClass(data.printingWebClass || 'wide_web');
     } catch (error) {
       console.error('Failed to load estimate:', error);
+      setEstimate(null);
     } finally {
       setLoading(false);
     }

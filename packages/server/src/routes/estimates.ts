@@ -3,8 +3,8 @@ import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { calculateEstimate, type Estimate as EngineEstimate } from '@es/engine';
-import { applyVisibilityToEstimate } from '../utils/visibility';
+import { calculateEstimate, type Estimate as EngineEstimate, type VisibilityProfile } from '@es/engine';
+import { getEffectiveProfile, stripEstimateRow, stripCalculationResult } from '../utils/visibility';
 
 const EstimateCreateSchema = z.object({
   customerId: z.string().uuid().optional(),
@@ -61,16 +61,20 @@ export async function getEstimatesRoute(
     const user = extractUserFromRequest(request);
     const db = getDatabase();
 
+    const [userRecord] = await db
+      .select({ visibilityProfile: schema.users.visibilityProfile })
+      .from(schema.users)
+      .where(eq(schema.users.id, user.userId));
+
+    const profile = getEffectiveProfile(user.role, userRecord?.visibilityProfile);
+
     const estimates = await db
       .select()
       .from(schema.estimates)
       .where(eq(schema.estimates.tenantId, tenantId))
       .orderBy(desc(schema.estimates.createdAt));
 
-    // Apply visibility profile
-    const visibleEstimates = estimates.map(est => 
-      applyVisibilityToEstimate(est, user.role)
-    );
+    const visibleEstimates = estimates.map(est => stripEstimateRow(est, profile));
 
     return reply.send(visibleEstimates);
   } catch (error: any) {
@@ -199,9 +203,17 @@ export async function calculateEstimateRoute(
   try {
     await request.jwtVerify();
     const tenantId = extractTenantFromRequest(request);
+    const user = extractUserFromRequest(request);
     const { id } = request.params;
 
     const db = getDatabase();
+
+    const [userRecord] = await db
+      .select({ visibilityProfile: schema.users.visibilityProfile })
+      .from(schema.users)
+      .where(eq(schema.users.id, user.userId));
+
+    const profile = getEffectiveProfile(user.role, userRecord?.visibilityProfile);
 
     // Get estimate with all details
     const [estimate] = await db
@@ -300,14 +312,273 @@ export async function calculateEstimateRoute(
       })
       .where(eq(schema.estimates.id, id));
 
-    return reply.send({
-      estimate: result.estimate,
-      costBreakdown: result.costBreakdown,
-      warnings: result.warnings,
-    });
+    return reply.send(stripCalculationResult(result, profile));
   } catch (error: any) {
     console.error('Calculate estimate error:', error);
     return reply.status(500).send({ error: 'Failed to calculate estimate' });
+  }
+}
+
+export async function generateProposalPdfRoute(
+  fastify: FastifyInstance,
+  request: FastifyRequest<{ Params: { id: string } }> ,
+  reply: FastifyReply
+) {
+  try {
+    await request.jwtVerify();
+    const tenantId = extractTenantFromRequest(request);
+    const user = extractUserFromRequest(request);
+    const { id } = request.params;
+
+    const db = getDatabase();
+
+    // Load user visibility profile (so PDF respects visibility)
+    const [userRecord] = await db
+      .select({ visibilityProfile: schema.users.visibilityProfile })
+      .from(schema.users)
+      .where(eq(schema.users.id, user.userId));
+
+    const profile = getEffectiveProfile(user.role, userRecord?.visibilityProfile);
+
+    // Fetch estimate and related data (reuse calculate logic)
+    const [estimate] = await db
+      .select()
+      .from(schema.estimates)
+      .where(and(eq(schema.estimates.id, id), eq(schema.estimates.tenantId, tenantId)));
+
+    if (!estimate) {
+      return reply.status(404).send({ error: 'Estimate not found' });
+    }
+
+    const layers = await db
+      .select()
+      .from(schema.layers)
+      .where(eq(schema.layers.estimateId, id))
+      .orderBy(schema.layers.position);
+
+    const materials = await db
+      .select()
+      .from(schema.materials)
+      .where(eq(schema.materials.tenantId, tenantId));
+
+    const materialMap = new Map(materials.map(m => [m.id, {
+      id: m.id,
+      name: m.name,
+      type: m.type,
+      solidPercent: m.solidPercent,
+      density: parseFloat(m.density),
+      costPerKgUsd: parseFloat(m.costPerKgUsd),
+      wastePercent: m.wastePercent,
+    }]));
+
+    const processes = await db
+      .select()
+      .from(schema.processes)
+      .where(eq(schema.processes.estimateId, id));
+
+    const slabs = await db
+      .select()
+      .from(schema.slabs)
+      .where(eq(schema.slabs.estimateId, id))
+      .orderBy(schema.slabs.quantityKg);
+
+    const estimateForEngine: EngineEstimate = {
+      id: estimate.id,
+      tenantId,
+      customerId: estimate.customerId || undefined,
+      jobName: estimate.jobName,
+      status: 'draft',
+      layers: layers.map(l => ({
+        id: l.id,
+        materialId: l.materialId,
+        micron: parseFloat(l.micron),
+        position: l.position,
+      })),
+      dimensions: {
+        productType: estimate.productType,
+        printingWebClass: estimate.printingWebClass,
+        ...estimate.dimensions,
+      },
+      markupPercent: parseFloat(estimate.markupPercent),
+      platesPerKg: parseFloat(estimate.platesPerKg),
+      deliveryPerKg: parseFloat(estimate.deliveryPerKg),
+      processes: processes.map(p => ({
+        id: p.id,
+        name: p.name,
+        costPerHour: parseFloat(p.costPerHour),
+        speedBasis: p.speedBasis as any,
+        speedValue: parseFloat(p.speedValue),
+        setupHours: parseFloat(p.setupHours),
+        enabled: p.enabled,
+      })),
+      slabs: slabs.map(s => ({ quantityKg: parseFloat(s.quantityKg), pricePerKg: parseFloat(s.pricePerKg) })),
+      displayCurrencyCode: estimate.displayCurrency,
+      exchangeRateUsdToDisplay: parseFloat(estimate.exchangeRateUsdToDisplay),
+      orderQuantityKg: estimate.orderQuantityKg ? parseFloat(estimate.orderQuantityKg) : (slabs[0]?.quantityKg ? parseFloat(slabs[0].quantityKg) : 1000),
+      solventCostPerKgUsd: estimate.solventCostPerKgUsd ? parseFloat(estimate.solventCostPerKgUsd) : undefined,
+      solventRatio: estimate.solventRatio ? parseFloat(estimate.solventRatio) : undefined,
+      createdAt: estimate.createdAt,
+      updatedAt: estimate.updatedAt,
+    };
+
+    const result = calculateEstimate(estimateForEngine, materialMap);
+
+    // Simple HTML template — branded using tenant info; includes laminate stack SVG and slab table
+    // Tenant colors/logo/terms are read from tenant record
+    const [tenant] = await db
+      .select()
+      .from(schema.tenants)
+      .where(eq(schema.tenants.id, tenantId));
+
+    const customerName = estimate.customerId ? estimate.customerId : 'Customer';
+
+    const laminateSvg = (() => {
+      // Render simple stacked rectangles representing layers
+      const total = layers.reduce((s, l) => s + (parseFloat(l.micron) || 0), 0) || 1;
+      const rects = layers.map((l: any, i: number) => {
+        const h = Math.max(4, (parseFloat(l.micron) / total) * 200);
+        const y = layers.slice(0, i).reduce((s: number, p: any) => s + Math.max(4, (parseFloat(p.micron) / total) * 200), 0);
+        return `<rect x="0" y="${y}" width="200" height="${h}" fill="#${(Math.abs(hashCode(l.materialId))%0xFFFFFF).toString(16).padStart(6,'0')}" />`;
+      }).join('\n');
+      return `<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
+    })();
+
+    function hashCode(str: string) {
+      let h = 0;
+      for (let i = 0; i < str.length; i++) h = (h << 5) - h + str.charCodeAt(i) | 0;
+      return h;
+    }
+
+    const slabRows = slabs.map((s: any) => `<tr><td>${s.quantityKg}</td><td>${s.pricePerKg}</td><td>${(parseFloat(s.quantityKg)*parseFloat(s.pricePerKg)).toFixed(2)}</td></tr>`).join('');
+
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Proposal - ${estimate.jobName}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@400;700&family=DM+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root{--primary:${tenant.primaryColor || '#1a2744'};--navy:#1a2744;--muted:#6b7280}
+    html,body{margin:0;padding:0;font-family:'DM Sans',system-ui,Arial;color:#111}
+    @page{size:A4;margin:20mm}
+    .page{width:100%;box-sizing:border-box;padding:20px}
+    .brand-bar{background:var(--primary);color:#fff;padding:18px 24px;display:flex;align-items:center;justify-content:space-between}
+    .brand-left{display:flex;align-items:center}
+    .logo{height:56px;width:auto;border-radius:6px;background:#fff;padding:4px}
+    .brand-title{margin-left:14px}
+    .brand-title .tenant{font-family:'Playfair Display',serif;font-size:20px;font-weight:700}
+    .brand-title .subtitle{font-size:12px;color:rgba(255,255,255,0.9)}
+
+    .meta{display:flex;justify-content:space-between;margin:20px 0}
+    .meta .left{max-width:65%}
+    h1{font-family:'Playfair Display',serif;margin:6px 0 2px;font-size:28px}
+    .job-info{color:var(--muted);font-size:13px}
+
+    .content{display:flex;gap:24px}
+    .left-col{flex:1}
+    .right-col{width:260px}
+
+    .laminate-box{border:1px solid #e6e6e6;padding:12px;border-radius:6px;background:#fff}
+    .laminate-svg{display:block;margin:0 auto}
+
+    .slab-table{width:100%;border-collapse:collapse;margin-top:18px}
+    .slab-table th{background:var(--primary);color:#fff;padding:10px;text-align:left;font-weight:600}
+    .slab-table td{padding:10px;border-bottom:1px solid #eee}
+
+    .section-title{font-weight:700;margin-top:18px;margin-bottom:8px}
+
+    .footer{margin-top:36px;border-top:1px solid #eee;padding-top:12px;color:#444;font-size:12px}
+    .tc{white-space:pre-wrap}
+
+    .page-footer{position:fixed;left:0;right:0;bottom:8px;text-align:center;font-size:11px;color:#999}
+    .page-number:before{content:"Page " counter(page)}
+
+    /* Print color adjustment */
+    *{-webkit-print-color-adjust:exact}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="brand-bar">
+      <div class="brand-left">
+        ${tenant.logo ? `<img src="${tenant.logo}" class="logo" alt="${tenant.name}"/>` : `<div style="width:56px;height:56px;background:#fff;border-radius:6px"></div>`}
+        <div class="brand-title">
+          <div class="tenant">${tenant.name}</div>
+          <div class="subtitle">Proposal for ${customerName}</div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-weight:700">Proposal</div>
+        <div style="font-size:12px">Ref: ${estimate.refNumber || ''}</div>
+        <div style="font-size:12px">Date: ${new Date().toLocaleDateString()}</div>
+      </div>
+    </div>
+
+    <div class="meta">
+      <div class="left">
+        <h1>${estimate.jobName}</h1>
+        <div class="job-info">${estimate.productType} • ${estimate.printingWebClass} • ${estimate.id}</div>
+      </div>
+      <div class="right">
+        <div class="laminate-box">
+          <div style="font-weight:700;margin-bottom:8px">Laminate Stack</div>
+          <div class="laminate-svg">${laminateSvg}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="left-col">
+        <div class="section-title">Estimate Summary</div>
+        <div>Sale Price / kg: <strong>${result.estimate.salePricePerKg ? result.estimate.salePricePerKg.toFixed(2) : (estimate.salePricePerKg || '')}</strong></div>
+        <div style="margin-top:12px" class="section-title">Slab Pricing</div>
+        <table class="slab-table">
+          <thead><tr><th>Quantity (kg)</th><th>Price / kg (${estimate.displayCurrency})</th><th>Total (${estimate.displayCurrency})</th></tr></thead>
+          <tbody>
+            ${slabRows}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="right-col">
+        <div class="section-title">Details</div>
+        <div><strong>Customer</strong><div>${customerName}</div></div>
+        <div style="margin-top:8px"><strong>Order Qty</strong><div>${estimate.orderQuantityKg || ''} kg</div></div>
+        <div style="margin-top:12px" class="section-title">Processes</div>
+        <div>${processes.map((p:any)=>`<div style="margin-bottom:6px"><strong>${p.name}</strong><div style="font-size:12px;color:#666">${p.costPerHour} / hr</div></div>`).join('')}</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div style="font-weight:700">Terms & Conditions</div>
+      <div class="tc">${tenant.termsAndConditions || 'Standard terms apply.'}</div>
+    </div>
+
+    <div class="page-footer"><span class="page-number"></span></div>
+  </div>
+</body>
+</html>`;
+
+    // Try to render PDF via puppeteer if available, otherwise return HTML
+    try {
+      const puppeteer = await import('puppeteer');
+      const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+      const pdf = await page.pdf({ format: 'A4', printBackground: true });
+      await browser.close();
+
+      reply.header('Content-Type', 'application/pdf');
+      return reply.send(pdf as any);
+    } catch (err) {
+      // Puppeteer not installed or failed — return HTML fallback
+      reply.header('Content-Type', 'text/html');
+      return reply.send(html);
+    }
+  } catch (error: any) {
+    console.error('Generate proposal PDF error:', error);
+    return reply.status(500).send({ error: 'Failed to generate proposal PDF' });
   }
 }
 
@@ -608,5 +879,10 @@ export async function registerEstimateRoutes(fastify: FastifyInstance) {
   fastify.post<{ Params: { id: string } }>(
     '/api/v1/estimates/:id/requote',
     async (request, reply) => requoteEstimateRoute(fastify, request, reply)
+  );
+
+  fastify.get<{ Params: { id: string } }>(
+    '/api/v1/estimates/:id/proposal-pdf',
+    async (request, reply) => generateProposalPdfRoute(fastify, request, reply)
   );
 }

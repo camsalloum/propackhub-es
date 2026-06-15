@@ -52,6 +52,7 @@ export class ApiClient {
 
   // Auth
   register(email: string, password: string, displayName: string, tenantName: string) {
+  register(email: string, password: string, displayName: string, tenantName: string, displayCurrency: string) {
     return this.request<{
       token: string;
       user: { id: string; email: string; displayName: string; role: string };
@@ -62,7 +63,7 @@ export class ApiClient {
       displayName,
       tenantName,
       tenantType: 'individual',
-      displayCurrency: 'AED',
+      displayCurrency,
     });
   }
 
@@ -87,6 +88,15 @@ export class ApiClient {
   // Materials
   getMaterials() {
     return this.request<any[]>('GET', '/api/v1/materials');
+  }
+
+  // Customers
+  getCustomers() {
+    return this.request<any[]>('GET', '/api/v1/customers');
+  }
+
+  createCustomer(customer: any) {
+    return this.request('POST', '/api/v1/customers', customer);
   }
 
   createMaterial(material: any) {
@@ -128,6 +138,33 @@ export class ApiClient {
 
   requoteEstimate(id: string) {
     return this.request<any>('POST', `/api/v1/estimates/${id}/requote`);
+  }
+
+  async getProposalPdf(id: string) {
+    const token = this.getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE_URL}/api/v1/estimates/${id}/proposal-pdf`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || `API error: ${res.status}`);
+    }
+
+    return res.blob();
+  }
+
+  // Settings
+  getSettings() {
+    return this.request<any>('GET', '/api/v1/settings');
+  }
+
+  updateSettings(payload: any) {
+    return this.request<any>('PATCH', '/api/v1/settings', payload);
   }
 }
 

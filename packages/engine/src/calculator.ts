@@ -89,9 +89,26 @@ export function calculateEstimate(
   const totalCost = materialCost + markupAmount + estimate.platesPerKg + 
                    estimate.deliveryPerKg + processResults.operationCostPerKg;
   
+  // Calculate waste cost impact: sum of (cost_m2 × waste/100) across all layers, converted to per-kg
+  let totalWasteCostPerM2 = 0;
+  layersWithCalc.forEach(layer => {
+    const material = materials.get(layer.materialId);
+    if (!material) return;
+    
+    let baseCostPerM2: number;
+    if (material.type === 'substrate') {
+      const gsm = layer.micron * material.density;
+      baseCostPerM2 = (gsm / 1000) * material.costPerKgUsd;
+    } else {
+      baseCostPerM2 = (layer.micron / 1000) * material.costPerKgUsd;
+    }
+    totalWasteCostPerM2 += baseCostPerM2 * (material.wastePercent / 100);
+  });
+  const wasteCostPerKg = totalGsm > 0 ? (totalWasteCostPerM2 / totalGsm) * 1000 : 0;
+  
   const costBreakdown = {
     materialPercent: totalCost > 0 ? (materialCost / totalCost) * 100 : 0,
-    wastePercent: 0, // TODO: Calculate waste percentage from materials
+    wastePercent: totalCost > 0 ? (wasteCostPerKg / totalCost) * 100 : 0,
     markupPercent: totalCost > 0 ? (markupAmount / totalCost) * 100 : 0,
     processPercent: totalCost > 0 ? (processResults.operationCostPerKg / totalCost) * 100 : 0
   };
@@ -158,7 +175,12 @@ function calculateLayer(layer: Layer, material: Material): Layer {
 }
 
 /**
- * Calculate total micron (substrate µ + ink/adhesive gsm treated as µ)
+ * Calculate total micron per COSTING_NOTES §3:
+ * total_micron = Σ substrate_micron + Σ ink/adhesive_gsm
+ * (substrate µ + ink/adhesive_gsm treated as thickness equivalent)
+ *
+ * This mixing of units is intentional: GSM of ink/adhesive layers is used as a
+ * thickness equivalent in the total_micron calculation for film_density.
  */
 function calculateTotalMicron(layers: Layer[], materials: Map<string, Material>): number {
   return layers.reduce((sum, layer) => {
@@ -166,9 +188,10 @@ function calculateTotalMicron(layers: Layer[], materials: Map<string, Material>)
     if (!material) return sum;
     
     if (material.type === 'substrate') {
+      // Substrate: add micron directly
       return sum + layer.micron;
     } else {
-      // For ink/adhesive, use gsm as micron in total calculation
+      // Ink/Adhesive: sum GSM as thickness equivalent (COSTING_NOTES §3)
       const gsm = (material.solidPercent * layer.micron) / 100;
       return sum + gsm;
     }

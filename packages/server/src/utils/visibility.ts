@@ -1,186 +1,205 @@
-/**
- * Visibility Profile Enforcement
- * Strips hidden fields from API responses based on user's visibility profile
- * Decision #20: Sales rep sees only selling price, admin sees full cost breakdown
- */
+import type { CalculationResult, Estimate as EngineEstimate, VisibilityProfile } from '@es/engine';
 
-export interface VisibilityProfile {
-  // Cost breakdown
-  showMarkupPercent: boolean;
-  showMaterialCost: boolean;
-  showCostPerM2: boolean;
-  showPlateCost: boolean;
-  showDeliveryCost: boolean;
-  showOperationCost: boolean;
-  showCostBreakdownPercent: boolean;
-  
-  // Material library
-  showLibraryPrices: boolean;
-  
-  // Solvent mix
-  showSolventCost: boolean;
-  
-  // Calculations
-  showYieldConversions: boolean;
-  showRollAfterSlittingDetail: boolean;
-  
-  // Alternate pricing
-  showAlternateUnitPrices: boolean;
-}
-
-// Predefined profiles
-export const VISIBILITY_PROFILES: Record<string, VisibilityProfile> = {
-  sales_rep: {
-    showMarkupPercent: false,
-    showMaterialCost: false,
-    showCostPerM2: false,
-    showPlateCost: false,
-    showDeliveryCost: false,
-    showOperationCost: false,
-    showCostBreakdownPercent: false,
-    showLibraryPrices: false,
-    showSolventCost: false,
-    showYieldConversions: false,
-    showRollAfterSlittingDetail: false,
-    showAlternateUnitPrices: false,
-  },
-  
-  tenant_admin: {
-    showMarkupPercent: true,
-    showMaterialCost: true,
-    showCostPerM2: true,
-    showPlateCost: true,
-    showDeliveryCost: true,
-    showOperationCost: true,
-    showCostBreakdownPercent: true,
-    showLibraryPrices: true,
-    showSolventCost: true,
-    showYieldConversions: true,
-    showRollAfterSlittingDetail: true,
-    showAlternateUnitPrices: true,
-  },
-  
-  platform_admin: {
-    showMarkupPercent: true,
-    showMaterialCost: true,
-    showCostPerM2: true,
-    showPlateCost: true,
-    showDeliveryCost: true,
-    showOperationCost: true,
-    showCostBreakdownPercent: true,
-    showLibraryPrices: true,
-    showSolventCost: true,
-    showYieldConversions: true,
-    showRollAfterSlittingDetail: true,
-    showAlternateUnitPrices: true,
-  },
+export const DEFAULT_SALES_REP_PROFILE: VisibilityProfile = {
+  structureLayers: true,
+  layerMicrons: true,
+  dimensions: true,
+  totalGsm: true,
+  printingWebClass: true,
+  productDimensionInputs: true,
+  printingWebWidth: true,
+  filmDensity: true,
+  gramsPerPiece: true,
+  yieldConversions: false,
+  rollAfterSlitting: false,
+  orderQtyUnitBreakdown: false,
+  alternatePriceUnits: true,
+  materialCostPerKg: false,
+  costPerSqm: false,
+  rmCostPerKg: false,
+  markupPercent: false,
+  markupAmount: false,
+  platesPerKg: false,
+  deliveryPerKg: false,
+  operationCost: false,
+  costBreakdown: false,
+  solventMixCost: false,
+  sellingPrice: true,
+  slabTable: true,
+  proposalPdf: true,
 };
 
-/**
- * Strip hidden fields from estimate based on user's visibility profile
- */
-export function applyVisibilityToEstimate(estimate: any, profileName: string): any {
-  const profile = VISIBILITY_PROFILES[profileName] || VISIBILITY_PROFILES.sales_rep;
-  
+export const DEFAULT_ADMIN_PROFILE: VisibilityProfile = {
+  structureLayers: true,
+  layerMicrons: true,
+  dimensions: true,
+  totalGsm: true,
+  printingWebClass: true,
+  productDimensionInputs: true,
+  printingWebWidth: true,
+  filmDensity: true,
+  gramsPerPiece: true,
+  yieldConversions: true,
+  rollAfterSlitting: true,
+  orderQtyUnitBreakdown: true,
+  alternatePriceUnits: true,
+  materialCostPerKg: true,
+  costPerSqm: true,
+  rmCostPerKg: true,
+  markupPercent: true,
+  markupAmount: true,
+  platesPerKg: true,
+  deliveryPerKg: true,
+  operationCost: true,
+  costBreakdown: true,
+  solventMixCost: true,
+  sellingPrice: true,
+  slabTable: true,
+  proposalPdf: true,
+};
+
+function parseVisibilityProfile(value: unknown): VisibilityProfile | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as VisibilityProfile;
+    } catch {
+      return undefined;
+    }
+  }
+
+  if (typeof value === 'object') {
+    return value as VisibilityProfile;
+  }
+
+  return undefined;
+}
+
+function getDefaultProfile(role: string): VisibilityProfile {
+  if (role === 'tenant_admin' || role === 'platform_admin') {
+    return DEFAULT_ADMIN_PROFILE;
+  }
+
+  return DEFAULT_SALES_REP_PROFILE;
+}
+
+export function getEffectiveProfile(role: string, storedProfile?: unknown): VisibilityProfile {
+  const customProfile = parseVisibilityProfile(storedProfile);
+
+  if (customProfile) {
+    return customProfile;
+  }
+
+  return getDefaultProfile(role);
+}
+
+export function stripEstimateRow(row: any, profile: VisibilityProfile): any {
   const visible: any = {
-    id: estimate.id,
-    refNumber: estimate.refNumber,
-    jobName: estimate.jobName,
-    customerId: estimate.customerId,
-    status: estimate.status,
-    productType: estimate.productType,
-    printingWebClass: estimate.printingWebClass,
-    dimensions: estimate.dimensions,
-    displayCurrency: estimate.displayCurrency,
-    exchangeRateUsdToDisplay: estimate.exchangeRateUsdToDisplay,
-    
-    // Always visible
-    totalGsm: estimate.totalGsm,
-    totalMicron: estimate.totalMicron,
-    salePricePerKg: estimate.salePricePerKg,
-    
-    // Structure always visible
-    layers: estimate.layers?.map((layer: any) => ({
-      id: layer.id,
-      materialId: layer.materialId,
-      position: layer.position,
-      micron: layer.micron,
-      gsm: layer.gsm,
-      ...(profile.showCostPerM2 && { costPerM2: layer.costPerM2 }),
-    })),
-    
-    // Slabs always visible (price only)
-    slabs: estimate.slabs,
-    
-    createdAt: estimate.createdAt,
-    updatedAt: estimate.updatedAt,
+    id: row.id,
+    refNumber: row.refNumber,
+    jobName: row.jobName,
+    customerId: row.customerId,
+    status: row.status,
+    productType: row.productType,
+    printingWebClass: row.printingWebClass,
+    dimensions: row.dimensions,
+    displayCurrency: row.displayCurrency,
+    exchangeRateUsdToDisplay: row.exchangeRateUsdToDisplay,
+    totalGsm: row.totalGsm,
+    totalMicron: row.totalMicron,
+    salePricePerKg: row.salePricePerKg,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
-  
-  // Conditional fields
-  if (profile.showMarkupPercent) {
-    visible.markupPercent = estimate.markupPercent;
+
+  if (profile.markupPercent) {
+    visible.markupPercent = row.markupPercent;
   }
-  
-  if (profile.showMaterialCost) {
-    visible.materialCostPerKg = estimate.materialCostPerKg;
+
+  if (profile.materialCostPerKg) {
+    visible.materialCostPerKg = row.materialCostPerKg ?? row.materialCostPerKgUsd;
   }
-  
-  if (profile.showPlateCost) {
-    visible.platesPerKg = estimate.platesPerKg;
+
+  if (profile.platesPerKg) {
+    visible.platesPerKg = row.platesPerKg;
   }
-  
-  if (profile.showDeliveryCost) {
-    visible.deliveryPerKg = estimate.deliveryPerKg;
+
+  if (profile.deliveryPerKg) {
+    visible.deliveryPerKg = row.deliveryPerKg;
   }
-  
-  if (profile.showOperationCost) {
-    visible.processes = estimate.processes;
+
+  if (profile.filmDensity) {
+    visible.filmDensity = row.filmDensity;
   }
-  
-  if (profile.showSolventCost) {
-    visible.solventCostPerKgUsd = estimate.solventCostPerKgUsd;
-    visible.solventRatio = estimate.solventRatio;
+
+  if (profile.solventMixCost) {
+    visible.solventCostPerKgUsd = row.solventCostPerKgUsd;
+    visible.solventRatio = row.solventRatio;
   }
-  
-  if (profile.showYieldConversions) {
-    visible.orderQuantityKg = estimate.orderQuantityKg;
+
+  if (profile.costBreakdown) {
+    visible.costBreakdown = row.costBreakdown ?? null;
   }
-  
+
   return visible;
 }
 
-/**
- * Strip hidden fields from material based on user's visibility profile
- */
-export function applyVisibilityToMaterial(material: any, profileName: string): any {
-  const profile = VISIBILITY_PROFILES[profileName] || VISIBILITY_PROFILES.sales_rep;
-  
-  const visible: any = {
-    id: material.id,
-    name: material.name,
-    type: material.type,
-    solidPercent: material.solidPercent,
-    density: material.density,
-    wastePercent: material.wastePercent,
-    isSolventBased: material.isSolventBased,
-    createdAt: material.createdAt,
-    updatedAt: material.updatedAt,
+export function stripCalculationResult(result: CalculationResult, profile: VisibilityProfile): any {
+  const estimate: any = {
+    ...result.estimate,
+    layers: result.estimate.layers?.map(layer => {
+      const copy = { ...layer };
+      if (!profile.costPerSqm) {
+        delete copy.costPerM2;
+      }
+      return copy;
+    }),
   };
-  
-  if (profile.showLibraryPrices) {
-    visible.costPerKgUsd = material.costPerKgUsd;
-  }
-  
-  return visible;
-}
 
-/**
- * Get visibility profile for user role
- */
-export function getVisibilityProfile(role: string, customProfile?: string): VisibilityProfile {
-  if (customProfile && VISIBILITY_PROFILES[customProfile]) {
-    return VISIBILITY_PROFILES[customProfile];
+  if (!profile.filmDensity) {
+    delete estimate.filmDensity;
   }
-  
-  return VISIBILITY_PROFILES[role] || VISIBILITY_PROFILES.sales_rep;
+
+  if (!profile.materialCostPerKg) {
+    delete estimate.materialCostPerKg;
+  }
+
+  if (!profile.markupPercent) {
+    delete estimate.markupPercent;
+  }
+
+  if (!profile.markupAmount) {
+    delete estimate.markupAmountPerKg;
+  }
+
+  if (!profile.platesPerKg) {
+    delete estimate.platesPerKg;
+  }
+
+  if (!profile.deliveryPerKg) {
+    delete estimate.deliveryPerKg;
+  }
+
+  if (!profile.operationCost) {
+    delete estimate.operationCostPerKg;
+  }
+
+  if (!profile.solventMixCost) {
+    delete estimate.solventMixCostPerKg;
+    delete estimate.solventMixRatio;
+  }
+
+  const stripped: any = {
+    ...result,
+    estimate,
+  };
+
+  if (!profile.costBreakdown) {
+    stripped.costBreakdown = null;
+  }
+
+  return stripped;
 }

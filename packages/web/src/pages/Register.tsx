@@ -6,15 +6,16 @@ import { useAuth } from '../hooks/useAuth';
 const Register = () => {
   const navigate = useNavigate();
   const { register, isLoading, error } = useAuth();
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     displayName: '',
     tenantName: '',
+    displayCurrency: 'AED',
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
@@ -28,7 +29,8 @@ const Register = () => {
         formData.email,
         formData.password,
         formData.displayName,
-        formData.tenantName
+        formData.tenantName,
+        formData.displayCurrency
       );
       navigate('/dashboard');
     } catch (err) {
@@ -112,6 +114,17 @@ const Register = () => {
                 placeholder="your@email.com"
                 className="w-full border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-navy mb-2">Display Currency</label>
+              <select name="displayCurrency" value={formData.displayCurrency} onChange={handleChange} className="input w-48">
+                <option value="AED">AED - UAE Dirham</option>
+                <option value="USD">USD - US Dollar</option>
+                <option value="EUR">EUR - Euro</option>
+                <option value="SAR">SAR - Saudi Riyal</option>
+                <option value="INR">INR - Indian Rupee</option>
+              </select>
             </div>
 
             <div>

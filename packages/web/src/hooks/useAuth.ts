@@ -69,11 +69,12 @@ export function useAuth() {
     email: string,
     password: string,
     displayName: string,
-    tenantName: string
+    tenantName: string,
+    displayCurrency: string
   ) => {
     try {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
-      const response = await apiClient.register(email, password, displayName, tenantName);
+      const response = await apiClient.register(email, password, displayName, tenantName, displayCurrency);
       apiClient.setToken(response.token);
       setState({
         isLoading: false,

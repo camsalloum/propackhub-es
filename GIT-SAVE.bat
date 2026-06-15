@@ -1,4 +1,8 @@
 @echo off
+REM Auto-save script - simple and fast
+cd /d "%~dp0"
+git add . && git commit -m "Auto-save" && git push origin main
+exit /b 0
 title Estimation Studio - SAVE TO GITHUB
 cls
 echo ====================================
@@ -16,8 +20,7 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo Enter commit message (what changed):
-set /p message="> "
+REM Auto-commit (no user input needed)
 
 if "%message%"=="" (
     echo ERROR: Message required
@@ -30,7 +33,7 @@ echo [1/3] Staging files...
 git add .
 
 echo [2/3] Committing...
-git commit -m "%message%"
+git commit -m "Auto-save"
 if %errorlevel% neq 0 (
     echo ERROR: Commit failed
     pause

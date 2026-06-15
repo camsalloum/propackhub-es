@@ -5,6 +5,23 @@ import { Search, Grid3x3, FileText, Layers } from 'lucide-react';
 const TemplatePicker = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'standard' | 'my' | 'blank'>('standard');
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null);
+
+  // fetch customers
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await apiClient.getCustomers();
+        if (mounted) setCustomers(data || []);
+      } catch (err) {
+        console.error('Failed to load customers', err);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   // Mock template data based on Decision #17 - 11 parent PGs
   const standardTemplates = [
@@ -49,12 +66,23 @@ const TemplatePicker = () => {
           <div>
             <label className="block text-sm font-medium text-navy mb-2">Customer</label>
             <div className="flex space-x-2">
-              <input
-                type="text"
-                placeholder="Search or select customer"
-                className="input flex-1"
-              />
-              <button className="btn-secondary whitespace-nowrap">+ New</button>
+              <select className="input flex-1" value={selectedCustomer || ''} onChange={(e) => setSelectedCustomer(e.target.value || null)}>
+                <option value="">Select a customer</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>{c.companyName}</option>
+                ))}
+              </select>
+              <button className="btn-secondary whitespace-nowrap" onClick={async () => {
+                const name = prompt('Customer company name');
+                if (!name) return;
+                try {
+                  const created = await apiClient.createCustomer({ companyName: name });
+                  setCustomers((prev) => [created, ...prev]);
+                  setSelectedCustomer(created.id);
+                } catch (err) {
+                  alert('Failed to create customer');
+                }
+              }}>+ New</button>
             </div>
           </div>
           <div>
@@ -142,10 +170,10 @@ const TemplatePicker = () => {
                     <h3 className="text-lg font-display font-semibold text-navy mb-4">{group}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {groupTemplates.map((template) => (
-                        <Link
+                        <div
                           key={template.id}
-                          to={`/estimate/new?template=${template.id}`}
-                          className="card hover:shadow-md transition-shadow cursor-pointer"
+                          onClick={() => setSelectedTemplate(template.id)}
+                          className={`card hover:shadow-md transition-shadow cursor-pointer ${selectedTemplate === template.id ? 'ring-2 ring-gold' : ''}`}
                         >
                           <div className="flex items-start space-x-4">
                             <div className="text-2xl">{template.icon}</div>
@@ -160,7 +188,7 @@ const TemplatePicker = () => {
                               </div>
                             </div>
                           </div>
-                        </Link>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -246,10 +274,15 @@ const TemplatePicker = () => {
 
       {/* Continue button */}
       <div className="mt-8 pt-8 border-t border-border">
-        <div className="flex justify-end">
+          <div className="flex justify-end">
           <button
             className="btn-primary"
-            disabled={!searchTerm && activeTab === 'standard'}
+            disabled={!selectedTemplate}
+            onClick={() => {
+              if (!selectedTemplate) return;
+              const url = `/estimate/new?template=${selectedTemplate}${selectedCustomer ? `&customer=${selectedCustomer}` : ''}`;
+              window.location.href = url;
+            }}
           >
             Continue to Estimate Editor
           </button>

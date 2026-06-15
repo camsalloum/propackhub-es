@@ -82,7 +82,7 @@ const Dashboard = () => {
           <p className="text-mist mt-2">Welcome back to ProPackHub Estimation Studio</p>
         </div>
         <Link
-          to="/estimate/new"
+          to="/estimate/choose"
           className="mt-4 lg:mt-0 btn-primary inline-flex items-center space-x-2"
         >
           <PlusCircle className="w-5 h-5" />
@@ -116,9 +116,9 @@ const Dashboard = () => {
       {/* Recent estimates */}
       {recentEstimates.length > 0 ? (
         <div className="card">
-          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-display font-semibold text-navy">Recent Estimates</h2>
-            <Link to="#" className="text-sm text-gold font-medium hover:underline">
+            <Link to="/estimates" className="text-sm text-gold font-medium hover:underline">
               View all
             </Link>
           </div>
@@ -158,9 +158,23 @@ const Dashboard = () => {
                           Open
                         </Link>
                         {estimate.status === 'sent' && (
-                          <Link to="#" className="text-sm text-mist font-medium hover:underline">
+                          <button onClick={async () => {
+                            try {
+                              const blob = await apiClient.getProposalPdf(estimate.refId);
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `proposal-${estimate.refId}.pdf`;
+                              document.body.appendChild(a);
+                              a.click();
+                              a.remove();
+                              URL.revokeObjectURL(url);
+                            } catch (err) {
+                              alert('Failed to download PDF');
+                            }
+                          }} className="text-sm text-mist font-medium hover:underline">
                             PDF
-                          </Link>
+                          </button>
                         )}
                       </div>
                     </td>

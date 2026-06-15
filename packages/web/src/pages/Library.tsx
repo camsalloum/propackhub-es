@@ -19,6 +19,34 @@ const Library = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+  const [showModal, setShowModal] = useState(false);
+
+  const openCreateModal = () => {
+    setEditingMaterial({ id: '', name: '', materialType: 'substrate', solidPercent: 30, density: 0.92, wastePercent: 0, costPerKgUsd: 0 });
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingMaterial(null);
+  };
+
+  const handleSaveMaterial = async () => {
+    if (!editingMaterial) return;
+    try {
+      if (editingMaterial.id) {
+        const updated = await apiClient.updateMaterial(editingMaterial.id, editingMaterial);
+        setMaterials((prev) => prev.map(m => m.id === updated.id ? updated : m));
+      } else {
+        const created = await apiClient.createMaterial(editingMaterial);
+        setMaterials((prev) => [created, ...prev]);
+      }
+      closeModal();
+    } catch (err) {
+      alert('Failed to save material: ' + (err instanceof Error ? err.message : 'Unknown'));
+    }
+  };
 
   useEffect(() => {
     fetchMaterials();
@@ -91,7 +119,7 @@ const Library = () => {
           <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Material Library</h1>
           <p className="text-mist mt-2">Manage your raw material prices and properties</p>
         </div>
-        <button className="mt-4 lg:mt-0 btn-primary inline-flex items-center space-x-2">
+        <button onClick={openCreateModal} className="mt-4 lg:mt-0 btn-primary inline-flex items-center space-x-2">
           <Plus className="w-5 h-5" />
           <span>Add Material</span>
         </button>
@@ -174,7 +202,7 @@ const Library = () => {
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex space-x-2">
-                        <button className="text-sm text-gold font-medium hover:underline">
+                        <button onClick={() => { setEditingMaterial(material); setShowModal(true); }} className="text-sm text-gold font-medium hover:underline">
                           Edit
                         </button>
                         <button
@@ -198,13 +226,46 @@ const Library = () => {
             <p className="text-mist mb-6">
               {searchTerm ? 'Try a different search term' : 'Add your first material to get started'}
             </p>
-            <button className="btn-primary inline-flex items-center space-x-2">
+            <button onClick={openCreateModal} className="btn-primary inline-flex items-center space-x-2">
               <Plus className="w-5 h-5" />
               <span>Add Material</span>
             </button>
           </div>
         )}
       </div>
+
+      {/* Modal */}
+      {showModal && editingMaterial && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-lg p-6">
+            <h3 className="font-display font-semibold text-navy mb-4">{editingMaterial.id ? 'Edit Material' : 'Add Material'}</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-navy mb-1">Name</label>
+                <input value={editingMaterial.name} onChange={(e) => setEditingMaterial({ ...editingMaterial, name: e.target.value })} className="input w-full" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-navy mb-1">Type</label>
+                  <select value={editingMaterial.materialType} onChange={(e) => setEditingMaterial({ ...editingMaterial, materialType: e.target.value as any })} className="input w-full">
+                    <option value="substrate">substrate</option>
+                    <option value="ink">ink</option>
+                    <option value="adhesive">adhesive</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-navy mb-1">Cost/kg (USD)</label>
+                  <input type="number" value={editingMaterial.costPerKgUsd} onChange={(e) => setEditingMaterial({ ...editingMaterial, costPerKgUsd: Number(e.target.value) })} className="input w-full" />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-2 mt-4">
+                <button onClick={closeModal} className="btn-secondary">Cancel</button>
+                <button onClick={handleSaveMaterial} className="btn-primary">Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Library info */}
       <div className="mt-6 text-sm text-mist">

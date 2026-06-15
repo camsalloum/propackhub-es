@@ -12,7 +12,8 @@
     "db:generate": "drizzle-kit generate:pg",
     "lint": "eslint src",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "pdf:test": "tsx src/scripts/generate_proposal_local.ts"
   },
   "dependencies": {
     "@es/engine": "*",
@@ -25,6 +26,9 @@
     "zod": "^3.22.4",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.5"
+  },
+  "optionalDependencies": {
+    "puppeteer": "^21.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.12.12",

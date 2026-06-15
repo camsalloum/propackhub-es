@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Users, DollarSign, FileText, Globe } from 'lucide-react';
+import { apiClient } from '../lib/api';
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState<'general' | 'team' | 'currency' | 'proposal'>('general');
@@ -10,6 +11,74 @@ const Settings = () => {
     { id: 'currency', name: 'Currency', icon: DollarSign },
     { id: 'proposal', name: 'Proposal Branding', icon: FileText },
   ];
+
+  // Controlled settings state
+  const [tenantName, setTenantName] = useState('');
+  const [defaultMarkup, setDefaultMarkup] = useState<number>(15);
+  const [defaultSlabTemplate, setDefaultSlabTemplate] = useState('standard');
+  const [displayCurrency, setDisplayCurrency] = useState('AED');
+  const [useAutoFx, setUseAutoFx] = useState(true);
+  const [exchangeRateUsdToDisplay, setExchangeRateUsdToDisplay] = useState<number>(3.6725);
+  const [lastFxUpdated, setLastFxUpdated] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
+  const [brandPrimaryColor, setBrandPrimaryColor] = useState('#0F1F3D');
+  const [termsAndConditions, setTermsAndConditions] = useState('');
+  const [footerText, setFooterText] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const settings = await apiClient.getSettings();
+        if (!mounted) return;
+        setTenantName(settings.name || '');
+        setDisplayCurrency(settings.displayCurrency || 'AED');
+        setExchangeRateUsdToDisplay(Number(settings.exchangeRateUsdToDisplay) || 1);
+        setUseAutoFx(Boolean(settings.useAutoFx));
+        setLogoUrl(settings.logoUrl || undefined);
+        setBrandPrimaryColor(settings.brandPrimaryColor || '#0F1F3D');
+        setTermsAndConditions(settings.termsAndConditions || '');
+        setFooterText((settings.footerText as string) || (settings.footer as string) || '');
+        setLastFxUpdated(settings.updatedAt ? new Date(settings.updatedAt).toLocaleString() : null);
+      } catch (err) {
+        console.error('Failed to load settings:', err);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const saveSettings = async () => {
+    try {
+      await apiClient.updateSettings({
+        name: tenantName,
+        displayCurrency,
+        useAutoFx,
+        exchangeRateUsdToDisplay,
+        logoUrl,
+        brandPrimaryColor,
+        termsAndConditions,
+        footerText,
+        defaultMarkup,
+        defaultSlabTemplate,
+      });
+      alert('Settings saved');
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      alert('Failed to save settings');
+    }
+  };
+
+  const refreshFx = async () => {
+    try {
+      const resp = await apiClient.request('POST', '/api/v1/settings/refresh-fx');
+      setExchangeRateUsdToDisplay(Number(resp.exchangeRateUsdToDisplay) || exchangeRateUsdToDisplay);
+      setLastFxUpdated(new Date().toLocaleString());
+      alert('Exchange rate refreshed');
+    } catch (err) {
+      console.error('Failed to refresh fx', err);
+      alert('Failed to refresh exchange rate');
+    }
+  };
 
   return (
     <div>
@@ -52,7 +121,8 @@ const Settings = () => {
                   <label className="block text-sm font-medium text-navy mb-2">Tenant Name</label>
                   <input
                     type="text"
-                    defaultValue="My Packaging Business"
+                    value={tenantName}
+                    onChange={(e) => setTenantName(e.target.value)}
                     className="input w-full lg:w-96"
                   />
                 </div>
@@ -61,7 +131,8 @@ const Settings = () => {
                   <label className="block text-sm font-medium text-navy mb-2">Default Markup %</label>
                   <input
                     type="number"
-                    defaultValue="15"
+                    value={defaultMarkup}
+                    onChange={(e) => setDefaultMarkup(Number(e.target.value))}
                     className="input w-32"
                   />
                   <p className="text-sm text-mist mt-2">Applied to all new estimates unless overridden</p>
@@ -69,15 +140,15 @@ const Settings = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-navy mb-2">Default Slab Template</label>
-                  <select className="input w-64">
-                    <option>Standard 4-tier (1T/2T/5T/10T)</option>
-                    <option>Small quantities (500/1000/2000 kg)</option>
-                    <option>Large quantities (5T/10T/20T/50T)</option>
+                  <select value={defaultSlabTemplate} onChange={(e) => setDefaultSlabTemplate(e.target.value)} className="input w-64">
+                    <option value="standard">Standard 4-tier (1T/2T/5T/10T)</option>
+                    <option value="small">Small quantities (500/1000/2000 kg)</option>
+                    <option value="large">Large quantities (5T/10T/20T/50T)</option>
                   </select>
                 </div>
 
                 <div className="pt-6 border-t border-border">
-                  <button className="btn-primary">Save Changes</button>
+                  <button onClick={() => saveSettings()} className="btn-primary">Save Changes</button>
                 </div>
               </div>
             </div>
@@ -161,7 +232,7 @@ const Settings = () => {
                 </div>
 
                 <div className="pt-6 border-t border-border">
-                  <button className="btn-primary">Save Changes</button>
+                  <button onClick={() => saveSettings()} className="btn-primary">Save Changes</button>
                 </div>
               </div>
             </div>
@@ -177,13 +248,13 @@ const Settings = () => {
                   <div className="flex items-center space-x-4">
                     <div className="relative">
                       <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-mist" />
-                      <select className="input pl-10 w-48">
-                        <option>AED - UAE Dirham</option>
-                        <option>USD - US Dollar</option>
-                        <option>EUR - Euro</option>
-                        <option>GBP - British Pound</option>
-                        <option>SAR - Saudi Riyal</option>
-                        <option>INR - Indian Rupee</option>
+                      <select className="input pl-10 w-48" value={displayCurrency} onChange={(e) => setDisplayCurrency(e.target.value)}>
+                        <option value="AED">AED - UAE Dirham</option>
+                        <option value="USD">USD - US Dollar</option>
+                        <option value="EUR">EUR - Euro</option>
+                        <option value="GBP">GBP - British Pound</option>
+                        <option value="SAR">SAR - Saudi Riyal</option>
+                        <option value="INR">INR - Indian Rupee</option>
                       </select>
                     </div>
                     <span className="text-sm text-mist">Material library always uses USD</span>
@@ -199,7 +270,8 @@ const Settings = () => {
                           type="radio"
                           id="auto-rate"
                           name="rate-source"
-                          defaultChecked
+                          checked={useAutoFx}
+                          onChange={() => setUseAutoFx(true)}
                           className="mr-2"
                         />
                         <label htmlFor="auto-rate" className="text-sm">Auto from web</label>
@@ -209,6 +281,8 @@ const Settings = () => {
                           type="radio"
                           id="manual-rate"
                           name="rate-source"
+                          checked={!useAutoFx}
+                          onChange={() => setUseAutoFx(false)}
                           className="mr-2"
                         />
                         <label htmlFor="manual-rate" className="text-sm">Manual override</label>
@@ -220,12 +294,13 @@ const Settings = () => {
                       <div className="flex items-center space-x-2">
                         <input
                           type="number"
-                          defaultValue="3.6725"
+                          value={exchangeRateUsdToDisplay}
+                          onChange={(e) => setExchangeRateUsdToDisplay(Number(e.target.value))}
                           step="0.0001"
                           className="input w-32"
                         />
-                        <span className="text-sm">AED</span>
-                        <button className="text-sm text-gold font-medium hover:underline ml-4">
+                        <span className="text-sm">{displayCurrency}</span>
+                        <button onClick={refreshFx} className="text-sm text-gold font-medium hover:underline ml-4">
                           Refresh now
                         </button>
                       </div>
@@ -257,11 +332,11 @@ const Settings = () => {
                   <label className="block text-sm font-medium text-navy mb-2">Company Logo</label>
                   <div className="flex items-center space-x-4">
                     <div className="w-32 h-16 bg-slate border border-dashed border-border rounded-lg flex items-center justify-center">
-                      <FileText className="w-8 h-8 text-mist" />
+                      {logoUrl ? <img src={logoUrl} alt="logo" className="max-w-full max-h-full" /> : <FileText className="w-8 h-8 text-mist" />}
                     </div>
                     <div>
-                      <button className="btn-secondary text-sm">Upload Logo</button>
-                      <p className="text-xs text-mist mt-2">PNG or SVG, max 2MB</p>
+                      <button onClick={() => { const url = prompt('Enter logo URL'); if (url) setLogoUrl(url); }} className="btn-secondary text-sm">Upload Logo</button>
+                      <p className="text-xs text-mist mt-2">PNG or SVG, max 2MB (URL or upload)</p>
                     </div>
                   </div>
                 </div>
@@ -272,7 +347,8 @@ const Settings = () => {
                     <div className="w-12 h-12 rounded-lg bg-navy border border-border"></div>
                     <input
                       type="text"
-                      defaultValue="#0F1F3D"
+                      value={brandPrimaryColor}
+                      onChange={(e) => setBrandPrimaryColor(e.target.value)}
                       className="input font-mono w-32"
                     />
                     <span className="text-sm text-mist">Used for headers and accents</span>
@@ -282,7 +358,8 @@ const Settings = () => {
                 <div>
                   <label className="block text-sm font-medium text-navy mb-2">Terms & Conditions</label>
                   <textarea
-                    defaultValue="Prices are valid for 30 days from the date of this quotation. Minimum order quantity applies. Lead times may vary based on material availability."
+                    value={termsAndConditions}
+                    onChange={(e) => setTermsAndConditions(e.target.value)}
                     rows={4}
                     className="input w-full"
                   />
@@ -291,14 +368,15 @@ const Settings = () => {
                 <div>
                   <label className="block text-sm font-medium text-navy mb-2">Footer Text</label>
                   <textarea
-                    defaultValue="My Packaging Business\n123 Business Street, Dubai, UAE\n+971 4 123 4567 | info@example.com"
+                    value={footerText}
+                    onChange={(e) => setFooterText(e.target.value)}
                     rows={3}
                     className="input w-full"
                   />
                 </div>
 
                 <div className="pt-6 border-t border-border">
-                  <button className="btn-primary">Save Changes</button>
+                  <button onClick={() => saveSettings()} className="btn-primary">Save Changes</button>
                 </div>
               </div>
             </div>

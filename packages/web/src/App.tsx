@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import EstimateEditor from './pages/EstimateEditor';
 import TemplatePicker from './pages/TemplatePicker';
+import EstimatesList from './pages/EstimatesList';
 import Library from './pages/Library';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
@@ -46,8 +47,10 @@ function App() {
         >
           <Route path="" element={<Dashboard />} />
           <Route path="dashboard" element={<Dashboard />} />
-          <Route path="estimate/new" element={<TemplatePicker />} />
+          <Route path="estimate/choose" element={<TemplatePicker />} />
+          <Route path="estimate/new" element={<EstimateEditor />} />
           <Route path="estimate/:id" element={<EstimateEditor />} />
+          <Route path="estimates" element={<EstimatesList />} />
           <Route path="library" element={<Library />} />
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

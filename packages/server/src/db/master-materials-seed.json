@@ -1,0 +1,142 @@
+[
+  {
+    "key": "ldpe-natural",
+    "name": "LDPE Natural",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 0.92,
+    "costPerKgUsd": 2.10,
+    "wastePercent": 5,
+    "isSolventBased": false
+  },
+  {
+    "key": "ldpe-shrink",
+    "name": "LDPE Shrink",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 0.92,
+    "costPerKgUsd": 2.30,
+    "wastePercent": 5,
+    "isSolventBased": false
+  },
+  {
+    "key": "pet-transparent",
+    "name": "PET Transparent",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 1.38,
+    "costPerKgUsd": 2.80,
+    "wastePercent": 5,
+    "isSolventBased": false
+  },
+  {
+    "key": "pet-metalized",
+    "name": "PET Metalized",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 1.38,
+    "costPerKgUsd": 3.50,
+    "wastePercent": 5,
+    "isSolventBased": false
+  },
+  {
+    "key": "bopp-transparent",
+    "name": "BOPP Transparent",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 0.91,
+    "costPerKgUsd": 2.40,
+    "wastePercent": 5,
+    "isSolventBased": false
+  },
+  {
+    "key": "bopp-white",
+    "name": "BOPP White",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 0.91,
+    "costPerKgUsd": 2.60,
+    "wastePercent": 5,
+    "isSolventBased": false
+  },
+  {
+    "key": "bopp-metalized",
+    "name": "BOPP Metalized",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 0.91,
+    "costPerKgUsd": 3.20,
+    "wastePercent": 5,
+    "isSolventBased": false
+  },
+  {
+    "key": "aluminium-foil",
+    "name": "Aluminium Foil",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 2.70,
+    "costPerKgUsd": 8.50,
+    "wastePercent": 5,
+    "isSolventBased": false
+  },
+  {
+    "key": "nylon",
+    "name": "Nylon (PA)",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 1.14,
+    "costPerKgUsd": 5.20,
+    "wastePercent": 5,
+    "isSolventBased": false
+  },
+  {
+    "key": "paper-kraft",
+    "name": "Paper Kraft",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 0.85,
+    "costPerKgUsd": 1.80,
+    "wastePercent": 8,
+    "isSolventBased": false
+  },
+  {
+    "key": "ink-sb",
+    "name": "Ink SB (Solvent Based)",
+    "type": "ink",
+    "solidPercent": 30,
+    "density": 1.00,
+    "costPerKgUsd": 12.00,
+    "wastePercent": 10,
+    "isSolventBased": true
+  },
+  {
+    "key": "ink-uv",
+    "name": "Ink UV",
+    "type": "ink",
+    "solidPercent": 100,
+    "density": 1.00,
+    "costPerKgUsd": 15.00,
+    "wastePercent": 10,
+    "isSolventBased": false
+  },
+  {
+    "key": "adhesive-sb",
+    "name": "Adhesive SB (Solvent Based)",
+    "type": "adhesive",
+    "solidPercent": 100,
+    "density": 1.00,
+    "costPerKgUsd": 6.50,
+    "wastePercent": 8,
+    "isSolventBased": true
+  },
+  {
+    "key": "adhesive-wb",
+    "name": "Adhesive WB (Water Based)",
+    "type": "adhesive",
+    "solidPercent": 100,
+    "density": 1.00,
+    "costPerKgUsd": 5.80,
+    "wastePercent": 8,
+    "isSolventBased": false
+  }
+]

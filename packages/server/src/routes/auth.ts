@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { hashPassword, verifyPassword, TokenPayload } from '../utils/auth';
 import { eq, and } from 'drizzle-orm';
+import { seedMaterialsForTenant } from '../db/seed-materials';
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -71,6 +72,14 @@ export async function registerRoute(
 
     if (!user) {
       return reply.status(500).send({ error: 'Failed to create user' });
+    }
+
+    // Seed master materials library for new tenant
+    try {
+      await seedMaterialsForTenant(tenant.id);
+    } catch (seedError) {
+      console.error('Failed to seed materials, but tenant/user created:', seedError);
+      // Continue - user can add materials manually
     }
 
     // Generate JWT token

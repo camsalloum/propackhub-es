@@ -1,28 +1,36 @@
 @echo off
-title ProPackHub Estimation Studio
-echo Starting ProPackHub Estimation Studio...
+title Estimation Studio - START SERVERS
+cls
+echo ====================================
+echo    ESTIMATION STUDIO
+echo    Start Servers
+echo ====================================
 echo.
 
-REM Install if needed
+REM Install if needed (first time only)
 if not exist "node_modules" (
-    echo Installing dependencies... (first time only)
+    echo [1/2] Installing dependencies...
     call npm install
     if %errorlevel% neq 0 (
-        echo Failed to install dependencies. Check Node.js installation.
+        echo ERROR: Failed to install. Check Node.js.
         pause
         exit /b 1
     )
+    echo.
 )
 
-echo Starting servers...
-echo Web App: http://localhost:5000
-echo API: http://localhost:5001
+echo [2/2] Starting servers...
+echo.
+echo   Web App: http://localhost:5000
+echo   API:     http://localhost:5001
+echo.
+echo Press Ctrl+C to stop servers
 echo.
 
-REM Open browser after short delay
+REM Open browser after 3 seconds
 start /b cmd /c "timeout /t 3 /nobreak > nul && start http://localhost:5000"
 
-REM Start servers
+REM Start both servers
 call npm run start:servers
 
 echo.

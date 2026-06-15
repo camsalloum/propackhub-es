@@ -1,20 +1,93 @@
-# ProPackHub — Estimation Studio
+# ProPackHub Estimation Studio
 
-Flexible packaging cost estimator (third ProPackHub product). **Pre-build** — docs and mockups only.
+Flexible Packaging Cost Estimator - Standalone SaaS application.
 
-## Read first
+## 🚀 Quick Start
 
-| Doc | Purpose |
-|-----|---------|
-| [docs/ES_MEMORY.md](docs/ES_MEMORY.md) | Living memory |
-| [docs/ES_PRD_v3_FINAL_BUILD_SPEC.md](docs/ES_PRD_v3_FINAL_BUILD_SPEC.md) | Build spec |
-| [docs/ESTIMATION_STUDIO_MASTER_PLAN.md](docs/ESTIMATION_STUDIO_MASTER_PLAN.md) | Master plan |
-| [mockup/es-estimate-editor.html](mockup/es-estimate-editor.html) | UI mockup |
+### First Time Setup
+1. **Setup Database** (one time only)
+   - Double-click: `SETUP-DATABASE.bat`
+   - Enter PostgreSQL password when asked
 
-Legacy Laravel reference: `archive/legacy-laravel/`
+2. **Start Application**
+   - Double-click: `RUN-ES.bat`
+   - Opens http://localhost:5000 automatically
 
-## GitHub
+### Daily Use
+- **Start:** Double-click `RUN-ES.bat`
+- **Save to GitHub:** Double-click `GIT-SAVE.bat`
 
-Remote (when created): `https://github.com/camsalloum/propackhub-es.git`
+---
 
-Mirror architecture from `../formulation-studio/` when scaffolding code.
+## 📦 What's Inside
+
+### Backend (Complete ✅)
+- PostgreSQL database (12 tables)
+- Fastify API server
+- JWT authentication with tenant isolation
+- Materials library (USD pricing)
+- Estimates with calculation engine
+- Port: 5001
+
+### Frontend (Auth Complete ✅)
+- React SPA with Tailwind CSS
+- Login/Register pages
+- Protected routes
+- Dashboard, Library, Settings pages
+- Port: 5000
+
+### Next Steps
+- Wire UI pages to real API data
+- Add PDF generation
+- Implement re-quote feature
+
+---
+
+## 📚 Documentation
+
+- **SETUP.md** - Detailed setup guide
+- **IMPLEMENTATION_COMPLETE.md** - Technical overview
+- **DATABASE_READY.md** - Database status
+- **docs/ES_MEMORY.md** - Project decisions
+- **docs/LIVE_STATE.md** - Current status
+
+---
+
+## 🔗 Links
+
+- **Repository:** https://github.com/camsalloum/propackhub-es.git
+- **Web:** http://localhost:5000
+- **API:** http://localhost:5001/api/v1
+
+---
+
+## 🛠️ Manual Commands
+
+```bash
+# Install dependencies
+npm install
+
+# Start servers
+npm run start:servers
+
+# Database
+cd packages/server
+npm run db:push
+
+# Git
+git add .
+git commit -m "message"
+git push origin main
+```
+
+---
+
+## 📋 Requirements
+
+- Node.js 22+
+- PostgreSQL 17 or 18
+- Windows (batch files)
+
+---
+
+**Status:** Backend operational, frontend auth complete, ready for data integration.

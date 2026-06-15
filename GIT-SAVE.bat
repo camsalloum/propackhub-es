@@ -1,11 +1,13 @@
 @echo off
-title Quick Save to GitHub - Estimation Studio
+title Estimation Studio - SAVE TO GITHUB
+cls
 echo ====================================
-echo Quick Save to GitHub
+echo    ESTIMATION STUDIO
+echo    Save to GitHub
 echo ====================================
 echo.
 
-REM Check if there are changes
+REM Check git status
 git status --short
 if %errorlevel% neq 0 (
     echo ERROR: Not a git repository
@@ -14,42 +16,40 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-set /p message="Enter commit message: "
+echo Enter commit message (what changed):
+set /p message="> "
 
 if "%message%"=="" (
-    echo ERROR: Commit message cannot be empty
+    echo ERROR: Message required
     pause
     exit /b 1
 )
 
 echo.
-echo [1/3] Staging changes...
+echo [1/3] Staging files...
 git add .
 
-echo.
 echo [2/3] Committing...
 git commit -m "%message%"
-
 if %errorlevel% neq 0 (
     echo ERROR: Commit failed
     pause
     exit /b 1
 )
 
-echo.
 echo [3/3] Pushing to GitHub...
-git push -u origin main
-
+git push origin main
 if %errorlevel% neq 0 (
-    echo WARNING: Push failed, but commit was successful locally
-    echo Run GIT-PUSH.bat to retry pushing
+    echo WARNING: Push failed
+    echo Try running: git push origin main
     pause
     exit /b 1
 )
 
 echo.
-echo ✅ All changes saved to GitHub!
-echo.
-echo Repository: https://github.com/camsalloum/propackhub-es.git
+echo ====================================
+echo   SUCCESS!
+echo   https://github.com/camsalloum/propackhub-es
+echo ====================================
 echo.
 pause

@@ -374,3 +374,25 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 - Refreshes material prices on next calculate
 
 **Status:** All 7 estimate endpoints now functional, frontend can open/edit/delete estimates
+
+
+### 2026-06-15 — Master Materials Library Seeding
+
+**Issue:** New tenants got empty material library, couldn't create estimates (PRD §3.2 requirement violated).
+
+**Solution:** Auto-seed 14 platform master materials on tenant registration.
+
+**Master materials added:**
+- **Substrates (10):** LDPE Natural, LDPE Shrink, PET Transparent, PET Metalized, BOPP Transparent, BOPP White, BOPP Metalized, Aluminium Foil, Nylon, Paper Kraft
+- **Inks (2):** Ink SB (30% solid, $12/kg), Ink UV (100% solid, $15/kg)
+- **Adhesives (2):** Adhesive SB ($6.50/kg), Adhesive WB ($5.80/kg)
+
+**Implementation:**
+- Created `master-materials-seed.json` with 14 materials (all USD pricing, density, waste%, isSolventBased flag)
+- Created `seed-materials.ts` utility to copy materials to tenant
+- Updated `auth.ts` register route to call `seedMaterialsForTenant()` after tenant creation
+- Seeding is fire-and-forget (logs error but doesn't fail registration)
+
+**Result:** New users can immediately create estimates with ready-to-use materials
+
+**Note:** Materials are **copied** to tenant (not shared) - each tenant owns their library and can modify prices

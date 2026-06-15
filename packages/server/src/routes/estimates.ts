@@ -268,7 +268,12 @@ export async function calculateEstimateRoute(
       slabs: [],
       displayCurrencyCode: estimate.displayCurrency,
       exchangeRateUsdToDisplay: parseFloat(estimate.exchangeRateUsdToDisplay),
-      orderQuantityKg: 1000, // Default for initial calculation
+      // Use order quantity from estimate or first slab, fallback to 1000
+      orderQuantityKg: estimate.orderQuantityKg 
+        ? parseFloat(estimate.orderQuantityKg)
+        : (slabs[0]?.quantityKg ? parseFloat(slabs[0].quantityKg) : 1000),
+      solventCostPerKgUsd: estimate.solventCostPerKgUsd ? parseFloat(estimate.solventCostPerKgUsd) : undefined,
+      solventRatio: estimate.solventRatio ? parseFloat(estimate.solventRatio) : undefined,
       createdAt: estimate.createdAt,
       updatedAt: estimate.updatedAt,
     };
@@ -282,7 +287,7 @@ export async function calculateEstimateRoute(
       .set({
         totalGsm: result.estimate.totalGsm?.toString(),
         totalMicron: result.estimate.totalMicron?.toString(),
-        materialCostPerKgUsd: result.estimate.materialCostPerKgUsd?.toString(),
+        materialCostPerKg: result.estimate.materialCostPerKg?.toString(),
         salePricePerKg: result.estimate.salePricePerKg?.toString(),
         updatedAt: new Date(),
       })

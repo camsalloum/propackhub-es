@@ -162,7 +162,12 @@ export function hasSolventBasedLayers(layers: Layer[], materials: Map<string, Ma
     const material = materials.get(layer.materialId);
     if (!material) return false;
     
-    // Ink SB or Adhesive SB require solvent mix
+    // Use isSolventBased field if available, otherwise fallback to name check
+    if (material.isSolventBased !== undefined) {
+      return material.isSolventBased;
+    }
+    
+    // Fallback: Ink SB or Adhesive SB require solvent mix (legacy support)
     return (material.type === 'ink' && material.name.includes('SB')) ||
            (material.type === 'adhesive' && material.name.includes('SB'));
   });

@@ -7,6 +7,7 @@ import { initializeDatabase, closeDatabase } from './db';
 import { registerAuthRoutes } from './routes/auth';
 import { registerMaterialRoutes } from './routes/materials';
 import { registerEstimateRoutes } from './routes/estimates';
+import { registerCustomerRoutes } from './routes/customers';
 
 const PORT = parseInt(process.env.PORT || '5001');
 const HOST = process.env.HOST || '0.0.0.0';
@@ -76,6 +77,7 @@ fastify.get('/api/v1', async () => {
 registerAuthRoutes(fastify);
 registerMaterialRoutes(fastify);
 registerEstimateRoutes(fastify);
+registerCustomerRoutes(fastify);
 
 // Error handler
 fastify.setErrorHandler((error, request, reply) => {

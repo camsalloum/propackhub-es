@@ -11,6 +11,7 @@ export interface Material {
   density: number; // g/cm³
   costPerKgUsd: number;
   wastePercent: number;
+  isSolventBased?: boolean; // True for SB ink/adhesive (replaces name.includes('SB') check)
 }
 
 export interface Layer {
@@ -75,6 +76,10 @@ export interface Estimate {
   deliveryPerKg: number; // In display currency
   processes: Process[];
   slabs: Slab[];
+  
+  // Solvent mix config (for SB ink/adhesive)
+  solventCostPerKgUsd?: number; // Cost of solvent in USD (default: 2.0)
+  solventRatio?: number; // Ratio (0-1) (default: 0.5)
   
   // Currency
   displayCurrencyCode: string;

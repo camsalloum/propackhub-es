@@ -67,6 +67,7 @@ export const materials = pgTable('materials', {
   density: decimal('density', { precision: 10, scale: 4 }).notNull(), // g/cm³
   costPerKgUsd: decimal('cost_per_kg_usd', { precision: 12, scale: 4 }).notNull(),
   wastePercent: integer('waste_percent').notNull().default(0),
+  isSolventBased: boolean('is_solvent_based').default(false), // True for SB ink/adhesive
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
@@ -114,10 +115,15 @@ export const estimates = pgTable('estimates', {
   displayCurrency: varchar('display_currency', { length: 3 }).notNull(),
   exchangeRateUsdToDisplay: decimal('exchange_rate_usd_to_display', { precision: 10, scale: 6 }).notNull(),
   
+  // Solvent mix config (for SB ink/adhesive)
+  solventCostPerKgUsd: decimal('solvent_cost_per_kg_usd', { precision: 12, scale: 4 }),
+  solventRatio: decimal('solvent_ratio', { precision: 5, scale: 4 }),
+  orderQuantityKg: decimal('order_quantity_kg', { precision: 12, scale: 2 }),
+  
   // Calculated
   totalGsm: decimal('total_gsm', { precision: 12, scale: 2 }),
   totalMicron: decimal('total_micron', { precision: 12, scale: 2 }),
-  materialCostPerKgUsd: decimal('material_cost_per_kg_usd', { precision: 12, scale: 4 }),
+  materialCostPerKg: decimal('material_cost_per_kg', { precision: 12, scale: 4 }),
   salePricePerKg: decimal('sale_price_per_kg', { precision: 12, scale: 4 }),
   
   // Re-quote tracking

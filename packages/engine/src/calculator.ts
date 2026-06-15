@@ -291,16 +291,21 @@ function calculateSolventMix(
   let solventBasedGsm = 0;
   layers.forEach(layer => {
     const material = materials.get(layer.materialId);
-    if (material && 
-        ((material.type === 'ink' && material.name.includes('SB')) ||
-         (material.type === 'adhesive' && material.name.includes('SB')))) {
-      solventBasedGsm += layer.gsm || 0;
+    if (material) {
+      // Use isSolventBased field if available, otherwise fallback to name check
+      const isSB = material.isSolventBased !== undefined 
+        ? material.isSolventBased 
+        : material.name.includes('SB');
+      
+      if ((material.type === 'ink' || material.type === 'adhesive') && isSB) {
+        solventBasedGsm += layer.gsm || 0;
+      }
     }
   });
   
-  // TODO: Get solvent mix cost/kg from estimate or tenant settings
-  const solventCostPerKg = 2.0; // Default placeholder
-  const solventRatio = 0.5; // Default placeholder ratio
+  // Get solvent mix cost from estimate or use default
+  const solventCostPerKg = estimate.solventCostPerKgUsd || 2.0;
+  const solventRatio = estimate.solventRatio || 0.5;
   
   // cost_m2_solvent = (sum_gsm / total_gsm) × (cost_per_kg / 1000)
   const costPerM2 = (solventBasedGsm / totalGsm) * (solventCostPerKg / 1000);

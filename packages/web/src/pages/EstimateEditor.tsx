@@ -1,29 +1,62 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { Save, Download, ArrowLeft, Layers, Calculator, Ruler, DollarSign } from 'lucide-react';
+import { apiClient } from '../lib/api';
 
 const EstimateEditor = () => {
+  const { id } = useParams<{ id: string }>();
+  const [loading, setLoading] = useState(true);
+  const [estimate, setEstimate] = useState<any>(null);
+  const [layers, setLayers] = useState<any[]>([]);
   const [activeSection, setActiveSection] = useState<'structure' | 'dimensions' | 'slabs' | 'markup'>('structure');
   const [printingWebClass, setPrintingWebClass] = useState<'wide_web' | 'narrow_web'>('wide_web');
 
-  // Mock data
-  const estimate = {
-    id: 'QT-2026-00142',
-    jobName: 'Chips duplex laminate',
-    customer: 'Acme Snacks Ltd',
-    status: 'draft',
-    totalGsm: 78.4,
-    totalMicron: 67,
-    salePricePerKg: 12.48,
-    displayCurrency: 'AED'
+  useEffect(() => {
+    if (id) {
+      fetchEstimate(id);
+    }
+  }, [id]);
+
+  const fetchEstimate = async (estimateId: string) => {
+    try {
+      setLoading(true);
+      // TODO: Implement GET /api/v1/estimates/:id endpoint
+      // const data = await apiClient.getEstimate(estimateId);
+      // setEstimate(data);
+      // setLayers(data.layers || []);
+      
+      // Mock data for now
+      setEstimate({
+        id: estimateId,
+        jobName: 'Chips duplex laminate',
+        customer: 'Acme Snacks Ltd',
+        status: 'draft',
+        totalGsm: 78.4,
+        totalMicron: 67,
+        salePricePerKg: 12.48,
+        displayCurrency: 'AED'
+      });
+      
+      setLayers([
+        { id: 1, type: 'substrate', material: 'PET Transparent', micron: 12, gsm: 16.56, costPerKg: 8.70 },
+        { id: 2, type: 'ink', material: 'Ink SB', micron: 2, gsm: 0.6, costPerKg: 12.00 },
+        { id: 3, type: 'adhesive', material: 'Adhesive SB', micron: 3, gsm: 3.0, costPerKg: 6.50 },
+        { id: 4, type: 'substrate', material: 'LDPE Natural', micron: 50, gsm: 46.0, costPerKg: 2.10 },
+      ]);
+    } catch (error) {
+      console.error('Failed to load estimate:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const layers = [
-    { id: 1, type: 'substrate', material: 'PET Transparent', micron: 12, gsm: 16.56, costPerKg: 8.70 },
-    { id: 2, type: 'ink', material: 'Ink SB', micron: 2, gsm: 0.6, costPerKg: 12.00 },
-    { id: 3, type: 'adhesive', material: 'Adhesive SB', micron: 3, gsm: 3.0, costPerKg: 6.50 },
-    { id: 4, type: 'substrate', material: 'LDPE Natural', micron: 50, gsm: 46.0, costPerKg: 2.10 },
-  ];
+  if (loading) {
+    return <div className="p-8">Loading estimate...</div>;
+  }
+
+  if (!estimate) {
+    return <div className="p-8">Estimate not found</div>;
+  }
 
   const slabs = [
     { quantityKg: 1000, pricePerKg: 12.48, total: 12480 },

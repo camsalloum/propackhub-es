@@ -323,3 +323,30 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 5. **Database persistence** for everything
 
 **Next: Wire web pages to API (currently still UI mockups)**
+
+
+### 2026-06-15 — Critical Bug Fixes (6 major issues)
+
+**Context:** After reviewing codebase, discovered 6 runtime bugs that would cause silent failures.
+
+**Bugs fixed:**
+1. **materialCostPerKgUsd → materialCostPerKg** - Field name mismatch prevented material cost from saving
+2. **Missing customers route** - Created complete CRUD for `/api/v1/customers/*` endpoints
+3. **EstimateEditor useParams** - Added dynamic ID extraction and API fetch logic
+4. **Hardcoded solvent cost** - Made `solventCostPerKgUsd` and `solventRatio` configurable per estimate
+5. **String-based SB detection** - Added `isSolventBased` boolean field to materials for reliable detection
+6. **Hardcoded orderQuantityKg** - Calculator now uses dynamic order quantity from estimate/slab
+
+**Schema changes:**
+- `materials` table: + `is_solvent_based` (boolean)
+- `estimates` table: + `solvent_cost_per_kg_usd`, `solvent_ratio`, `order_quantity_kg`
+- `estimates` table: renamed `material_cost_per_kg_usd` → `material_cost_per_kg`
+
+**Files modified:** 9 files (engine types/calculator/validator, server schema/routes/index, web EstimateEditor)
+
+**Artifacts:**
+- `CRITICAL_BUGS_FIXED.md` - Complete bug documentation
+- `packages/server/migration-add-bug-fixes.sql` - Database migration script
+- `packages/server/src/routes/customers.ts` - New customers CRUD route
+
+**Next:** Run migration, restart servers, test all endpoints

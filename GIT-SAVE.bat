@@ -1,8 +1,4 @@
 @echo off
-REM Auto-save script - simple and fast
-cd /d "%~dp0"
-git add . && git commit -m "Auto-save" && git push origin main
-exit /b 0
 title Estimation Studio - SAVE TO GITHUB
 cls
 echo ====================================
@@ -11,19 +7,12 @@ echo    Save to GitHub
 echo ====================================
 echo.
 
+cd /d "%~dp0"
+
 REM Check git status
 git status --short
 if %errorlevel% neq 0 (
     echo ERROR: Not a git repository
-    pause
-    exit /b 1
-)
-
-echo.
-REM Auto-commit (no user input needed)
-
-if "%message%"=="" (
-    echo ERROR: Message required
     pause
     exit /b 1
 )
@@ -35,9 +24,7 @@ git add .
 echo [2/3] Committing...
 git commit -m "Auto-save"
 if %errorlevel% neq 0 (
-    echo ERROR: Commit failed
-    pause
-    exit /b 1
+    echo WARNING: Nothing to commit or commit failed
 )
 
 echo [3/3] Pushing to GitHub...
@@ -45,9 +32,11 @@ git push origin main
 if %errorlevel% neq 0 (
     echo WARNING: Push failed
     echo Try running: git push origin main
-    pause
-    exit /b 1
 )
+
+echo.
+echo Done.
+pause
 
 echo.
 echo ====================================

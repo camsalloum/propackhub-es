@@ -53,8 +53,19 @@
 - FX fetch on register + refresh endpoint
 - Visibility stripping on estimate list + calculate (not on GET by id)
 - PATCH estimate updates layers/slabs/processes (delete + re-insert)
-- GET estimate enriches layers with material details
+- GET estimate enriches layers with material details (materialName, materialType, isSolventBased)
+- **Fix 1 (2026-06-17):** `getEstimateRoute` ReferenceError fixed — replaced broken `const [user]` self-reference with `extractUserFromRequest`
+- **Fix 2 (2026-06-17):** `updateEstimateRoute` now accepts `status`, `notes`, `note` — added to `EstimateCreateSchema`; added `notes` column to DB
+- **Fix 3 (2026-06-17):** `activityLogs.userId` FK changed from `onDelete: 'set null'` → `onDelete: 'cascade'` (was contradictory with `notNull()`)
+- **Fix 4 (2026-06-17):** Engine `tsup.config.ts` — `dts: true`, `outExtension: () => ({ js: '.mjs' })`; `package.json` types → `index.d.mts`; added `@types/bcryptjs`, `@types/pg`, `@types/pdfkit` to server devDeps
+- **Fix 5 (2026-06-17):** CustomersList page created (`/customers`), route added in App.tsx, Layout nav `href: '/customers'`
+- **Fix 6 (2026-06-17):** `GET /api/v1/customers/:id/estimates` server route added; `apiClient.getCustomerEstimates()` added; `CustomerDetail.tsx` uses server-scoped query instead of client-side filter
+- **Fix 7 (2026-06-17):** `requoteEstimateRoute` now returns `price_changes[]` array comparing old vs new material costs
+- **Fix 8 (2026-06-17):** `getEstimatesRoute` enriches estimates with `customerName`; Dashboard uses `displayCurrency` instead of hardcoded `AED`
+- **Fix 9 (2026-06-17):** PDF proposal shows real customer name (fetches from customers table), applies visibility profile to hide `markupPercent`/`materialCostPerKg` for sales rep
+- **Fix 10 (2026-06-17):** `run-migration.cjs` updated to use `drizzle-kit push`; `FX_API_URL` in `.env.example` appends `/USD`
 - Templates: GET list, GET by id, POST instantiate (creates estimate with pre-filled layers/processes/slabs)
+- **DB migration (2026-06-17):** All tables aligned with Drizzle schema (enums, column renames, structure_templates table, notes column, activity_logs FK fix)
 - **Builds successfully**
 
 ### Web (`packages/web`) — good
@@ -69,12 +80,9 @@
 ## What does NOT work yet
 
 1. Client-side engine in web for instant recalc (Decision #23) — deferred B6
-2. Customers list page — nav link is `#` (E2 partial)
-3. Re-quote `price_changes[]` response — copies slabs but no delta calc (E4 partial)
-4. PDF proposal — basic HTML works but needs branding + slab table polish (Phase F)
-5. CI (server test job fails — no test files) (Phase G)
-6. FX conversion in UI display (Phase B7)
-7. Dashboard expiring proposals, `/dashboard/summary` (Phase G)
+2. FX conversion in UI display (Phase B7)
+3. Dashboard expiring proposals, `/dashboard/summary` (Phase G)
+4. CI (server test job fails — no test files) (Phase G)
 
 ---
 

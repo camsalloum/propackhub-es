@@ -156,11 +156,38 @@ async function deleteCustomerRoute(
   return reply.status(204).send();
 }
 
+// Get estimates for a customer
+async function getCustomerEstimatesRoute(
+  request: FastifyRequest<{
+    Params: { id: string };
+  }>,
+  reply: FastifyReply
+) {
+  await request.jwtVerify();
+  const tenantId = extractTenantFromRequest(request);
+  const { id } = request.params;
+  const db = getDatabase();
+
+  const estimates = await db
+    .select()
+    .from(schema.estimates)
+    .where(
+      and(
+        eq(schema.estimates.customerId, id),
+        eq(schema.estimates.tenantId, tenantId)
+      )
+    )
+    .orderBy(schema.estimates.createdAt);
+
+  return reply.send(estimates);
+}
+
 // Register routes
 export async function registerCustomerRoutes(fastify: FastifyInstance) {
   fastify.get('/api/v1/customers', getCustomersRoute);
   fastify.post('/api/v1/customers', createCustomerRoute);
   fastify.get('/api/v1/customers/:id', getCustomerRoute);
+  fastify.get('/api/v1/customers/:id/estimates', getCustomerEstimatesRoute);
   fastify.patch('/api/v1/customers/:id', updateCustomerRoute);
   fastify.delete('/api/v1/customers/:id', deleteCustomerRoute);
 }

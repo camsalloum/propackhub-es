@@ -41,6 +41,9 @@ const EstimateCreateSchema = z.object({
     quantityKg: z.number().positive(),
     pricePerKg: z.number().nonnegative(),
   })).default([]),
+  status: z.enum(['draft', 'sent', 'won', 'lost']).optional(),
+  notes: z.string().optional(),
+  note: z.string().optional(), // used in activity log
 });
 
 async function generateRefNumber(db: any, tenantId: string): Promise<string> {
@@ -78,7 +81,17 @@ export async function getEstimatesRoute(
       .where(eq(schema.estimates.tenantId, tenantId))
       .orderBy(desc(schema.estimates.createdAt));
 
-    const visibleEstimates = estimates.map(est => stripEstimateRow(est, profile));
+    // Enrich with customer names
+    const customers = await db
+      .select({ id: schema.customers.id, companyName: schema.customers.companyName })
+      .from(schema.customers)
+      .where(eq(schema.customers.tenantId, tenantId));
+    const customerMap = new Map(customers.map(c => [c.id, c.companyName]));
+
+    const visibleEstimates = estimates.map(est => ({
+      ...stripEstimateRow(est, profile),
+      customerName: est.customerId ? (customerMap.get(est.customerId) ?? null) : null,
+    }));
 
     return reply.send(visibleEstimates);
   } catch (error: any) {
@@ -440,7 +453,7 @@ export async function generateProposalPdfRoute(
       .from(schema.tenants)
       .where(eq(schema.tenants.id, tenantId));
 
-    const customerName = estimate.customerId ? estimate.customerId : 'Customer';
+    const customerName = estimate.customerId ? ((await db.select({ companyName: schema.customers.companyName }).from(schema.customers).where(eq(schema.customers.id, estimate.customerId)))[0]?.companyName || 'Customer') : 'Customer';
 
     const laminateSvg = (() => {
       // Render simple stacked rectangles representing layers
@@ -542,6 +555,8 @@ export async function generateProposalPdfRoute(
       <div class="left-col">
         <div class="section-title">Estimate Summary</div>
         <div>Sale Price / kg: <strong>${result.estimate.salePricePerKg ? result.estimate.salePricePerKg.toFixed(2) : (estimate.salePricePerKg || '')}</strong></div>
+        ${profile.materialCostPerKg ? `<div>Material Cost / kg: <strong>${result.estimate.materialCostPerKg?.toFixed(2) ?? ''}</strong></div>` : ''}
+        ${profile.markupPercent ? `<div>Markup: <strong>${estimate.markupPercent}%</strong></div>` : ''}
         <div style="margin-top:12px" class="section-title">Slab Pricing</div>
         <table class="slab-table">
           <thead><tr><th>Quantity (kg)</th><th>Price / kg (${estimate.displayCurrency})</th><th>Total (${estimate.displayCurrency})</th></tr></thead>
@@ -703,16 +718,25 @@ async function getEstimateRoute(
       .where(and(eq(schema.activityLogs.entityType, 'estimate'), eq(schema.activityLogs.entityId, id)))
       .orderBy(desc(schema.activityLogs.createdAt));
 
-    const [user] = await db
-      .select({ id: schema.users.id })
-      .from(schema.users)
-      .where(and(eq(schema.users.id, user.userId), eq(schema.users.tenantId, tenantId)));
+    const requestUser = extractUserFromRequest(request);
+    const profile = await getUserVisibilityProfile(db, requestUser.userId);
 
-    const profile = await getUserVisibilityProfile(db, user.userId);
+    // Enrich layers with material details
+    const allMaterials = await db
+      .select()
+      .from(schema.materials)
+      .where(eq(schema.materials.tenantId, tenantId));
+    const materialMap = new Map(allMaterials.map(m => [m.id, m]));
+    const enrichedLayers = layers.map(l => ({
+      ...l,
+      materialName: materialMap.get(l.materialId)?.name ?? 'Unknown',
+      materialType: materialMap.get(l.materialId)?.type ?? 'substrate',
+      isSolventBased: materialMap.get(l.materialId)?.isSolventBased ?? false,
+    }));
 
     return reply.send({
       ...stripEstimateRow(estimate, profile),
-      layers,
+      layers: enrichedLayers,
       processes: profile.operationCost ? processes : [],
       slabs: profile.slabTable ? slabs : [],
       activityLogs: logs || [],
@@ -991,7 +1015,28 @@ async function requoteEstimateRoute(
       });
     }
 
-    return reply.status(201).send(newEstimate);
+    // Build price_changes: compare current material costs vs source
+    const allMaterials = await db
+      .select()
+      .from(schema.materials)
+      .where(eq(schema.materials.tenantId, tenantId));
+    const materialMap = new Map(allMaterials.map(m => [m.id, m]));
+
+    const priceChanges = sourceLayers.map(layer => {
+      const mat = materialMap.get(layer.materialId);
+      const oldCostPerSqM = Number(layer.costPerM2 || 0);
+      const newCostPerSqM = mat ? Number(mat.costPerM2 || 0) : oldCostPerSqM;
+      const deltaPct = oldCostPerSqM > 0 ? ((newCostPerSqM - oldCostPerSqM) / oldCostPerSqM) * 100 : 0;
+      return {
+        materialId: layer.materialId,
+        materialName: mat?.name ?? 'Unknown',
+        oldCostUsd: oldCostPerSqM,
+        newCostUsd: newCostPerSqM,
+        deltaPct: Math.round(deltaPct * 100) / 100,
+      };
+    });
+
+    return reply.status(201).send({ ...newEstimate, price_changes: priceChanges });
   } catch (error: any) {
     console.error('Requote estimate error:', error);
     return reply.status(500).send({ error: 'Failed to requote estimate' });

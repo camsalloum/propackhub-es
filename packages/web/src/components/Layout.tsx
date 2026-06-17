@@ -21,7 +21,7 @@ const Layout = () => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Estimates', href: '/estimate/new', icon: FileText },
-    { name: 'Customers', href: '#', icon: Users },
+    { name: 'Customers', href: '/customers', icon: Users },
     { name: 'Library', href: '/library', icon: FolderOpen },
     { name: 'Settings', href: '/settings', icon: SettingsIcon },
   ];

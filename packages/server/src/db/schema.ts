@@ -127,6 +127,9 @@ export const estimates = pgTable('estimates', {
   materialCostPerKg: decimal('material_cost_per_kg', { precision: 12, scale: 4 }),
   salePricePerKg: decimal('sale_price_per_kg', { precision: 12, scale: 4 }),
   
+  // Notes
+  notes: text('notes'),
+  
   // Re-quote tracking
   sourceEstimationId: uuid('source_estimation_id').references(() => estimates.id, { onDelete: 'set null' }),
   
@@ -196,7 +199,7 @@ export const slabs = pgTable('slabs', {
 export const activityLogs = pgTable('activity_logs', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'set null' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   action: varchar('action', { length: 50 }).notNull(), // created, updated, deleted, etc.
   entityType: varchar('entity_type', { length: 50 }).notNull(), // estimate, material, customer
   entityId: uuid('entity_id'),

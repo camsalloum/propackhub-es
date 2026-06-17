@@ -23,9 +23,8 @@ export default function CustomerDetail() {
       const cust = customers.find((c: any) => c.id === id);
       setCustomer(cust || null);
 
-      // Fetch all estimates and filter for this customer
-      const allEstimates = await apiClient.getEstimates();
-      const custEstimates = allEstimates.filter((e: any) => e.customerId === id);
+      // Fetch estimates for this customer from the server
+      const custEstimates = await apiClient.getCustomerEstimates(id!);
       setEstimates(custEstimates);
     } catch (error) {
       console.error('Failed to load customer data:', error);
@@ -51,7 +50,7 @@ export default function CustomerDetail() {
     return (
       <div className="p-8">
         <p>Customer not found</p>
-        <Link to="/dashboard" className="text-gold hover:underline">Back to dashboard</Link>
+        <Link to="/customers" className="text-gold hover:underline">Back to customers</Link>
       </div>
     );
   }
@@ -60,7 +59,7 @@ export default function CustomerDetail() {
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8 flex items-center space-x-4">
-        <Link to="/dashboard" className="text-mist hover:text-ink">
+        <Link to="/customers" className="text-mist hover:text-ink">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>

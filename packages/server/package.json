@@ -33,7 +33,10 @@
     "svg-to-pdfkit": "^1.2.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.12.12",
+    "@types/pg": "^8.11.0",
+    "@types/pdfkit": "^0.13.4",
     "drizzle-kit": "^0.20.14",
     "eslint": "^8.57.0",
     "tsup": "^8.0.2",

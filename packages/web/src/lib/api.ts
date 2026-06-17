@@ -94,6 +94,10 @@ export class ApiClient {
     return this.request<any[]>('GET', '/api/v1/customers');
   }
 
+  getCustomerEstimates(customerId: string) {
+    return this.request<any[]>(`GET`, `/api/v1/customers/${customerId}/estimates`);
+  }
+
   createCustomer(customer: any) {
     return this.request('POST', '/api/v1/customers', customer);
   }

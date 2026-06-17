@@ -11,6 +11,7 @@ interface Estimate {
   totalPrice: number;
   createdAt: string;
   customerName?: string;
+displayCurrency?: string;
 }
 
 const Dashboard = () => {
@@ -53,7 +54,7 @@ const Dashboard = () => {
     structure: 'Estimate',
     status: e.status,
     date: new Date(e.createdAt).toLocaleDateString(),
-    total: `AED ${(e.totalPrice || 0).toLocaleString('en-AE', { minimumFractionDigits: 2 })}`,
+    total: `${e.displayCurrency || 'AED'} ${(e.totalPrice || 0).toLocaleString('en-AE', { minimumFractionDigits: 2 })}`,
     refId: e.id,
   }));
 

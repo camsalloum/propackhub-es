@@ -245,6 +245,19 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 
 ---
 
+## Session log — 2026-06-17
+
+### Fixes 7-10 applied
+
+- **Fix 7:** `requoteEstimateRoute` returns `price_changes[]` array with `materialId`, `materialName`, `oldCostUsd`, `newCostUsd`, `deltaPct`
+- **Fix 8:** `getEstimatesRoute` enriches estimates with `customerName` from customers table; Dashboard uses `displayCurrency` instead of hardcoded `AED`
+- **Fix 9:** PDF proposal fetches real customer name; applies visibility profile to hide `markupPercent`/`materialCostPerKg` for sales rep
+- **Fix 10:** `run-migration.cjs` updated to use `drizzle-kit push`; `FX_API_URL` in `.env.example` appends `/USD`
+
+**Files changed:** 15 files (estimates.ts, Dashboard.tsx, run-migration.cjs, .env.example, etc.)
+
+---
+
 ## Open items
 
 - [ ] **External audit** ([ES_AUDIT_HANDOFF.md](./ES_AUDIT_HANDOFF.md))

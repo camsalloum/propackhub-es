@@ -147,6 +147,16 @@ export function stripEstimateRow(row: any, profile: VisibilityProfile): any {
   return visible;
 }
 
+export function stripMaterialRow(row: any, profile: VisibilityProfile): any {
+  const visible = { ...row };
+
+  if (!profile.materialCostPerKg && !profile.rmCostPerKg) {
+    delete visible.costPerKgUsd;
+  }
+
+  return visible;
+}
+
 export function stripCalculationResult(result: CalculationResult, profile: VisibilityProfile): any {
   const estimate: any = {
     ...result.estimate,
@@ -154,6 +164,9 @@ export function stripCalculationResult(result: CalculationResult, profile: Visib
       const copy = { ...layer };
       if (!profile.costPerSqm) {
         delete copy.costPerM2;
+      }
+      if (!profile.materialCostPerKg && !profile.rmCostPerKg) {
+        delete copy.material;
       }
       return copy;
     }),

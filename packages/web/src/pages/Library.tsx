@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, Filter, Trash2 } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 import { apiClient } from '../lib/api';
 
 interface Material {
   id: string;
   name: string;
-  materialType: 'substrate' | 'ink' | 'adhesive';
+  type: 'substrate' | 'ink' | 'adhesive';
   solidPercent: number;
   density: number;
   wastePercent: number;
@@ -23,7 +23,7 @@ const Library = () => {
   const [showModal, setShowModal] = useState(false);
 
   const openCreateModal = () => {
-    setEditingMaterial({ id: '', name: '', materialType: 'substrate', solidPercent: 30, density: 0.92, wastePercent: 0, costPerKgUsd: 0 });
+    setEditingMaterial({ id: '', name: '', type: 'substrate', solidPercent: 30, density: 0.92, wastePercent: 0, costPerKgUsd: 0 });
     setShowModal(true);
   };
 
@@ -36,10 +36,10 @@ const Library = () => {
     if (!editingMaterial) return;
     try {
       if (editingMaterial.id) {
-        const updated = await apiClient.updateMaterial(editingMaterial.id, editingMaterial);
+        const updated = await apiClient.updateMaterial(editingMaterial.id, editingMaterial) as Material;
         setMaterials((prev) => prev.map(m => m.id === updated.id ? updated : m));
       } else {
-        const created = await apiClient.createMaterial(editingMaterial);
+        const created = await apiClient.createMaterial(editingMaterial) as Material;
         setMaterials((prev) => [created, ...prev]);
       }
       closeModal();
@@ -82,7 +82,7 @@ const Library = () => {
 
   const filteredMaterials = materials.filter(material => {
     const matchesSearch = material.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = activeFilter === 'all' || material.materialType === activeFilter;
+    const matchesFilter = activeFilter === 'all' || material.type === activeFilter;
     return matchesSearch && matchesFilter;
   });
 
@@ -190,8 +190,8 @@ const Library = () => {
                       <div className="font-medium">{material.name}</div>
                     </td>
                     <td className="py-4 px-4">
-                      <span className={`text-xs px-2 py-1 rounded-md ${getTypeColor(material.materialType)}`}>
-                        {material.materialType}
+                      <span className={`text-xs px-2 py-1 rounded-md ${getTypeColor(material.type)}`}>
+                        {material.type}
                       </span>
                     </td>
                     <td className="py-4 px-4 font-mono text-sm">{material.solidPercent}</td>
@@ -247,7 +247,7 @@ const Library = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-navy mb-1">Type</label>
-                  <select value={editingMaterial.materialType} onChange={(e) => setEditingMaterial({ ...editingMaterial, materialType: e.target.value as any })} className="input w-full">
+                  <select value={editingMaterial.type} onChange={(e) => setEditingMaterial({ ...editingMaterial, type: e.target.value as any })} className="input w-full">
                     <option value="substrate">substrate</option>
                     <option value="ink">ink</option>
                     <option value="adhesive">adhesive</option>

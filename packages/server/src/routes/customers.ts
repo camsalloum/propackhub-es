@@ -11,7 +11,6 @@ const createCustomerSchema = z.object({
   contactName: z.string().optional(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
-  address: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -22,6 +21,7 @@ async function getCustomersRoute(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
+  await request.jwtVerify();
   const tenantId = extractTenantFromRequest(request);
   const db = getDatabase();
 
@@ -41,6 +41,7 @@ async function createCustomerRoute(
   }>,
   reply: FastifyReply
 ) {
+  await request.jwtVerify();
   const tenantId = extractTenantFromRequest(request);
   const db = getDatabase();
 
@@ -54,7 +55,6 @@ async function createCustomerRoute(
       contactName: validated.contactName,
       email: validated.email,
       phone: validated.phone,
-      address: validated.address,
       notes: validated.notes,
     })
     .returning();
@@ -69,6 +69,7 @@ async function getCustomerRoute(
   }>,
   reply: FastifyReply
 ) {
+  await request.jwtVerify();
   const tenantId = extractTenantFromRequest(request);
   const { id } = request.params;
   const db = getDatabase();
@@ -98,6 +99,7 @@ async function updateCustomerRoute(
   }>,
   reply: FastifyReply
 ) {
+  await request.jwtVerify();
   const tenantId = extractTenantFromRequest(request);
   const { id } = request.params;
   const db = getDatabase();
@@ -132,6 +134,7 @@ async function deleteCustomerRoute(
   }>,
   reply: FastifyReply
 ) {
+  await request.jwtVerify();
   const tenantId = extractTenantFromRequest(request);
   const { id } = request.params;
   const db = getDatabase();
@@ -155,11 +158,6 @@ async function deleteCustomerRoute(
 
 // Register routes
 export async function registerCustomerRoutes(fastify: FastifyInstance) {
-  // All routes require authentication
-  fastify.addHook('onRequest', async (request) => {
-    await request.jwtVerify();
-  });
-
   fastify.get('/api/v1/customers', getCustomersRoute);
   fastify.post('/api/v1/customers', createCustomerRoute);
   fastify.get('/api/v1/customers/:id', getCustomerRoute);

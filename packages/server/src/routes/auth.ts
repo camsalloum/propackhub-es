@@ -4,6 +4,7 @@ import { getDatabase, schema } from '../db';
 import { hashPassword, verifyPassword, TokenPayload } from '../utils/auth';
 import { eq, and } from 'drizzle-orm';
 import { seedMaterialsForTenant } from '../db/seed-materials';
+import { seedTemplatesForTenant } from '../db/seed-templates';
 import { fetchExchangeRate } from '../utils/fx-rates';
 
 const RegisterSchema = z.object({
@@ -92,6 +93,14 @@ export async function registerRoute(
     } catch (seedError) {
       console.error('Failed to seed materials, but tenant/user created:', seedError);
       // Continue - user can add materials manually
+    }
+
+    // Seed structure templates for new tenant (depends on materials being seeded first)
+    try {
+      await seedTemplatesForTenant(tenant.id);
+    } catch (seedError) {
+      console.error('Failed to seed templates, but tenant/user/materials created:', seedError);
+      // Continue - templates are optional
     }
 
     // Generate JWT token

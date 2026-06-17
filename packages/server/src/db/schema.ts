@@ -31,6 +31,7 @@ export const tenants = pgTable('tenants', {
   displayCurrency: varchar('display_currency', { length: 3 }).notNull().default('USD'),
   exchangeRateUsdToDisplay: decimal('exchange_rate_usd_to_display', { precision: 10, scale: 6 }).notNull().default('1.0'),
   exchangeRateUpdatedAt: timestamp('exchange_rate_updated_at', { withTimezone: true }).defaultNow(),
+  useAutoFx: boolean('use_auto_fx').default(true), // Auto-refresh exchange rates
   logo: text('logo'), // Base64 or URL
   primaryColor: varchar('primary_color', { length: 7 }).default('#0F1F3D'),
   termsAndConditions: text('terms_and_conditions'),
@@ -205,6 +206,36 @@ export const activityLogs = pgTable('activity_logs', {
   tenantIdIdx: index('activity_logs_tenant_id_idx').on(table.tenantId),
   userIdIdx: index('activity_logs_user_id_idx').on(table.userId),
   createdAtIdx: index('activity_logs_created_at_idx').on(table.createdAt),
+}));
+
+// Structure Templates (seeded per tenant from ES_STANDARD_TEMPLATES_SEED.json)
+export const structureTemplates = pgTable('structure_templates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(), // e.g. "Commercial Items Plain"
+  pebiParentPg: varchar('pebi_parent_pg', { length: 255 }).notNull(), // PEBI parent product group name
+  productType: productTypeEnum('product_type').notNull(), // roll, sleeve, pouch
+  materialClass: varchar('material_class', { length: 50 }), // PE, Non PE
+  structureType: varchar('structure_type', { length: 50 }), // Mono, Multilayer
+  substrateOrigin: varchar('substrate_origin', { length: 50 }), // PE or null
+  displayOrder: integer('display_order').notNull().default(0),
+  defaultDimensions: jsonb('default_dimensions'), // Default dimension values
+  defaultLayers: jsonb('default_layers').notNull(), // Array of { layer_order, layer_type, ref_material_key, default_micron }
+  defaultProcesses: jsonb('default_processes'), // Array of { process_key, enabled }
+  defaultPrintingWebClass: printingWebClassEnum('default_printing_web_class').default('wide_web'),
+  solventMixEnabled: boolean('solvent_mix_enabled').default(false),
+  inkSystemOptions: jsonb('ink_system_options'), // ["SB"] or ["SB", "UV"]
+  substrateOptions: jsonb('substrate_options'), // For shrink sleeves: ["PET Shrink Film", "PVC Shrink Film"]
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  tenantIdIdx: index('structure_templates_tenant_id_idx').on(table.tenantId),
+  displayOrderIdx: index('structure_templates_display_order_idx').on(table.displayOrder),
+}));
+
+export const structureTemplatesRelations = relations(structureTemplates, ({ one }) => ({
+  tenant: one(tenants, { fields: [structureTemplates.tenantId], references: [tenants.id] }),
 }));
 
 // Relations

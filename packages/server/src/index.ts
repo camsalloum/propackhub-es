@@ -4,11 +4,14 @@ import fastifyJwt from '@fastify/jwt';
 import cors from '@fastify/cors';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
 import { initializeDatabase, closeDatabase } from './db';
+import { seedDefaultAdmin } from './db/seed-admin';
 import { registerAuthRoutes } from './routes/auth';
 import { registerMaterialRoutes } from './routes/materials';
 import { registerEstimateRoutes } from './routes/estimates';
 import { registerCustomerRoutes } from './routes/customers';
 import { registerSettingsRoutes } from './routes/settings';
+import { registerTemplateRoutes } from './routes/templates';
+import { registerUserRoutes } from './routes/users';
 
 const PORT = parseInt(process.env.PORT || '5001');
 const HOST = process.env.HOST || '0.0.0.0';
@@ -85,6 +88,8 @@ registerMaterialRoutes(fastify);
 registerEstimateRoutes(fastify);
 registerCustomerRoutes(fastify);
 registerSettingsRoutes(fastify);
+registerTemplateRoutes(fastify);
+registerUserRoutes(fastify);
 
 // Error handler
 fastify.setErrorHandler((error, request, reply) => {
@@ -106,6 +111,9 @@ async function start() {
   try {
     // Initialize database
     await initializeDatabase();
+
+    // Seed default admin user (idempotent — skips if already exists)
+    await seedDefaultAdmin();
 
     // Listen
     await fastify.listen({ port: PORT, host: HOST });

@@ -19,7 +19,6 @@ const Settings = () => {
   const [displayCurrency, setDisplayCurrency] = useState('AED');
   const [useAutoFx, setUseAutoFx] = useState(true);
   const [exchangeRateUsdToDisplay, setExchangeRateUsdToDisplay] = useState<number>(3.6725);
-  const [lastFxUpdated, setLastFxUpdated] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
   const [brandPrimaryColor, setBrandPrimaryColor] = useState('#0F1F3D');
   const [termsAndConditions, setTermsAndConditions] = useState('');
@@ -35,11 +34,10 @@ const Settings = () => {
         setDisplayCurrency(settings.displayCurrency || 'AED');
         setExchangeRateUsdToDisplay(Number(settings.exchangeRateUsdToDisplay) || 1);
         setUseAutoFx(Boolean(settings.useAutoFx));
-        setLogoUrl(settings.logoUrl || undefined);
-        setBrandPrimaryColor(settings.brandPrimaryColor || '#0F1F3D');
+        setLogoUrl(settings.logo || undefined);
+        setBrandPrimaryColor(settings.primaryColor || '#0F1F3D');
         setTermsAndConditions(settings.termsAndConditions || '');
         setFooterText((settings.footerText as string) || (settings.footer as string) || '');
-        setLastFxUpdated(settings.updatedAt ? new Date(settings.updatedAt).toLocaleString() : null);
       } catch (err) {
         console.error('Failed to load settings:', err);
       }
@@ -54,11 +52,11 @@ const Settings = () => {
         displayCurrency,
         useAutoFx,
         exchangeRateUsdToDisplay,
-        logoUrl,
-        brandPrimaryColor,
+        logo: logoUrl,
+        primaryColor: brandPrimaryColor,
         termsAndConditions,
         footerText,
-        defaultMarkup,
+        defaultMarkupPercent: defaultMarkup,
         defaultSlabTemplate,
       });
       alert('Settings saved');
@@ -70,9 +68,8 @@ const Settings = () => {
 
   const refreshFx = async () => {
     try {
-      const resp = await apiClient.request('POST', '/api/v1/settings/refresh-fx');
+      const resp = await apiClient.refreshFx();
       setExchangeRateUsdToDisplay(Number(resp.exchangeRateUsdToDisplay) || exchangeRateUsdToDisplay);
-      setLastFxUpdated(new Date().toLocaleString());
       alert('Exchange rate refreshed');
     } catch (err) {
       console.error('Failed to refresh fx', err);

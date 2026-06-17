@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
 import { eq, and } from 'drizzle-orm';
+import { getEffectiveProfile, stripMaterialRow } from '../utils/visibility';
 
 const MaterialSchema = z.object({
   name: z.string().min(1),
@@ -21,14 +22,24 @@ export async function getMaterialsRoute(
   try {
     await request.jwtVerify();
     const tenantId = extractTenantFromRequest(request);
+    const user = extractUserFromRequest(request);
     const db = getDatabase();
+
+    const [userRecord] = await db
+      .select({ visibilityProfile: schema.users.visibilityProfile })
+      .from(schema.users)
+      .where(eq(schema.users.id, user.userId));
+
+    const profile = getEffectiveProfile(user.role, userRecord?.visibilityProfile);
 
     const materials = await db
       .select()
       .from(schema.materials)
       .where(eq(schema.materials.tenantId, tenantId));
 
-    return reply.send(materials);
+    const visibleMaterials = materials.map(mat => stripMaterialRow(mat, profile));
+
+    return reply.send(visibleMaterials);
   } catch (error: any) {
     console.error('Get materials error:', error);
     return reply.status(500).send({ error: 'Failed to fetch materials' });

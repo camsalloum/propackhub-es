@@ -38,10 +38,11 @@ async function updateTenantSettingsRoute(
       displayCurrency?: string;
       useAutoFx?: boolean;
       exchangeRateUsdToDisplay?: number;
-      logoUrl?: string;
-      brandPrimaryColor?: string;
-      brandSecondaryColor?: string;
+      logo?: string;
+      primaryColor?: string;
       termsAndConditions?: string;
+      footerText?: string;
+      defaultMarkupPercent?: number;
     };
   }>,
   reply: FastifyReply
@@ -62,17 +63,20 @@ async function updateTenantSettingsRoute(
     if (request.body.exchangeRateUsdToDisplay !== undefined) {
       updates.exchangeRateUsdToDisplay = request.body.exchangeRateUsdToDisplay.toString();
     }
-    if (request.body.logoUrl !== undefined) {
-      updates.logoUrl = request.body.logoUrl;
+    if (request.body.logo !== undefined) {
+      updates.logo = request.body.logo;
     }
-    if (request.body.brandPrimaryColor !== undefined) {
-      updates.brandPrimaryColor = request.body.brandPrimaryColor;
-    }
-    if (request.body.brandSecondaryColor !== undefined) {
-      updates.brandSecondaryColor = request.body.brandSecondaryColor;
+    if (request.body.primaryColor !== undefined) {
+      updates.primaryColor = request.body.primaryColor;
     }
     if (request.body.termsAndConditions !== undefined) {
       updates.termsAndConditions = request.body.termsAndConditions;
+    }
+    if (request.body.footerText !== undefined) {
+      updates.footerText = request.body.footerText;
+    }
+    if (request.body.defaultMarkupPercent !== undefined) {
+      updates.defaultMarkupPercent = request.body.defaultMarkupPercent.toString();
     }
 
     const [updated] = await db

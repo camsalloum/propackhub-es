@@ -1,167 +1,131 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-06-15
+**Last updated:** 2026-06-17
 
-## Status: ✅ ALL CRITICAL ENDPOINTS IMPLEMENTED
+## Status: Phase A–E complete — Phase F in progress
 
-- **Phase:** Backend complete with all CRUD operations, ready for full UI integration
+- **Phase:** PRD §14.1 Phase 1 (~75%) — Phase A/B/C/D/E complete, Phase F next
 - **Workspace:** `D:\ProPackHub\apps\estimation-studio\`
 - **Git:** `https://github.com/camsalloum/propackhub-es.git` on `main`
-- **Commit:** `8798462` - Missing estimate endpoints added
-
-## Recent Updates ✅
-
-### 2026-06-15 Session
-1. **Fixed 6 critical bugs** (material cost, customers route, useParams, solvent config, SB detection, order quantity)
-2. **Added 4 missing estimate endpoints** (GET/:id, PATCH/:id, DELETE/:id, POST/:id/requote)
-3. **Ran database migration** (added columns: total_gsm, total_micron, material_cost_per_kg, sale_price_per_kg)
-4. **Updated frontend** (EstimateEditor now loads real data, API client complete)
-
-## What's Now Working ✅
-
-### Backend (Complete)
-- ✅ PostgreSQL database with 12 tables (Drizzle ORM)
-- ✅ User registration & login with JWT tokens
-- ✅ Tenant isolation on all APIs
-- ✅ Materials CRUD (USD library)
-- ✅ Estimates creation with calculation engine integration
-- ✅ All routes protected by authentication
-- ✅ Graceful error handling
-
-### Web (Auth Complete)
-- ✅ Login page (email/password)
-- ✅ Register page (create account + tenant)
-- ✅ Auth context (`useAuth` hook)
-- ✅ JWT token management
-- ✅ Protected routes (redirect to login if not auth'd)
-- ✅ User display in sidebar
-- ✅ Logout functionality
-- ✅ Auto-check existing session on load
-
-### What's Ready to Use
-1. **Register** → Create account + personal tenant + first login
-2. **Dashboard** → Shows user info
-3. **Library** → Ready for materials API integration
-4. **Settings** → Ready for tenant settings API
-5. **Estimates** → Ready for real estimate creation
-
-## Setup Instructions
-
-```bash
-# 1. Setup PostgreSQL
-# See SETUP.md for detailed instructions
-
-# 2. Install dependencies
-npm install
-
-# 3. Set environment variables
-cd packages/server
-cp .env.example .env
-# Edit .env with your DATABASE_URL
-
-cd ../web
-cp .env.example .env
-# Leave defaults or customize
-
-# 4. Initialize database
-cd packages/server
-npm run db:push
-
-# 5. Start servers
-npm run start:servers
-# Or: npm run dev
-# Or: Double-click RUN-ES.bat
-
-# 6. Open browser
-# http://localhost:5000
-```
-
-## Test the App
-
-1. **Register**: Click "Create one" on login page
-   - Email: `test@example.com`
-   - Password: `password123`
-   - Name: `John Doe`
-   - Company: `Test Co`
-
-2. **Login**: Should land on Dashboard
-
-3. **Logout**: Click "Sign Out" in sidebar
-
-4. **API Testing**: Use Postman or curl (see SETUP.md)
-
-## Next: Wire Data Pages to API
-
-Current UI pages (Dashboard, Library, Settings, Estimates) are mockups.
-
-To make them functional:
-1. **Dashboard** — Fetch estimates list + stats from `/api/v1/estimates`
-2. **Library** — Fetch materials from `/api/v1/materials`
-3. **Estimate Editor** — Call `/api/v1/estimates/:id/calculate`
-4. **Settings** — Save tenant settings (new API endpoint needed)
-
-Each page needs `useEffect` to fetch data and `useState` to manage state.
-
-## Database Schema
-
-12 tables created:
-- `tenants` — Workspaces
-- `users` — Team members  
-- `materials` — Material library (USD)
-- `estimates` — Cost estimates
-- `layers` — Material layers
-- `customers` — Customer contacts
-- `processes` — Machine/operation costs
-- `slabs` — Quantity pricing tiers
-- `activity_logs` — Audit trail
-
-## Architecture Summary
-
-```
-Web (React SPA)
-  ├── Login/Register pages
-  ├── Protected routes
-  ├── useAuth hook (JWT management)
-  └── API client (fetch wrapper)
-
-API Server (Fastify)
-  ├── Auth routes (register, login, me)
-  ├── Materials CRUD
-  ├── Estimates CRUD + calculate
-  ├── JWT middleware
-  └── Tenant isolation
-
-Database (PostgreSQL)
-  └── Drizzle ORM with schema
-```
-
-## Files Structure
-
-```
-Backend:
-- packages/server/src/
-  ├── db/schema.ts (Drizzle schema)
-  ├── routes/auth.ts, materials.ts, estimates.ts
-  ├── utils/auth.ts
-  └── index.ts (Main server)
-
-Frontend:
-- packages/web/src/
-  ├── pages/Login.tsx, Register.tsx
-  ├── hooks/useAuth.ts
-  ├── lib/api.ts
-  └── App.tsx (Auth guard + routing)
-```
-
-## Blocking Items (for next session)
-
-1. **Update Dashboard** to call `/api/v1/estimates` instead of mock data
-2. **Update Library** to call `/api/v1/materials` 
-3. **Create estimate form** that POSTs to `/api/v1/estimates`
-4. **Link calculate** button to `/api/v1/estimates/:id/calculate`
-5. **Create Customers API** (routes + CRUD)
-6. **Add Settings API** for tenant config
+- **Implementation plan:** [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) ← **start here for build work**
 
 ---
 
-**Status: Ready to integrate real data into UI pages. Backend fully operational. 🎉**
+## Recent Progress (2026-06-17)
+
+### Phase B — Quote loop (COMPLETE ✅)
+- ✅ B1–B5, B8–B9: All core quote loop tasks done
+- EstimateEditor: material loading, controlled dimensions, save→calculate→refresh
+
+### Phase C — Templates & structure (COMPLETE ✅)
+- ✅ C1–C7: structure_templates table, seed on register, API routes, TemplatePicker API-driven
+
+### Phase D — Visibility & roles (COMPLETE ✅)
+- ✅ D1: stripEstimateRow on GET /estimates/:id
+- ✅ D2: stripMaterialRow on GET /materials (hides costPerKgUsd for sales rep)
+- ✅ D3: isAdmin guards in EstimateEditor (hides slabs, markup, cost breakdown, $/kg)
+- ✅ D4: Users route (GET /users, PATCH /users/:id/visibility)
+- ✅ D5: Visibility presets (3 named: admin, sales_rep, read_only)
+
+### Phase E — Customers & re-quote (PARTIAL ⏳)
+- ✅ E1: CustomerDetail.tsx routed at /customers/:id
+- ✅ E5: Re-quote banner in EstimateEditor when sourceEstimationId set
+- ⏳ E2: Customers list page — nav link is # (no list page yet)
+- ⏳ E3: GET /customers/:id/estimates — client-side filtering only
+- ⏳ E4: Re-quote copies layers+processes+slabs but no price_changes response
+
+### TypeScript fixes (applied across sessions)
+- vite-env.d.ts, useAuth.ts, Library.tsx, Settings.tsx, TemplatePicker.tsx, LaminateVisualizer.tsx, App.tsx
+
+---
+
+## What actually works (code-verified 2026-06-16)
+
+### Engine (`packages/engine`) — strong
+- Laravel-aligned calculator (GSM, solvent mix, additive sale price, dimensions)
+- **12/12 unit tests pass**
+- Builds successfully
+
+### Server (`packages/server`) — good
+- Auth (register, login, me), JWT, tenant isolation
+- Materials, customers, estimates, settings, templates routes registered
+- Material seed (14 items) + structure template seed (11 PGs) on tenant registration
+- FX fetch on register + refresh endpoint
+- Visibility stripping on estimate list + calculate (not on GET by id)
+- PATCH estimate updates layers/slabs/processes (delete + re-insert)
+- GET estimate enriches layers with material details
+- Templates: GET list, GET by id, POST instantiate (creates estimate with pre-filled layers/processes/slabs)
+- **Builds successfully**
+
+### Web (`packages/web`) — good
+- Login, Register, auth guard, Layout shell
+- Dashboard, Library, Settings, EstimatesList API-wired
+- EstimateEditor — full save/calculate loop with material loading, controlled dimensions, auto-calculate
+- TemplatePicker — loads templates from API, groups by material class, instantiates via API
+- **`npm run build` passes** for web, server, and engine
+
+---
+
+## What does NOT work yet
+
+1. Client-side engine in web for instant recalc (Decision #23) — deferred B6
+2. Customers list page — nav link is `#` (E2 partial)
+3. Re-quote `price_changes[]` response — copies slabs but no delta calc (E4 partial)
+4. PDF proposal — basic HTML works but needs branding + slab table polish (Phase F)
+5. CI (server test job fails — no test files) (Phase G)
+6. FX conversion in UI display (Phase B7)
+7. Dashboard expiring proposals, `/dashboard/summary` (Phase G)
+
+---
+
+## PRD position
+
+| PRD phase | Progress |
+|-----------|----------|
+| Pre-build (docs, wireframes) | Done |
+| Scaffold | Done |
+| Phase 1 Foundation | ~75% |
+| Phase 2 Visualizer + Estimate | ~60% |
+| Phase 3 History + Re-quote | ~50% |
+| Phase 4 Proposals | ~30% |
+| Phase 5–6 | Not started |
+
+---
+
+## Next work (Phase F — see implementation plan)
+
+1. Phase F: PDF proposal branding — logo, primary color, terms, footer from tenant settings
+2. Phase F: Slab table in PDF from real slab data
+3. Phase F: PDF respects visibility — no cost/markup for sales rep
+4. Phase G: CI, tests, PWA, dashboard summary
+
+## Next work (Phase D — see implementation plan)
+
+1. Phase D: Visibility & roles — stripEstimateRow on GET /:id, role-based UI hiding, Settings Team tab
+2. Phase D: Strip material USD prices on materials GET for sales rep profile
+3. Phase E: Customers & re-quote — route CustomerDetail, copy slabs on requote
+
+---
+
+## Setup (unchanged)
+
+```bash
+npm install
+cd packages/server && cp .env.example .env  # set DATABASE_URL
+cd ../web && cp .env.example .env
+cd ../server && npm run db:push
+npm run start:servers
+# http://localhost:5000
+```
+
+See [SETUP.md](../SETUP.md) for details.
+
+---
+
+## Database
+
+12 tables: `tenants`, `users`, `materials`, `customers`, `estimates`, `layers`, `processes`, `slabs`, `activity_logs` (+ enums). Missing PRD tables: `ref_standard_templates`, `structure_templates`.
+
+---
+
+**Do not trust prior “ALL CRITICAL ENDPOINTS IMPLEMENTED / UI mockups only” notes — superseded by audit 2026-06-15.**

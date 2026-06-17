@@ -6,6 +6,15 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 import { calculateEstimate, type Estimate as EngineEstimate, type VisibilityProfile } from '@es/engine';
 import { getEffectiveProfile, stripEstimateRow, stripCalculationResult } from '../utils/visibility';
 
+async function getUserVisibilityProfile(db: any, userId: string): Promise<VisibilityProfile> {
+  const [userRecord] = await db
+    .select({ visibilityProfile: schema.users.visibilityProfile, role: schema.users.role })
+    .from(schema.users)
+    .where(eq(schema.users.id, userId));
+
+  return getEffectiveProfile(userRecord?.role, userRecord?.visibilityProfile);
+}
+
 const EstimateCreateSchema = z.object({
   customerId: z.string().uuid().optional(),
   jobName: z.string().min(1),
@@ -61,12 +70,7 @@ export async function getEstimatesRoute(
     const user = extractUserFromRequest(request);
     const db = getDatabase();
 
-    const [userRecord] = await db
-      .select({ visibilityProfile: schema.users.visibilityProfile })
-      .from(schema.users)
-      .where(eq(schema.users.id, user.userId));
-
-    const profile = getEffectiveProfile(user.role, userRecord?.visibilityProfile);
+    const profile = await getUserVisibilityProfile(db, user.userId);
 
     const estimates = await db
       .select()
@@ -78,6 +82,9 @@ export async function getEstimatesRoute(
 
     return reply.send(visibleEstimates);
   } catch (error: any) {
+    if (error.statusCode === 401 || error.code === 'FST_JWT_NO_AUTHORIZATION_IN_HEADER') {
+      throw error; // Let Fastify handle auth errors properly
+    }
     console.error('Get estimates error:', error);
     return reply.status(500).send({ error: 'Failed to fetch estimates' });
   }
@@ -119,6 +126,7 @@ export async function createEstimateRoute(
       density: parseFloat(m.density),
       costPerKgUsd: parseFloat(m.costPerKgUsd),
       wastePercent: m.wastePercent,
+      isSolventBased: m.isSolventBased,
     }]));
 
     // Generate ref number
@@ -208,12 +216,7 @@ export async function calculateEstimateRoute(
 
     const db = getDatabase();
 
-    const [userRecord] = await db
-      .select({ visibilityProfile: schema.users.visibilityProfile })
-      .from(schema.users)
-      .where(eq(schema.users.id, user.userId));
-
-    const profile = getEffectiveProfile(user.role, userRecord?.visibilityProfile);
+    const profile = await getUserVisibilityProfile(db, user.userId);
 
     // Get estimate with all details
     const [estimate] = await db
@@ -246,6 +249,7 @@ export async function calculateEstimateRoute(
       density: parseFloat(m.density),
       costPerKgUsd: parseFloat(m.costPerKgUsd),
       wastePercent: m.wastePercent,
+      isSolventBased: m.isSolventBased,
     }]));
 
     // Get processes
@@ -253,6 +257,13 @@ export async function calculateEstimateRoute(
       .select()
       .from(schema.processes)
       .where(eq(schema.processes.estimateId, id));
+
+    // Get slabs
+    const slabs = await db
+      .select()
+      .from(schema.slabs)
+      .where(eq(schema.slabs.estimateId, id))
+      .orderBy(schema.slabs.quantityKg);
 
     // Convert to engine format
     const estimateForEngine: EngineEstimate = {
@@ -284,7 +295,11 @@ export async function calculateEstimateRoute(
         setupHours: parseFloat(p.setupHours),
         enabled: p.enabled,
       })),
-      slabs: [],
+      slabs: slabs.map(s => ({
+        id: s.id,
+        quantityKg: parseFloat(s.quantityKg),
+        pricePerKg: parseFloat(s.pricePerKg),
+      })),
       displayCurrencyCode: estimate.displayCurrency,
       exchangeRateUsdToDisplay: parseFloat(estimate.exchangeRateUsdToDisplay),
       // Use order quantity from estimate or first slab, fallback to 1000
@@ -332,13 +347,7 @@ export async function generateProposalPdfRoute(
 
     const db = getDatabase();
 
-    // Load user visibility profile (so PDF respects visibility)
-    const [userRecord] = await db
-      .select({ visibilityProfile: schema.users.visibilityProfile })
-      .from(schema.users)
-      .where(eq(schema.users.id, user.userId));
-
-    const profile = getEffectiveProfile(user.role, userRecord?.visibilityProfile);
+    const profile = await getUserVisibilityProfile(db, user.userId);
 
     // Fetch estimate and related data (reuse calculate logic)
     const [estimate] = await db
@@ -369,6 +378,7 @@ export async function generateProposalPdfRoute(
       density: parseFloat(m.density),
       costPerKgUsd: parseFloat(m.costPerKgUsd),
       wastePercent: m.wastePercent,
+      isSolventBased: m.isSolventBased,
     }]));
 
     const processes = await db
@@ -560,7 +570,7 @@ export async function generateProposalPdfRoute(
 </body>
 </html>`;
 
-    // Try to render PDF via puppeteer if available, otherwise return HTML
+    // Try to render PDF via puppeteer if available
     try {
       const puppeteer = await import('puppeteer');
       const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
@@ -572,9 +582,64 @@ export async function generateProposalPdfRoute(
       reply.header('Content-Type', 'application/pdf');
       return reply.send(pdf as any);
     } catch (err) {
-      // Puppeteer not installed or failed — return HTML fallback
-      reply.header('Content-Type', 'text/html');
-      return reply.send(html);
+      // Puppeteer not available or failed — try pdfkit + svg-to-pdfkit
+      try {
+        const PDFDocument = (await import('pdfkit')).default;
+        const SVGtoPDF = (await import('svg-to-pdfkit')).default;
+
+        const doc = new PDFDocument({ size: 'A4', margin: 20, autoFirstPage: false });
+        const chunks: Buffer[] = [];
+        doc.on('data', (c: Buffer) => chunks.push(c));
+        doc.on('end', () => {
+          const out = Buffer.concat(chunks);
+          reply.header('Content-Type', 'application/pdf');
+          reply.send(out);
+        });
+
+        doc.addPage({ size: 'A4', margin: 20 });
+        // Draw brand bar
+        doc.rect(0, 0, doc.page.width, 72).fill(tenant.primaryColor || '#1a2744');
+        doc.fillColor('#000').fontSize(20).text(tenant.name || '', 40, 28);
+
+        // Render SVG laminate into PDF using svg-to-pdfkit
+        const svg = laminateSvg;
+        SVGtoPDF(doc as any, svg, 40, 100, { assumePt: true, width: 200 });
+
+        // Slab table
+        doc.moveDown(6).fontSize(12).fillColor('#000').text('Slab Pricing', { underline: true });
+        const startY = doc.y + 6;
+        // simple table rendering
+        let y = startY;
+        doc.fontSize(10);
+        doc.text('Qty (kg)', 40, y);
+        doc.text('Price / kg', 140, y);
+        doc.text('Total', 260, y);
+        y += 18;
+        for (const s of slabs) {
+          doc.text(String(s.quantityKg), 40, y);
+          doc.text(String(s.pricePerKg), 140, y);
+          doc.text((parseFloat(s.quantityKg) * parseFloat(s.pricePerKg)).toFixed(2), 260, y);
+          y += 16;
+          if (y > doc.page.height - 80) {
+            doc.addPage();
+            y = 40;
+          }
+        }
+
+        // Terms
+        doc.addPage();
+        doc.fontSize(12).text('Terms & Conditions', { underline: true });
+        doc.moveDown(0.5).fontSize(9).text(tenant.termsAndConditions || 'Standard terms apply.');
+
+        doc.end();
+
+        // response will be sent in 'end' handler
+        return;
+      } catch (err2) {
+        // Fallback: return HTML if no PDF tool available
+        reply.header('Content-Type', 'text/html');
+        return reply.send(html);
+      }
     }
   } catch (error: any) {
     console.error('Generate proposal PDF error:', error);
@@ -631,11 +696,26 @@ async function getEstimateRoute(
       .where(eq(schema.slabs.estimateId, id))
       .orderBy(schema.slabs.quantityKg);
 
+    // Get activity logs for this estimate
+    const logs = await db
+      .select()
+      .from(schema.activityLogs)
+      .where(and(eq(schema.activityLogs.entityType, 'estimate'), eq(schema.activityLogs.entityId, id)))
+      .orderBy(desc(schema.activityLogs.createdAt));
+
+    const [user] = await db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(and(eq(schema.users.id, user.userId), eq(schema.users.tenantId, tenantId)));
+
+    const profile = await getUserVisibilityProfile(db, user.userId);
+
     return reply.send({
-      ...estimate,
+      ...stripEstimateRow(estimate, profile),
       layers,
-      processes,
-      slabs,
+      processes: profile.operationCost ? processes : [],
+      slabs: profile.slabTable ? slabs : [],
+      activityLogs: logs || [],
     });
   } catch (error: any) {
     console.error('Get estimate error:', error);
@@ -692,6 +772,64 @@ async function updateEstimateRoute(
       .set(updates)
       .where(eq(schema.estimates.id, id))
       .returning();
+
+    // Update layers (delete + re-insert)
+    if (request.body.layers !== undefined) {
+      await db.delete(schema.layers).where(eq(schema.layers.estimateId, id));
+      for (const layer of request.body.layers) {
+        await db.insert(schema.layers).values({
+          estimateId: id,
+          materialId: layer.materialId,
+          micron: layer.micron.toString(),
+          position: layer.position,
+        });
+      }
+    }
+
+    // Update processes (delete + re-insert)
+    if (request.body.processes !== undefined) {
+      await db.delete(schema.processes).where(eq(schema.processes.estimateId, id));
+      for (const process of request.body.processes) {
+        await db.insert(schema.processes).values({
+          estimateId: id,
+          name: process.name,
+          costPerHour: process.costPerHour.toString(),
+          speedBasis: process.speedBasis,
+          speedValue: process.speedValue.toString(),
+          setupHours: process.setupHours.toString(),
+          enabled: process.enabled,
+        });
+      }
+    }
+
+    // Update slabs (delete + re-insert)
+    if (request.body.slabs !== undefined) {
+      await db.delete(schema.slabs).where(eq(schema.slabs.estimateId, id));
+      for (const slab of request.body.slabs) {
+        await db.insert(schema.slabs).values({
+          estimateId: id,
+          quantityKg: slab.quantityKg.toString(),
+          pricePerKg: slab.pricePerKg.toString(),
+        });
+      }
+    }
+
+    // If status changed, insert an activity log for audit trail
+    if (updates.status) {
+      try {
+        const user = extractUserFromRequest(request);
+        await db.insert(schema.activityLogs).values({
+          tenantId,
+          userId: user.userId,
+          action: 'status_change',
+          entityType: 'estimate',
+          entityId: id,
+          changes: { status: updates.status, note: request.body.note || null },
+        });
+      } catch (logErr) {
+        console.warn('Failed to write activity log:', logErr);
+      }
+    }
 
     return reply.send(updated);
   } catch (error: any) {
@@ -836,6 +974,20 @@ async function requoteEstimateRoute(
         speedValue: process.speedValue,
         setupHours: process.setupHours,
         enabled: process.enabled,
+      });
+    }
+
+    // Copy slabs
+    const sourceSlabs = await db
+      .select()
+      .from(schema.slabs)
+      .where(eq(schema.slabs.estimateId, id));
+
+    for (const slab of sourceSlabs) {
+      await db.insert(schema.slabs).values({
+        estimateId: newEstimate.id,
+        quantityKg: slab.quantityKg,
+        pricePerKg: slab.pricePerKg,
       });
     }
 

@@ -1,57 +1,54 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Grid3x3, FileText, Layers } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Search, Grid3x3, Layers } from 'lucide-react';
+import { apiClient } from '../lib/api';
 
 const TemplatePicker = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'standard' | 'my' | 'blank'>('standard');
+  const [activeTab, setActiveTab] = useState<'standard' | 'blank'>('standard');
   const [customers, setCustomers] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const navigate = useNavigate();
 
-  // fetch customers
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const data = await apiClient.getCustomers();
-        if (mounted) setCustomers(data || []);
+        const [custData, tmplData] = await Promise.all([
+          apiClient.getCustomers(),
+          apiClient.getTemplates(),
+        ]);
+        if (mounted) {
+          setCustomers(custData || []);
+          setTemplates(tmplData || []);
+        }
       } catch (err) {
-        console.error('Failed to load customers', err);
+        console.error('Failed to load data', err);
       }
     })();
     return () => { mounted = false; };
   }, []);
 
-  // Mock template data based on Decision #17 - 11 parent PGs
-  const standardTemplates = [
-    { id: 1, group: 'A · PE Mono', name: 'Commercial Items Plain', type: 'pouch', structure: 'PE Mono', icon: '🛍️' },
-    { id: 2, group: 'A · PE Mono', name: 'Commercial Items Printed', type: 'pouch', structure: 'PE Mono + Ink', icon: '🖨️' },
-    { id: 3, group: 'A · PE Mono', name: 'Industrial Items Plain', type: 'roll', structure: 'PE Mono', icon: '🏭' },
-    { id: 4, group: 'A · PE Mono', name: 'Industrial Items Printed', type: 'roll', structure: 'PE Mono + Ink', icon: '🏭🖨️' },
-    { id: 5, group: 'A · PE Mono', name: 'Shrink Film Plain', type: 'roll', structure: 'PE Mono', icon: '📦' },
-    { id: 6, group: 'A · PE Mono', name: 'Shrink Film Printed', type: 'roll', structure: 'PE Mono + Ink', icon: '📦🖨️' },
-    { id: 7, group: 'A · PE Mono', name: 'Wide Film', type: 'roll', structure: 'PE Mono', icon: '📏' },
-    { id: 8, group: 'B · Non PE Mono', name: 'Mono Layer Printed', type: 'roll', structure: 'Non PE + Ink', icon: '📄' },
-    { id: 9, group: 'B · Non PE Mono', name: 'Shrink Sleeves', type: 'sleeve', structure: 'PVC/PET', icon: '👕' },
-    { id: 10, group: 'B · Non PE Mono', name: 'Labels', type: 'roll', structure: 'Face Stock', icon: '🏷️' },
-    { id: 11, group: 'C · Non PE Multilayer', name: 'Laminates', type: 'roll', structure: 'PET/PE 4L', icon: '🥞' },
-  ];
-
-  const myTemplates = [
-    { id: 12, name: 'Snack Pouch', type: 'pouch', structure: 'PET/AL/PE', lastUsed: '2 days ago' },
-    { id: 13, name: 'Coffee Bag', type: 'pouch', structure: 'PET/PE', lastUsed: '1 week ago' },
-    { id: 14, name: 'Pet Food Laminate', type: 'roll', structure: 'PET/AL/PE', lastUsed: '2 weeks ago' },
-  ];
-
-  const filteredStandardTemplates = standardTemplates.filter(template =>
-    template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    template.structure.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTemplates = templates.filter(t =>
+    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (t.pebiParentPg || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredMyTemplates = myTemplates.filter(template =>
-    template.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleUseTemplate = async () => {
+    if (!selectedTemplate) return;
+    try {
+      const jobNameInput = (document.querySelector('input[placeholder*="Chips duplex"]') as HTMLInputElement)?.value;
+      const instantiated = await apiClient.instantiateTemplate(selectedTemplate, {
+        customerId: selectedCustomer || undefined,
+        jobName: jobNameInput || undefined,
+      });
+      navigate(`/estimate/${instantiated.id}`);
+    } catch (err) {
+      alert('Failed to create estimate from template');
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -76,7 +73,7 @@ const TemplatePicker = () => {
                 const name = prompt('Customer company name');
                 if (!name) return;
                 try {
-                  const created = await apiClient.createCustomer({ companyName: name });
+                  const created = await apiClient.createCustomer({ companyName: name }) as any;
                   setCustomers((prev) => [created, ...prev]);
                   setSelectedCustomer(created.id);
                 } catch (err) {
@@ -125,17 +122,6 @@ const TemplatePicker = () => {
             Standard Templates
           </button>
           <button
-            onClick={() => setActiveTab('my')}
-            className={`pb-4 px-1 font-medium text-sm border-b-2 transition-colors ${
-              activeTab === 'my'
-                ? 'border-gold text-gold'
-                : 'border-transparent text-mist hover:text-ink'
-            }`}
-          >
-            <FileText className="w-4 h-4 inline-block mr-2" />
-            My Templates
-          </button>
-          <button
             onClick={() => setActiveTab('blank')}
             className={`pb-4 px-1 font-medium text-sm border-b-2 transition-colors ${
               activeTab === 'blank'
@@ -152,88 +138,36 @@ const TemplatePicker = () => {
       {/* Content based on active tab */}
       {activeTab === 'standard' && (
         <div>
-          {filteredStandardTemplates.length === 0 ? (
+          {filteredTemplates.length === 0 ? (
             <div className="card text-center py-12">
               <Grid3x3 className="w-12 h-12 text-mist mx-auto mb-4" />
               <h3 className="text-xl font-display font-semibold text-navy mb-2">No templates found</h3>
               <p className="text-mist">Try a different search term</p>
             </div>
           ) : (
-            <div className="space-y-8">
-              {/* Group templates by group */}
-              {['A · PE Mono', 'B · Non PE Mono', 'C · Non PE Multilayer'].map((group) => {
-                const groupTemplates = filteredStandardTemplates.filter(t => t.group === group);
-                if (groupTemplates.length === 0) return null;
-
-                return (
-                  <div key={group}>
-                    <h3 className="text-lg font-display font-semibold text-navy mb-4">{group}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {groupTemplates.map((template) => (
-                        <div
-                          key={template.id}
-                          onClick={() => setSelectedTemplate(template.id)}
-                          className={`card hover:shadow-md transition-shadow cursor-pointer ${selectedTemplate === template.id ? 'ring-2 ring-gold' : ''}`}
-                        >
-                          <div className="flex items-start space-x-4">
-                            <div className="text-2xl">{template.icon}</div>
-                            <div className="flex-1">
-                              <h4 className="font-display font-semibold text-navy mb-1">{template.name}</h4>
-                              <p className="text-sm text-mist mb-2">{template.structure}</p>
-                              <div className="flex items-center space-x-2">
-                                <span className="text-xs px-2 py-1 bg-slate rounded-md">
-                                  {template.type}
-                                </span>
-                                <span className="text-xs text-mist">Default: Wide Web</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'my' && (
-        <div>
-          {filteredMyTemplates.length === 0 ? (
-            <div className="card text-center py-12">
-              <FileText className="w-12 h-12 text-mist mx-auto mb-4" />
-              <h3 className="text-xl font-display font-semibold text-navy mb-2">No saved templates</h3>
-              <p className="text-mist mb-6">Save structures from your estimates to create templates</p>
-              <Link to="/estimate/new?template=blank" className="btn-secondary">
-                Start with Blank Canvas
-              </Link>
-            </div>
-          ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredMyTemplates.map((template) => (
-                <Link
+              {filteredTemplates.map((template) => (
+                <div
                   key={template.id}
-                  to={`/estimate/new?template=${template.id}`}
-                  className="card hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => setSelectedTemplate(template.id)}
+                  className={`card hover:shadow-md transition-shadow cursor-pointer ${selectedTemplate === template.id ? 'ring-2 ring-gold' : ''}`}
                 >
                   <div className="flex items-start space-x-4">
                     <div className="w-10 h-10 bg-gold/10 rounded-lg flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-gold" />
+                      <Layers className="w-5 h-5 text-gold" />
                     </div>
                     <div className="flex-1">
                       <h4 className="font-display font-semibold text-navy mb-1">{template.name}</h4>
-                      <p className="text-sm text-mist mb-2">{template.structure}</p>
-                      <div className="flex items-center justify-between">
+                      <p className="text-sm text-mist mb-2">{template.pebiParentPg || template.structureType || ''}</p>
+                      <div className="flex items-center space-x-2">
                         <span className="text-xs px-2 py-1 bg-slate rounded-md">
-                          {template.type}
+                          {template.productType}
                         </span>
-                        <span className="text-xs text-mist">Used {template.lastUsed}</span>
+                        <span className="text-xs text-mist">{template.materialClass || ''}</span>
                       </div>
                     </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
@@ -278,11 +212,7 @@ const TemplatePicker = () => {
           <button
             className="btn-primary"
             disabled={!selectedTemplate}
-            onClick={() => {
-              if (!selectedTemplate) return;
-              const url = `/estimate/new?template=${selectedTemplate}${selectedCustomer ? `&customer=${selectedCustomer}` : ''}`;
-              window.location.href = url;
-            }}
+            onClick={handleUseTemplate}
           >
             Continue to Estimate Editor
           </button>

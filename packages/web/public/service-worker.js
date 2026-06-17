@@ -24,6 +24,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
+  // Only handle http/https requests — skip chrome-extension, etc.
+  const url = new URL(request.url);
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
   event.respondWith(
     caches.match(request).then((cached) => cached || fetch(request).then((resp) => {
       if (!resp || resp.status !== 200 || resp.type !== 'basic') return resp;

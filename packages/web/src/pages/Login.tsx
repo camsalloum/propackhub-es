@@ -8,8 +8,8 @@ const Login = () => {
   const { login, isLoading, error } = useAuth();
   
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: 'admin@propackhub.com',
+    password: 'Pph654883!',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -67,7 +67,7 @@ const Login = () => {
                 value={formData.email}
                 onChange={handleChange}
                 required
-                placeholder="your@email.com"
+                placeholder="admin@propackhub.com"
                 className="w-full border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
               />
             </div>
@@ -82,7 +82,7 @@ const Login = () => {
                 value={formData.password}
                 onChange={handleChange}
                 required
-                placeholder="••••••••"
+                placeholder="••••••••••"
                 className="w-full border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
               />
             </div>
@@ -113,9 +113,9 @@ const Login = () => {
 
         {/* Demo credentials */}
         <div className="mt-8 text-center text-white text-sm">
-          <p className="mb-2">Demo Credentials:</p>
-          <p>Email: <code className="bg-white/10 px-2 py-1 rounded">demo@example.com</code></p>
-          <p>Password: <code className="bg-white/10 px-2 py-1 rounded">password123</code></p>
+          <p className="mb-2">Default Admin:</p>
+          <p>Email: <code className="bg-white/10 px-2 py-1 rounded">admin@propackhub.com</code></p>
+          <p>Password: <code className="bg-white/10 px-2 py-1 rounded">Pph654883!</code></p>
         </div>
       </div>
     </div>

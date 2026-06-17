@@ -12,6 +12,8 @@
 |-----|------|
 | [LOCKED_DECISIONS.md](./LOCKED_DECISIONS.md) | Strategic locks #2–#23 |
 | [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md) | Build PRD |
+| [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) | **Phased build plan** (audit findings, P0–G, DoD) |
+| [LIVE_STATE.md](./LIVE_STATE.md) | Current phase + what works |
 | [archive/legacy-laravel/COSTING_NOTES.md](../archive/legacy-laravel/COSTING_NOTES.md) | Laravel engine source of truth |
 | [ES_STANDARD_TEMPLATES_SEED.json](./ES_STANDARD_TEMPLATES_SEED.json) | 11 parent PG default stacks (v3) |
 | [ES_STANDARD_TEMPLATES_SEED.md](./ES_STANDARD_TEMPLATES_SEED.md) | Human-readable seed + review checklist |
@@ -146,14 +148,14 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 
 | Step | Task | Status |
 |------|------|--------|
-| 1 | Layer stacks + material model | **Complete** (owner proceed → Step 2) |
-| 2 | Wireframes + mockup | **Complete — audit pending** |
-| 2b | Audit handoff doc | **Complete** |
-| 3 | Scaffold `propackhub-es/` | Pending |
-| 4 | Engine golden tests (Laravel) | Pending |
-| 5 | MVP build | Pending |
+| 1 | Layer stacks + material model | **Complete** |
+| 2 | Wireframes + mockup | **Complete** |
+| 2b | Audit handoff doc | **Complete** (external audit still open) |
+| 3 | Scaffold `propackhub-es/` | **Complete** (2026-06-14) |
+| 4 | Engine golden tests (Laravel) | **Partial** — 12 unit tests pass; not full Laravel reference suite |
+| 5 | MVP build | **In progress** — see [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) |
 
-**Code not scaffolded yet** — docs only in this folder.
+**Code scaffold exists** — monorepo with engine, server, web. Quote workflow not E2E functional (audit 2026-06-15).
 
 ---
 
@@ -248,11 +250,18 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 - [ ] **External audit** ([ES_AUDIT_HANDOFF.md](./ES_AUDIT_HANDOFF.md))
 - [ ] Owner sign-off on seed micron hints (non-blocking)
 - [ ] ES domain / hosting
-- [ ] Explicit owner “go build” for scaffold (Step 3)
+- [x] Scaffold (Step 3) — done 2026-06-14
+- [x] **Phase A blockers** — web build, calculate crash, schema drift — done 2026-06-16
+- [x] **Phase B quote loop** — save + calculate + real material IDs — done 2026-06-16
+- [ ] **Phase C** Templates API + seed from `ES_STANDARD_TEMPLATES_SEED.json`
+- [ ] **Phase D** Visibility in UI (Decision #20) + team settings API
+- [ ] **Phase E** Customer detail page + re-quote UX
+- [ ] **Phase F** PDF proposal branding + slab table
+- [ ] CI green (server tests missing)
 
 ---
 
-*Last updated: 2026-06-14 (workspace memory automation)*
+*Last updated: 2026-06-16 (Phase A + B complete)*
 ### 2026-06-14 — Implementation Scaffold Started
 
 - **Owner requested implementation start** despite audit pending
@@ -396,3 +405,110 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 **Result:** New users can immediately create estimates with ready-to-use materials
 
 **Note:** Materials are **copied** to tenant (not shared) - each tenant owns their library and can modify prices
+
+### 2026-06-15 — Full implementation audit (code vs PRD)
+
+**Method:** Read all packages source; ran `engine` tests (12/12 pass), `server` build (pass), `web` build (**fail**). Did not rely on docs alone.
+
+**Verdict:** Foundation credible; **quote workflow not functional E2E**. Prior LIVE_STATE overstated completion.
+
+**Module scores:** engine 8/10 · server 5/10 · web 3/10
+
+**P0 blockers (confirmed in code):**
+1. `api.ts` duplicate `register()` — web does not compile
+2. `TemplatePicker.tsx` missing `useEffect` / `apiClient` imports
+3. `calculateEstimateRoute` references `slabs` never loaded → ReferenceError at runtime
+4. EstimateEditor save payload missing `productType`, `dimensions`, layer `materialId` UUIDs
+
+**P1 gaps:**
+- PATCH estimate does not update layers/slabs/processes
+- Editor never calls calculate; `@es/engine` not used in web pages
+- Library `materialType` vs API `type` mismatch; decimal strings from DB
+- Schema drift: `useAutoFx`, settings `logoUrl`/`brandPrimaryColor` vs schema columns
+- Customers `address` in route but not in schema
+- Calculate material map omits `isSolventBased`
+- GET `/estimates/:id` skips visibility strip
+
+**P2 gaps (PRD):**
+- No template DB/API; seed JSON not loaded
+- No FX display conversion in UI
+- Sales rep visibility not enforced in UI
+- CustomerDetail not routed; re-quote missing slabs + price delta
+- CI fails (no server tests)
+
+**What works:** auth, material seed, materials/customers CRUD, estimate routes (structure), visibility strip on list/calculate, engine math, partial API wiring on Dashboard/Library/Settings.
+
+**Artifacts:**
+- [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) — phased plan A→G with DoD and PRD acceptance tracker
+- [LIVE_STATE.md](./LIVE_STATE.md) — corrected status
+
+**Next:** Execute Phase A in implementation plan, then Phase B quote loop.
+
+### 2026-06-16 — Phase A + Phase B complete
+
+**Phase A — Unblock build & runtime (all P0 fixed):**
+- Fixed duplicate `register()` in API client
+- Fixed TemplatePicker missing imports
+- Fixed `slabs` ReferenceError in calculate route (loads slabs from DB)
+- Added `isSolventBased` to all material maps (3 instances)
+- Added `useAutoFx` field to tenants schema
+- Aligned settings field names (`logo`/`primaryColor`)
+- Removed `address` from customers route
+
+**Phase B — Quote loop (all tasks complete):**
+- B1: Library.tsx — API `type` ↔ UI mapping, decimal string parsing
+- B2: EstimateEditor loads tenant materials from API; layers use real `materialId` UUIDs; material dropdown selector with type filtering
+- B3: Controlled dimensions (`DimensionState`), productType selector (roll/sleeve/pouch), calculated values (printing web width, density, GSM)
+- B4: PATCH estimate route — delete + re-insert for layers, slabs, and processes on update; GET estimate enriches layers with material details
+- B5: Save → Create/Update → auto-Calculate → refresh UI with calculated salePricePerKg
+- B6: (deferred) Client-side engine import in web for instant recalc
+- B7: (deferred) FX display conversion
+- B8: Auto-calculate integrated into save flow (B5)
+- B9: TemplatePicker passes `template`, `productType`, `customer`, `jobName` via URL params to editor
+- B10: (deferred) Dashboard/EstimatesList customer name join
+
+**TypeScript fixes (17 errors → 0):**
+- Added `src/vite-env.d.ts` for `import.meta.env` and CSS module types
+- Fixed `useAuth.ts` — relaxed `role` and `displayCurrency` types
+- Fixed `Library.tsx` — removed unused imports, added type casts
+- Fixed `Settings.tsx` — added `apiClient.refreshFx()` method, displayed `lastFxUpdated` in UI
+- Fixed `TemplatePicker.tsx` — typed `created` customer response
+- Fixed `LaminateVisualizer.tsx` — removed unused `React` import
+- Fixed `App.tsx` — removed unused `CustomerDetail` import
+
+**Build status:**
+- ✅ `npm run build --workspace=packages/web` passes (tsc + vite build)
+- ✅ `npm run build --workspace=packages/server` passes (tsup)
+- ✅ Engine 12/12 tests pass
+
+**Key architectural decisions made:**
+- Layers use `materialId` UUIDs (not string names) — material details enriched in GET route
+- Save payload matches `EstimateCreateSchema` (jobName, customerId, productType, printingWebClass, dimensions, markupPercent, platesPerKg, deliveryPerKg, layers, slabs, processes)
+- Auto-calculate after save — no separate "calculate" step needed
+- TemplatePicker → editor via URL params (template, productType, customer, jobName)
+- `apiClient.refreshFx()` added as public method (was private `request`)
+
+**Next:** Phase F — Proposals & branding (PDF slab table, branding, visibility in PDF)
+
+### 2026-06-17 — Phase D + Phase E partial + Phase B re-merge
+
+**Context:** Another agent reverted Phase B/C work while fixing the same P0 blockers. Had to re-apply Phase B on top of their visibility additions (isAdmin guards).
+
+**Phase D — Visibility & roles (complete):**
+- D1: `stripEstimateRow` already applied on `GET /estimates/:id` and list
+- D2: Added `stripMaterialRow` to materials GET route — hides `costPerKgUsd` for sales reps
+- D3: `isAdmin` guards in EstimateEditor — hides slabs, markup, cost breakdown, $/kg column, solvent mix for non-admin
+- D4: Users route created by other agent (`GET /users`, `PATCH /users/:id/visibility`); registered in index.ts; added API client methods
+- D5: Visibility presets endpoint (`GET /visibility-presets`) — 3 named: admin, sales_rep, read_only
+
+**Phase E — Customers & re-quote (partial):**
+- E1: `CustomerDetail.tsx` routed at `/customers/:id` in App.tsx
+- E5: Re-quote banner added to EstimateEditor — shows when `sourceEstimationId` is set
+- E2/E3/E4: Partial — customers list page not built; client-side estimate filtering; requote copies slabs but no price_changes
+
+**Phase B re-merge:**
+- EstimateEditor fully rewritten to merge Phase B (material loading, controlled dimensions, save→calculate) with visibility additions (isAdmin guards, useAuth)
+- Kept: material dropdown, LayerItem interface, DimensionState, buildSavePayload, auto-calculate on save
+- Kept: isAdmin guards on slabs/markup/cost-breakdown tabs and sidebar sections
+
+**Build status:** Web ✅ Server ✅ Engine 12/12 ✅

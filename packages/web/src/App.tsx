@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import EstimateEditor from './pages/EstimateEditor';
 import TemplatePicker from './pages/TemplatePicker';
 import EstimatesList from './pages/EstimatesList';
+import CustomerDetail from './pages/CustomerDetail';
 import Library from './pages/Library';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
@@ -51,6 +52,7 @@ function App() {
           <Route path="estimate/new" element={<EstimateEditor />} />
           <Route path="estimate/:id" element={<EstimateEditor />} />
           <Route path="estimates" element={<EstimatesList />} />
+          <Route path="customers/:id" element={<CustomerDetail />} />
           <Route path="library" element={<Library />} />
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

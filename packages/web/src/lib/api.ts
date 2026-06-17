@@ -51,12 +51,11 @@ export class ApiClient {
   }
 
   // Auth
-  register(email: string, password: string, displayName: string, tenantName: string) {
   register(email: string, password: string, displayName: string, tenantName: string, displayCurrency: string) {
     return this.request<{
       token: string;
-      user: { id: string; email: string; displayName: string; role: string };
-      tenant: { id: string; name: string };
+      user: { id: string; email: string; displayName: string; role: 'user' | 'tenant_admin' | 'platform_admin' };
+      tenant: { id: string; name: string; displayCurrency: string };
     }>('POST', '/api/v1/auth/register', {
       email,
       password,
@@ -70,7 +69,7 @@ export class ApiClient {
   login(email: string, password: string) {
     return this.request<{
       token: string;
-      user: { id: string; email: string; displayName: string; role: string };
+      user: { id: string; email: string; displayName: string; role: 'user' | 'tenant_admin' | 'platform_admin' };
       tenant: { id: string; name: string; displayCurrency: string };
     }>('POST', '/api/v1/auth/login', {
       email,
@@ -80,7 +79,7 @@ export class ApiClient {
 
   getMe() {
     return this.request<{
-      user: { id: string; email: string; displayName: string; role: string };
+      user: { id: string; email: string; displayName: string; role: 'user' | 'tenant_admin' | 'platform_admin' };
       tenant: { id: string; name: string; displayCurrency: string };
     }>('GET', '/api/v1/auth/me');
   }
@@ -165,6 +164,36 @@ export class ApiClient {
 
   updateSettings(payload: any) {
     return this.request<any>('PATCH', '/api/v1/settings', payload);
+  }
+
+  refreshFx() {
+    return this.request<{ exchangeRateUsdToDisplay: number }>('POST', '/api/v1/settings/refresh-fx');
+  }
+
+  // Users & Visibility
+  getUsers() {
+    return this.request<any>('GET', '/api/v1/users');
+  }
+
+  updateUserVisibility(userId: string, visibilityProfile: Record<string, boolean>) {
+    return this.request<any>('PATCH', `/api/v1/users/${userId}/visibility`, { visibilityProfile });
+  }
+
+  getVisibilityPresets() {
+    return this.request<Record<string, { name: string; profile: Record<string, boolean> }>>('GET', '/api/v1/visibility-presets');
+  }
+
+  // Templates
+  getTemplates() {
+    return this.request<any[]>('GET', '/api/v1/templates');
+  }
+
+  getTemplate(id: string) {
+    return this.request<any>('GET', `/api/v1/templates/${id}`);
+  }
+
+  instantiateTemplate(id: string, data: { customerId?: string; jobName?: string }) {
+    return this.request<any>('POST', `/api/v1/templates/${id}/instantiate`, data);
   }
 }
 

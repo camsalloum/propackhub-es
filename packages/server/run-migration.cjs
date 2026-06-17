@@ -9,10 +9,17 @@ async function run() {
   await c.query(sql);
   console.log('Migration complete!');
   
-  // Verify
-  const res = await c.query("SELECT column_name FROM information_schema.columns WHERE table_name='estimates' ORDER BY ordinal_position;");
-  console.log('Columns after migration:');
-  res.rows.forEach(r => console.log('  ' + r.column_name));
+  // Verify - show all tables and their columns
+  const res = await c.query("SELECT table_name, column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name IN ('tenants','users','estimates','customers','materials','layers','processes','slabs','activity_logs','structure_templates') ORDER BY table_name, ordinal_position;");
+  const tables = {};
+  res.rows.forEach(r => {
+    if (!tables[r.table_name]) tables[r.table_name] = [];
+    tables[r.table_name].push(`${r.column_name} (${r.data_type})`);
+  });
+  Object.keys(tables).sort().forEach(t => {
+    console.log(`\n${t}:`);
+    tables[t].forEach(c => console.log(`  ${c}`));
+  });
   await c.end();
 }
 

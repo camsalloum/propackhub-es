@@ -7,9 +7,20 @@ echo    Start Servers
 echo ====================================
 echo.
 
+REM Kill any existing servers on ports 5000 and 5001
+echo [1/3] Killing existing servers...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5001 .*LISTENING"') do (
+    taskkill /F /PID %%a >nul 2>&1
+)
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5000 .*LISTENING"') do (
+    taskkill /F /PID %%a >nul 2>&1
+)
+echo   Done.
+echo.
+
 REM Install if needed (first time only)
 if not exist "node_modules" (
-    echo [1/2] Installing dependencies...
+    echo [2/3] Installing dependencies...
     call npm install
     if %errorlevel% neq 0 (
         echo ERROR: Failed to install. Check Node.js.
@@ -19,7 +30,7 @@ if not exist "node_modules" (
     echo.
 )
 
-echo [2/2] Starting servers...
+echo [3/3] Starting servers...
 echo.
 echo   Web App: http://localhost:5000
 echo   API:     http://localhost:5001

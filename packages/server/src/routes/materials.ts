@@ -4,6 +4,7 @@ import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
 import { eq, and } from 'drizzle-orm';
 import { getEffectiveProfile, stripMaterialRow } from '../utils/visibility';
+import { ensureMaterialsForTenant } from '../db/seed-materials';
 
 const MaterialSchema = z.object({
   name: z.string().min(1),
@@ -31,6 +32,8 @@ export async function getMaterialsRoute(
       .where(eq(schema.users.id, user.userId));
 
     const profile = getEffectiveProfile(user.role, userRecord?.visibilityProfile);
+
+    await ensureMaterialsForTenant(tenantId);
 
     const materials = await db
       .select()

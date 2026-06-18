@@ -1,8 +1,8 @@
 import { getDatabase, schema } from './index';
 import { hashPassword } from '../utils/auth';
 import { eq } from 'drizzle-orm';
-import { seedMaterialsForTenant } from './seed-materials';
-import { seedTemplatesForTenant } from './seed-templates';
+import { seedMaterialsForTenant, ensureMaterialsForTenant } from './seed-materials';
+import { seedTemplatesForTenant, ensureTemplatesForTenant } from './seed-templates';
 
 const DEFAULT_ADMIN_EMAIL = 'admin@propackhub.com';
 const DEFAULT_ADMIN_PASSWORD = 'Pph654883!';
@@ -27,6 +27,31 @@ export async function seedDefaultAdmin(): Promise<void> {
       .limit(1);
 
     if (existing.length > 0) {
+      const [admin] = await db
+        .select({ tenantId: schema.users.tenantId })
+        .from(schema.users)
+        .where(eq(schema.users.email, DEFAULT_ADMIN_EMAIL))
+        .limit(1);
+
+      if (admin) {
+        try {
+          const matsAdded = await ensureMaterialsForTenant(admin.tenantId);
+          if (matsAdded > 0) {
+            console.log(`✓ Backfilled ${matsAdded} materials for default admin tenant`);
+          }
+        } catch (seedErr) {
+          console.error('Failed to backfill materials for default admin:', seedErr);
+        }
+        try {
+          const added = await ensureTemplatesForTenant(admin.tenantId);
+          if (added > 0) {
+            console.log(`✓ Backfilled ${added} structure templates for default admin tenant`);
+          }
+        } catch (seedErr) {
+          console.error('Failed to backfill templates for default admin:', seedErr);
+        }
+      }
+
       console.log(`✓ Default admin already exists (${DEFAULT_ADMIN_EMAIL})`);
       return;
     }

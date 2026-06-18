@@ -1,4 +1,5 @@
 import { getDatabase, schema } from './index';
+import { eq } from 'drizzle-orm';
 import masterMaterials from './master-materials-seed.json';
 
 /**
@@ -31,6 +32,22 @@ export async function seedMaterialsForTenant(tenantId: string): Promise<number> 
     console.error('Failed to seed materials:', error);
     throw error;
   }
+}
+
+/** Idempotent — seeds master materials when tenant library is empty. */
+export async function ensureMaterialsForTenant(tenantId: string): Promise<number> {
+  const db = getDatabase();
+  const existing = await db
+    .select({ id: schema.materials.id })
+    .from(schema.materials)
+    .where(eq(schema.materials.tenantId, tenantId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    return 0;
+  }
+
+  return seedMaterialsForTenant(tenantId);
 }
 
 /**

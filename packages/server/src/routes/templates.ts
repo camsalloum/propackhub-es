@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest } from '../utils/auth';
 import { eq, and } from 'drizzle-orm';
+import { ensureTemplatesForTenant } from '../db/seed-templates';
 
 /**
  * GET /api/v1/templates
@@ -18,6 +19,8 @@ export async function getTemplatesRoute(
     await request.jwtVerify();
     const tenantId = extractTenantFromRequest(request);
     const db = getDatabase();
+
+    await ensureTemplatesForTenant(tenantId);
 
     const templates = await db
       .select()

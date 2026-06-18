@@ -10,6 +10,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push:pg",
     "db:patch": "tsx scripts/apply-schema-patches.ts",
+    "db:seed-templates": "tsx scripts/seed-templates-backfill.ts",
     "db:generate": "drizzle-kit generate:pg",
     "lint": "eslint src",
     "test": "vitest run",

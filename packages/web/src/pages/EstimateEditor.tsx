@@ -30,6 +30,7 @@ const EstimateEditor = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [calculating, setCalculating] = useState(false);
 
@@ -121,12 +122,34 @@ const EstimateEditor = () => {
   };
 
   // Load materials + customers on mount
+  const loadBaseData = useCallback(async () => {
+    let mats: MaterialItem[] = [];
+    let custs: any[] = [];
+
+    try {
+      mats = (await apiClient.getMaterials()) || [];
+      setMaterials(mats);
+    } catch (err) {
+      console.error('Failed to load materials:', err);
+      setLoadError('Could not load materials. Layer defaults may be incomplete.');
+    }
+
+    try {
+      custs = (await apiClient.getCustomers()) || [];
+      setCustomers(custs);
+    } catch (err) {
+      console.error('Failed to load customers:', err);
+    }
+
+    return { mats, custs };
+  }, []);
+
   useEffect(() => {
     const init = async () => {
       try {
-        const [mats, custs] = await Promise.all([apiClient.getMaterials(), apiClient.getCustomers()]);
-        setMaterials(mats || []);
-        setCustomers(custs || []);
+        setLoadError(null);
+        setLoading(true);
+        const { mats, custs } = await loadBaseData();
 
         if (id) {
           await fetchEstimate(id);
@@ -134,7 +157,7 @@ const EstimateEditor = () => {
           const templateId = searchParams.get('template') ? Number(searchParams.get('template')) : null;
           const paramCustomer = searchParams.get('customer') || '';
           const paramJobName = searchParams.get('jobName') || 'New estimate';
-          const paramProductType = (searchParams.get('productType') || 'roll') as 'roll' | 'sleeve' | 'pouch';
+          const paramProductType = (searchParams.get('productType') || searchParams.get('type') || 'roll') as 'roll' | 'sleeve' | 'pouch';
           const defaultLayers = getTemplateLayers(templateId, mats || []);
           setJobName(paramJobName);
           setCustomerId(paramCustomer);
@@ -147,13 +170,13 @@ const EstimateEditor = () => {
           ]);
           setEstimate({ id: undefined, status: 'draft', displayCurrency: 'AED', salePricePerKg: 0, materialCostPerKg: 0, totalGsm: 0, totalMicron: 0 });
           setPrintingWebClass('wide_web');
-          // Check for priceChanges passed from requote navigation
           const statePriceChanges = (location.state as any)?.priceChanges;
           if (statePriceChanges) setPriceChanges(statePriceChanges);
           setLoading(false);
         }
       } catch (err) {
         console.error('Failed to load base data:', err);
+        setLoadError('Failed to load estimate data.');
         setLoading(false);
       }
     };
@@ -222,6 +245,7 @@ const EstimateEditor = () => {
     } catch (error) {
       console.error('Failed to load estimate:', error);
       setEstimate(null);
+      setLoadError('Estimate not found or could not be loaded.');
     } finally { setLoading(false); }
   };
 
@@ -378,6 +402,20 @@ const EstimateEditor = () => {
   };
 
   if (loading) return <div className="p-8">Loading estimate...</div>;
+
+  if (loadError && !estimate && id) {
+    return (
+      <div className="p-8 max-w-lg mx-auto card bg-red-50 border border-red-200 text-center">
+        <p className="text-red-800 font-medium">{loadError}</p>
+        <div className="flex flex-col gap-2 mt-4">
+          <button type="button" className="btn-primary" onClick={() => { setLoading(true); fetchEstimate(id!); }}>
+            Retry
+          </button>
+          <Link to="/estimates" className="text-gold hover:underline text-sm">Back to estimates</Link>
+        </div>
+      </div>
+    );
+  }
   if (!estimate) return <div className="p-8">Estimate not found</div>;
 
   const displaySlabs = slabsState.length > 0 ? slabsState : [{ quantityKg: 1000, pricePerKg: 0, total: 0 }, { quantityKg: 2000, pricePerKg: 0, total: 0 }, { quantityKg: 5000, pricePerKg: 0, total: 0 }];
@@ -390,6 +428,14 @@ const EstimateEditor = () => {
 
   return (
     <div className="max-w-7xl mx-auto pb-24 md:pb-0">
+      {loadError && (
+        <div className="mb-4 card bg-amber-50 border border-amber-200 text-sm text-amber-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <span>{loadError}</span>
+          <button type="button" className="btn-secondary text-sm" onClick={loadBaseData}>
+            Retry materials
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">

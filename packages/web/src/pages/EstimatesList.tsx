@@ -18,18 +18,21 @@ const EstimatesList = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        const data = await apiClient.getEstimates();
-        setEstimates(data || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load estimates');
-      } finally {
-        setLoading(false);
-      }
-    })();
+    fetchEstimates();
   }, []);
+
+  const fetchEstimates = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await apiClient.getEstimates();
+      setEstimates(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load estimates');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -44,6 +47,9 @@ const EstimatesList = () => {
       <div className="card bg-red-50 border-red-200">
         <p className="text-red-800 font-medium">Could not load estimates</p>
         <p className="text-red-600 text-sm mt-1">{error}</p>
+        <button type="button" className="btn-primary mt-4" onClick={fetchEstimates}>
+          Retry
+        </button>
       </div>
     );
   }

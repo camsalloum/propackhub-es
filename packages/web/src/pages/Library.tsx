@@ -113,6 +113,9 @@ const Library = () => {
       <div className="card bg-red-50 border border-red-200">
         <p className="text-red-800 font-medium">Error loading materials</p>
         <p className="text-red-600 text-sm mt-1">{error}</p>
+        <button type="button" className="btn-primary mt-4" onClick={fetchMaterials}>
+          Retry
+        </button>
       </div>
     );
   }

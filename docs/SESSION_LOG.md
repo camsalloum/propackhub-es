@@ -15,3 +15,5 @@
 | 2026-06-18 | Cursor | V1 plan close-out: E6 requote auto-calc, F3 pdfkit branding, Phase H platform library + SSO stub, mobile tab nav + polish | estimate-calculation.ts, pdf-proposal-kit.ts, platform.ts, MasterLibrary.tsx, Layout.tsx, docs/* | Full PEBI SSO exchange post-V1 |
 | 2026-06-18 | Cursor | PRD v3.4 alignment: header/status, §14 complete, Appendix A.1 build matrix, removed stale “not built yet” | ES_PRD_v3_FINAL_BUILD_SPEC.md, ES_MEMORY.md, ES_IMPLEMENTATION_PLAN.md | — |
 | 2026-06-18 | Cursor | Audit TS cleanup: server tsc 0 errors, material-map helper, requote price_changes fix | schema.ts, estimates.ts, material-map.ts, routes/*, docs/* | — |
+| 2026-06-18 | Cursor | Fix empty template picker: ensureTemplates backfill, independent fetch, Vite proxy API | seed-templates.ts, templates.ts, TemplatePicker.tsx, api.ts | — |
+| 2026-06-18 | Cursor | Cross-page audit: Promise.all splits, error+retry UI, route fixes, ensureMaterials | web pages/*, seed-materials.ts, materials.ts | — |

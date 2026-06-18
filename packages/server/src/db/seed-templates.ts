@@ -27,11 +27,6 @@ interface TemplateSeedEntry {
   substrate_options?: string[];
 }
 
-/**
- * Seed structure templates for a new tenant.
- * Called automatically on tenant registration after materials are seeded.
- * Maps ref_material_key to actual material IDs from the tenant's library.
- */
 export async function seedTemplatesForTenant(tenantId: string): Promise<number> {
   const db = getDatabase();
 
@@ -124,4 +119,20 @@ export async function seedTemplatesForTenant(tenantId: string): Promise<number> 
     console.error('Failed to seed structure templates:', error);
     throw error;
   }
+}
+
+/** Idempotent — seeds 11 parent PG templates only when tenant has none (e.g. pre-Phase C accounts). */
+export async function ensureTemplatesForTenant(tenantId: string): Promise<number> {
+  const db = getDatabase();
+  const existing = await db
+    .select({ id: schema.structureTemplates.id })
+    .from(schema.structureTemplates)
+    .where(eq(schema.structureTemplates.tenantId, tenantId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    return 0;
+  }
+
+  return seedTemplatesForTenant(tenantId);
 }

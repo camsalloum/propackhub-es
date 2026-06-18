@@ -9,6 +9,7 @@ export default function CustomerDetail() {
   const [customer, setCustomer] = useState<any>(null);
   const [estimates, setEstimates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -16,18 +17,29 @@ export default function CustomerDetail() {
   }, [id]);
 
   const fetchCustomerAndEstimates = async () => {
+    if (!id) return;
     try {
       setLoading(true);
-      // Fetch customer details
-      const customers = await apiClient.getCustomers();
-      const cust = customers.find((c: any) => c.id === id);
-      setCustomer(cust || null);
+      setError(null);
 
-      // Fetch estimates for this customer from the server
-      const custEstimates = await apiClient.getCustomerEstimates(id!);
-      setEstimates(custEstimates);
-    } catch (error) {
-      console.error('Failed to load customer data:', error);
+      try {
+        const customers = await apiClient.getCustomers();
+        const cust = customers.find((c: any) => c.id === id);
+        setCustomer(cust || null);
+      } catch (err) {
+        console.error('Failed to load customer:', err);
+        setCustomer(null);
+        setError('Could not load customer details');
+      }
+
+      try {
+        const custEstimates = await apiClient.getCustomerEstimates(id);
+        setEstimates(custEstimates);
+      } catch (err) {
+        console.error('Failed to load customer estimates:', err);
+        setEstimates([]);
+        setError((prev) => prev || 'Could not load quote history');
+      }
     } finally {
       setLoading(false);
     }
@@ -44,6 +56,20 @@ export default function CustomerDetail() {
 
   if (loading) {
     return <div className="p-8">Loading customer...</div>;
+  }
+
+  if (error && !customer) {
+    return (
+      <div className="max-w-6xl mx-auto p-8 card bg-red-50 border border-red-200 text-center">
+        <p className="text-red-800 font-medium">{error}</p>
+        <button type="button" className="btn-primary mt-4" onClick={fetchCustomerAndEstimates}>
+          Retry
+        </button>
+        <Link to="/customers" className="block mt-3 text-gold hover:underline">
+          Back to customers
+        </Link>
+      </div>
+    );
   }
 
   if (!customer) {
@@ -108,7 +134,10 @@ export default function CustomerDetail() {
               )}
             </div>
 
-            <button onClick={() => navigate(`/estimate`, { state: { customerId: id } })} className="btn-primary w-full mt-6">
+            <button
+              onClick={() => navigate(`/estimate/choose?customer=${id}`)}
+              className="btn-primary w-full mt-6"
+            >
               + New estimate
             </button>
           </div>

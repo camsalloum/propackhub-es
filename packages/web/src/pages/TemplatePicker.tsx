@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Grid3x3, Layers } from 'lucide-react';
 import { apiClient } from '../lib/api';
 
@@ -10,25 +10,38 @@ const TemplatePicker = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const loadData = async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const tmplData = await apiClient.getTemplates();
+      setTemplates(tmplData || []);
+    } catch (err) {
+      console.error('Failed to load templates', err);
+      setTemplates([]);
+      setLoadError('Could not load standard templates. Check that the API server is running, then retry.');
+    }
+    try {
+      const custData = await apiClient.getCustomers();
+      setCustomers(custData || []);
+    } catch (err) {
+      console.error('Failed to load customers', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const [custData, tmplData] = await Promise.all([
-          apiClient.getCustomers(),
-          apiClient.getTemplates(),
-        ]);
-        if (mounted) {
-          setCustomers(custData || []);
-          setTemplates(tmplData || []);
-        }
-      } catch (err) {
-        console.error('Failed to load data', err);
-      }
-    })();
-    return () => { mounted = false; };
+    const customerFromUrl = searchParams.get('customer');
+    if (customerFromUrl) {
+      setSelectedCustomer(customerFromUrl);
+    }
+    loadData();
   }, []);
 
   const filteredTemplates = templates.filter(t =>
@@ -138,11 +151,26 @@ const TemplatePicker = () => {
       {/* Content based on active tab */}
       {activeTab === 'standard' && (
         <div>
-          {filteredTemplates.length === 0 ? (
+          {loading ? (
+            <div className="card text-center py-12 text-mist">Loading templates…</div>
+          ) : loadError ? (
+            <div className="card text-center py-12">
+              <p className="text-danger mb-4">{loadError}</p>
+              <button type="button" className="btn-primary" onClick={loadData}>
+                Retry
+              </button>
+            </div>
+          ) : filteredTemplates.length === 0 ? (
             <div className="card text-center py-12">
               <Grid3x3 className="w-12 h-12 text-mist mx-auto mb-4" />
-              <h3 className="text-xl font-display font-semibold text-navy mb-2">No templates found</h3>
-              <p className="text-mist">Try a different search term</p>
+              <h3 className="text-xl font-display font-semibold text-navy mb-2">
+                {searchTerm ? 'No templates match your search' : 'No templates yet'}
+              </h3>
+              <p className="text-mist">
+                {searchTerm
+                  ? 'Try a different search term'
+                  : 'Standard product-group templates are loading — refresh the page. If this persists, restart the API server.'}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -622,3 +622,17 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 - `svg-to-pdfkit.d.ts` module stub; unused param/import cleanup
 
 **Verify:** engine 18/18, server 5/5, all builds pass.
+
+### 2026-06-18 — Template picker empty state fix
+
+**Symptom:** `/estimate/choose` showed "No templates found" despite 11 PG templates in DB.
+
+**Cause:** Admin tenant predated template seed; `GET /api/v1/templates` could 500 or `Promise.all` with customers failed silently → empty UI.
+
+**Fix:** `ensureTemplatesForTenant` on startup + templates GET; `db:seed-templates` script; TemplatePicker loads templates independently with retry; dev API uses Vite proxy (`api.ts`).
+
+### 2026-06-18 — Cross-page audit (silent failures + routing)
+
+**Review:** Same class of bugs as empty template picker — `Promise.all` masking partial failures, console-only errors, wrong new-estimate routes.
+
+**Fixed:** CustomersList/CustomerDetail → `/estimate/choose`; CustomerDetail `?customer=` preselect; independent API loads + Retry on Dashboard, Estimates, Customers, Library, Settings, EstimateEditor, MasterLibrary; `ensureMaterialsForTenant` on materials GET + admin backfill.

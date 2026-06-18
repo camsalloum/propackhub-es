@@ -31,21 +31,22 @@ const Dashboard = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchSummary = async () => {
-      try {
-        setLoading(true);
-        const data = await apiClient.getDashboardSummary();
-        setSummary(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load dashboard');
-        console.error('Error fetching dashboard:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchSummary();
   }, []);
+
+  const fetchSummary = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await apiClient.getDashboardSummary();
+      setSummary(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard');
+      console.error('Error fetching dashboard:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const stats = summary
     ? [
@@ -96,6 +97,9 @@ const Dashboard = () => {
       <div className="card bg-red-50 border border-red-200">
         <p className="text-red-800 font-medium">Error loading dashboard</p>
         <p className="text-red-600 text-sm mt-1">{error}</p>
+        <button type="button" className="btn-primary mt-4" onClick={fetchSummary}>
+          Retry
+        </button>
       </div>
     );
   }

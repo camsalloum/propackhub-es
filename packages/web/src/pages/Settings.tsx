@@ -28,45 +28,56 @@ const Settings = () => {
   const [brandPrimaryColor, setBrandPrimaryColor] = useState('#0F1F3D');
   const [termsAndConditions, setTermsAndConditions] = useState('');
   const [footerText, setFooterText] = useState('');
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [teamError, setTeamError] = useState<string | null>(null);
+  const [teamLoading, setTeamLoading] = useState(false);
+
+  const loadSettings = async () => {
+    try {
+      setSettingsError(null);
+      const settings = await apiClient.getSettings();
+      setTenantName(settings.name || '');
+      setDisplayCurrency(settings.displayCurrency || 'AED');
+      setExchangeRateUsdToDisplay(Number(settings.exchangeRateUsdToDisplay) || 1);
+      setUseAutoFx(Boolean(settings.useAutoFx));
+      setLogoUrl(settings.logo || undefined);
+      setBrandPrimaryColor(settings.primaryColor || '#0F1F3D');
+      setTermsAndConditions(settings.termsAndConditions || '');
+      setFooterText((settings.footerText as string) || (settings.footer as string) || '');
+    } catch (err) {
+      setSettingsError(err instanceof Error ? err.message : 'Failed to load settings');
+      console.error('Failed to load settings:', err);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const settings = await apiClient.getSettings();
-        if (!mounted) return;
-        setTenantName(settings.name || '');
-        setDisplayCurrency(settings.displayCurrency || 'AED');
-        setExchangeRateUsdToDisplay(Number(settings.exchangeRateUsdToDisplay) || 1);
-        setUseAutoFx(Boolean(settings.useAutoFx));
-        setLogoUrl(settings.logo || undefined);
-        setBrandPrimaryColor(settings.primaryColor || '#0F1F3D');
-        setTermsAndConditions(settings.termsAndConditions || '');
-        setFooterText((settings.footerText as string) || (settings.footer as string) || '');
-      } catch (err) {
-        console.error('Failed to load settings:', err);
-      }
-    })();
-    return () => { mounted = false; };
+    loadSettings();
   }, []);
+
+  const loadTeamSettings = async () => {
+    setTeamLoading(true);
+    setTeamError(null);
+    try {
+      const usersResp = await apiClient.getUsers();
+      setTeamUsers(usersResp.users || []);
+    } catch (err) {
+      console.error('Failed to load team users:', err);
+      setTeamError('Could not load team members');
+    }
+    try {
+      const presets = await apiClient.getVisibilityPresets();
+      setVisibilityPresets(presets || {});
+    } catch (err) {
+      console.error('Failed to load visibility presets:', err);
+      setTeamError((prev) => prev || 'Could not load visibility presets');
+    } finally {
+      setTeamLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isAdmin || activeTab !== 'team') return;
-    let mounted = true;
-    (async () => {
-      try {
-        const [usersResp, presets] = await Promise.all([
-          apiClient.getUsers(),
-          apiClient.getVisibilityPresets(),
-        ]);
-        if (!mounted) return;
-        setTeamUsers(usersResp.users || []);
-        setVisibilityPresets(presets || {});
-      } catch (err) {
-        console.error('Failed to load team settings:', err);
-      }
-    })();
-    return () => { mounted = false; };
+    loadTeamSettings();
   }, [activeTab, isAdmin]);
 
   const applyPresetToUser = async (userId: string, presetKey: string) => {
@@ -119,6 +130,14 @@ const Settings = () => {
       <div className="mb-8">
         <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Settings</h1>
         <p className="text-mist mt-2">Configure your Estimation Studio workspace</p>
+        {settingsError && (
+          <div className="mt-4 card bg-red-50 border border-red-200 text-sm text-red-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <span>{settingsError}</span>
+            <button type="button" className="btn-secondary text-sm" onClick={loadSettings}>
+              Retry
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8">
@@ -193,8 +212,18 @@ const Settings = () => {
               <h2 className="text-xl font-display font-semibold text-navy mb-6">Team & Visibility</h2>
               {!isAdmin ? (
                 <p className="text-mist text-sm">Only tenant admins can manage team visibility.</p>
+              ) : teamLoading ? (
+                <p className="text-mist text-sm">Loading team settings…</p>
               ) : (
                 <div className="space-y-6">
+                  {teamError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <span>{teamError}</span>
+                      <button type="button" className="btn-secondary text-sm" onClick={loadTeamSettings}>
+                        Retry
+                      </button>
+                    </div>
+                  )}
                   <div>
                     <h3 className="font-display font-semibold text-navy mb-4">Visibility Presets</h3>
                     <div className="flex flex-wrap gap-2">

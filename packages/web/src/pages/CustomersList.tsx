@@ -6,6 +6,7 @@ import { apiClient } from '../lib/api';
 export default function CustomersList() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -15,10 +16,12 @@ export default function CustomersList() {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await apiClient.getCustomers();
       setCustomers(data);
-    } catch (error) {
-      console.error('Failed to load customers:', error);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load customers');
+      console.error('Failed to load customers:', err);
     } finally {
       setLoading(false);
     }
@@ -44,6 +47,18 @@ export default function CustomersList() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="max-w-6xl mx-auto card bg-red-50 border border-red-200 text-center py-12">
+        <p className="text-red-800 font-medium">Could not load customers</p>
+        <p className="text-red-600 text-sm mt-1">{error}</p>
+        <button type="button" className="btn-primary mt-4" onClick={fetchCustomers}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto">
       {/* Header */}
@@ -55,7 +70,7 @@ export default function CustomersList() {
             <p className="text-sm text-mist">{customers.length} customers</p>
           </div>
         </div>
-        <Link to="/estimate/new" className="btn-primary inline-flex items-center space-x-2">
+        <Link to="/estimate/choose" className="btn-primary inline-flex items-center space-x-2">
           <Plus className="w-4 h-4" />
           <span>New Estimate</span>
         </Link>

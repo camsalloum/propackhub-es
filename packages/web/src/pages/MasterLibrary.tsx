@@ -64,7 +64,27 @@ const MasterLibrary = () => {
       </div>
 
       {error && (
-        <div className="card bg-red-50 border-red-200 mb-4 text-red-700 text-sm">{error}</div>
+        <div className="card bg-red-50 border-red-200 mb-4 text-red-700 text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <span>{error}</span>
+          <button
+            type="button"
+            className="btn-secondary text-sm"
+            onClick={async () => {
+              setLoading(true);
+              setError(null);
+              try {
+                const data = await apiClient.getMasterMaterials();
+                setMaterials(data || []);
+              } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to load master library');
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
+            Retry
+          </button>
+        </div>
       )}
 
       <div className="space-y-3 md:hidden">

@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest } from '../utils/auth';
 import { eq } from 'drizzle-orm';
@@ -120,14 +119,13 @@ async function refreshExchangeRateRoute(
     const rate = await fetchExchangeRate(tenant.displayCurrency);
 
     // Update tenant
-    const [updated] = await db
+    await db
       .update(schema.tenants)
       .set({
         exchangeRateUsdToDisplay: rate.toString(),
         updatedAt: new Date(),
       })
-      .where(eq(schema.tenants.id, tenantId))
-      .returning();
+      .where(eq(schema.tenants.id, tenantId));
 
     return reply.send({
       exchangeRateUsdToDisplay: rate,

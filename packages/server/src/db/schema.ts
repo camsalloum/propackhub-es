@@ -1,7 +1,6 @@
 import {
   pgTable,
   pgEnum,
-  serial,
   varchar,
   text,
   integer,
@@ -13,7 +12,6 @@ import {
   index,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { sql } from 'drizzle-orm';
 
 // Enums
 export const userRoleEnum = pgEnum('user_role', ['user', 'tenant_admin', 'platform_admin']);
@@ -93,6 +91,7 @@ export const customers = pgTable('customers', {
 }));
 
 // Estimates (tenant-owned)
+// @ts-expect-error Drizzle self-referential FK (sourceEstimationId)
 export const estimates = pgTable('estimates', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
@@ -136,6 +135,7 @@ export const estimates = pgTable('estimates', {
   notes: text('notes'),
   
   // Re-quote tracking
+  // @ts-expect-error Drizzle self-referential FK callback
   sourceEstimationId: uuid('source_estimation_id').references(() => estimates.id, { onDelete: 'set null' }),
   
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),

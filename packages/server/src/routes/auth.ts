@@ -2,7 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { hashPassword, verifyPassword, TokenPayload } from '../utils/auth';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { seedMaterialsForTenant } from '../db/seed-materials';
 import { seedTemplatesForTenant } from '../db/seed-templates';
 import { fetchExchangeRate } from '../utils/fx-rates';
@@ -199,7 +199,7 @@ export async function loginRoute(
 }
 
 export async function meRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest,
   reply: FastifyReply
 ) {
@@ -254,7 +254,7 @@ export async function registerAuthRoutes(fastify: FastifyInstance) {
 
   fastify.get('/api/v1/auth/me', async (request, reply) => meRoute(fastify, request, reply));
 
-  fastify.get('/api/v1/auth/sso/pebi', async (request, reply) => {
+  fastify.get('/api/v1/auth/sso/pebi', async (_request, reply) => {
     const baseUrl = process.env.PEBI_SSO_URL || '';
     const returnUrl = process.env.ES_PUBLIC_URL || process.env.CORS_ORIGIN || 'http://localhost:5000';
     if (!baseUrl) {

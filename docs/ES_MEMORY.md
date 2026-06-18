@@ -608,3 +608,17 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 **Context:** User asked which doc is canonical vs what was built.
 
 **Updated:** `ES_PRD_v3_FINAL_BUILD_SPEC.md` — title v3.4, status V1 implemented, §14 phases marked complete, Appendix A.1 build matrix, removed stale “not built yet” line.
+
+### 2026-06-18 — Audit TypeScript cleanup (server 0 errors)
+
+**Context:** User approved execution of `AUDIT_2026-06-18.md` Steps 1–9.
+
+**Done:**
+- `packages/server` `tsc --noEmit` **0 errors** (was ~71)
+- Shared `buildEngineMaterialMap` in `utils/material-map.ts`; `EngineEstimate` import in `estimates.ts`
+- Drizzle callback typing across routes + `estimate-calculation.ts`
+- Schema: removed unused imports; `@ts-expect-error` on circular `estimates` FK
+- Requote `price_changes`: compare `costPerKgUsd` (old derived from layer `costPerM2` + gsm when cached)
+- `svg-to-pdfkit.d.ts` module stub; unused param/import cleanup
+
+**Verify:** engine 18/18, server 5/5, all builds pass.

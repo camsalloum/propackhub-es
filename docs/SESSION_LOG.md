@@ -14,3 +14,4 @@
 | 2026-06-18 | Cursor | G3 Laravel golden tests (4 scenarios, 18 engine tests); G4 mobile bottom sheets, swipe delete, layer reorder | golden-fixtures.ts, golden.test.ts, BottomSheet.tsx, LayerCard.tsx, EstimateEditor.tsx, docs/* | E6 requote auto-calc, F3 PDF branding |
 | 2026-06-18 | Cursor | V1 plan close-out: E6 requote auto-calc, F3 pdfkit branding, Phase H platform library + SSO stub, mobile tab nav + polish | estimate-calculation.ts, pdf-proposal-kit.ts, platform.ts, MasterLibrary.tsx, Layout.tsx, docs/* | Full PEBI SSO exchange post-V1 |
 | 2026-06-18 | Cursor | PRD v3.4 alignment: header/status, §14 complete, Appendix A.1 build matrix, removed stale “not built yet” | ES_PRD_v3_FINAL_BUILD_SPEC.md, ES_MEMORY.md, ES_IMPLEMENTATION_PLAN.md | — |
+| 2026-06-18 | Cursor | Audit TS cleanup: server tsc 0 errors, material-map helper, requote price_changes fix | schema.ts, estimates.ts, material-map.ts, routes/*, docs/* | — |

@@ -21,23 +21,23 @@
     "@fastify/cors": "^9.0.1",
     "@fastify/jwt": "^8.0.1",
     "@fastify/type-provider-typebox": "^4.0.0",
-    "drizzle-orm": "^0.30.10",
-    "pg": "^8.11.3",
-    "fastify": "^4.26.2",
-    "zod": "^3.22.4",
     "bcryptjs": "^2.4.3",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.30.10",
+    "fastify": "^4.26.2",
+    "pg": "^8.11.3",
+    "zod": "^3.22.4"
   },
   "optionalDependencies": {
-    "puppeteer": "^21.0.0",
     "pdfkit": "^0.13.0",
+    "puppeteer": "^21.0.0",
     "svg-to-pdfkit": "^1.2.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.12.12",
-    "@types/pg": "^8.11.0",
     "@types/pdfkit": "^0.13.4",
+    "@types/pg": "^8.11.0",
     "drizzle-kit": "^0.20.14",
     "eslint": "^8.57.0",
     "tsup": "^8.0.2",

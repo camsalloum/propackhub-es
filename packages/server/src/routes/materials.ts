@@ -15,7 +15,7 @@ const MaterialSchema = z.object({
 });
 
 export async function getMaterialsRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest,
   reply: FastifyReply
 ) {
@@ -37,7 +37,7 @@ export async function getMaterialsRoute(
       .from(schema.materials)
       .where(eq(schema.materials.tenantId, tenantId));
 
-    const visibleMaterials = materials.map(mat => stripMaterialRow(mat, profile));
+    const visibleMaterials = materials.map((mat: (typeof materials)[number]) => stripMaterialRow(mat, profile));
 
     return reply.send(visibleMaterials);
   } catch (error: any) {
@@ -47,7 +47,7 @@ export async function getMaterialsRoute(
 }
 
 export async function createMaterialRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest<{ Body: z.infer<typeof MaterialSchema> }>,
   reply: FastifyReply
 ) {
@@ -77,7 +77,7 @@ export async function createMaterialRoute(
 }
 
 export async function updateMaterialRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest<{ Params: { id: string }; Body: Partial<z.infer<typeof MaterialSchema>> }>,
   reply: FastifyReply
 ) {
@@ -113,7 +113,7 @@ export async function updateMaterialRoute(
 }
 
 export async function deleteMaterialRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest<{ Params: { id: string } }>,
   reply: FastifyReply
 ) {

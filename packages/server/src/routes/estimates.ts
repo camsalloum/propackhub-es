@@ -3,10 +3,10 @@ import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { calculateEstimate, type VisibilityProfile } from '@es/engine';
+import { calculateEstimate, type VisibilityProfile, type Estimate as EngineEstimate } from '@es/engine';
 import { getEffectiveProfile, stripEstimateRow, stripCalculationResult } from '../utils/visibility';
 import { usdToDisplay } from '../utils/currency';
-import { calculateAndPersistEstimate } from '../services/estimate-calculation';
+import { calculateAndPersistEstimate, buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
 
 async function getUserVisibilityProfile(db: any, userId: string): Promise<VisibilityProfile> {
   const [userRecord] = await db
@@ -65,7 +65,7 @@ async function generateRefNumber(db: any, tenantId: string): Promise<string> {
 }
 
 export async function getEstimatesRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest,
   reply: FastifyReply
 ) {
@@ -88,9 +88,9 @@ export async function getEstimatesRoute(
       .select({ id: schema.customers.id, companyName: schema.customers.companyName })
       .from(schema.customers)
       .where(eq(schema.customers.tenantId, tenantId));
-    const customerMap = new Map(customers.map(c => [c.id, c.companyName]));
+    const customerMap = new Map(customers.map((c: (typeof customers)[number]) => [c.id, c.companyName]));
 
-    const visibleEstimates = estimates.map(est => ({
+    const visibleEstimates = estimates.map((est: (typeof estimates)[number]) => ({
       ...stripEstimateRow(est, profile),
       customerName: est.customerId ? (customerMap.get(est.customerId) ?? null) : null,
     }));
@@ -106,7 +106,7 @@ export async function getEstimatesRoute(
 }
 
 export async function createEstimateRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest<{ Body: z.infer<typeof EstimateCreateSchema> }>,
   reply: FastifyReply
 ) {
@@ -126,23 +126,6 @@ export async function createEstimateRoute(
     if (!tenant) {
       return reply.status(404).send({ error: 'Tenant not found' });
     }
-
-    // Get materials for calculation
-    const materials = await db
-      .select()
-      .from(schema.materials)
-      .where(eq(schema.materials.tenantId, tenantId));
-
-    const materialMap = new Map(materials.map(m => [m.id, {
-      id: m.id,
-      name: m.name,
-      type: m.type,
-      solidPercent: m.solidPercent,
-      density: parseFloat(m.density),
-      costPerKgUsd: parseFloat(m.costPerKgUsd),
-      wastePercent: m.wastePercent,
-      isSolventBased: m.isSolventBased,
-    }]));
 
     // Generate ref number
     const refNumber = await generateRefNumber(db, tenantId);
@@ -219,7 +202,7 @@ export async function createEstimateRoute(
 }
 
 export async function calculateEstimateRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest<{ Params: { id: string } }>,
   reply: FastifyReply
 ) {
@@ -244,7 +227,7 @@ export async function calculateEstimateRoute(
 }
 
 export async function generateProposalPdfRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest<{ Params: { id: string } }> ,
   reply: FastifyReply
 ) {
@@ -279,16 +262,7 @@ export async function generateProposalPdfRoute(
       .from(schema.materials)
       .where(eq(schema.materials.tenantId, tenantId));
 
-    const materialMap = new Map(materials.map(m => [m.id, {
-      id: m.id,
-      name: m.name,
-      type: m.type,
-      solidPercent: m.solidPercent,
-      density: parseFloat(m.density),
-      costPerKgUsd: parseFloat(m.costPerKgUsd),
-      wastePercent: m.wastePercent,
-      isSolventBased: m.isSolventBased,
-    }]));
+    const materialMap = buildEngineMaterialMap(materials);
 
     const processes = await db
       .select()
@@ -307,7 +281,7 @@ export async function generateProposalPdfRoute(
       customerId: estimate.customerId || undefined,
       jobName: estimate.jobName,
       status: 'draft',
-      layers: layers.map(l => ({
+      layers: layers.map((l: (typeof layers)[number]) => ({
         id: l.id,
         materialId: l.materialId,
         micron: parseFloat(l.micron),
@@ -321,16 +295,16 @@ export async function generateProposalPdfRoute(
       markupPercent: parseFloat(estimate.markupPercent),
       platesPerKg: parseFloat(estimate.platesPerKg),
       deliveryPerKg: parseFloat(estimate.deliveryPerKg),
-      processes: processes.map(p => ({
+      processes: processes.map((p: (typeof processes)[number]) => ({
         id: p.id,
         name: p.name,
         costPerHour: parseFloat(p.costPerHour),
-        speedBasis: p.speedBasis as any,
+        speedBasis: p.speedBasis as 'kg_per_hour' | 'm_per_min' | 'pcs_per_min',
         speedValue: parseFloat(p.speedValue),
         setupHours: parseFloat(p.setupHours),
         enabled: p.enabled,
       })),
-      slabs: slabs.map(s => ({ quantityKg: parseFloat(s.quantityKg), pricePerKg: parseFloat(s.pricePerKg) })),
+      slabs: slabs.map((s: (typeof slabs)[number]) => ({ quantityKg: parseFloat(s.quantityKg), pricePerKg: parseFloat(s.pricePerKg) })),
       displayCurrencyCode: estimate.displayCurrency,
       exchangeRateUsdToDisplay: parseFloat(estimate.exchangeRateUsdToDisplay),
       orderQuantityKg: estimate.orderQuantityKg ? parseFloat(estimate.orderQuantityKg) : (slabs[0]?.quantityKg ? parseFloat(slabs[0].quantityKg) : 1000),
@@ -353,10 +327,10 @@ export async function generateProposalPdfRoute(
 
     const laminateSvg = (() => {
       // Render simple stacked rectangles representing layers
-      const total = layers.reduce((s, l) => s + (parseFloat(l.micron) || 0), 0) || 1;
-      const rects = layers.map((l: any, i: number) => {
+      const total = layers.reduce((s: number, l: (typeof layers)[number]) => s + (parseFloat(l.micron) || 0), 0) || 1;
+      const rects = layers.map((l: (typeof layers)[number], i: number) => {
         const h = Math.max(4, (parseFloat(l.micron) / total) * 200);
-        const y = layers.slice(0, i).reduce((s: number, p: any) => s + Math.max(4, (parseFloat(p.micron) / total) * 200), 0);
+        const y = layers.slice(0, i).reduce((s: number, p: (typeof layers)[number]) => s + Math.max(4, (parseFloat(p.micron) / total) * 200), 0);
         return `<rect x="0" y="${y}" width="200" height="${h}" fill="#${(Math.abs(hashCode(l.materialId))%0xFFFFFF).toString(16).padStart(6,'0')}" />`;
       }).join('\n');
       return `<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
@@ -370,7 +344,7 @@ export async function generateProposalPdfRoute(
 
     const fxRate = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;
     const saleDisplay = usdToDisplay(result.estimate.salePricePerKg || parseFloat(estimate.salePricePerKg || '0'), fxRate);
-    const slabRows = slabs.map((s: any) => {
+    const slabRows = slabs.map((s: (typeof slabs)[number]) => {
       const qty = parseFloat(s.quantityKg);
       const price = saleDisplay;
       return `<tr><td>${qty.toLocaleString()}</td><td>${price.toFixed(2)}</td><td>${(qty * price).toFixed(2)}</td></tr>`;
@@ -518,7 +492,7 @@ export async function generateProposalPdfRoute(
           markupPercent: profile.markupPercent ? parseFloat(estimate.markupPercent) : undefined,
           showMaterialCost: !!profile.materialCostPerKg,
           showMarkup: !!profile.markupPercent,
-          slabs: slabs.map((s) => ({
+          slabs: slabs.map((s: (typeof slabs)[number]) => ({
             quantityKg: parseFloat(s.quantityKg),
             pricePerKg: saleDisplay,
           })),
@@ -542,7 +516,7 @@ export async function generateProposalPdfRoute(
 
 // Get single estimate by ID
 async function getEstimateRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest<{
     Params: { id: string };
   }>,
@@ -604,8 +578,8 @@ async function getEstimateRoute(
       .select()
       .from(schema.materials)
       .where(eq(schema.materials.tenantId, tenantId));
-    const materialMap = new Map(allMaterials.map(m => [m.id, m]));
-    const enrichedLayers = layers.map(l => ({
+    const materialMap = new Map<string, MaterialRow>(allMaterials.map((m: MaterialRow) => [m.id, m]));
+    const enrichedLayers = layers.map((l: (typeof layers)[number]) => ({
       ...l,
       materialName: materialMap.get(l.materialId)?.name ?? 'Unknown',
       materialType: materialMap.get(l.materialId)?.type ?? 'substrate',
@@ -627,7 +601,7 @@ async function getEstimateRoute(
 
 // Update estimate
 async function updateEstimateRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest<{
     Params: { id: string };
     Body: Partial<z.infer<typeof EstimateCreateSchema>>;
@@ -755,7 +729,7 @@ async function updateEstimateRoute(
 
 // Delete estimate
 async function deleteEstimateRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest<{
     Params: { id: string };
   }>,
@@ -790,7 +764,7 @@ async function deleteEstimateRoute(
 
 // Re-quote estimate (create new estimate from existing, refresh material prices)
 async function requoteEstimateRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest<{
     Params: { id: string };
   }>,
@@ -911,18 +885,23 @@ async function requoteEstimateRoute(
       .select()
       .from(schema.materials)
       .where(eq(schema.materials.tenantId, tenantId));
-    const materialMap = new Map(allMaterials.map(m => [m.id, m]));
+    const materialMap = new Map<string, MaterialRow>(allMaterials.map((m: MaterialRow) => [m.id, m]));
 
-    const priceChanges = sourceLayers.map(layer => {
+    const priceChanges = sourceLayers.map((layer: (typeof sourceLayers)[number]) => {
       const mat = materialMap.get(layer.materialId);
+      const newCostUsd = mat ? parseFloat(mat.costPerKgUsd) : 0;
       const oldCostPerSqM = Number(layer.costPerM2 || 0);
-      const newCostPerSqM = mat ? Number(mat.costPerM2 || 0) : oldCostPerSqM;
-      const deltaPct = oldCostPerSqM > 0 ? ((newCostPerSqM - oldCostPerSqM) / oldCostPerSqM) * 100 : 0;
+      const micron = parseFloat(layer.micron);
+      const density = mat ? parseFloat(mat.density) : 1;
+      const gsm = micron * density;
+      const oldCostUsd =
+        gsm > 0 && oldCostPerSqM > 0 ? (oldCostPerSqM / gsm) * 1000 : newCostUsd;
+      const deltaPct = oldCostUsd > 0 ? ((newCostUsd - oldCostUsd) / oldCostUsd) * 100 : 0;
       return {
         materialId: layer.materialId,
         materialName: mat?.name ?? 'Unknown',
-        oldCostUsd: oldCostPerSqM,
-        newCostUsd: newCostPerSqM,
+        oldCostUsd,
+        newCostUsd,
         deltaPct: Math.round(deltaPct * 100) / 100,
       };
     });

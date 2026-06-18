@@ -10,7 +10,7 @@ import { eq, and } from 'drizzle-orm';
  *   - standard_only=true: only return active templates
  */
 export async function getTemplatesRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest,
   reply: FastifyReply
 ) {
@@ -42,7 +42,7 @@ export async function getTemplatesRoute(
  * Get a single structure template by ID with full details.
  */
 export async function getTemplateByIdRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest<{ Params: { id: string } }>,
   reply: FastifyReply
 ) {
@@ -79,7 +79,7 @@ export async function getTemplateByIdRoute(
  * The template's default layers are resolved to actual material IDs.
  */
 export async function instantiateTemplateRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest<{
     Params: { id: string };
     Body: {
@@ -234,6 +234,12 @@ export async function instantiateTemplateRoute(
 
 export async function registerTemplateRoutes(fastify: FastifyInstance) {
   fastify.get('/api/v1/templates', async (request, reply) => getTemplatesRoute(fastify, request, reply));
-  fastify.get('/api/v1/templates/:id', async (request, reply) => getTemplateByIdRoute(fastify, request, reply));
-  fastify.post('/api/v1/templates/:id/instantiate', async (request, reply) => instantiateTemplateRoute(fastify, request, reply));
+  fastify.get<{ Params: { id: string } }>(
+    '/api/v1/templates/:id',
+    async (request, reply) => getTemplateByIdRoute(fastify, request, reply)
+  );
+  fastify.post<{ Params: { id: string }; Body: { customerId?: string; jobName?: string } }>(
+    '/api/v1/templates/:id/instantiate',
+    async (request, reply) => instantiateTemplateRoute(fastify, request, reply)
+  );
 }

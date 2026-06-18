@@ -1,4 +1,4 @@
-import type { CalculationResult, Estimate as EngineEstimate, VisibilityProfile } from '@es/engine';
+import type { CalculationResult, VisibilityProfile } from '@es/engine';
 
 export const DEFAULT_SALES_REP_PROFILE: VisibilityProfile = {
   structureLayers: true,

@@ -2,6 +2,7 @@ import { eq, and } from 'drizzle-orm';
 import { calculateEstimate, type Estimate as EngineEstimate, type CalculationResult } from '@es/engine';
 import { schema } from '../db';
 import { usdToDisplay } from '../utils/currency';
+import { buildEngineMaterialMap, type MaterialRow } from '../utils/material-map';
 
 type Db = ReturnType<typeof import('../db').getDatabase>;
 
@@ -30,21 +31,7 @@ export async function calculateAndPersistEstimate(
     .from(schema.materials)
     .where(eq(schema.materials.tenantId, tenantId));
 
-  const materialMap = new Map(
-    materials.map((m) => [
-      m.id,
-      {
-        id: m.id,
-        name: m.name,
-        type: m.type,
-        solidPercent: m.solidPercent,
-        density: parseFloat(m.density),
-        costPerKgUsd: parseFloat(m.costPerKgUsd),
-        wastePercent: m.wastePercent,
-        isSolventBased: m.isSolventBased,
-      },
-    ])
-  );
+  const materialMap = buildEngineMaterialMap(materials);
 
   const processes = await db
     .select()
@@ -57,13 +44,17 @@ export async function calculateAndPersistEstimate(
     .where(eq(schema.slabs.estimateId, estimateId))
     .orderBy(schema.slabs.quantityKg);
 
+  type LayerRow = (typeof layers)[number];
+  type ProcessRow = (typeof processes)[number];
+  type SlabRow = (typeof slabs)[number];
+
   const estimateForEngine: EngineEstimate = {
     id: estimate.id,
     tenantId,
     customerId: estimate.customerId || undefined,
     jobName: estimate.jobName,
     status: estimate.status as EngineEstimate['status'],
-    layers: layers.map((l) => ({
+    layers: layers.map((l: LayerRow) => ({
       id: l.id,
       materialId: l.materialId,
       micron: parseFloat(l.micron),
@@ -77,7 +68,7 @@ export async function calculateAndPersistEstimate(
     markupPercent: parseFloat(estimate.markupPercent),
     platesPerKg: parseFloat(estimate.platesPerKg),
     deliveryPerKg: parseFloat(estimate.deliveryPerKg),
-    processes: processes.map((p) => ({
+    processes: processes.map((p: ProcessRow) => ({
       id: p.id,
       name: p.name,
       costPerHour: parseFloat(p.costPerHour),
@@ -86,7 +77,7 @@ export async function calculateAndPersistEstimate(
       setupHours: parseFloat(p.setupHours),
       enabled: p.enabled,
     })),
-    slabs: slabs.map((s) => ({
+    slabs: slabs.map((s: SlabRow) => ({
       quantityKg: parseFloat(s.quantityKg),
       pricePerKg: parseFloat(s.pricePerKg),
     })),
@@ -125,7 +116,7 @@ export async function calculateAndPersistEstimate(
       .where(eq(schema.slabs.id, slab.id));
   }
 
-  result.slabs = slabs.map((s) => ({
+  result.slabs = slabs.map((s: SlabRow) => ({
     quantityKg: parseFloat(s.quantityKg),
     pricePerKg: saleDisplay,
     total: parseFloat(s.quantityKg) * saleDisplay,
@@ -133,3 +124,5 @@ export async function calculateAndPersistEstimate(
 
   return result;
 }
+
+export { buildEngineMaterialMap, type MaterialRow };

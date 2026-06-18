@@ -27,6 +27,7 @@
 | PEBI SSO stub (`PEBI_SSO_URL` + login button) | ✅ |
 | Builds: web + server + engine | ✅ |
 | Tests: engine 18/18, server 5/5 | ✅ |
+| Server `tsc --noEmit` | ✅ 0 errors (audit cleanup 2026-06-18) |
 
 ---
 
@@ -35,6 +36,8 @@
 1. Full PEBI SSO token exchange (when PPH auth API ready)
 2. Push master library changes to existing tenants
 3. Run `npm run db:patch --workspace=packages/server` after pull if schema behind
+
+**Next:** Manual QA on mobile (375px) + re-quote price banner; no open implementation-plan items.
 
 ---
 

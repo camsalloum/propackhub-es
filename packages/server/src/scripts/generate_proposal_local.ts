@@ -35,7 +35,7 @@ async function run() {
   ]);
 
   // Use calculation engine
-  const result = calculateEstimate(sampleEstimate as any, materials as any);
+  calculateEstimate(sampleEstimate as any, materials as any);
 
   // Simple PRD-style HTML (same structure as server template) — minimal copy for local testing
   const laminateSvg = (() => {

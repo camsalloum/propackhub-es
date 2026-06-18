@@ -17,17 +17,8 @@ function normalizeVisibilityProfile(role: string, profile?: VisibilityProfile): 
   return { ...base, ...(profile ?? {}) };
 }
 
-async function getUserVisibilityProfile(db: any, userId: string): Promise<VisibilityProfile> {
-  const [userRecord] = await db
-    .select({ role: schema.users.role, visibilityProfile: schema.users.visibilityProfile })
-    .from(schema.users)
-    .where(eq(schema.users.id, userId));
-
-  return normalizeVisibilityProfile(userRecord?.role ?? 'user', userRecord?.visibilityProfile as VisibilityProfile | undefined);
-}
-
 async function getTenantUsersRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest,
   reply: FastifyReply
 ) {
@@ -43,7 +34,7 @@ async function getTenantUsersRoute(
       .orderBy(schema.users.displayName);
 
     return reply.send({
-      users: users.map(user => ({
+      users: users.map((user: (typeof users)[number]) => ({
         ...user,
         visibilityProfile: getEffectiveProfile(user.role, user.visibilityProfile),
       })),
@@ -55,7 +46,7 @@ async function getTenantUsersRoute(
 }
 
 async function updateUserVisibilityRoute(
-  fastify: FastifyInstance,
+  _fastify: FastifyInstance,
   request: FastifyRequest<{ Params: { id: string }; Body: z.infer<typeof PatchUserVisibilitySchema> }>,
   reply: FastifyReply
 ) {

@@ -36,7 +36,7 @@ export default function CustomerDetail() {
   const handleRequote = async (estimate: any) => {
     try {
       const newEst = await apiClient.requoteEstimate(estimate.id);
-      navigate(`/estimate/${newEst.id}`);
+      navigate(`/estimate/${newEst.id}`, { state: { priceChanges: newEst.price_changes } });
     } catch (err) {
       alert('Failed to create re-quote');
     }

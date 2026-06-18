@@ -38,6 +38,7 @@ export const tenants = pgTable('tenants', {
   footerText: text('footer_text'),
   defaultMarkupPercent: decimal('default_markup_percent', { precision: 5, scale: 2 }).default('15.00'),
   defaultSlabTemplate: varchar('default_slab_template', { length: 50 }).default('standard'),
+  quotationValidDays: integer('quotation_valid_days').notNull().default(30),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
@@ -126,6 +127,10 @@ export const estimates = pgTable('estimates', {
   totalMicron: decimal('total_micron', { precision: 12, scale: 2 }),
   materialCostPerKg: decimal('material_cost_per_kg', { precision: 12, scale: 4 }),
   salePricePerKg: decimal('sale_price_per_kg', { precision: 12, scale: 4 }),
+  
+  // Proposal lifecycle
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+  validUntil: timestamp('valid_until', { withTimezone: true }),
   
   // Notes
   notes: text('notes'),

@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Users, DollarSign, FileText, Globe } from 'lucide-react';
 import { apiClient } from '../lib/api';
+import { useAuth } from '../hooks/useAuth';
 
 const Settings = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
   const [activeTab, setActiveTab] = useState<'general' | 'team' | 'currency' | 'proposal'>('general');
+  const [teamUsers, setTeamUsers] = useState<any[]>([]);
+  const [visibilityPresets, setVisibilityPresets] = useState<Record<string, { name: string; profile: Record<string, boolean> }>>({});
 
   const tabs = [
     { id: 'general', name: 'General', icon: SettingsIcon },
@@ -44,6 +49,38 @@ const Settings = () => {
     })();
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    if (!isAdmin || activeTab !== 'team') return;
+    let mounted = true;
+    (async () => {
+      try {
+        const [usersResp, presets] = await Promise.all([
+          apiClient.getUsers(),
+          apiClient.getVisibilityPresets(),
+        ]);
+        if (!mounted) return;
+        setTeamUsers(usersResp.users || []);
+        setVisibilityPresets(presets || {});
+      } catch (err) {
+        console.error('Failed to load team settings:', err);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [activeTab, isAdmin]);
+
+  const applyPresetToUser = async (userId: string, presetKey: string) => {
+    const preset = visibilityPresets[presetKey];
+    if (!preset) return;
+    try {
+      await apiClient.updateUserVisibility(userId, preset.profile);
+      const usersResp = await apiClient.getUsers();
+      setTeamUsers(usersResp.users || []);
+      alert(`Applied "${preset.name}" to user`);
+    } catch (err) {
+      alert('Failed to update visibility');
+    }
+  };
 
   const saveSettings = async () => {
     try {
@@ -154,84 +191,50 @@ const Settings = () => {
           {activeTab === 'team' && (
             <div className="card">
               <h2 className="text-xl font-display font-semibold text-navy mb-6">Team & Visibility</h2>
-              
-              <div className="space-y-6">
-                <div>
-                  <h3 className="font-display font-semibold text-navy mb-4">Default Profile for New Users</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Structure & dimensions</span>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" defaultChecked />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold"></div>
-                      </label>
+              {!isAdmin ? (
+                <p className="text-mist text-sm">Only tenant admins can manage team visibility.</p>
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="font-display font-semibold text-navy mb-4">Visibility Presets</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(visibilityPresets).map(([key, preset]) => (
+                        <span key={key} className="text-xs px-3 py-1 bg-slate rounded-full text-ink">{preset.name}</span>
+                      ))}
                     </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Material $/kg visibility</span>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold"></div>
-                      </label>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Markup % & cost breakdown</span>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold"></div>
-                      </label>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Operation/process costs</span>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" defaultChecked />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold"></div>
-                      </label>
+                  </div>
+                  <div className="pt-6 border-t border-border">
+                    <h3 className="font-display font-semibold text-navy mb-4">Team Members</h3>
+                    {teamUsers.length === 0 && <p className="text-mist text-sm">No team members found.</p>}
+                    <div className="space-y-4">
+                      {teamUsers.map((member) => (
+                        <div key={member.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-slate rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-navy/10 rounded-full flex items-center justify-center">
+                              <span className="font-display font-semibold text-navy">{member.displayName?.charAt(0) || '?'}</span>
+                            </div>
+                            <div>
+                              <p className="font-medium">{member.displayName}</p>
+                              <p className="text-sm text-mist">{member.email} · {member.role}</p>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(visibilityPresets).map(([key, preset]) => (
+                              <button
+                                key={key}
+                                onClick={() => applyPresetToUser(member.id, key)}
+                                className="text-xs btn-secondary py-1 px-2"
+                              >
+                                {preset.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
-
-                <div className="pt-6 border-t border-border">
-                  <h3 className="font-display font-semibold text-navy mb-4">Team Members</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-slate rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-navy/10 rounded-full flex items-center justify-center">
-                          <span className="font-display font-semibold text-navy">SA</span>
-                        </div>
-                        <div>
-                          <p className="font-medium">Sarah Ahmed</p>
-                          <p className="text-sm text-mist">sarah@example.com · Sales Rep</p>
-                        </div>
-                      </div>
-                      <button className="text-sm text-gold font-medium hover:underline">
-                        Customize visibility
-                      </button>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-4 bg-slate rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-navy/10 rounded-full flex items-center justify-center">
-                          <span className="font-display font-semibold text-navy">AM</span>
-                        </div>
-                        <div>
-                          <p className="font-medium">Ahmed Mohamed</p>
-                          <p className="text-sm text-mist">ahmed@example.com · Sales Rep</p>
-                        </div>
-                      </div>
-                      <button className="text-sm text-gold font-medium hover:underline">
-                        Customize visibility
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-6 border-t border-border">
-                  <button onClick={() => saveSettings()} className="btn-primary">Save Changes</button>
-                </div>
-              </div>
+              )}
             </div>
           )}
 

@@ -10,12 +10,30 @@ on:
 jobs:
   install-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: es_user
+          POSTGRES_PASSWORD: es_password
+          POSTGRES_DB: estimation_studio_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://es_user:es_password@localhost:5432/estimation_studio_test
+      JWT_SECRET: ci-test-secret
+      CORS_ORIGIN: http://localhost:5000
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js 20
+      - name: Use Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - name: Install apt deps for Chromium
         run: |
           sudo apt-get update
@@ -25,6 +43,10 @@ jobs:
             libxrandr2 libxrender1 libxss1 libxtst6 libappindicator3-1 xdg-utils wget
       - name: Install repository dependencies
         run: npm ci
+      - name: Push database schema
+        run: |
+          npm run db:push --workspace packages/server || true
+          npm run db:patch --workspace packages/server
       - name: Run engine tests
         run: npm run test --workspace packages/engine
       - name: Run server tests

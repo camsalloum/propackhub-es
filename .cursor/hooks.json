@@ -1,10 +1,4 @@
 {
   "version": 1,
-  "hooks": {
-    "stop": [
-      {
-        "command": ".cursor/hooks/session-end-memory.mjs"
-      }
-    ]
-  }
+  "hooks": {}
 }

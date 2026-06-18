@@ -3,8 +3,10 @@ import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { calculateEstimate, type Estimate as EngineEstimate, type VisibilityProfile } from '@es/engine';
+import { calculateEstimate, type VisibilityProfile } from '@es/engine';
 import { getEffectiveProfile, stripEstimateRow, stripCalculationResult } from '../utils/visibility';
+import { usdToDisplay } from '../utils/currency';
+import { calculateAndPersistEstimate } from '../services/estimate-calculation';
 
 async function getUserVisibilityProfile(db: any, userId: string): Promise<VisibilityProfile> {
   const [userRecord] = await db
@@ -230,118 +232,12 @@ export async function calculateEstimateRoute(
     const db = getDatabase();
 
     const profile = await getUserVisibilityProfile(db, user.userId);
-
-    // Get estimate with all details
-    const [estimate] = await db
-      .select()
-      .from(schema.estimates)
-      .where(and(eq(schema.estimates.id, id), eq(schema.estimates.tenantId, tenantId)));
-
-    if (!estimate) {
-      return reply.status(404).send({ error: 'Estimate not found' });
-    }
-
-    // Get layers
-    const layers = await db
-      .select()
-      .from(schema.layers)
-      .where(eq(schema.layers.estimateId, id))
-      .orderBy(schema.layers.position);
-
-    // Get materials
-    const materials = await db
-      .select()
-      .from(schema.materials)
-      .where(eq(schema.materials.tenantId, tenantId));
-
-    const materialMap = new Map(materials.map(m => [m.id, {
-      id: m.id,
-      name: m.name,
-      type: m.type,
-      solidPercent: m.solidPercent,
-      density: parseFloat(m.density),
-      costPerKgUsd: parseFloat(m.costPerKgUsd),
-      wastePercent: m.wastePercent,
-      isSolventBased: m.isSolventBased,
-    }]));
-
-    // Get processes
-    const processes = await db
-      .select()
-      .from(schema.processes)
-      .where(eq(schema.processes.estimateId, id));
-
-    // Get slabs
-    const slabs = await db
-      .select()
-      .from(schema.slabs)
-      .where(eq(schema.slabs.estimateId, id))
-      .orderBy(schema.slabs.quantityKg);
-
-    // Convert to engine format
-    const estimateForEngine: EngineEstimate = {
-      id: estimate.id,
-      tenantId,
-      customerId: estimate.customerId || undefined,
-      jobName: estimate.jobName,
-      status: 'draft',
-      layers: layers.map(l => ({
-        id: l.id,
-        materialId: l.materialId,
-        micron: parseFloat(l.micron),
-        position: l.position,
-      })),
-      dimensions: {
-        productType: estimate.productType,
-        printingWebClass: estimate.printingWebClass,
-        ...estimate.dimensions,
-      },
-      markupPercent: parseFloat(estimate.markupPercent),
-      platesPerKg: parseFloat(estimate.platesPerKg),
-      deliveryPerKg: parseFloat(estimate.deliveryPerKg),
-      processes: processes.map(p => ({
-        id: p.id,
-        name: p.name,
-        costPerHour: parseFloat(p.costPerHour),
-        speedBasis: p.speedBasis as any,
-        speedValue: parseFloat(p.speedValue),
-        setupHours: parseFloat(p.setupHours),
-        enabled: p.enabled,
-      })),
-      slabs: slabs.map(s => ({
-        id: s.id,
-        quantityKg: parseFloat(s.quantityKg),
-        pricePerKg: parseFloat(s.pricePerKg),
-      })),
-      displayCurrencyCode: estimate.displayCurrency,
-      exchangeRateUsdToDisplay: parseFloat(estimate.exchangeRateUsdToDisplay),
-      // Use order quantity from estimate or first slab, fallback to 1000
-      orderQuantityKg: estimate.orderQuantityKg 
-        ? parseFloat(estimate.orderQuantityKg)
-        : (slabs[0]?.quantityKg ? parseFloat(slabs[0].quantityKg) : 1000),
-      solventCostPerKgUsd: estimate.solventCostPerKgUsd ? parseFloat(estimate.solventCostPerKgUsd) : undefined,
-      solventRatio: estimate.solventRatio ? parseFloat(estimate.solventRatio) : undefined,
-      createdAt: estimate.createdAt,
-      updatedAt: estimate.updatedAt,
-    };
-
-    // Calculate
-    const result = calculateEstimate(estimateForEngine, materialMap);
-
-    // Update estimate with calculated values
-    await db
-      .update(schema.estimates)
-      .set({
-        totalGsm: result.estimate.totalGsm?.toString(),
-        totalMicron: result.estimate.totalMicron?.toString(),
-        materialCostPerKg: result.estimate.materialCostPerKg?.toString(),
-        salePricePerKg: result.estimate.salePricePerKg?.toString(),
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.estimates.id, id));
-
+    const result = await calculateAndPersistEstimate(db, id, tenantId);
     return reply.send(stripCalculationResult(result, profile));
   } catch (error: any) {
+    if (error.message === 'Estimate not found') {
+      return reply.status(404).send({ error: 'Estimate not found' });
+    }
     console.error('Calculate estimate error:', error);
     return reply.status(500).send({ error: 'Failed to calculate estimate' });
   }
@@ -472,7 +368,13 @@ export async function generateProposalPdfRoute(
       return h;
     }
 
-    const slabRows = slabs.map((s: any) => `<tr><td>${s.quantityKg}</td><td>${s.pricePerKg}</td><td>${(parseFloat(s.quantityKg)*parseFloat(s.pricePerKg)).toFixed(2)}</td></tr>`).join('');
+    const fxRate = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;
+    const saleDisplay = usdToDisplay(result.estimate.salePricePerKg || parseFloat(estimate.salePricePerKg || '0'), fxRate);
+    const slabRows = slabs.map((s: any) => {
+      const qty = parseFloat(s.quantityKg);
+      const price = saleDisplay;
+      return `<tr><td>${qty.toLocaleString()}</td><td>${price.toFixed(2)}</td><td>${(qty * price).toFixed(2)}</td></tr>`;
+    }).join('');
 
     const html = `<!doctype html>
 <html>
@@ -554,8 +456,8 @@ export async function generateProposalPdfRoute(
     <div class="content">
       <div class="left-col">
         <div class="section-title">Estimate Summary</div>
-        <div>Sale Price / kg: <strong>${result.estimate.salePricePerKg ? result.estimate.salePricePerKg.toFixed(2) : (estimate.salePricePerKg || '')}</strong></div>
-        ${profile.materialCostPerKg ? `<div>Material Cost / kg: <strong>${result.estimate.materialCostPerKg?.toFixed(2) ?? ''}</strong></div>` : ''}
+        <div>Sale Price / kg: <strong>${estimate.displayCurrency} ${saleDisplay.toFixed(2)}</strong></div>
+        ${profile.materialCostPerKg ? `<div>Material Cost / kg: <strong>${estimate.displayCurrency} ${usdToDisplay(result.estimate.materialCostPerKg || 0, fxRate).toFixed(2)}</strong></div>` : ''}
         ${profile.markupPercent ? `<div>Markup: <strong>${estimate.markupPercent}%</strong></div>` : ''}
         <div style="margin-top:12px" class="section-title">Slab Pricing</div>
         <table class="slab-table">
@@ -570,14 +472,15 @@ export async function generateProposalPdfRoute(
         <div class="section-title">Details</div>
         <div><strong>Customer</strong><div>${customerName}</div></div>
         <div style="margin-top:8px"><strong>Order Qty</strong><div>${estimate.orderQuantityKg || ''} kg</div></div>
-        <div style="margin-top:12px" class="section-title">Processes</div>
-        <div>${processes.map((p:any)=>`<div style="margin-bottom:6px"><strong>${p.name}</strong><div style="font-size:12px;color:#666">${p.costPerHour} / hr</div></div>`).join('')}</div>
+        ${profile.operationCost ? `<div style="margin-top:12px" class="section-title">Processes</div>
+        <div>${processes.map((p:any)=>`<div style="margin-bottom:6px"><strong>${p.name}</strong><div style="font-size:12px;color:#666">${p.costPerHour} / hr</div></div>`).join('')}</div>` : ''}
       </div>
     </div>
 
     <div class="footer">
       <div style="font-weight:700">Terms & Conditions</div>
       <div class="tc">${tenant.termsAndConditions || 'Standard terms apply.'}</div>
+      ${tenant.footerText ? `<div style="margin-top:12px;font-size:11px;color:#666">${tenant.footerText}</div>` : ''}
     </div>
 
     <div class="page-footer"><span class="page-number"></span></div>
@@ -599,57 +502,32 @@ export async function generateProposalPdfRoute(
     } catch (err) {
       // Puppeteer not available or failed — try pdfkit + svg-to-pdfkit
       try {
-        const PDFDocument = (await import('pdfkit')).default;
-        const SVGtoPDF = (await import('svg-to-pdfkit')).default;
-
-        const doc = new PDFDocument({ size: 'A4', margin: 20, autoFirstPage: false });
-        const chunks: Buffer[] = [];
-        doc.on('data', (c: Buffer) => chunks.push(c));
-        doc.on('end', () => {
-          const out = Buffer.concat(chunks);
-          reply.header('Content-Type', 'application/pdf');
-          reply.send(out);
+        const { renderBrandedPdfKitProposal } = await import('../utils/pdf-proposal-kit');
+        const pdfBuffer = await renderBrandedPdfKitProposal({
+          tenantName: tenant.name || 'Proposal',
+          primaryColor: tenant.primaryColor || '#1a2744',
+          customerName,
+          jobName: estimate.jobName,
+          refNumber: estimate.refNumber || '',
+          productType: estimate.productType,
+          displayCurrency: estimate.displayCurrency,
+          saleDisplay,
+          materialCostDisplay: profile.materialCostPerKg
+            ? usdToDisplay(result.estimate.materialCostPerKg || 0, fxRate)
+            : undefined,
+          markupPercent: profile.markupPercent ? parseFloat(estimate.markupPercent) : undefined,
+          showMaterialCost: !!profile.materialCostPerKg,
+          showMarkup: !!profile.markupPercent,
+          slabs: slabs.map((s) => ({
+            quantityKg: parseFloat(s.quantityKg),
+            pricePerKg: saleDisplay,
+          })),
+          laminateSvg,
+          termsAndConditions: tenant.termsAndConditions || undefined,
+          footerText: tenant.footerText || undefined,
         });
-
-        doc.addPage({ size: 'A4', margin: 20 });
-        // Draw brand bar
-        doc.rect(0, 0, doc.page.width, 72).fill(tenant.primaryColor || '#1a2744');
-        doc.fillColor('#000').fontSize(20).text(tenant.name || '', 40, 28);
-
-        // Render SVG laminate into PDF using svg-to-pdfkit
-        const svg = laminateSvg;
-        SVGtoPDF(doc as any, svg, 40, 100, { assumePt: true, width: 200 });
-
-        // Slab table
-        doc.moveDown(6).fontSize(12).fillColor('#000').text('Slab Pricing', { underline: true });
-        const startY = doc.y + 6;
-        // simple table rendering
-        let y = startY;
-        doc.fontSize(10);
-        doc.text('Qty (kg)', 40, y);
-        doc.text('Price / kg', 140, y);
-        doc.text('Total', 260, y);
-        y += 18;
-        for (const s of slabs) {
-          doc.text(String(s.quantityKg), 40, y);
-          doc.text(String(s.pricePerKg), 140, y);
-          doc.text((parseFloat(s.quantityKg) * parseFloat(s.pricePerKg)).toFixed(2), 260, y);
-          y += 16;
-          if (y > doc.page.height - 80) {
-            doc.addPage();
-            y = 40;
-          }
-        }
-
-        // Terms
-        doc.addPage();
-        doc.fontSize(12).text('Terms & Conditions', { underline: true });
-        doc.moveDown(0.5).fontSize(9).text(tenant.termsAndConditions || 'Standard terms apply.');
-
-        doc.end();
-
-        // response will be sent in 'end' handler
-        return;
+        reply.header('Content-Type', 'application/pdf');
+        return reply.send(pdfBuffer);
       } catch (err2) {
         // Fallback: return HTML if no PDF tool available
         reply.header('Content-Type', 'text/html');
@@ -777,12 +655,25 @@ async function updateEstimateRoute(
       return reply.status(404).send({ error: 'Estimate not found' });
     }
 
+    const [tenant] = await db
+      .select({ quotationValidDays: schema.tenants.quotationValidDays })
+      .from(schema.tenants)
+      .where(eq(schema.tenants.id, tenantId));
+
     const updates: any = { updatedAt: new Date() };
 
     // Update basic fields if provided
     if (request.body.jobName !== undefined) updates.jobName = request.body.jobName;
     if (request.body.customerId !== undefined) updates.customerId = request.body.customerId;
-    if (request.body.status !== undefined) updates.status = request.body.status;
+    if (request.body.status !== undefined) {
+      updates.status = request.body.status;
+      if (request.body.status === 'sent' && existing.status !== 'sent') {
+        const sentAt = new Date();
+        const validDays = tenant?.quotationValidDays ?? 30;
+        updates.sentAt = sentAt;
+        updates.validUntil = new Date(sentAt.getTime() + validDays * 86400000);
+      }
+    }
     if (request.body.productType !== undefined) updates.productType = request.body.productType;
     if (request.body.printingWebClass !== undefined) updates.printingWebClass = request.body.printingWebClass;
     if (request.body.markupPercent !== undefined) updates.markupPercent = request.body.markupPercent.toString();
@@ -1036,7 +927,30 @@ async function requoteEstimateRoute(
       };
     });
 
-    return reply.status(201).send({ ...newEstimate, price_changes: priceChanges });
+    // E6: auto-calculate with refreshed library prices
+    let calcResult;
+    try {
+      calcResult = await calculateAndPersistEstimate(db, newEstimate.id, tenantId);
+    } catch (calcErr) {
+      console.warn('Requote auto-calculate failed:', calcErr);
+    }
+
+    const [refreshed] = await db
+      .select()
+      .from(schema.estimates)
+      .where(eq(schema.estimates.id, newEstimate.id));
+
+    return reply.status(201).send({
+      ...refreshed,
+      price_changes: priceChanges,
+      calculated: calcResult
+        ? {
+            salePricePerKg: calcResult.estimate.salePricePerKg,
+            materialCostPerKg: calcResult.estimate.materialCostPerKg,
+            totalGsm: calcResult.estimate.totalGsm,
+          }
+        : undefined,
+    });
   } catch (error: any) {
     console.error('Requote estimate error:', error);
     return reply.status(500).send({ error: 'Failed to requote estimate' });

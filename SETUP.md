@@ -241,6 +241,30 @@ npm run lint
 npm run format
 ```
 
+## Server integration tests
+
+Integration tests live in `packages/server/src/test/*.integration.test.ts`. They require a running PostgreSQL database with the schema applied.
+
+```bash
+cd packages/server
+cp .env.example .env   # set DATABASE_URL and JWT_SECRET
+npm run db:push
+npm run db:patch   # idempotent columns if push fails
+npm run test
+```
+
+Tests skip automatically when `DATABASE_URL` is unset (unit tests still run). CI uses a Postgres 15 service container, runs `db:push`, then the full server test suite.
+
+## PDF generation (Puppeteer)
+
+Proposal PDFs use Puppeteer/Chromium. On Linux CI, apt Chromium dependencies are installed in `.github/workflows/ci.yml`. Locally on Windows/macOS, Puppeteer downloads its own Chromium on first run.
+
+```bash
+npm run pdf:test --workspace=packages/server
+```
+
+If PDF generation fails locally, ensure you have network access for the initial Chromium download, or set `PUPPETEER_EXECUTABLE_PATH` to a system Chrome/Chromium binary.
+
 ## API Testing
 
 Use Postman or curl:

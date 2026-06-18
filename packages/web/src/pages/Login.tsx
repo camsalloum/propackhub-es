@@ -1,16 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Loader } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { apiClient } from '../lib/api';
 
 const Login = () => {
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuth();
+  const [ssoUrl, setSsoUrl] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     email: 'admin@propackhub.com',
     password: 'Pph654883!',
   });
+
+  useEffect(() => {
+    apiClient.getPebiSsoUrl().then((r) => {
+      if (r.enabled && r.url) setSsoUrl(r.url);
+    }).catch(() => {});
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
@@ -90,12 +98,23 @@ const Login = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gold text-white font-display font-semibold py-3 rounded-lg hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+              className="w-full bg-gold text-white font-display font-semibold py-3 min-h-[48px] rounded-lg hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
             >
               {isLoading && <Loader className="w-4 h-4 animate-spin" />}
               <span>{isLoading ? 'Signing in...' : 'Sign In'}</span>
             </button>
           </form>
+
+          {ssoUrl && (
+            <div className="mt-4">
+              <a
+                href={ssoUrl}
+                className="w-full flex items-center justify-center min-h-[48px] border border-border rounded-lg font-medium text-navy hover:bg-slate"
+              >
+                Sign in with ProPackHub
+              </a>
+            </div>
+          )}
 
           {/* Sign up link */}
           <div className="mt-6 text-center">

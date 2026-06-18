@@ -51,7 +51,7 @@ const TemplatePicker = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto pb-28 lg:pb-0">
       <div className="mb-8">
         <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy mb-2">New Estimate</h1>
         <p className="text-mist">Start from a standard template, your saved template, or a blank canvas</p>
@@ -206,9 +206,9 @@ const TemplatePicker = () => {
         </div>
       )}
 
-      {/* Continue button */}
-      <div className="mt-8 pt-8 border-t border-border">
-          <div className="flex justify-end">
+      {/* Continue — desktop */}
+      <div className="mt-8 pt-8 border-t border-border hidden lg:block">
+        <div className="flex justify-end">
           <button
             className="btn-primary"
             disabled={!selectedTemplate}
@@ -218,6 +218,19 @@ const TemplatePicker = () => {
           </button>
         </div>
       </div>
+
+      {/* Sticky mobile CTA */}
+      {activeTab === 'standard' && selectedTemplate && (
+        <div className="lg:hidden fixed bottom-16 left-0 right-0 z-30 px-4 safe-area-pb">
+          <button
+            type="button"
+            className="btn-primary w-full shadow-lg"
+            onClick={handleUseTemplate}
+          >
+            Continue to editor
+          </button>
+        </div>
+      )}
     </div>
   );
 };

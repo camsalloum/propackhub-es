@@ -1,0 +1,135 @@
+import { eq, and } from 'drizzle-orm';
+import { calculateEstimate, type Estimate as EngineEstimate, type CalculationResult } from '@es/engine';
+import { schema } from '../db';
+import { usdToDisplay } from '../utils/currency';
+
+type Db = ReturnType<typeof import('../db').getDatabase>;
+
+export async function calculateAndPersistEstimate(
+  db: Db,
+  estimateId: string,
+  tenantId: string
+): Promise<CalculationResult> {
+  const [estimate] = await db
+    .select()
+    .from(schema.estimates)
+    .where(and(eq(schema.estimates.id, estimateId), eq(schema.estimates.tenantId, tenantId)));
+
+  if (!estimate) {
+    throw new Error('Estimate not found');
+  }
+
+  const layers = await db
+    .select()
+    .from(schema.layers)
+    .where(eq(schema.layers.estimateId, estimateId))
+    .orderBy(schema.layers.position);
+
+  const materials = await db
+    .select()
+    .from(schema.materials)
+    .where(eq(schema.materials.tenantId, tenantId));
+
+  const materialMap = new Map(
+    materials.map((m) => [
+      m.id,
+      {
+        id: m.id,
+        name: m.name,
+        type: m.type,
+        solidPercent: m.solidPercent,
+        density: parseFloat(m.density),
+        costPerKgUsd: parseFloat(m.costPerKgUsd),
+        wastePercent: m.wastePercent,
+        isSolventBased: m.isSolventBased,
+      },
+    ])
+  );
+
+  const processes = await db
+    .select()
+    .from(schema.processes)
+    .where(eq(schema.processes.estimateId, estimateId));
+
+  const slabs = await db
+    .select()
+    .from(schema.slabs)
+    .where(eq(schema.slabs.estimateId, estimateId))
+    .orderBy(schema.slabs.quantityKg);
+
+  const estimateForEngine: EngineEstimate = {
+    id: estimate.id,
+    tenantId,
+    customerId: estimate.customerId || undefined,
+    jobName: estimate.jobName,
+    status: estimate.status as EngineEstimate['status'],
+    layers: layers.map((l) => ({
+      id: l.id,
+      materialId: l.materialId,
+      micron: parseFloat(l.micron),
+      position: l.position,
+    })),
+    dimensions: {
+      productType: estimate.productType,
+      printingWebClass: estimate.printingWebClass,
+      ...(estimate.dimensions as object),
+    },
+    markupPercent: parseFloat(estimate.markupPercent),
+    platesPerKg: parseFloat(estimate.platesPerKg),
+    deliveryPerKg: parseFloat(estimate.deliveryPerKg),
+    processes: processes.map((p) => ({
+      id: p.id,
+      name: p.name,
+      costPerHour: parseFloat(p.costPerHour),
+      speedBasis: p.speedBasis as 'kg_per_hour' | 'm_per_min' | 'pcs_per_min',
+      speedValue: parseFloat(p.speedValue),
+      setupHours: parseFloat(p.setupHours),
+      enabled: p.enabled,
+    })),
+    slabs: slabs.map((s) => ({
+      quantityKg: parseFloat(s.quantityKg),
+      pricePerKg: parseFloat(s.pricePerKg),
+    })),
+    displayCurrencyCode: estimate.displayCurrency,
+    exchangeRateUsdToDisplay: parseFloat(estimate.exchangeRateUsdToDisplay),
+    orderQuantityKg: estimate.orderQuantityKg
+      ? parseFloat(estimate.orderQuantityKg)
+      : slabs[0]?.quantityKg
+        ? parseFloat(slabs[0].quantityKg)
+        : 1000,
+    solventCostPerKgUsd: estimate.solventCostPerKgUsd ? parseFloat(estimate.solventCostPerKgUsd) : undefined,
+    solventRatio: estimate.solventRatio ? parseFloat(estimate.solventRatio) : undefined,
+    createdAt: estimate.createdAt,
+    updatedAt: estimate.updatedAt,
+  };
+
+  const result = calculateEstimate(estimateForEngine, materialMap);
+  const fxRate = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;
+  const saleDisplay = usdToDisplay(result.estimate.salePricePerKg || 0, fxRate);
+
+  await db
+    .update(schema.estimates)
+    .set({
+      totalGsm: result.estimate.totalGsm?.toString(),
+      totalMicron: result.estimate.totalMicron?.toString(),
+      materialCostPerKg: result.estimate.materialCostPerKg?.toString(),
+      salePricePerKg: result.estimate.salePricePerKg?.toString(),
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.estimates.id, estimateId));
+
+  for (const slab of slabs) {
+    await db
+      .update(schema.slabs)
+      .set({ pricePerKg: saleDisplay.toString(), updatedAt: new Date() })
+      .where(eq(schema.slabs.id, slab.id));
+  }
+
+  result.slabs = slabs.map((s) => ({
+    quantityKg: parseFloat(s.quantityKg),
+    pricePerKg: saleDisplay,
+    total: parseFloat(s.quantityKg) * saleDisplay,
+  }));
+
+  return result;
+}

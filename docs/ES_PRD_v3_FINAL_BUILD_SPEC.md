@@ -1,10 +1,10 @@
-# ProPackHub Estimation Studio — PRD v3.2 Final Build Specification
+# ProPackHub Estimation Studio — PRD v3.4 Final Build Specification
 
 **Document type:** Build specification (developer-ready)  
 **Version:** 3.4 Audit-ready (external audit refinements)  
-**Date:** 2026-06-11  
-**Status:** Pre-build complete through Step 2 — **awaiting audit** before scaffold  
-**Audit handoff:** [ES_AUDIT_HANDOFF.md](./ES_AUDIT_HANDOFF.md) ← **start here for reviewer agent**  
+**Date:** 2026-06-11 (V1 build verified 2026-06-18)  
+**Status:** **V1 implemented** — monorepo `packages/{engine,server,web}`; see [LIVE_STATE.md](./LIVE_STATE.md) and [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md)  
+**Audit handoff:** [ES_AUDIT_HANDOFF.md](./ES_AUDIT_HANDOFF.md)  
 **Living memory:** [ES_MEMORY.md](./ES_MEMORY.md) · **Wireframes:** [ES_WIREFRAMES.md](./ES_WIREFRAMES.md) · **Mockup:** [mockup/es-estimate-editor.html](./mockup/es-estimate-editor.html)  
 **Supersedes:** PRD v3.0 (2026-06-11), [ES_PRD_v3_STRATEGIC.md](./ES_PRD_v3_STRATEGIC.md), [PRD_v3_Final.md](./PRD_v3_Final.md) (enterprise — mostly rejected)  
 **Locked decisions:** [LOCKED_DECISIONS.md](./LOCKED_DECISIONS.md) (#2–#23)  
@@ -17,7 +17,7 @@
 
 **For auditors:** Read [ES_AUDIT_HANDOFF.md](./ES_AUDIT_HANDOFF.md) first, then this PRD and `legacy-laravel/COSTING_NOTES.md`.
 
-**For builders:** After audit PASS + owner “go build”, follow §14 phases starting with `propackhub-es/` scaffold (mirror `propackhub-fs`).
+**For builders:** V1 is built. Use [LIVE_STATE.md](./LIVE_STATE.md) for what works today and [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) for phase history. New work should extend this PRD §21 (out of scope) or post-V1 items in LIVE_STATE.
 
 This PRD includes:
 
@@ -1572,31 +1572,33 @@ packages/engine    → calculate(), no I/O — shared by web + server (Jest gold
 
 ## 14. Development phases
 
-### 14.0 Pre-build (current — 2026-06-12)
+### 14.0 Pre-build (completed 2026-06-12)
 
 | Step | Deliverable | Status |
 |------|-------------|--------|
-| 0 | Laravel audit → `COSTING_NOTES.md` | Done |
-| 1 | `ES_STANDARD_TEMPLATES_SEED.json` v3 | Done |
-| 2 | Wireframes + HTML mockup (desktop + mobile tab) | Done |
-| — | **Audit** → [ES_AUDIT_HANDOFF.md](./ES_AUDIT_HANDOFF.md) | **In progress** |
-| 3 | Scaffold `propackhub-es/` | After audit + go build |
-| 4 | Engine golden tests | After scaffold |
+| 0 | Laravel audit → `COSTING_NOTES.md` | ✅ Done |
+| 1 | `ES_STANDARD_TEMPLATES_SEED.json` v3 | ✅ Done |
+| 2 | Wireframes + HTML mockup (desktop + mobile tab) | ✅ Done |
+| — | Audit → [ES_AUDIT_HANDOFF.md](./ES_AUDIT_HANDOFF.md) | ✅ Done (owner proceeded to scaffold) |
+| 3 | Scaffold monorepo (`packages/engine`, `server`, `web`) | ✅ Done (2026-06-14+) |
+| 4 | Engine golden tests | ✅ Done (2026-06-18 — 18 tests) |
 
-### 14.1 Post-scaffold phases
+### 14.1 Post-scaffold phases (V1 — completed 2026-06-18)
 
-| Phase | Weeks | Deliverables |
-|-------|-------|--------------|
-| **1 Foundation** | 1–4 | Auth, tenancy, library seed, materials CRUD, visibility presets, **engine in web + server**, unit tests |
-| **2 Visualizer + Estimate** | 5–8 | Visualizer, **desktop table + mobile cards**, calculate API (role + visibility filter), slabs |
-| **3 History + Re-quote** | 9–10 | Customer detail, `/requote`, price delta banner |
-| **4 Proposals** | 11–12 | PDF with SVG + slab table, branding settings |
-| **5 Platform** | 13–14 | ProPackHub SSO, product tile, admin master library |
-| **6 Polish** | 15–16 | PWA, mobile QA gate (375px layer CRUD), Laravel golden tests |
+| Phase | Weeks | Deliverables | Status |
+|-------|-------|--------------|--------|
+| **1 Foundation** | 1–4 | Auth, tenancy, library seed, materials CRUD, visibility presets, **engine in web + server**, unit tests | ✅ |
+| **2 Visualizer + Estimate** | 5–8 | Visualizer, **desktop table + mobile cards**, calculate API (role + visibility filter), slabs | ✅ |
+| **3 History + Re-quote** | 9–10 | Customer detail, `/requote`, price delta banner | ✅ |
+| **4 Proposals** | 11–12 | PDF with SVG + slab table, branding settings | ✅ |
+| **5 Platform** | 13–14 | ProPackHub SSO stub, platform admin master library | ✅ Partial — full SSO token exchange post-V1 |
+| **6 Polish** | 15–16 | PWA, mobile QA gate (375px layer CRUD), Laravel golden tests | ✅ |
 
 ---
 
 ## 15. Acceptance criteria (V1)
+
+*Verified against codebase 2026-06-18 — see [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) §5.*
 
 1. `tenant_admin` registers, receives seeded library + **11 parent PG templates**, first quote **< 15 min**, subsequent **< 3 min** (desktop).
 2. **Client-side** price update **< 50ms** after edit; server reconcile within 300ms on good network.
@@ -1629,7 +1631,22 @@ packages/engine    → calculate(), no I/O — shared by web + server (Jest gold
 | Wireframes | WF-1–7 + HTML mockup | `ES_WIREFRAMES.md`, `mockup/` |
 | Build gate | Audit → scaffold → golden tests → MVP | §14.0, `ES_AUDIT_HANDOFF.md` |
 
-**Not built yet:** `propackhub-es/` codebase, engine package, API server.
+### Appendix A.1 — V1 build status (2026-06-18)
+
+| Component | Status | Location / notes |
+|-----------|--------|------------------|
+| Monorepo | ✅ Built | `packages/engine`, `packages/server`, `packages/web` |
+| PostgreSQL schema + auth | ✅ Built | Drizzle, JWT, tenant isolation |
+| Costing engine | ✅ Built | `@es/engine` — Laravel parity; 18 golden/unit tests |
+| REST API | ✅ Built | `/api/v1/*` — estimates, materials, customers, templates, settings, dashboard |
+| Web app (desktop + mobile PWA) | ✅ Built | React + Vite; cards, bottom sheets, bottom nav |
+| CI | ✅ Built | GitHub Actions — engine + server integration tests |
+| §15 acceptance criteria #1–#8, #10–#11 | ✅ Pass | Implementation plan tracker |
+| Full PEBI SSO token exchange | ⏳ Post-V1 | `PEBI_SSO_URL` login stub only |
+| Push master library to existing tenants | ⏳ Post-V1 | New tenants get seed on register |
+| Native app (Capacitor) | ⏳ Post-V1 | Per §21 — same React bundle, not wrapped yet |
+
+**Supersedes stale line:** ~~Not built yet: codebase, engine, API server.~~
 
 ---
 
@@ -1638,7 +1655,7 @@ packages/engine    → calculate(), no I/O — shared by web + server (Jest gold
 | File | Role |
 |------|------|
 | **[ES_AUDIT_HANDOFF.md](./ES_AUDIT_HANDOFF.md)** | **Auditor entry point** |
-| **ES_PRD_v3_FINAL_BUILD_SPEC.md** | This file — build spec v3.4 |
+| **ES_PRD_v3_FINAL_BUILD_SPEC.md** | This file — **PRD v3.4** (V1 built) |
 | [LOCKED_DECISIONS.md](./LOCKED_DECISIONS.md) | Decisions #2–#23 |
 | [ES_MEMORY.md](./ES_MEMORY.md) | Living session memory |
 | [ES_WIREFRAMES.md](./ES_WIREFRAMES.md) | Wireframes |

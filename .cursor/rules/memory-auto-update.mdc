@@ -6,6 +6,8 @@ alwaysApply: true
 
 # Living memory — automatic session end
 
+**No stop hook** — memory is enforced via this rule only (stop-hook `followup_message` caused an infinite SESSION END loop).
+
 After any session where you **created or changed** code or docs, update memory **before stopping**:
 
 1. Append dated bullets to `docs/ES_MEMORY.md` session log (costing/architecture decisions).

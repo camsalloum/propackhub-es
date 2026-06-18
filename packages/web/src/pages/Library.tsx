@@ -57,7 +57,12 @@ const Library = () => {
       setLoading(true);
       setError(null);
       const data = await apiClient.getMaterials();
-      setMaterials(data || []);
+      setMaterials((data || []).map((m: any) => ({
+        ...m,
+        type: m.type || m.materialType,
+        density: Number(m.density),
+        costPerKgUsd: Number(m.costPerKgUsd),
+      })));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load materials');
       console.error('Error fetching materials:', err);
@@ -167,8 +172,58 @@ const Library = () => {
         </div>
       </div>
 
-      {/* Materials table */}
-      <div className="card">
+      {/* Materials — mobile cards */}
+      <div className="md:hidden space-y-3">
+        {filteredMaterials.length > 0 ? (
+          filteredMaterials.map((material) => (
+            <div key={material.id} className="card p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="font-medium">{material.name}</div>
+                  <span className={`text-xs px-2 py-0.5 rounded-md mt-1 inline-block ${getTypeColor(material.type)}`}>
+                    {material.type}
+                  </span>
+                </div>
+                <div className="font-mono font-semibold text-gold">${material.costPerKgUsd.toFixed(2)}</div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-3 text-xs text-mist">
+                <div>Solid {material.solidPercent}%</div>
+                <div>ρ {material.density.toFixed(2)}</div>
+                <div>Waste {material.wastePercent}%</div>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button
+                  type="button"
+                  onClick={() => { setEditingMaterial(material); setShowModal(true); }}
+                  className="flex-1 min-h-[44px] rounded-lg bg-slate text-sm font-medium text-navy"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(material.id)}
+                  disabled={deleting === material.id}
+                  className="min-h-[44px] px-4 rounded-lg bg-red-50 text-red-600 text-sm font-medium"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="card text-center py-12">
+            <Search className="w-12 h-12 text-mist mx-auto mb-4" />
+            <h3 className="text-xl font-display font-semibold text-navy mb-2">No materials found</h3>
+            <button onClick={openCreateModal} className="btn-primary inline-flex items-center space-x-2 mt-4">
+              <Plus className="w-5 h-5" />
+              <span>Add Material</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Materials table — desktop */}
+      <div className="card hidden md:block">
         {filteredMaterials.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -220,7 +275,7 @@ const Library = () => {
             </table>
           </div>
         ) : (
-          <div className="text-center py-12">
+          <div className="text-center py-12 hidden md:block">
             <Search className="w-12 h-12 text-mist mx-auto mb-4" />
             <h3 className="text-xl font-display font-semibold text-navy mb-2">No materials found</h3>
             <p className="text-mist mb-6">
@@ -236,8 +291,8 @@ const Library = () => {
 
       {/* Modal */}
       {showModal && editingMaterial && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-lg p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+          <div className="bg-white rounded-t-2xl sm:rounded-lg w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto safe-area-pb">
             <h3 className="font-display font-semibold text-navy mb-4">{editingMaterial.id ? 'Edit Material' : 'Add Material'}</h3>
             <div className="space-y-4">
               <div>

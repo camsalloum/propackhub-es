@@ -8,5 +8,5 @@ export default defineConfig({
   sourcemap: true,
   target: 'es2022',
   outDir: 'dist',
-  external: ['@es/engine']
+  external: ['@es/engine', 'pdfkit', 'svg-to-pdfkit', 'puppeteer']
 });

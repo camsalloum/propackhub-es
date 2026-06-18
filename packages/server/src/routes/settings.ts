@@ -43,6 +43,7 @@ async function updateTenantSettingsRoute(
       termsAndConditions?: string;
       footerText?: string;
       defaultMarkupPercent?: number;
+      quotationValidDays?: number;
     };
   }>,
   reply: FastifyReply
@@ -77,6 +78,9 @@ async function updateTenantSettingsRoute(
     }
     if (request.body.defaultMarkupPercent !== undefined) {
       updates.defaultMarkupPercent = request.body.defaultMarkupPercent.toString();
+    }
+    if (request.body.quotationValidDays !== undefined) {
+      updates.quotationValidDays = request.body.quotationValidDays;
     }
 
     const [updated] = await db

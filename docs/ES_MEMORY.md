@@ -11,7 +11,7 @@
 | Doc | Role |
 |-----|------|
 | [LOCKED_DECISIONS.md](./LOCKED_DECISIONS.md) | Strategic locks #2–#23 |
-| [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md) | Build PRD |
+| [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md) | Build PRD **v3.4** (V1 implemented — see Appendix A.1) |
 | [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) | **Phased build plan** (audit findings, P0–G, DoD) |
 | [LIVE_STATE.md](./LIVE_STATE.md) | Current phase + what works |
 | [archive/legacy-laravel/COSTING_NOTES.md](../archive/legacy-laravel/COSTING_NOTES.md) | Laravel engine source of truth |
@@ -525,3 +525,86 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 - Kept: isAdmin guards on slabs/markup/cost-breakdown tabs and sidebar sections
 
 **Build status:** Web ✅ Server ✅ Engine 12/12 ✅
+
+### 2026-06-18 — Verification audit + Phase F gaps fixed
+
+**Context:** Prior agents (2026-06-16/17) completed Phases A–E. This session re-read code (did not trust docs alone), confirmed builds/tests, fixed remaining gaps, advanced Phase F/G.
+
+**Verified correct:** Phases A–E implementation (auth, CRUD, templates, visibility, requote, CustomerDetail, quote loop).
+
+**Fixes applied:**
+- Calculate route: persist slab prices in display currency after calc; return FX-adjusted slabs
+- PDF: display-currency sale price + slab table; hide processes for sales rep; footer text
+- Web: `lib/currency.ts`; EstimateEditor display price + auto-calculate on template load
+- Library: normalize decimal fields from API
+- Settings Team tab: wired to users API + visibility presets (was mock UI)
+- CI: Node 22; server `currency.test.ts` (2 tests)
+
+**Plan updated:** ES_IMPLEMENTATION_PLAN.md §10 verification audit; Phase F mostly complete; next = Phase G.
+
+**Build/tests:** web ✅ server ✅ engine 12/12 ✅ server 2/2 ✅
+
+### 2026-06-18 — Phase G1: server integration tests + CI Postgres
+
+**Context:** User approved continuing Phase G1 after partial setup in prior turn.
+
+**Delivered:**
+- `buildApp()` factory in `app.ts` — Fastify + routes without listen (testable)
+- `auth-estimates.integration.test.ts` — register, login, create estimate, calculate, GET persist (3 tests)
+- CI: Postgres 15 service container, `DATABASE_URL`/`JWT_SECRET`, `db:push` before server tests
+- SETUP.md: integration test instructions + Puppeteer PDF section (completes F1)
+
+**Build/tests:** server 5/5 ✅ (2 unit + 3 integration, requires DATABASE_URL locally)
+
+### 2026-06-18 — Cursor stop hook Windows fix
+
+**Context:** User reported Windows “Select an app to open this .mjs file” dialog on every agent session end.
+
+**Cause:** `.cursor/hooks.json` invoked `session-end-memory.mjs` directly; Windows treats `.mjs` as a file to open, not a Node script.
+
+**Fix:** Changed hook command to `node .cursor/hooks/session-end-memory.mjs` (estimation-studio; same pattern applied in sibling ProPackHub apps + parent workspace).
+
+### 2026-06-18 — Phase G6 + B6 + G5
+
+**Delivered:**
+- Dashboard API `GET /dashboard/summary` — monthly count, draft/sent/won, recent, expiring proposals
+- Mark-sent sets `sentAt` + `validUntil` from tenant `quotationValidDays` (default 30)
+- Web Dashboard uses summary API; expiring proposals banner
+- B6: `estimateCalc.ts` + EstimateEditor live `@es/engine` preview on layer/dimension edits
+- G5: service-worker v2 for Vite `/assets/*` caching
+- G4 partial: mobile sticky price bar on estimate editor
+- `db:patch` script + CI fallback for schema columns
+
+**Build/tests:** web ✅ server ✅ engine 12/12 ✅ server 5/5 ✅
+
+### 2026-06-18 — Stop hook infinite SESSION END loop (fixed)
+
+**Context:** User reported every agent turn ended with injected "SESSION END" prompt; agent could not advance on real tasks.
+
+**Cause:** `.cursor/hooks.json` `stop` hook returned `followup_message` after **every** agent completion. Answering that prompt triggered `stop` again → same follow-up forever.
+
+**Fix:** Removed `stop` hook from estimation-studio and parent `ProPackHub/.cursor/hooks.json`. Memory updates rely on `memory-auto-update.mdc` (alwaysApply) only. `session-end-memory.mjs` left as no-op with comment.
+
+### 2026-06-18 — Phase G3 + G4 complete
+
+**G3:** `golden-fixtures.ts` — Laminates duplex, UV narrow web, sleeve LM/kg, operation cost scenarios; `golden.test.ts` (6 tests). Engine **18/18** pass.
+
+**G4:** `BottomSheet.tsx`; `LayerCard` swipe-delete + drag reorder; mobile edit/add layer sheets in `EstimateEditor`; collapsible laminate preview on phone.
+
+**Build/tests:** web ✅ engine 18/18 ✅
+
+### 2026-06-18 — V1 plan complete (E6, F3, Phase H, mobile polish)
+
+**E6:** `calculateAndPersistEstimate` service; requote route auto-calculates with fresh library prices.
+
+**F3:** `pdf-proposal-kit.ts` — branded pdfkit PDF (header, sale price, SVG stack, slabs, terms).
+
+**Phase H:** `GET/PUT /api/v1/platform/master-materials`; `MasterLibrary.tsx`; `GET /api/v1/auth/sso/pebi`; Login SSO button.
+
+**Mobile:** Bottom tab nav (`Layout.tsx`); safe-area CSS; keyboard-aware `BottomSheet`; mobile cards on Estimates/Library; TemplatePicker sticky CTA.
+
+### 2026-06-18 — PRD v3.4 doc alignment
+
+**Context:** User asked which doc is canonical vs what was built.
+
+**Updated:** `ES_PRD_v3_FINAL_BUILD_SPEC.md` — title v3.4, status V1 implemented, §14 phases marked complete, Appendix A.1 build matrix, removed stale “not built yet” line.

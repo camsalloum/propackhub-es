@@ -253,4 +253,14 @@ export async function registerAuthRoutes(fastify: FastifyInstance) {
   );
 
   fastify.get('/api/v1/auth/me', async (request, reply) => meRoute(fastify, request, reply));
+
+  fastify.get('/api/v1/auth/sso/pebi', async (request, reply) => {
+    const baseUrl = process.env.PEBI_SSO_URL || '';
+    const returnUrl = process.env.ES_PUBLIC_URL || process.env.CORS_ORIGIN || 'http://localhost:5000';
+    if (!baseUrl) {
+      return reply.send({ enabled: false, url: null });
+    }
+    const url = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}return_url=${encodeURIComponent(returnUrl)}`;
+    return reply.send({ enabled: true, url });
+  });
 }

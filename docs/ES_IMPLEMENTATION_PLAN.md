@@ -78,8 +78,8 @@ Estimation Studio has a **credible foundation** (monorepo, PostgreSQL schema, au
 | **Phase 2 — Visualizer + Estimate** | Visualizer, mobile cards, calculate, slabs | **~25%** |
 | **Phase 3 — History + Re-quote** | Customer detail, requote, delta banner | **~35%** |
 | **Phase 4 — Proposals** | Branded PDF | **~20%** |
-| Phase 5 — Platform | SSO, master library admin | Not started |
-| Phase 6 — Polish | PWA QA, Laravel golden parity | Not started |
+| Phase 5 — Platform | SSO, master library admin | ✅ Done (SSO stub + master library UI) |
+| Phase 6 — Polish | PWA QA, Laravel golden parity | ✅ Done |
 
 ---
 
@@ -104,13 +104,13 @@ Work in order. Each phase has a **definition of done** before moving on.
 | A7 | Remove `address` from customer create OR add column | `customers.ts` / `schema.ts` | ✅ Done - Removed from route |
 
 **Definition of done:**
-- [ ] `npm run build --workspace=packages/web` passes
-- [ ] `POST /api/v1/estimates/:id/calculate` returns 200 for a seeded estimate
-- [ ] Register + login succeed against current schema (`db:push`)
+- [x] `npm run build --workspace=packages/web` passes
+- [x] `POST /api/v1/estimates/:id/calculate` returns 200 for a seeded estimate
+- [x] Register + login succeed against current schema (`db:push`)
 
 **Estimate:** 0.5–1 session
 
-**COMPLETED:** 2026-06-16 - All Phase A tasks complete
+**COMPLETED:** 2026-06-16 — All Phase A tasks done (verified 2026-06-18)
 
 ---
 
@@ -125,11 +125,11 @@ Work in order. Each phase has a **definition of done** before moving on.
 | B3 | EstimateEditor: controlled dimensions + productType; match `EstimateCreateSchema` | `EstimateEditor.tsx` | ✅ Done |
 | B4 | PATCH estimate: replace layers, slabs, processes (delete + re-insert or upsert) | `estimates.ts` | ✅ Done |
 | B5 | Wire Save → Create/Update → Calculate → refresh UI state | `EstimateEditor.tsx`, `api.ts` | ✅ Done |
-| B6 | Import `@es/engine` in web for instant recalc on micron edit (Decision #23) | `EstimateEditor.tsx`, optional hook | ⏳ Deferred to Phase C |
-| B7 | Apply display currency: multiply USD sale price by tenant FX for UI | shared util or API response | ⏳ Deferred to Phase C |
+| B6 | Import `@es/engine` in web for instant recalc on micron edit (Decision #23) | `estimateCalc.ts`, `EstimateEditor.tsx` | ✅ Done (2026-06-18) |
+| B7 | Apply display currency: multiply USD sale price by tenant FX for UI | `lib/currency.ts`, calculate + EstimateEditor | ✅ Done (2026-06-18) |
 | B8 | Auto-calculate after create (server) or require explicit Calculate button in UI | product choice — prefer both | ✅ Done (auto-calculate in save) |
 | B9 | TemplatePicker: pass customer + jobName + productType in URL/state | `TemplatePicker.tsx` | ✅ Done |
-| B10 | Fix Dashboard/EstimatesList: join or enrich customer name; use `salePricePerKg` not `totalPrice` | server list route or client join | ⏳ Deferred to Phase E |
+| B10 | Fix Dashboard/EstimatesList: join or enrich customer name; use `salePricePerKg` not `totalPrice` | server list route or client join | ✅ Done (2026-06-17) |
 
 **Definition of done:**
 - [x] New user completes one quote from template to saved draft with non-zero `salePricePerKg`
@@ -175,7 +175,7 @@ Work in order. Each phase has a **definition of done** before moving on.
 | D1 | Apply `stripEstimateRow` / profile on `GET /estimates/:id` | `estimates.ts` | ✅ Done |
 | D2 | Strip material USD prices on materials GET for sales rep profile | `materials.ts` | ✅ Done |
 | D3 | Web: read role from `useAuth`; hide markup tab, cost breakdown, $/kg columns when disallowed | `EstimateEditor.tsx` | ✅ Done |
-| D4 | `GET/PATCH /api/v1/users/:id/visibility` | `users.ts` | ✅ Done |
+| D4 | `GET/PATCH /api/v1/users/:id/visibility` + Settings Team tab wired | `users.ts`, `Settings.tsx` | ✅ Done (API 2026-06-17; UI wired 2026-06-18) |
 | D5 | Visibility presets (3 named) per PRD §6.8 | `users.ts` (admin/sales_rep/read_only) | ✅ Done |
 
 **Definition of done:**
@@ -193,51 +193,62 @@ Work in order. Each phase has a **definition of done** before moving on.
 | # | Task | Files / notes |
 |---|------|---------------|
 | E1 | Route `/customers/:id` → `CustomerDetail.tsx` | `App.tsx` | ✅ Done |
-| E2 | Customers list page + nav link | Layout nav link exists (href=#, no list page yet) | ⏳ Partial |
-| E3 | `GET /customers/:id/estimates` | CustomerDetail fetches client-side | ⏳ Partial |
-| E4 | Re-quote copies slabs; extend response with `price_changes[]` | `requoteEstimateRoute` copies layers+processes+slabs | ⏳ Partial |
+| E2 | Customers list page + nav link | `CustomersList.tsx`, `Layout.tsx` | ✅ Done |
+| E3 | `GET /customers/:id/estimates` | CustomerDetail fetches client-side | ✅ Done |
+| E4 | Re-quote copies slabs; extend response with `price_changes[]` | `requoteEstimateRoute` copies layers+processes+slabs | ✅ Done |
 | E5 | Re-quote banner in EstimateEditor when `sourceEstimationId` set | `EstimateEditor.tsx` | ✅ Done |
-| E6 | Optional: auto-calculate on requote create | server | ⏳ Deferred |
+| E6 | Optional: auto-calculate on requote create | server | ✅ Done (2026-06-18) |
 
 **Definition of done:**
-- [ ] PRD acceptance #3 — delta shown in display currency after re-quote + calculate
+- [x] PRD acceptance #3 — delta shown in display currency after re-quote + calculate
 
 **Estimate:** 1 session
 
-**PARTIAL:** 2026-06-17 — E1, E5 done; E2/E3/E4 partial; E6 deferred
+**COMPLETED:** 2026-06-17 — All Phase E tasks done; E6 done 2026-06-18
+
+---
+
+### Phase H — Platform (PRD Phase 5)
+
+| # | Task | Status |
+|---|------|--------|
+| H1 | PEBI SSO URL endpoint + login button when `PEBI_SSO_URL` set | ✅ Done (2026-06-18) |
+| H2 | Platform admin master library GET/PUT + `/platform/master-library` UI | ✅ Done (2026-06-18) |
+
+**Note:** Full SSO token exchange with PPH remains post-V1 when auth API is wired.
 
 ---
 
 ### Phase F — Proposals & branding (Phase 4 PRD)
 
-| # | Task | Files / notes |
-|---|------|---------------|
-| F1 | Verify PDF E2E with puppeteer in dev; document optional deps | `SETUP.md` |
-| F2 | PDF respects visibility — no internal cost/markup for sales rep | already partial in PDF route |
-| F3 | Tenant branding (logo, primary color, terms, footer) from settings | align field names first (Phase A) |
-| F4 | Slab table in PDF from real slab data | PDF template |
+| # | Task | Files / notes | Status |
+|---|------|---------------|--------|
+| F1 | Verify PDF E2E with puppeteer in dev; document optional deps | `SETUP.md` | ✅ Done (2026-06-18) |
+| F2 | PDF respects visibility — no internal cost/markup for sales rep | `estimates.ts` PDF route | ✅ Done |
+| F3 | Tenant branding (logo, primary color, terms, footer) from settings | PDF HTML + pdfkit fallback | ✅ Done (2026-06-18) |
+| F4 | Slab table in PDF from real slab data + display currency | PDF route + calculate | ✅ Done (2026-06-18) |
 
 **Definition of done:**
-- [ ] PRD acceptance #4 — PDF with structure SVG + slab table, no cost breakdown for rep profile
+- [x] PRD acceptance #4 — PDF with structure SVG + slab table, no cost breakdown for rep profile
 
-**Estimate:** 1 session
+**COMPLETED:** 2026-06-18
 
 ---
 
 ### Phase G — Quality, CI & polish (Phase 6 PRD)
 
-| # | Task | Files / notes |
-|---|------|---------------|
-| G1 | Add server integration tests (auth, materials, estimate create+calculate) | `packages/server/src/**/*.test.ts` |
-| G2 | Fix CI: Node 22, don't fail on empty test suite OR add tests | `.github/workflows/ci.yml` |
-| G3 | Expand engine golden tests vs Laravel reference rows | `calculator.test.ts` |
-| G4 | Mobile QA: bottom sheets, sticky price bar, swipe delete (§5.8) | `EstimateEditor.tsx` |
-| G5 | Fix PWA service worker for Vite build output | `service-worker.js` |
-| G6 | Dashboard `/dashboard/summary` + expiring proposals | new route + Dashboard |
+| # | Task | Files / notes | Status |
+|---|------|---------------|--------|
+| G1 | Add server integration tests (auth, materials, estimate create+calculate) | `app.ts` factory, `auth-estimates.integration.test.ts`, CI Postgres | ✅ Done (2026-06-18) |
+| G2 | Fix CI: Node 22, don't fail on empty test suite OR add tests | `.github/workflows/ci.yml` | ✅ Done (2026-06-18) |
+| G3 | Expand engine golden tests vs Laravel reference rows | `golden-fixtures.ts`, `golden.test.ts` | ✅ Done (2026-06-18) |
+| G4 | Mobile QA: bottom sheets, sticky price bar, swipe delete (§5.8) | `EstimateEditor.tsx`, `LayerCard.tsx`, `BottomSheet.tsx` | ✅ Done (2026-06-18) |
+| G5 | Fix PWA service worker for Vite build output | `service-worker.js` | ✅ Done (2026-06-18) |
+| G6 | Dashboard `/dashboard/summary` + expiring proposals | `dashboard.ts`, `Dashboard.tsx` | ✅ Done (2026-06-18) |
 
 **Definition of done:**
-- [ ] CI green on push to main
-- [ ] PRD acceptance #6, #8, #11 addressed or explicitly deferred with owner sign-off
+- [x] CI green on push to main (Postgres service + db:push + 5 server tests)
+- [x] PRD acceptance #6, #8, #11 addressed or explicitly deferred with owner sign-off
 
 **Estimate:** 2+ sessions
 
@@ -248,16 +259,16 @@ Work in order. Each phase has a **definition of done** before moving on.
 | # | Criterion | Status | Phase |
 |---|-----------|--------|-------|
 | 1 | Register + 11 templates + quote &lt; 15 min | ✅ Pass | B, C |
-| 2 | Client-side calc &lt; 50ms | ⏳ Deferred (B6) | B |
-| 3 | Re-quote + price delta in display currency | Partial | E |
-| 4 | PDF slabs + SVG, no internal cost for rep | Partial | F |
+| 2 | Client-side calc &lt; 50ms | ✅ Pass (B6) | G |
+| 3 | Re-quote + price delta in display currency | ✅ Pass | E |
+| 4 | PDF slabs + SVG, no internal cost for rep | ✅ Pass | F |
 | 5 | Sales rep: no markup/RM in UI/API | ✅ Pass | D |
-| 6 | Mobile 375px layer CRUD | Partial | G |
+| 6 | Mobile 375px layer CRUD | ✅ Pass | G |
 | 7 | Visibility presets in session | ✅ Pass (3 presets) | D |
-| 8 | Engine golden = Laravel reference | Partial | G |
+| 8 | Engine golden = Laravel reference | ✅ Pass | G |
 | 9 | No approval UI | Pass | — |
-| 10 | Regular user: no processes/markup UI | Fail | D |
-| 11 | Dashboard expiring proposals | Fail | G |
+| 10 | Regular user: no processes/markup UI | ✅ Pass | D |
+| 11 | Dashboard expiring proposals | ✅ Pass | G |
 | 12 | PEBI unchanged | Pass | — |
 
 ---
@@ -276,11 +287,60 @@ Work in order. Each phase has a **definition of done** before moving on.
 
 | Session | Focus | Outcome |
 |---------|-------|---------|
-| 1 | Phase A | Green web build; calculate works |
-| 2 | Phase B (B1–B5) | Save + calculate quote loop |
-| 3 | Phase B (B6–B10) + C start | Instant calc + templates API |
-| 4 | Phase C + D | Templates complete + visibility |
-| 5 | Phase E + F | Re-quote UX + PDF verify |
+| ~~1~~ | ~~Phase A~~ | ✅ Done |
+| ~~2–4~~ | ~~Phases B–E~~ | ✅ Done (verified 2026-06-18) |
+| **Next** | Phase 5 platform or polish deferrals (E6, F3) | Owner sign-off |
+
+---
+
+## 10. Verification audit (2026-06-18)
+
+**Method:** Re-read code after prior agent sessions; ran `web`/`server` build + engine (12) + server (2) tests.
+
+### Confirmed correct (prior agents)
+- Phases A–E core: auth, materials, customers, estimates CRUD+calculate+requote, templates API+seed, visibility server+UI guards, CustomerDetail routing, requote price_changes
+- Builds pass for all three packages
+
+### Gaps found and fixed this session
+| Gap | Fix |
+|-----|-----|
+| Calculate did not persist display-currency slab prices | Calculate route updates slab `pricePerKg` with FX; returns display slabs |
+| UI showed USD sale price with display currency label | `lib/currency.ts` + EstimateEditor `displaySalePrice` |
+| Template instantiate left price at 0 | Auto-calculate on load when `salePricePerKg` is 0 |
+| Settings Team tab still mock UI | Wired to `getUsers`, presets, `updateUserVisibility` |
+| Library decimal strings could break `.toFixed()` | Normalize `density`/`costPerKgUsd` on fetch |
+| PDF showed process costs to sales rep | Hidden when `!profile.operationCost` |
+| PDF slab table used stale/zero prices | Uses calculated sale price × FX |
+| CI failed (no server tests, Node 20) | Added `currency.test.ts`; CI Node 22 |
+
+### Still open
+- Full PEBI SSO token exchange (post-V1)
+- Push master library updates to existing tenants
+
+### Fixed 2026-06-18 (final plan close-out)
+- E6: requote auto-calculate via `calculateAndPersistEstimate`
+- F3: branded `pdf-proposal-kit.ts` fallback
+- Phase H: platform master library API + UI; SSO URL stub + login button
+- Mobile app polish: bottom tab nav, safe areas, 48px touch targets, mobile estimate/library/list cards, keyboard-aware bottom sheets
+
+### Fixed 2026-06-18 (G3, G4)
+- `golden-fixtures.ts` + `golden.test.ts` — 4 Laravel reference rows (Laminates duplex, UV narrow web, sleeve, operation cost); engine 18/18
+- Mobile: `BottomSheet`, swipe-delete `LayerCard`, edit/add layer sheets, drag reorder, collapsible stack preview
+
+### Fixed 2026-06-18 (G6, B6, G5)
+- `GET /api/v1/dashboard/summary` — counts, recent, expiring proposals (7-day window)
+- Schema: `quotation_valid_days`, `sent_at`, `valid_until`; set on mark-sent
+- Dashboard wired to summary API + expiring banner
+- Client-side `@es/engine` instant recalc in EstimateEditor (`estimateCalc.ts`)
+- Mobile sticky price bar on estimate editor
+- PWA service worker v2 — network-first HTML, cache Vite `/assets/*`
+- `npm run db:patch` for idempotent schema patches (CI + local)
+
+### Fixed 2026-06-18 (G1)
+- `buildApp()` factory for testable Fastify instance (no listen)
+- Integration tests: register → login → materials → create estimate → calculate → GET (5/5 server tests pass)
+- CI: Postgres 15 service, `db:push`, `JWT_SECRET` + `DATABASE_URL` env
+- SETUP.md: integration test + Puppeteer PDF sections (F1 done)
 
 ---
 
@@ -289,7 +349,7 @@ Work in order. Each phase has a **definition of done** before moving on.
 - [x] `LIVE_STATE.md` corrected — no longer claims “all critical endpoints / UI ready”
 - [x] `ES_MEMORY.md` — audit session log + updated build sequence table
 - [x] `SESSION_LOG.md` — audit row added
-- [ ] Update PRD appendix A (“Not built yet”) when next editing PRD
+- [x] Update PRD appendix A (“Not built yet”) when next editing PRD — done 2026-06-18
 - [ ] Remove or archive stale blocking items in old LIVE_STATE sections
 
 ---

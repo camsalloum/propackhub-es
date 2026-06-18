@@ -1,50 +1,175 @@
-import React from 'react';
+import { useRef, useState, useCallback } from 'react';
+import { GripVertical, Pencil, Trash2 } from 'lucide-react';
 
-interface LayerCardProps {
-  layer: any;
-  onMicronChange?: (value: number) => void;
-  onRemove?: () => void;
+export interface LayerCardLayer {
+  id: string;
+  type: string;
+  material: string;
+  micron: number;
+  gsm?: number;
+  costPerKg?: number;
 }
 
-const LayerCard: React.FC<LayerCardProps> = ({ layer, onMicronChange, onRemove }) => {
+interface LayerCardProps {
+  layer: LayerCardLayer;
+  index: number;
+  total: number;
+  showCost?: boolean;
+  onEdit?: () => void;
+  onRemove?: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  onDragStart?: (index: number) => void;
+  onDragEnter?: (index: number) => void;
+  onDragEnd?: () => void;
+  isDragging?: boolean;
+}
+
+const SWIPE_THRESHOLD = 72;
+
+const LayerCard = ({
+  layer,
+  index,
+  total,
+  showCost = false,
+  onEdit,
+  onRemove,
+  onMoveUp,
+  onMoveDown,
+  onDragStart,
+  onDragEnter,
+  onDragEnd,
+  isDragging,
+}: LayerCardProps) => {
+  const [offsetX, setOffsetX] = useState(0);
+  const [swiping, setSwiping] = useState(false);
+  const startX = useRef(0);
+  const startY = useRef(0);
+  const locked = useRef<'x' | 'y' | null>(null);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX;
+    startY.current = e.touches[0].clientY;
+    locked.current = null;
+    setSwiping(true);
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!swiping) return;
+    const dx = e.touches[0].clientX - startX.current;
+    const dy = e.touches[0].clientY - startY.current;
+    if (!locked.current) {
+      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+        locked.current = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      }
+    }
+    if (locked.current === 'x') {
+      setOffsetX(Math.min(0, Math.max(-96, dx)));
+    }
+  }, [swiping]);
+
+  const handleTouchEnd = useCallback(() => {
+    setSwiping(false);
+    locked.current = null;
+    if (offsetX < -SWIPE_THRESHOLD) {
+      setOffsetX(-96);
+    } else {
+      setOffsetX(0);
+    }
+  }, [offsetX]);
+
+  const confirmRemove = () => {
+    if (window.confirm(`Remove ${layer.material}?`)) {
+      onRemove?.();
+    }
+    setOffsetX(0);
+  };
+
+  const typeColor =
+    layer.type === 'substrate' ? 'bg-blue-600' : layer.type === 'ink' ? 'bg-purple-600' : 'bg-green-600';
+
   return (
-    <div className="bg-white border border-border rounded-lg p-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center space-x-3">
-            <div className={`w-10 h-10 rounded-md flex items-center justify-center text-white ${
-              layer.type === 'substrate' ? 'bg-blue-600' : layer.type === 'ink' ? 'bg-purple-600' : 'bg-green-600'
-            }`}>{layer.type?.charAt(0).toUpperCase()}</div>
-            <div>
-              <div className="font-medium">{layer.material}</div>
-              <div className="text-sm text-mist">ID: {layer.id}</div>
+    <div className="relative overflow-hidden rounded-xl">
+      <div className="absolute inset-y-0 right-0 flex items-stretch w-24">
+        <button
+          type="button"
+          onClick={confirmRemove}
+          className="flex-1 bg-danger text-white flex items-center justify-center min-h-[48px]"
+          aria-label="Delete layer"
+        >
+          <Trash2 className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div
+        className={`relative bg-white border border-border rounded-xl transition-transform touch-pan-y ${
+          isDragging ? 'opacity-60 scale-[0.98] shadow-lg z-10' : ''
+        }`}
+        style={{ transform: `translateX(${offsetX}px)` }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onDragEnter={() => onDragEnter?.(index)}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          onDragEnd?.();
+        }}
+      >
+        <div className="flex items-center gap-2 p-3 min-h-[64px]">
+          <button
+            type="button"
+            draggable
+            onDragStart={() => onDragStart?.(index)}
+            onDragEnd={() => onDragEnd?.()}
+            className="shrink-0 w-11 h-11 flex items-center justify-center text-mist cursor-grab active:cursor-grabbing touch-none"
+            aria-label="Reorder layer"
+          >
+            <GripVertical className="w-5 h-5" />
+          </button>
+
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white shrink-0 ${typeColor}`}>
+            {layer.type?.charAt(0).toUpperCase()}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-sm truncate">{layer.material}</div>
+            <div className="text-xs text-mist mt-0.5">
+              {layer.micron} µ · {(layer.gsm ?? 0).toFixed(1)} GSM
+              {showCost && layer.costPerKg != null ? ` · $${layer.costPerKg.toFixed(2)}/kg` : ''}
             </div>
           </div>
-        </div>
-        <div className="text-right">
-          <div className="text-sm text-mist">{layer.gsm?.toFixed?.(1) || layer.gsm} GSM</div>
-          <div className="text-sm font-mono">{layer.costPerKg?.toFixed?.(2) || ''} $/kg</div>
-        </div>
-      </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs text-mist">Micron</label>
-          <input
-            type="number"
-            value={layer.micron}
-            onChange={(e) => onMicronChange?.(Number(e.target.value))}
-            className="input w-full font-mono text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-xs text-mist">Type</label>
-          <div className="text-sm">{layer.type}</div>
-        </div>
-      </div>
+          <div className="flex flex-col gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={onMoveUp}
+              disabled={index === 0}
+              className="w-11 h-8 text-xs rounded bg-slate disabled:opacity-30"
+              aria-label="Move layer up"
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              onClick={onMoveDown}
+              disabled={index >= total - 1}
+              className="w-11 h-8 text-xs rounded bg-slate disabled:opacity-30"
+              aria-label="Move layer down"
+            >
+              ↓
+            </button>
+          </div>
 
-      <div className="mt-3 flex justify-end">
-        <button onClick={() => onRemove?.()} className="text-sm text-mist hover:text-danger">Remove</button>
+          <button
+            type="button"
+            onClick={onEdit}
+            className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg bg-slate text-navy"
+            aria-label="Edit layer"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

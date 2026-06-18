@@ -84,6 +84,18 @@ export class ApiClient {
     }>('GET', '/api/v1/auth/me');
   }
 
+  getPebiSsoUrl() {
+    return this.request<{ enabled: boolean; url: string | null }>('GET', '/api/v1/auth/sso/pebi');
+  }
+
+  getMasterMaterials() {
+    return this.request<any[]>('GET', '/api/v1/platform/master-materials');
+  }
+
+  updateMasterMaterials(materials: any[]) {
+    return this.request<{ ok: boolean; count: number }>('PUT', '/api/v1/platform/master-materials', materials);
+  }
+
   // Materials
   getMaterials() {
     return this.request<any[]>('GET', '/api/v1/materials');
@@ -117,6 +129,18 @@ export class ApiClient {
   // Estimates
   getEstimates() {
     return this.request<any[]>('GET', '/api/v1/estimates');
+  }
+
+  getDashboardSummary() {
+    return this.request<{
+      estimatesThisMonth: number;
+      drafts: number;
+      sent: number;
+      won: number;
+      recent: any[];
+      expiringProposals: any[];
+      quotationValidDays: number;
+    }>('GET', '/api/v1/dashboard/summary');
   }
 
   getEstimate(id: string) {

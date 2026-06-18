@@ -1,26 +1,14 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs';
-
-let input = {};
-try {
-  input = JSON.parse(readFileSync(0, 'utf8'));
-} catch {
-  input = {};
-}
-
-const status = input.status ?? input.reason ?? '';
-if (/no.?op|cancelled|aborted/i.test(String(status))) {
-  process.stdout.write(JSON.stringify({}));
-  process.exit(0);
-}
-
-const msg = [
-  'SESSION END — Estimation Studio memory (if you edited files):',
-  '1. docs/ES_MEMORY.md — append session log bullets',
-  '2. docs/SESSION_LOG.md — append row',
-  '3. docs/LIVE_STATE.md — update phase / next steps',
-  '4. Say "Memory updated. [N] files changed."',
-].join('\n');
-
-process.stdout.write(JSON.stringify({ followup_message: msg }));
+/**
+ * DISABLED — do not register in hooks.json with followup_message.
+ *
+ * A stop hook that returns followup_message runs after EVERY agent turn, not only
+ * at session end, which caused an infinite "SESSION END" loop (agent replies →
+ * hook fires again → same prompt injected).
+ *
+ * Living memory updates are handled by .cursor/rules/memory-auto-update.mdc
+ * (alwaysApply). Re-enable only if Cursor adds a true sessionEnd event or
+ * loop-safe one-shot followup.
+ */
+process.stdout.write(JSON.stringify({}));
 process.exit(0);

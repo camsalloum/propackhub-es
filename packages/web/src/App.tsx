@@ -9,6 +9,7 @@ import CustomerDetail from './pages/CustomerDetail';
 import CustomersList from './pages/CustomersList';
 import Library from './pages/Library';
 import Settings from './pages/Settings';
+import MasterLibrary from './pages/MasterLibrary';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
@@ -57,6 +58,7 @@ function App() {
           <Route path="customers/:id" element={<CustomerDetail />} />
           <Route path="library" element={<Library />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="platform/master-library" element={<MasterLibrary />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>

@@ -3,6 +3,20 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
+// Suppress external library errors (search analyzer)
+window.addEventListener('error', (event) => {
+  if (event.message?.includes('Search engine null')) {
+    event.preventDefault();
+  }
+});
+
+// Suppress unhandled promise rejections from search analyzer
+window.addEventListener('unhandledrejection', (event) => {
+  if (event.reason?.message?.includes('Search engine null')) {
+    event.preventDefault();
+  }
+});
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

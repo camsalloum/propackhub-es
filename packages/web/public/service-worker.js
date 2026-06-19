@@ -24,11 +24,14 @@ self.addEventListener('fetch', (event) => {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
   if (url.origin !== self.location.origin) return;
 
-  // SPA navigation — network first, fallback to cached shell
-  if (request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) {
-    event.respondWith(
-      fetch(request).catch(() => caches.match('/index.html'))
-    );
+  // Skip API calls — let them go through to the dev server proxy
+  if (url.pathname.startsWith('/api/')) {
+    return;
+  }
+
+  // Skip navigation in dev — causes issues with dev server proxy/HMR
+  // In dev, Vite handles SPA routing directly
+  if (request.mode === 'navigate') {
     return;
   }
 
@@ -37,10 +40,16 @@ self.addEventListener('fetch', (event) => {
     caches.match(request).then((cached) => {
       const networkFetch = fetch(request)
         .then((resp) => {
-          if (resp && resp.status === 200 && resp.type === 'basic') {
-            const clone = resp.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          // Only cache successful responses
+          if (!resp || resp.status !== 200 || resp.type !== 'basic') {
+            return resp;
           }
+          const clone = resp.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, clone).catch(() => {
+              // Silently ignore cache write errors
+            });
+          });
           return resp;
         })
         .catch(() => cached);

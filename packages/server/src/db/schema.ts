@@ -177,6 +177,9 @@ export const estimates = pgTable('estimates', {
   // @ts-expect-error Drizzle self-referential FK callback
   sourceEstimationId: uuid('source_estimation_id').references(() => estimates.id, { onDelete: 'set null' }),
   
+  // Soft delete support
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
@@ -184,6 +187,7 @@ export const estimates = pgTable('estimates', {
   customerIdIdx: index('estimates_customer_id_idx').on(table.customerId),
   statusIdx: index('estimates_status_idx').on(table.status),
   refNumberIdx: index('estimates_ref_number_idx').on(table.refNumber),
+  deletedAtIdx: index('estimates_deleted_at_idx').on(table.deletedAt),
 }));
 
 // Layers (estimate details)

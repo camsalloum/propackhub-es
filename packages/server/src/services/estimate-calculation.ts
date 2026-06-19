@@ -114,17 +114,14 @@ export async function calculateAndPersistEstimate(
       await db
         .update(schema.layers)
         .set({
-          materialName: mat.name,
-          // @ts-ignore — snapshot columns added via SQL patch
           material_name_snapshot: mat.name,
-          // @ts-ignore
           unit_cost_snapshot_usd: mat.costPerKgUsd,
         })
         .where(eq(schema.layers.id, layer.id));
     }
   }
 
-  // Persist estimate aggregates + lastCalculatedAt (B4)
+  // Persist estimate aggregates (B4)
   await db
     .update(schema.estimates)
     .set({
@@ -132,8 +129,6 @@ export async function calculateAndPersistEstimate(
       totalMicron: result.estimate.totalMicron?.toString(),
       materialCostPerKg: result.estimate.materialCostPerKg?.toString(),
       salePricePerKg: result.estimate.salePricePerKg?.toString(),
-      // @ts-ignore — lastCalculatedAt added via SQL patch
-      lastCalculatedAt: new Date(),
       updatedAt: new Date(),
     })
     .where(eq(schema.estimates.id, estimateId));

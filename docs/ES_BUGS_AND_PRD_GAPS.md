@@ -1,9 +1,9 @@
 # Estimation Studio — Bugs & PRD Gaps Backlog
 
 **Created:** 2026-06-18  
-**Last Updated:** 2026-06-19 — **Part A: 9/9 FIXED** ✅ | 7/7 integration tests passing | Slab pricing corrected  
+**Last Updated:** 2026-06-19 — **ALL PARTS COMPLETE** ✅ | 7/7 integration tests + 19/19 engine tests passing  
 **Canonical spec:** [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md) (v3.4)  
-**V1 status:** Core quote loop shipped; Part A (costing) complete; Parts B-D deferred to Phase 2.
+**Status:** Phase 1 + Phase 2 complete. All bugs, schema gaps, API gaps, and UI gaps resolved.
 
 **Legend**
 
@@ -20,13 +20,12 @@
 
 | Bucket | Count | Status | Priority |
 |--------|------:|--------|----------|
-| **A — Engine / costing bugs** | 9 | **✅ 9/9 FIXED** | P0–P1 (wrong prices in production) |
-| **B — Schema vs PRD §8** | 8+ | 📋 DEFERRED | P1–P2 (post-Phase-1) |
-| **C — Missing API §9** | 3 | 📋 DEFERRED (C3: currency; C1,C2: features) | P1–P2 |
-| **D — UI / UX vs PRD §5–§7** | 9+ | 📋 DEFERRED | P1–P3 (polish) |
+| **A — Engine / costing bugs** | 9 | **✅ 9/9 FIXED** | Complete |
+| **B — Schema vs PRD §8** | 8+ | **✅ ALL COMPLETE** | Complete |
+| **C — Missing API §9** | 3 | **✅ ALL COMPLETE** | Complete |
+| **D — UI / UX vs PRD §5–§7** | 9+ | **✅ ALL COMPLETE** | Complete |
 
-**Phase 1 completion:** All **costing accuracy & calculation bugs** resolved. Core quote pipeline fully functional.  
-**Next: Phase 2** — Schema expansions (proposals, categories, snapshots), customer ergonomics, UI polish.
+**Phase 1 + Phase 2 completion (2026-06-19):** All bugs, schema gaps, API gaps, and UI gaps resolved. Full test suite green.
 
 ---
 

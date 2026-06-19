@@ -68,6 +68,32 @@ export const users = pgTable('users', {
   tenantIdIdx: index('users_tenant_id_idx').on(table.tenantId),
 }));
 
+// Material categories (B1) — defined before materials for FK reference
+export const categories = pgTable('categories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  displayOrder: integer('display_order').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  tenantIdx: index('categories_tenant_idx').on(table.tenantId),
+}));
+
+// Material subcategories (B1)
+export const subcategories = pgTable('subcategories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  categoryId: uuid('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  displayOrder: integer('display_order').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  tenantIdx: index('subcategories_tenant_idx').on(table.tenantId),
+  categoryIdx: index('subcategories_category_idx').on(table.categoryId),
+}));
+
 // Materials (tenant-owned)
 export const materials = pgTable('materials', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -79,6 +105,8 @@ export const materials = pgTable('materials', {
   costPerKgUsd: decimal('cost_per_kg_usd', { precision: 12, scale: 4 }).notNull(),
   wastePercent: integer('waste_percent').notNull().default(0),
   isSolventBased: boolean('is_solvent_based').default(false), // True for SB ink/adhesive
+  // B1: taxonomy FK (nullable — added via SQL patch, backfilled by seed-categories)
+  subcategoryId: uuid('subcategory_id').references(() => subcategories.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
@@ -169,6 +197,11 @@ export const layers = pgTable('layers', {
   // Cached calculations
   gsm: decimal('gsm', { precision: 12, scale: 4 }),
   costPerM2: decimal('cost_per_m2', { precision: 12, scale: 4 }),
+  // Backward‑compatible column used by legacy routes (customers.ts)
+  materialName: varchar('material_name', { length: 255 }),
+  // Snapshot fields for re‑quote "was" pricing (B5)
+  material_name_snapshot: varchar('material_name_snapshot', { length: 255 }),
+  unit_cost_snapshot_usd: decimal('unit_cost_snapshot_usd', { precision: 12, scale: 4 }),
   
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
@@ -204,11 +237,55 @@ export const slabs = pgTable('slabs', {
   estimateId: uuid('estimate_id').notNull().references(() => estimates.id, { onDelete: 'cascade' }),
   quantityKg: decimal('quantity_kg', { precision: 12, scale: 2 }).notNull(),
   pricePerKg: decimal('price_per_kg', { precision: 12, scale: 4 }).notNull(),
+  // Optional explicit ordering for UI display (SCHEMA-01)
+  sortOrder: integer('sort_order').notNull().default(0),
   
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
   estimateIdIdx: index('slabs_estimate_id_idx').on(table.estimateId),
+}));
+
+// ---------------------------------------------------------------------------
+// Additional tables required for Phase 2 (B/C sections)
+// ---------------------------------------------------------------------------
+
+// (categories and subcategories are defined above, before materials)
+
+// Slab templates (B5)
+export const slabTemplates = pgTable('slab_templates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  templateKey: varchar('template_key', { length: 50 }).notNull(), // e.g. 'standard', 'large'
+  name: varchar('name', { length: 255 }).notNull(),
+  quantities: jsonb('quantities').notNull(), // number[] — quantity breakpoints in kg
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  tenantIdx: index('slab_templates_tenant_idx').on(table.tenantId),
+}));
+
+// Proposals (PDF persistence) (B3)
+export const proposals = pgTable('proposals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  estimateId: uuid('estimate_id').notNull().references(() => estimates.id, { onDelete: 'cascade' }),
+  pdfPath: varchar('pdf_path', { length: 512 }), // local path or S3 key
+  validUntil: timestamp('valid_until', { withTimezone: true }),
+  sentAt: timestamp('sent_at', { withTimezone: true }).defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  tenantIdx: index('proposals_tenant_idx').on(table.tenantId),
+  estimateIdx: index('proposals_estimate_idx').on(table.estimateId),
+}));
+
+// Estimation cost snapshots (B4) – separate from live estimation_costs table
+export const estimationCostSnapshots = pgTable('estimation_cost_snapshots', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  estimateId: uuid('estimate_id').notNull().references(() => estimates.id, { onDelete: 'cascade' }),
+  computedAt: timestamp('computed_at', { withTimezone: true }).defaultNow(),
+  breakdownJson: jsonb('breakdown_json').notNull(),
+}, (table) => ({
+  estimateIdx: index('estimation_cost_snapshots_estimate_idx').on(table.estimateId),
 }));
 
 // Activity logs for audit
@@ -238,6 +315,8 @@ export const structureTemplates = pgTable('structure_templates', {
   structureType: varchar('structure_type', { length: 50 }), // Mono, Multilayer
   substrateOrigin: varchar('substrate_origin', { length: 50 }), // PE or null
   displayOrder: integer('display_order').notNull().default(0),
+  // Flag to indicate standard (built‑in) templates vs. tenant‑created (B2)
+  isStandard: boolean('is_standard').notNull().default(true),
   defaultDimensions: jsonb('default_dimensions'), // Default dimension values
   defaultLayers: jsonb('default_layers').notNull(), // Array of { layer_order, layer_type, ref_material_key, default_micron }
   defaultProcesses: jsonb('default_processes'), // Array of { process_key, enabled }

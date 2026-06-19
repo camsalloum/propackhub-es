@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-06-19 (Phase 1 complete)
 
-## Status: ✅ PHASE 1 COMPLETE — All costing bugs fixed, 7/7 tests passing
+## Status: ✅ PHASE 1 + PHASE 2 COMPLETE — All bugs, schema, API, UI implemented
 
 - **Phase:** Estimation Studio Phase 1 core functionality + all costing bugs (Part A)
 - **Workspace:** `D:\ProPackHub\apps\estimation-studio\`
@@ -17,24 +17,41 @@
 |------|--------|
 | Auth + tenant + material/template seed | ✅ |
 | Quote loop: template → edit → save → calculate → price | ✅ |
-| Slab pricing: per-quantity calculation + persistence | ✅ **FIXED** |
+| Slab pricing: per-quantity calculation + persistence | ✅ |
 | Solvent mix costing (wide web SB ink/adhesive) | ✅ |
 | Client-side `@es/engine` instant price preview | ✅ |
 | Dashboard summary + expiring proposals (7 days) | ✅ |
 | Display currency, visibility profile, re-quote + auto-calc | ✅ |
-| Re-quote banner with USD price changes | ✅ |
+| Re-quote banner with USD price changes + stale warnings | ✅ |
 | Save Draft vs Save & Calculate (split buttons) | ✅ |
 | Markup % label + Effective margin % (on sale price) | ✅ |
 | Layer delete confirmation (inline swipe, no window.confirm) | ✅ |
 | Customer getCustomer(id) API (no N+1) | ✅ |
+| Customer autocomplete (debounced API, ≥2 chars) | ✅ |
+| Duplicate estimate (frozen prices) | ✅ |
 | PDF (Puppeteer + branded pdfkit fallback) | ✅ |
 | PWA service worker (Vite prod assets) | ✅ |
 | Mobile: bottom nav, cards, sheets, swipe delete | ✅ |
 | Platform admin: master library API + UI | ✅ |
 | PEBI SSO stub | ✅ |
-| **Engine tests** | ✅ **12/12** |
-| **Web build** | ✅ |
-| **Server `tsc --noEmit`** | ✅ |
+| Categories + subcategories (taxonomy, seeded on register) | ✅ |
+| Slab templates (standard/large, seeded on register) | ✅ |
+| Layer snapshots on calculate (B5) | ✅ |
+| Estimation cost snapshot table on calculate (B4) | ✅ |
+| Proposals table (schema + SQL patch) | ✅ |
+| Slabs sort_order column | ✅ |
+| structure_templates.is_standard column | ✅ |
+| Supported currencies endpoint (30+ ISO codes) | ✅ |
+| Register.tsx: full currency dropdown from API | ✅ |
+| Library: skeleton loader (D6) | ✅ |
+| TemplatePicker: skeleton + grouped templates + My Templates tab | ✅ |
+| Settings: preview as user + customize visibility grid | ✅ |
+| EstimateEditor: order qty + unit selector, roll spec panel | ✅ |
+| Printing web width tooltip (D7) | ✅ |
+| CustomerDetail: mini LaminateVisualizer per row + getCustomer | ✅ |
+| **Engine tests** | ✅ **19/19** |
+| **Web tsc** | ✅ |
+| **Server tsc** | ✅ |
 | **Server integration tests** | ✅ **7/7** |
 
 ---

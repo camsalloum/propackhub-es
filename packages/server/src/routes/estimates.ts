@@ -230,7 +230,7 @@ export async function calculateEstimateRoute(
 
 export async function generateProposalPdfRoute(
   _fastify: FastifyInstance,
-  request: FastifyRequest<{ Params: { id: string } }> ,
+  request: FastifyRequest<{ Params: { id: string } }>,
   reply: FastifyReply
 ) {
   try {
@@ -333,7 +333,7 @@ export async function generateProposalPdfRoute(
       const rects = layers.map((l: (typeof layers)[number], i: number) => {
         const h = Math.max(4, (parseFloat(l.micron) / total) * 200);
         const y = layers.slice(0, i).reduce((s: number, p: (typeof layers)[number]) => s + Math.max(4, (parseFloat(p.micron) / total) * 200), 0);
-        return `<rect x="0" y="${y}" width="200" height="${h}" fill="#${(Math.abs(hashCode(l.materialId))%0xFFFFFF).toString(16).padStart(6,'0')}" />`;
+        return `<rect x="0" y="${y}" width="200" height="${h}" fill="#${(Math.abs(hashCode(l.materialId)) % 0xFFFFFF).toString(16).padStart(6, '0')}" />`;
       }).join('\n');
       return `<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
     })();
@@ -449,7 +449,7 @@ export async function generateProposalPdfRoute(
         <div><strong>Customer</strong><div>${customerName}</div></div>
         <div style="margin-top:8px"><strong>Order Qty</strong><div>${estimate.orderQuantityKg || ''} kg</div></div>
         ${profile.operationCost ? `<div style="margin-top:12px" class="section-title">Processes</div>
-        <div>${processes.map((p:any)=>`<div style="margin-bottom:6px"><strong>${p.name}</strong><div style="font-size:12px;color:#666">${p.costPerHour} / hr</div></div>`).join('')}</div>` : ''}
+        <div>${processes.map((p: any) => `<div style="margin-bottom:6px"><strong>${p.name}</strong><div style="font-size:12px;color:#666">${p.costPerHour} / hr</div></div>`).join('')}</div>` : ''}
       </div>
     </div>
 
@@ -849,7 +849,7 @@ async function requoteEstimateRoute(
           sql`EXTRACT(YEAR FROM ${schema.estimates.createdAt}) = ${year}`
         )
       );
-    
+
     const nextNumber = (count[0]?.count || 0) + 1;
     const newRefNumber = `QT-${year}-${String(nextNumber).padStart(5, '0')}`;
 
@@ -972,10 +972,10 @@ async function requoteEstimateRoute(
       warnings,
       calculated: calcResult
         ? {
-            salePricePerKg: calcResult.estimate.salePricePerKg,
-            materialCostPerKg: calcResult.estimate.materialCostPerKg,
-            totalGsm: calcResult.estimate.totalGsm,
-          }
+          salePricePerKg: calcResult.estimate.salePricePerKg,
+          materialCostPerKg: calcResult.estimate.materialCostPerKg,
+          totalGsm: calcResult.estimate.totalGsm,
+        }
         : undefined,
     });
   } catch (error: any) {

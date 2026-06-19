@@ -1,11 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Loader, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { apiClient } from '../lib/api';
 
 const Register = () => {
   const navigate = useNavigate();
   const { register, isLoading, error } = useAuth();
+
+  const [currencies, setCurrencies] = useState<Array<{ code: string; name: string }>>([
+    { code: 'AED', name: 'UAE Dirham' },
+    { code: 'USD', name: 'US Dollar' },
+    { code: 'EUR', name: 'Euro' },
+    { code: 'SAR', name: 'Saudi Riyal' },
+    { code: 'INR', name: 'Indian Rupee' },
+  ]);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -14,6 +23,10 @@ const Register = () => {
     tenantName: '',
     displayCurrency: 'AED',
   });
+
+  useEffect(() => {
+    apiClient.getSupportedCurrencies().then(setCurrencies).catch(() => {/* fallback list stays */});
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData((prev) => ({
@@ -118,12 +131,10 @@ const Register = () => {
 
             <div>
               <label className="block text-sm font-medium text-navy mb-2">Display Currency</label>
-              <select name="displayCurrency" value={formData.displayCurrency} onChange={handleChange} className="input w-48">
-                <option value="AED">AED - UAE Dirham</option>
-                <option value="USD">USD - US Dollar</option>
-                <option value="EUR">EUR - Euro</option>
-                <option value="SAR">SAR - Saudi Riyal</option>
-                <option value="INR">INR - Indian Rupee</option>
+              <select name="displayCurrency" value={formData.displayCurrency} onChange={handleChange} className="input w-full">
+                {currencies.map((c) => (
+                  <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
+                ))}
               </select>
             </div>
 

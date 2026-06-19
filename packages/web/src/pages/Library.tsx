@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus } from 'lucide-react';
 import { apiClient } from '../lib/api';
+import { SkeletonTableRows } from '../components/Skeleton';
 
 interface Material {
   id: string;
@@ -102,8 +103,8 @@ const Library = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-mist">Loading materials...</p>
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-4">
+        <SkeletonTableRows rows={8} />
       </div>
     );
   }

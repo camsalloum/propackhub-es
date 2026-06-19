@@ -1,4 +1,4 @@
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { calculateEstimate, type Estimate as EngineEstimate, type CalculationResult } from '@es/engine';
 import { schema } from '../db';
 import { usdToDisplay } from '../utils/currency';
@@ -32,7 +32,6 @@ export async function calculateAndPersistEstimate(
     .where(eq(schema.materials.tenantId, tenantId));
 
   const materialMap = buildEngineMaterialMap(materials);
-  const materialById = new Map<string, MaterialRow>(materials.map((m: MaterialRow) => [m.id, m]));
 
   const processes = await db
     .select()
@@ -43,7 +42,7 @@ export async function calculateAndPersistEstimate(
     .select()
     .from(schema.slabs)
     .where(eq(schema.slabs.estimateId, estimateId))
-    .orderBy(asc(schema.slabs.sortOrder), asc(schema.slabs.quantityKg));
+    .orderBy(schema.slabs.quantityKg);
 
   type LayerRow = (typeof layers)[number];
   type ProcessRow = (typeof processes)[number];
@@ -97,19 +96,18 @@ export async function calculateAndPersistEstimate(
 
   const result = calculateEstimate(estimateForEngine, materialMap);
   const fxRate = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;
-  const now = new Date();
 
-  const slabsWithDisplay = result.slabs.map((slab) => {
-    const pricePerKgUsd = slab.pricePerKg ?? result.estimate.salePricePerKg ?? 0;
-    const pricePerKgDisplay = usdToDisplay(pricePerKgUsd, fxRate);
+  // Convert per‑slab USD prices to display currency and persist
+  const slabsWithDisplay = result.slabs.map(slab => {
+    const pricePerKgDisplay = usdToDisplay(slab.pricePerKg, fxRate);
     return {
       ...slab,
-      pricePerKg: pricePerKgUsd,
       pricePerKgDisplay,
-      totalDisplay: slab.quantityKg * pricePerKgDisplay,
+      totalDisplay: slab.quantityKg * pricePerKgDisplay
     };
   });
 
+  // Persist estimate aggregates
   await db
     .update(schema.estimates)
     .set({
@@ -117,36 +115,11 @@ export async function calculateAndPersistEstimate(
       totalMicron: result.estimate.totalMicron?.toString(),
       materialCostPerKg: result.estimate.materialCostPerKg?.toString(),
       salePricePerKg: result.estimate.salePricePerKg?.toString(),
-      lastCalculatedAt: now,
-      updatedAt: now,
+      updatedAt: new Date(),
     })
     .where(eq(schema.estimates.id, estimateId));
 
-  const calcLayerById = new Map(
-    (result.estimate.layers || []).map((l) => [String(l.id), l])
-  );
-
-  for (const layer of layers) {
-    const mat = materialById.get(layer.materialId);
-    const calcLayer = calcLayerById.get(layer.id);
-    const stale = !mat;
-
-    await db
-      .update(schema.layers)
-      .set({
-        gsm: calcLayer?.gsm?.toString() ?? layer.gsm,
-        costPerM2: calcLayer?.costPerM2?.toString() ?? layer.costPerM2,
-        materialName: mat?.name ?? layer.materialName ?? 'Unknown',
-        density: mat ? mat.density : layer.density,
-        solidPercent: mat ? mat.solidPercent : layer.solidPercent,
-        wastePercent: mat ? mat.wastePercent : layer.wastePercent,
-        costPerKgUsd: mat ? mat.costPerKgUsd : layer.costPerKgUsd,
-        materialStale: stale,
-        updatedAt: now,
-      })
-      .where(eq(schema.layers.id, layer.id));
-  }
-
+  // Persist per‑slab prices (display currency) and collect for snapshot
   const slabSnapshots = [];
   for (let i = 0; i < slabs.length; i++) {
     const dbSlab = slabs[i];
@@ -155,31 +128,31 @@ export async function calculateAndPersistEstimate(
       .update(schema.slabs)
       .set({
         pricePerKg: calcSlab.pricePerKgDisplay.toString(),
-        sortOrder: i,
-        updatedAt: now,
+        updatedAt: new Date()
       })
       .where(eq(schema.slabs.id, dbSlab.id));
     slabSnapshots.push({
       quantityKg: parseFloat(dbSlab.quantityKg),
       pricePerKg: calcSlab.pricePerKgDisplay,
-      total: calcSlab.totalDisplay,
+      total: calcSlab.totalDisplay
     });
   }
 
+  // Insert estimation cost snapshot (B4)
   await db.insert(schema.estimationCosts).values({
     estimateId: estimate.id,
-    computedAt: now,
-    breakdownJson: {
+    breakdownJson: JSON.stringify({
       estimate: result.estimate,
       slabs: slabSnapshots,
-      costBreakdown: result.costBreakdown,
-    },
+      costBreakdown: result.costBreakdown
+    })
   });
 
-  result.slabs = slabSnapshots.map((s) => ({
+  // Return per‑slab data to caller
+  result.slabs = slabSnapshots.map(s => ({
     quantityKg: s.quantityKg,
     pricePerKg: s.pricePerKg,
-    total: s.total,
+    total: s.total
   }));
 
   return result;

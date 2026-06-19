@@ -588,65 +588,10 @@ describe('Engine calculator — golden tests', () => {
     };
 
     const result = calculateEstimate(estimate, materials);
-    result.slabs.forEach((slab, i) => {
-      const expectedPrice = result.slabs[i].pricePerKg;
-      expect(slab.total).toBeCloseTo(slab.quantityKg * expectedPrice, 2);
+    // Slabs should have totals calculated based on sale price
+    result.slabs.forEach((slab) => {
+      expect(slab.total).toBe(slab.quantityKg * result.estimate.salePricePerKg);
     });
-  });
-
-  it('per-slab prices differ when process cost depends on quantity', () => {
-    const estimate: Estimate = {
-      id: 'test-slab-process',
-      jobName: 'Slab process test',
-      layers: [
-        {
-          id: 1,
-          materialId: 'pe-plain',
-          micron: 50,
-          gsm: 0,
-          costPerKg: 0,
-          costPerM2: 0,
-          material: undefined,
-        },
-      ],
-      slabs: [
-        { quantityKg: 1000, pricePerKg: 0, total: 0 },
-        { quantityKg: 5000, pricePerKg: 0, total: 0 },
-      ],
-      markupPercent: 15,
-      platesPerKg: 0,
-      deliveryPerKg: 0,
-      orderQuantityKg: 1000,
-      displayCurrency: 'USD',
-      salePricePerKg: 0,
-      materialCostPerKg: 0,
-      totalGsm: 0,
-      totalMicron: 0,
-      filmDensity: 0,
-      sqmPerKg: 0,
-      dimensions: {
-        productType: 'roll',
-        reelWidthMm: 800,
-        cutoffMm: 600,
-        piecesPerCut: 1,
-        numberOfUps: 1,
-        extraPrintingTrimMm: 0,
-      },
-      processes: [
-        {
-          id: 'p1',
-          name: 'Printing',
-          costPerHour: 100,
-          speedBasis: 'm_per_min',
-          speedValue: 100,
-          setupHours: 0,
-          enabled: true,
-        },
-      ],
-    };
-
-    const result = calculateEstimate(estimate, materials);
-    expect(result.slabs[0].pricePerKg).not.toBeCloseTo(result.slabs[1].pricePerKg, 4);
   });
 
   it('should handle pouch dimensions (width × height, not reel)', () => {

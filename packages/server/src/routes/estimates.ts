@@ -824,6 +824,12 @@ async function requoteEstimateRoute(
       return reply.status(404).send({ error: 'Source estimate not found' });
     }
 
+    // Get tenant's current currency settings (PRD §7.5: re-quote uses current, not frozen)
+    const [tenant] = await db
+      .select()
+      .from(schema.tenants)
+      .where(eq(schema.tenants.id, tenantId));
+
     // Get layers with current material prices
     const sourceLayers = await db
       .select()
@@ -862,8 +868,9 @@ async function requoteEstimateRoute(
         markupPercent: source.markupPercent,
         platesPerKg: source.platesPerKg,
         deliveryPerKg: source.deliveryPerKg,
-        displayCurrency: source.displayCurrency,
-        exchangeRateUsdToDisplay: source.exchangeRateUsdToDisplay,
+        // PRD §7.5: re-quote always uses current tenant currency/rate, not frozen source rate
+        displayCurrency: tenant?.displayCurrency || source.displayCurrency,
+        exchangeRateUsdToDisplay: tenant?.exchangeRateUsdToDisplay || source.exchangeRateUsdToDisplay,
         solventCostPerKgUsd: source.solventCostPerKgUsd,
         solventRatio: source.solventRatio,
         orderQuantityKg: source.orderQuantityKg,
@@ -998,6 +1005,12 @@ async function duplicateEstimateRoute(
       return reply.status(404).send({ error: 'Source estimate not found' });
     }
 
+    // Get tenant's current currency settings (frozen prices + current FX)
+    const [tenant] = await db
+      .select()
+      .from(schema.tenants)
+      .where(eq(schema.tenants.id, tenantId));
+
     const sourceLayers = await db
       .select()
       .from(schema.layers)
@@ -1031,8 +1044,9 @@ async function duplicateEstimateRoute(
         markupPercent: source.markupPercent,
         platesPerKg: source.platesPerKg,
         deliveryPerKg: source.deliveryPerKg,
-        displayCurrency: source.displayCurrency,
-        exchangeRateUsdToDisplay: source.exchangeRateUsdToDisplay,
+        // Duplicate keeps frozen prices but uses current tenant currency/FX for display
+        displayCurrency: tenant?.displayCurrency || source.displayCurrency,
+        exchangeRateUsdToDisplay: tenant?.exchangeRateUsdToDisplay || source.exchangeRateUsdToDisplay,
         solventCostPerKgUsd: source.solventCostPerKgUsd,
         solventRatio: source.solventRatio,
         orderQuantityKg: source.orderQuantityKg,

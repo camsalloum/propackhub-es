@@ -96,7 +96,7 @@ export function calculateEstimate(
     );
 
     return {
-      quantityKg: slab.quantityKg,
+      ...slab,
       pricePerKg: slabSalePricePerKg,
       total: slab.quantityKg * slabSalePricePerKg
     };
@@ -159,7 +159,7 @@ export function calculateEstimate(
   
   return {
     estimate: updatedEstimate,
-    slabs: slabsWithTotals.map(s => ({ quantityKg: s.quantityKg, pricePerKg: s.pricePerKg, total: s.total })),
+    slabs: slabsWithTotals,
     costBreakdown,
     warnings
   };

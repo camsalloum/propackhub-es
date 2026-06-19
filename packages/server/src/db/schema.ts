@@ -41,6 +41,17 @@ export const tenants = pgTable('tenants', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
+// Estimation cost snapshots (B4)
+export const estimationCosts = pgTable('estimation_costs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  estimateId: uuid('estimate_id')
+    .notNull()
+    .references(() => estimates.id, { onDelete: 'cascade' }),
+  computedAt: timestamp('computed_at', { withTimezone: true }).defaultNow(),
+  // Store a JSON snapshot of all calculated fields for audit/debug
+  breakdownJson: jsonb('breakdown_json').notNull(),
+});
+
 // Users
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -57,32 +68,10 @@ export const users = pgTable('users', {
   tenantIdIdx: index('users_tenant_id_idx').on(table.tenantId),
 }));
 
-// Material taxonomy (tenant-owned)
-export const categories = pgTable('categories', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  name: varchar('name', { length: 255 }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
-  tenantIdIdx: index('categories_tenant_id_idx').on(table.tenantId),
-}));
-
-export const subcategories = pgTable('subcategories', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  categoryId: uuid('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
-  name: varchar('name', { length: 255 }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
-  tenantIdIdx: index('subcategories_tenant_id_idx').on(table.tenantId),
-  categoryIdIdx: index('subcategories_category_id_idx').on(table.categoryId),
-}));
-
 // Materials (tenant-owned)
 export const materials = pgTable('materials', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  subcategoryId: uuid('subcategory_id').references(() => subcategories.id, { onDelete: 'set null' }),
   name: varchar('name', { length: 255 }).notNull(),
   type: layerTypeEnum('type').notNull(),
   solidPercent: integer('solid_percent').notNull(), // 30 for Ink SB, 100 for Ink UV
@@ -142,9 +131,6 @@ export const estimates = pgTable('estimates', {
   solventCostPerKgUsd: decimal('solvent_cost_per_kg_usd', { precision: 12, scale: 4 }),
   solventRatio: decimal('solvent_ratio', { precision: 5, scale: 4 }),
   orderQuantityKg: decimal('order_quantity_kg', { precision: 12, scale: 2 }),
-  orderQuantityUnit: varchar('order_quantity_unit', { length: 20 }).default('kgs'),
-  lastCalculatedAt: timestamp('last_calculated_at', { withTimezone: true }),
-  deletedAt: timestamp('deleted_at', { withTimezone: true }),
   
   // Calculated
   totalGsm: decimal('total_gsm', { precision: 12, scale: 2 }),
@@ -172,16 +158,6 @@ export const estimates = pgTable('estimates', {
   refNumberIdx: index('estimates_ref_number_idx').on(table.refNumber),
 }));
 
-// Estimation cost snapshots (B4)
-export const estimationCosts = pgTable('estimation_costs', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  estimateId: uuid('estimate_id')
-    .notNull()
-    .references(() => estimates.id, { onDelete: 'cascade' }),
-  computedAt: timestamp('computed_at', { withTimezone: true }).defaultNow(),
-  breakdownJson: jsonb('breakdown_json').notNull(),
-});
-
 // Layers (estimate details)
 export const layers = pgTable('layers', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -189,13 +165,6 @@ export const layers = pgTable('layers', {
   materialId: uuid('material_id').notNull().references(() => materials.id),
   position: integer('position').notNull(),
   micron: decimal('micron', { precision: 10, scale: 2 }).notNull(),
-  // Snapshots (B5)
-  materialName: varchar('material_name', { length: 255 }),
-  density: decimal('density', { precision: 10, scale: 4 }),
-  solidPercent: integer('solid_percent'),
-  wastePercent: integer('waste_percent'),
-  costPerKgUsd: decimal('cost_per_kg_usd', { precision: 12, scale: 4 }),
-  materialStale: boolean('material_stale').default(false),
   
   // Cached calculations
   gsm: decimal('gsm', { precision: 12, scale: 4 }),
@@ -235,38 +204,11 @@ export const slabs = pgTable('slabs', {
   estimateId: uuid('estimate_id').notNull().references(() => estimates.id, { onDelete: 'cascade' }),
   quantityKg: decimal('quantity_kg', { precision: 12, scale: 2 }).notNull(),
   pricePerKg: decimal('price_per_kg', { precision: 12, scale: 4 }).notNull(),
-  sortOrder: integer('sort_order').notNull().default(0),
   
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
   estimateIdIdx: index('slabs_estimate_id_idx').on(table.estimateId),
-}));
-
-// Slab quantity presets per tenant (B3)
-export const slabTemplates = pgTable('slab_templates', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  templateKey: varchar('template_key', { length: 50 }).notNull(),
-  name: varchar('name', { length: 255 }).notNull(),
-  quantities: jsonb('quantities').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
-  tenantIdIdx: index('slab_templates_tenant_id_idx').on(table.tenantId),
-}));
-
-// Proposal PDF history (B2)
-export const proposals = pgTable('proposals', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
-  estimateId: uuid('estimate_id').notNull().references(() => estimates.id, { onDelete: 'cascade' }),
-  pdfPath: varchar('pdf_path', { length: 512 }),
-  validUntil: timestamp('valid_until', { withTimezone: true }),
-  sentAt: timestamp('sent_at', { withTimezone: true }).defaultNow(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
-  estimateIdIdx: index('proposals_estimate_id_idx').on(table.estimateId),
-  tenantIdIdx: index('proposals_tenant_id_idx').on(table.tenantId),
 }));
 
 // Activity logs for audit
@@ -303,7 +245,6 @@ export const structureTemplates = pgTable('structure_templates', {
   solventMixEnabled: boolean('solvent_mix_enabled').default(false),
   inkSystemOptions: jsonb('ink_system_options'), // ["SB"] or ["SB", "UV"]
   substrateOptions: jsonb('substrate_options'), // For shrink sleeves: ["PET Shrink Film", "PVC Shrink Film"]
-  isStandard: boolean('is_standard').notNull().default(true),
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),

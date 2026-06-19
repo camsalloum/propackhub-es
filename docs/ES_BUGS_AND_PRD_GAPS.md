@@ -150,7 +150,7 @@ These were validated in code review 2026-06-18. They affect **sale price accurac
 
 ---
 
-## Part B — Schema gaps vs PRD §8 — **📋 DEFERRED TO PHASE 2**
+## Part B — Schema gaps vs PRD §8 — **✅ COMPLETE (2026-06-19)**
 
 Current Drizzle schema: `packages/server/src/db/schema.ts` — **13 tables**. PRD §8 describes a richer normalized model.
 
@@ -275,7 +275,7 @@ Track in **Phase 3** if product needs My Templates + duplicate frozen prices.
 
 ---
 
-## Part C — Missing API endpoints (PRD §9) — **📋 DEFERRED TO PHASE 2**
+## Part C — Missing API endpoints (PRD §9) — **✅ COMPLETE (2026-06-19)**
 
 ### C1. `GET /customers/autocomplete?q=` — **P1** ✅
 
@@ -336,7 +336,7 @@ Track in **Phase 3** if product needs My Templates + duplicate frozen prices.
 
 ---
 
-## Part D — UI / UX gaps vs PRD — **📋 DEFERRED TO PHASE 2**
+## Part D — UI / UX gaps vs PRD — **✅ COMPLETE (2026-06-19)**
 
 ### D1. Template picker incomplete — **P1** ✅
 

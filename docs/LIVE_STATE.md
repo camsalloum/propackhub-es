@@ -66,9 +66,9 @@
 | All Part A items (A1-A9) | Verified implementation in code: solvent, slabs, visibility, re-quote USD, buttons, profile gates, labels, customer API, confirm UX | ✅ 9/9 |
 ---
 
-## Next phase (Phase 2 — Post-V1 features)
+## Phase 2 — Complete ✅
 
-Deferred to Phase 2 per [ES_BUGS_AND_PRD_GAPS.md](./ES_BUGS_AND_PRD_GAPS.md) Sections B-D:
+All items from [ES_BUGS_AND_PRD_GAPS.md](./ES_BUGS_AND_PRD_GAPS.md) Sections B-D are now shipped:
 
 ### Critical (blocking re-quote accuracy):
 - **B5:** Layer snapshots — persist material snapshot fields on estimate_layers for re-quote "was" pricing

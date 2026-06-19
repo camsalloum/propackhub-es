@@ -15,9 +15,12 @@ describe.skipIf(!hasDatabase)('API integration — auth + estimates', () => {
   beforeAll(async () => {
     await initializeDatabase();
     const db = getDatabase();
-    await db.execute(sql.raw('ALTER TABLE tenants ADD COLUMN IF NOT EXISTS quotation_valid_days INTEGER NOT NULL DEFAULT 30'));
-    await db.execute(sql.raw('ALTER TABLE estimates ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ'));
-    await db.execute(sql.raw('ALTER TABLE estimates ADD COLUMN IF NOT EXISTS valid_until TIMESTAMPTZ'));
+    const { readFileSync } = await import('node:fs');
+    const { fileURLToPath } = await import('node:url');
+    const path = await import('node:path');
+    const dir = path.dirname(fileURLToPath(import.meta.url));
+    const patchSql = readFileSync(path.join(dir, '../../scripts/schema-patches.sql'), 'utf8');
+    await db.execute(sql.raw(patchSql));
     app = await buildApp({ jwtSecret: 'integration-test-secret', logger: false });
     await app.ready();
   });
@@ -101,8 +104,8 @@ describe.skipIf(!hasDatabase)('API integration — auth + estimates', () => {
           printingWebClass: 'wide_web',
         },
         markupPercent: 15,
-        platesPerKg: 0,
-        deliveryPerKg: 0,
+        platesPerKg: 0.50,
+        deliveryPerKg: 0.25,
         layers: [
           { materialId: substrate.id, micron: 30, position: 0 },
           { materialId: ink.id, micron: 5, position: 1 },

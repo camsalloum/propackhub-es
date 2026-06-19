@@ -74,7 +74,8 @@ describe('Engine calculator — golden tests', () => {
       platesPerKg: 0,
       deliveryPerKg: 0,
       orderQuantityKg: 1000,
-      displayCurrency: 'AED',
+      displayCurrencyCode: 'AED',
+      exchangeRateUsdToDisplay: 1,
       salePricePerKg: 0,
       materialCostPerKg: 0,
       totalGsm: 0,
@@ -91,6 +92,8 @@ describe('Engine calculator — golden tests', () => {
         printingWebClass: 'wide_web',
       },
       processes: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
     const result = calculateEstimate(estimate, materials);
@@ -120,7 +123,8 @@ describe('Engine calculator — golden tests', () => {
       platesPerKg: 0,
       deliveryPerKg: 0,
       orderQuantityKg: 1000,
-      displayCurrency: 'AED',
+      displayCurrencyCode: 'AED',
+      exchangeRateUsdToDisplay: 1,
       salePricePerKg: 0,
       materialCostPerKg: 0,
       totalGsm: 0,
@@ -584,10 +588,65 @@ describe('Engine calculator — golden tests', () => {
     };
 
     const result = calculateEstimate(estimate, materials);
-    // Slabs should have totals calculated based on sale price
-    result.slabs.forEach((slab) => {
-      expect(slab.total).toBe(slab.quantityKg * result.estimate.salePricePerKg);
+    result.slabs.forEach((slab, i) => {
+      const expectedPrice = result.slabs[i].pricePerKg;
+      expect(slab.total).toBeCloseTo(slab.quantityKg * expectedPrice, 2);
     });
+  });
+
+  it('per-slab prices differ when process cost depends on quantity', () => {
+    const estimate: Estimate = {
+      id: 'test-slab-process',
+      jobName: 'Slab process test',
+      layers: [
+        {
+          id: 1,
+          materialId: 'pe-plain',
+          micron: 50,
+          gsm: 0,
+          costPerKg: 0,
+          costPerM2: 0,
+          material: undefined,
+        },
+      ],
+      slabs: [
+        { quantityKg: 1000, pricePerKg: 0, total: 0 },
+        { quantityKg: 5000, pricePerKg: 0, total: 0 },
+      ],
+      markupPercent: 15,
+      platesPerKg: 0,
+      deliveryPerKg: 0,
+      orderQuantityKg: 1000,
+      displayCurrency: 'USD',
+      salePricePerKg: 0,
+      materialCostPerKg: 0,
+      totalGsm: 0,
+      totalMicron: 0,
+      filmDensity: 0,
+      sqmPerKg: 0,
+      dimensions: {
+        productType: 'roll',
+        reelWidthMm: 800,
+        cutoffMm: 600,
+        piecesPerCut: 1,
+        numberOfUps: 1,
+        extraPrintingTrimMm: 0,
+      },
+      processes: [
+        {
+          id: 'p1',
+          name: 'Printing',
+          costPerHour: 100,
+          speedBasis: 'm_per_min',
+          speedValue: 100,
+          setupHours: 0,
+          enabled: true,
+        },
+      ],
+    };
+
+    const result = calculateEstimate(estimate, materials);
+    expect(result.slabs[0].pricePerKg).not.toBeCloseTo(result.slabs[1].pricePerKg, 4);
   });
 
   it('should handle pouch dimensions (width × height, not reel)', () => {
@@ -634,5 +693,64 @@ describe('Engine calculator — golden tests', () => {
     // linear_m_per_kg_reel = (1000/46 / 300) × 1000 = 72.46 m/kg (uses open_height)
     expect(result.estimate.piecesPerKg).toBeGreaterThan(300);
     expect(result.estimate.linearMPerKgReel).toBeCloseTo(72.46, 1);
+  });
+
+  it('solvent ratio affects solvent mix cost (A1 fix)', () => {
+    // Test that changing solventRatio changes solventMixCostPerKg
+    const estimate: Estimate = {
+      id: 'test-13',
+      tenantId: 'tenant-1',
+      jobName: 'Test solvent ratio',
+      status: 'draft',
+      layers: [
+        {
+          id: 'layer-1',
+          materialId: 'ink-sb',
+          micron: 2,
+          position: 0,
+          gsm: 0,
+          costPerM2: 0,
+          material: undefined,
+        },
+      ],
+      slabs: [],
+      markupPercent: 15,
+      platesPerKg: 0,
+      deliveryPerKg: 0,
+      orderQuantityKg: 1000,
+      displayCurrency: 'USD',
+      salePricePerKg: 0,
+      materialCostPerKg: 0,
+      totalGsm: 0,
+      totalMicron: 0,
+      filmDensity: 0,
+      sqmPerKg: 0,
+      dimensions: {
+        productType: 'roll',
+        reelWidthMm: 800,
+        cutoffMm: 600,
+        piecesPerCut: 1,
+        numberOfUps: 2,
+        extraPrintingTrimMm: 10,
+        printingWebClass: 'wide_web',
+      },
+      processes: [],
+      solventCostPerKgUsd: 2.0,
+      solventRatio: 0.5,
+    };
+
+    // With ratio 0.5: solventMixCostPerKg should be higher (smaller denominator)
+    const result1 = calculateEstimate(estimate, materials);
+    const costWithRatio05 = result1.estimate.solventMixCostPerKg;
+
+    // With ratio 0.8: solventMixCostPerKg should be lower (larger denominator)
+    const estimate2 = { ...estimate, solventRatio: 0.8 };
+    const result2 = calculateEstimate(estimate2, materials);
+    const costWithRatio08 = result2.estimate.solventMixCostPerKg;
+
+    // Verify ratio affects cost
+    expect(costWithRatio05).toBeGreaterThan(0);
+    expect(costWithRatio08).toBeGreaterThan(0);
+    expect(costWithRatio05).toBeGreaterThan(costWithRatio08);
   });
 });

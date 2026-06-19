@@ -5,7 +5,10 @@ import { hashPassword, verifyPassword, TokenPayload } from '../utils/auth';
 import { eq } from 'drizzle-orm';
 import { seedMaterialsForTenant } from '../db/seed-materials';
 import { seedTemplatesForTenant } from '../db/seed-templates';
+import { ensureCategoriesForTenant } from '../db/seed-categories';
+import { ensureSlabTemplatesForTenant } from '../db/seed-slab-templates';
 import { fetchExchangeRate } from '../utils/fx-rates';
+import { getEffectiveProfile } from '../utils/visibility';
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -100,7 +103,13 @@ export async function registerRoute(
       await seedTemplatesForTenant(tenant.id);
     } catch (seedError) {
       console.error('Failed to seed templates, but tenant/user/materials created:', seedError);
-      // Continue - templates are optional
+    }
+
+    try {
+      await ensureCategoriesForTenant(tenant.id);
+      await ensureSlabTemplatesForTenant(tenant.id);
+    } catch (seedError) {
+      console.error('Failed to seed categories/slab templates:', seedError);
     }
 
     // Generate JWT token
@@ -228,6 +237,7 @@ export async function meRoute(
         email: userData.email,
         displayName: userData.displayName,
         role: userData.role,
+        visibilityProfile: getEffectiveProfile(userData.role, userData.visibilityProfile),
       },
       tenant: {
         id: tenantData.id,

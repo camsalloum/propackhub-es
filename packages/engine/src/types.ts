@@ -15,7 +15,7 @@ export interface Material {
 }
 
 export interface Layer {
-  id: string;
+  id: string | number;
   materialId: string;
   material?: Material; // Populated when loaded
   micron: number;
@@ -23,6 +23,8 @@ export interface Layer {
   // Calculated fields
   gsm?: number;
   costPerM2?: number;
+  // Some legacy tests reference costPerKg; keep optional for compatibility
+  costPerKg?: number;
 }
 
 export interface EstimateDimensions {
@@ -87,8 +89,8 @@ export interface Estimate {
   
   // Metadata
   sourceEstimationId?: string; // For re-quote tracking
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
   
   // Calculated fields (output)
   totalGsm?: number;

@@ -3,6 +3,8 @@ import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest } from '../utils/auth';
 import { eq } from 'drizzle-orm';
 import { fetchExchangeRate } from '../utils/fx-rates';
+import { filterSupportedCurrencies } from '../utils/supported-currencies';
+import { ensureSlabTemplatesForTenant } from '../db/seed-slab-templates';
 
 // Get tenant settings
 async function getTenantSettingsRoute(
@@ -43,6 +45,7 @@ async function updateTenantSettingsRoute(
       footerText?: string;
       defaultMarkupPercent?: number;
       quotationValidDays?: number;
+      defaultSlabTemplate?: string;
     };
   }>,
   reply: FastifyReply
@@ -80,6 +83,9 @@ async function updateTenantSettingsRoute(
     }
     if (request.body.quotationValidDays !== undefined) {
       updates.quotationValidDays = request.body.quotationValidDays;
+    }
+    if (request.body.defaultSlabTemplate !== undefined) {
+      updates.defaultSlabTemplate = request.body.defaultSlabTemplate;
     }
 
     const [updated] = await db
@@ -138,7 +144,34 @@ async function refreshExchangeRateRoute(
   }
 }
 
+async function getSupportedCurrenciesRoute(
+  request: FastifyRequest<{ Querystring: { q?: string } }>,
+  reply: FastifyReply
+) {
+  const q = request.query.q;
+  return reply.send(filterSupportedCurrencies(q));
+}
+
+async function getSlabTemplatesRoute(request: FastifyRequest, reply: FastifyReply) {
+  try {
+    await request.jwtVerify();
+    const tenantId = extractTenantFromRequest(request);
+    const db = getDatabase();
+    await ensureSlabTemplatesForTenant(tenantId);
+    const rows = await db
+      .select()
+      .from(schema.slabTemplates)
+      .where(eq(schema.slabTemplates.tenantId, tenantId));
+    return reply.send(rows);
+  } catch (error: any) {
+    console.error('Get slab templates error:', error);
+    return reply.status(500).send({ error: 'Failed to get slab templates' });
+  }
+}
+
 export async function registerSettingsRoutes(fastify: FastifyInstance) {
+  fastify.get('/api/v1/settings/currency/supported', getSupportedCurrenciesRoute);
+  fastify.get('/api/v1/settings/slab-templates', getSlabTemplatesRoute);
   fastify.get('/api/v1/settings', getTenantSettingsRoute);
   fastify.patch('/api/v1/settings', updateTenantSettingsRoute);
   fastify.post('/api/v1/settings/refresh-fx', refreshExchangeRateRoute);

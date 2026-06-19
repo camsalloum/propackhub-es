@@ -105,6 +105,7 @@ export async function seedTemplatesForTenant(tenantId: string): Promise<number> 
         solventMixEnabled: t.solvent_mix_enabled || false,
         inkSystemOptions: t.ink_system_options || ['SB'],
         substrateOptions: t.substrate_options || null,
+        isStandard: true,
       };
     });
 

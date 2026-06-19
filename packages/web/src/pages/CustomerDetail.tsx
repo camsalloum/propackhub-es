@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Copy } from 'lucide-react';
 import { apiClient } from '../lib/api';
+import LaminateVisualizer from '../components/LaminateVisualizer';
+import { SkeletonTableRows } from '../components/Skeleton';
 
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
@@ -23,9 +25,8 @@ export default function CustomerDetail() {
       setError(null);
 
       try {
-        const customers = await apiClient.getCustomers();
-        const cust = customers.find((c: any) => c.id === id);
-        setCustomer(cust || null);
+        const cust = await apiClient.getCustomer(id);
+        setCustomer(cust);
       } catch (err) {
         console.error('Failed to load customer:', err);
         setCustomer(null);
@@ -54,8 +55,17 @@ export default function CustomerDetail() {
     }
   };
 
+  const handleDuplicate = async (estimate: any) => {
+    try {
+      const copy = await apiClient.duplicateEstimate(estimate.id);
+      navigate(`/estimate/${copy.id}`);
+    } catch {
+      alert('Failed to duplicate estimate');
+    }
+  };
+
   if (loading) {
-    return <div className="p-8">Loading customer...</div>;
+    return <div className="p-8 max-w-6xl mx-auto"><SkeletonTableRows rows={4} /></div>;
   }
 
   if (error && !customer) {
@@ -164,7 +174,20 @@ export default function CustomerDetail() {
                       <span className={`badge badge-${est.status}`}>{est.status}</span>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 text-sm">
+                    <div className="flex items-start gap-4 mb-4">
+                      {est.layers?.length > 0 && (
+                        <LaminateVisualizer
+                          layers={est.layers.map((l: any, i: number) => ({
+                            id: String(i),
+                            type: 'substrate',
+                            material: l.materialName || 'Layer',
+                            micron: parseFloat(l.micron) || 10,
+                          }))}
+                          width={80}
+                          height={48}
+                        />
+                      )}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1 text-sm">
                       <div>
                         <p className="text-mist">Product</p>
                         <p className="font-medium">{est.productType}</p>
@@ -182,11 +205,16 @@ export default function CustomerDetail() {
                         <p className="font-medium">{new Date(est.createdAt).toLocaleDateString()}</p>
                       </div>
                     </div>
+                    </div>
 
-                    <div className="flex space-x-2">
+                    <div className="flex flex-wrap gap-2">
                       <Link to={`/estimate/${est.id}`} className="btn-secondary text-sm">
                         Open
                       </Link>
+                      <button onClick={() => handleDuplicate(est)} className="btn-secondary text-sm inline-flex items-center space-x-1">
+                        <Copy className="w-3 h-3" />
+                        <span>Duplicate</span>
+                      </button>
                       <button onClick={() => handleRequote(est)} className="btn-secondary text-sm inline-flex items-center space-x-1">
                         <RefreshCw className="w-3 h-3" />
                         <span>Re-quote</span>

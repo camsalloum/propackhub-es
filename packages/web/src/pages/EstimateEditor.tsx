@@ -7,7 +7,9 @@ import LaminateVisualizer from '../components/LaminateVisualizer';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { usdToDisplay } from '../lib/currency';
-import { runClientCalculation } from '../lib/estimateCalc';
+import { runClientCalculation, effectiveMarginPercent } from '../lib/estimateCalc';
+import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
+import CustomerAutocomplete from '../components/CustomerAutocomplete';
 
 interface MaterialItem {
   id: string; name: string; type: string; solidPercent: number;
@@ -27,6 +29,7 @@ interface DimensionState {
 const EstimateEditor = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const { can, isPreviewing } = useVisibilityProfile(user?.role);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -41,6 +44,11 @@ const EstimateEditor = () => {
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [priceChanges, setPriceChanges] = useState<any[]>([]);
+  const [requoteWarnings, setRequoteWarnings] = useState<string[]>([]);
+  const [orderQuantity, setOrderQuantity] = useState<number>(1000);
+  const [orderQuantityUnit, setOrderQuantityUnit] = useState('kgs');
+  const [rollSpecOpen, setRollSpecOpen] = useState(false);
+  const [processesState, setProcessesState] = useState<any[]>([]);
 
   // UI state
   const [activeSection, setActiveSection] = useState<'structure' | 'dimensions' | 'slabs' | 'markup'>('structure');
@@ -64,7 +72,6 @@ const EstimateEditor = () => {
   const [dragHoverIndex, setDragHoverIndex] = useState<number | null>(null);
   const [mobileStackOpen, setMobileStackOpen] = useState(false);
 
-  const isAdmin = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
   const location = useLocation();
 
   const editingLayer = layers.find((l) => l.id === editingLayerId) ?? null;
@@ -149,7 +156,7 @@ const EstimateEditor = () => {
       try {
         setLoadError(null);
         setLoading(true);
-        const { mats, custs } = await loadBaseData();
+        const { mats } = await loadBaseData();
 
         if (id) {
           await fetchEstimate(id);
@@ -227,6 +234,9 @@ const EstimateEditor = () => {
       setDeliveryPerKg(parseFloat(data.deliveryPerKg) || 0);
       if (data.solventCostPerKgUsd) setSolventCostPerKgUsd(parseFloat(data.solventCostPerKgUsd));
       if (data.solventRatio) setSolventRatio(parseFloat(data.solventRatio));
+      if (data.orderQuantityKg) setOrderQuantity(parseFloat(data.orderQuantityKg));
+      if (data.orderQuantityUnit) setOrderQuantityUnit(data.orderQuantityUnit);
+      if (data.processes) setProcessesState(data.processes);
       if (data.dimensions) setDimensions({
         reelWidthMm: data.dimensions.reelWidthMm || 800, cutoffMm: data.dimensions.cutoffMm || 600,
         numberOfUps: data.dimensions.numberOfUps || 1, extraPrintingTrimMm: data.dimensions.extraPrintingTrimMm || 0,
@@ -277,10 +287,12 @@ const EstimateEditor = () => {
     markupPercent, platesPerKg, deliveryPerKg,
     solventCostPerKgUsd: printingWebClass === 'wide_web' ? solventCostPerKgUsd : undefined,
     solventRatio: printingWebClass === 'wide_web' ? solventRatio : undefined,
+    orderQuantityKg: orderQuantity,
+    orderQuantityUnit,
     layers: layers.map((l, i) => ({ materialId: l.materialId, micron: l.micron, position: i })),
     slabs: slabsState.map(s => ({ quantityKg: s.quantityKg, pricePerKg: s.pricePerKg })),
-    processes: [],
-  }), [jobName, customerId, productType, printingWebClass, dimensions, markupPercent, platesPerKg, deliveryPerKg, solventCostPerKgUsd, solventRatio, layers, slabsState]);
+    processes: processesState,
+  }), [jobName, customerId, productType, printingWebClass, dimensions, markupPercent, platesPerKg, deliveryPerKg, solventCostPerKgUsd, solventRatio, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   const slabQuantitiesKey = slabsState.map((s) => s.quantityKg).join(',');
   const layerInputsKey = layers.map((l) => `${l.materialId}:${l.micron}`).join('|');
@@ -299,6 +311,8 @@ const EstimateEditor = () => {
         platesPerKg,
         deliveryPerKg,
         slabs: slabsState,
+        processes: processesState,
+        orderQuantityKg: orderQuantity,
         displayCurrency: estimate?.displayCurrency || 'AED',
         exchangeRateUsdToDisplay: parseFloat(estimate?.exchangeRateUsdToDisplay) || 1,
         solventCostPerKgUsd,
@@ -334,15 +348,21 @@ const EstimateEditor = () => {
       })
     );
     setSlabsState((prev) =>
-      prev.map((s) => ({
-        ...s,
-        pricePerKg: saleDisplay,
-        total: s.quantityKg * saleDisplay,
-      }))
+      prev.map((s, i) => {
+        const calcSlab = clientCalcResult.slabs[i];
+        const priceDisplay = calcSlab
+          ? usdToDisplay(calcSlab.pricePerKg, fx)
+          : usdToDisplay(clientCalcResult.estimate.salePricePerKg || 0, fx);
+        return {
+          ...s,
+          pricePerKg: priceDisplay,
+          total: s.quantityKg * priceDisplay,
+        };
+      })
     );
   }, [clientCalcResult, estimate?.exchangeRateUsdToDisplay]);
 
-  const handleSaveEstimate = async () => {
+  const persistEstimate = async (andCalculate: boolean) => {
     if (saving) return;
     setSaving(true);
     try {
@@ -350,7 +370,6 @@ const EstimateEditor = () => {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         localStorage.setItem(`offlineDraft:${estimate?.id || 'new'}`, JSON.stringify(payload));
         alert('Offline — draft saved locally');
-        setSaving(false);
         return;
       }
       let saved;
@@ -361,7 +380,7 @@ const EstimateEditor = () => {
         navigate(`/estimate/${saved.id}`, { replace: true });
       }
       setEstimate((prev: any) => ({ ...prev, ...saved }));
-      if (saved.id) {
+      if (andCalculate && saved.id) {
         setCalculating(true);
         try {
           const result = await apiClient.calculateEstimate(saved.id);
@@ -375,13 +394,19 @@ const EstimateEditor = () => {
     } finally { setSaving(false); }
   };
 
+  const handleSaveDraft = () => persistEstimate(false);
+  const handleSaveAndCalculate = () => persistEstimate(true);
+
   const handleRequote = async () => {
     if (!estimate?.id) return;
     try {
       const res = await apiClient.requoteEstimate(estimate.id);
       if (res?.id) {
         setPriceChanges(res.price_changes || []);
-        navigate(`/estimate/${res.id}`, { state: { priceChanges: res.price_changes || [] } });
+        setRequoteWarnings(res.warnings || []);
+        navigate(`/estimate/${res.id}`, {
+          state: { priceChanges: res.price_changes || [], warnings: res.warnings || [] },
+        });
       }
     } catch (err) { alert('Failed to create re-quote'); }
   };
@@ -451,17 +476,31 @@ const EstimateEditor = () => {
               )}
               {priceChanges.length > 0 && (
                 <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
-                  <p className="font-semibold text-amber-800 mb-2">Price Changes vs Original:</p>
+                  <p className="font-semibold text-amber-800 mb-2">Price changes vs original</p>
                   <div className="space-y-1">
                     {priceChanges.map((pc: any) => (
-                      <div key={pc.materialId} className="flex justify-between text-xs">
-                        <span className="text-ink">{pc.materialName}</span>
+                      <div key={pc.materialId} className="flex justify-between text-xs gap-2">
+                        <span className="text-ink">
+                          {pc.materialName}
+                          {pc.materialStale ? ' (removed from library)' : ''}
+                        </span>
                         <span className={pc.deltaPct > 0 ? 'text-danger' : pc.deltaPct < 0 ? 'text-success' : 'text-mist'}>
-                          {pc.deltaPct > 0 ? '+' : ''}{pc.deltaPct.toFixed(1)}%
+                          ${pc.oldCostUsd?.toFixed(2)} → ${pc.newCostUsd?.toFixed(2)}
+                          {' '}({pc.deltaPct > 0 ? '+' : ''}{pc.deltaPct?.toFixed(1)}%)
                         </span>
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+              {requoteWarnings.length > 0 && (
+                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+                  {requoteWarnings.map((w, i) => <p key={i}>{w}</p>)}
+                </div>
+              )}
+              {isPreviewing && (
+                <div className="mt-2 p-2 bg-purple-50 border border-purple-200 rounded text-sm text-purple-800">
+                  Previewing as sales rep view
                 </div>
               )}
               <div className="flex items-center space-x-4 mt-2">
@@ -472,11 +511,11 @@ const EstimateEditor = () => {
             </div>
           </div>
           <div className="flex space-x-2">
-            <button onClick={handleSaveEstimate} disabled={saving} className="btn-secondary inline-flex items-center space-x-2">
+            <button onClick={handleSaveDraft} disabled={saving} className="btn-secondary inline-flex items-center space-x-2">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               <span>{saving ? 'Saving...' : 'Save'}</span>
             </button>
-            <button onClick={handleSaveEstimate} disabled={saving || calculating} className="btn-primary inline-flex items-center space-x-2">
+            <button onClick={handleSaveAndCalculate} disabled={saving || calculating} className="btn-primary inline-flex items-center space-x-2">
               {calculating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calculator className="w-4 h-4" />}
               <span>{calculating ? 'Calculating...' : 'Save & Calculate'}</span>
             </button>
@@ -487,6 +526,30 @@ const EstimateEditor = () => {
         </div>
       </div>
 
+            <div className="card mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-navy mb-2">Customer</label>
+                <CustomerAutocomplete value={customerId} onChange={setCustomerId} />
+              </div>
+              {can('orderQtyUnitBreakdown') && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-navy mb-2">Order quantity</label>
+                    <input type="number" value={orderQuantity} onChange={(e) => setOrderQuantity(Number(e.target.value))} className="input w-full" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-navy mb-2">Unit</label>
+                    <select value={orderQuantityUnit} onChange={(e) => setOrderQuantityUnit(e.target.value)} className="input w-full">
+                      <option value="kgs">kgs</option>
+                      <option value="sqm">sqm</option>
+                      <option value="kpcs">kpcs</option>
+                      <option value="lm">lm</option>
+                      <option value="roll_500_lm">roll (500 lm)</option>
+                    </select>
+                  </div>
+                </>
+              )}
+            </div>
       <div className="lg:flex lg:space-x-8">
         {/* Left panel */}
         <div className="lg:flex-1 lg:max-w-3xl">
@@ -501,7 +564,7 @@ const EstimateEditor = () => {
             <button onClick={() => setActiveSection('slabs')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap ${activeSection === 'slabs' ? 'bg-gold/10 text-gold' : 'hover:bg-slate text-ink'}`}>
               <Calculator className="w-4 h-4" /><span>Quantity Slabs</span>
             </button>
-            {isAdmin && <button onClick={() => setActiveSection('markup')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap ${activeSection === 'markup' ? 'bg-gold/10 text-gold' : 'hover:bg-slate text-ink'}`}>
+            {can('markupPercent') && <button onClick={() => setActiveSection('markup')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap ${activeSection === 'markup' ? 'bg-gold/10 text-gold' : 'hover:bg-slate text-ink'}`}>
               <DollarSign className="w-4 h-4" /><span>Markup & Extras</span>
             </button>}
           </div>
@@ -540,8 +603,8 @@ const EstimateEditor = () => {
                       key={layer.id}
                       index={idx}
                       total={layers.length}
-                      layer={{ ...layer, type: layer.materialType, material: layer.materialName, costPerKg: isAdmin ? layer.costPerKgUsd : undefined }}
-                      showCost={isAdmin}
+                      layer={{ ...layer, type: layer.materialType, material: layer.materialName, costPerKg: can('materialCostPerKg') ? layer.costPerKgUsd : undefined }}
+                      showCost={can('materialCostPerKg')}
                       onEdit={() => openLayerEdit(layer.id)}
                       onRemove={() => setLayers((prev) => prev.filter((l) => l.id !== layer.id))}
                       onMoveUp={() => moveLayer(idx, -1)}
@@ -579,7 +642,7 @@ const EstimateEditor = () => {
                         <th className="text-left py-3 px-4 text-sm font-medium text-mist">Material</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-mist">µ</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-mist">GSM</th>
-                        {isAdmin && <th className="text-left py-3 px-4 text-sm font-medium text-mist">$/kg</th>}
+                        {can('materialCostPerKg') && <th className="text-left py-3 px-4 text-sm font-medium text-mist">$/kg</th>}
                         <th className="text-left py-3 px-4 text-sm font-medium text-mist"></th>
                       </tr>
                     </thead>
@@ -616,7 +679,7 @@ const EstimateEditor = () => {
                             }} className="input w-20 font-mono text-sm" />
                           </td>
                           <td className="py-4 px-4 font-mono text-sm">{layer.gsm.toFixed(1)}</td>
-                          {isAdmin && <td className="py-4 px-4 font-mono text-sm">{layer.costPerKgUsd.toFixed(2)}</td>}
+                          {can('materialCostPerKg') && <td className="py-4 px-4 font-mono text-sm">{layer.costPerKgUsd.toFixed(2)}</td>}
                           <td className="py-4 px-4">
                             <button onClick={() => setLayers((prev) => prev.filter((l) => l.id !== layer.id))} className="text-sm text-mist hover:text-danger">Remove</button>
                           </td>
@@ -654,7 +717,7 @@ const EstimateEditor = () => {
                 </div>
 
                 {/* Solvent mix (admin only, wide web) */}
-                {isAdmin && printingWebClass === 'wide_web' && (
+                {can('solventMixCost') && printingWebClass === 'wide_web' && (
                   <div className="mt-6 p-4 border border-border rounded-lg">
                     <h4 className="font-display font-semibold text-navy mb-3">Solvent Mix</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -710,12 +773,28 @@ const EstimateEditor = () => {
               <div className="pt-4 border-t border-border">
                 <h4 className="font-display font-semibold text-navy mb-4">Calculated Values</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div><p className="text-sm text-mist">Printing web width</p><p className="font-mono font-semibold text-gold">{printWebWidth} mm</p></div>
+                  {can('printingWebWidth') && (
+                  <div title="Press/lamination width before slitting — not your finished reel width.">
+                    <p className="text-sm text-mist">Printing web width <span className="text-mist cursor-help">ⓘ</span></p>
+                    <p className="font-mono font-semibold text-gold">{printWebWidth} mm</p>
+                  </div>
+                  )}
                   <div><p className="text-sm text-mist">Total µ</p><p className="font-mono font-semibold">{totalMicron}</p></div>
                   <div><p className="text-sm text-mist">Total GSM</p><p className="font-mono font-semibold">{totalGsm.toFixed(1)}</p></div>
                   <div><p className="text-sm text-mist">Density</p><p className="font-mono font-semibold">{density}</p></div>
                 </div>
               </div>
+              {can('rollAfterSlitting') && productType === 'roll' && (
+                <details className="p-4 border border-border rounded-lg" open={rollSpecOpen} onToggle={(e) => setRollSpecOpen((e.target as HTMLDetailsElement).open)}>
+                  <summary className="font-medium cursor-pointer">Roll spec (after slitting)</summary>
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label className="block text-sm text-mist mb-1">Core diameter (mm)</label><input type="number" className="input w-full" defaultValue={(dimensions as any).coreDiameterMm || 76} /></div>
+                    <div><label className="block text-sm text-mist mb-1">OD (mm)</label><input type="number" className="input w-full" defaultValue={(dimensions as any).outerDiameterMm || 400} /></div>
+                    <div><label className="block text-sm text-mist mb-1">Film weight (kg)</label><input type="number" className="input w-full" readOnly value={orderQuantity} /></div>
+                    <div><label className="block text-sm text-mist mb-1">Pieces per roll</label><input type="number" className="input w-full" defaultValue={(dimensions as any).piecesPerRoll || 1} /></div>
+                  </div>
+                </details>
+              )}
             </div>
           )}
 
@@ -729,30 +808,31 @@ const EstimateEditor = () => {
                     <th className="text-left py-3 px-4 text-sm font-medium text-mist">Quantity (kg)</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-mist">Price/kg ({estimate?.displayCurrency || 'USD'})</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-mist">Order total</th>
-                    {isAdmin && <th className="text-left py-3 px-4 text-sm font-medium text-mist"></th>}
+                    {can('markupPercent') && <th className="text-left py-3 px-4 text-sm font-medium text-mist"></th>}
                   </tr></thead>
                   <tbody>
                     {displaySlabs.map((slab: any, index: number) => (
                       <tr key={index} className="border-b border-border last:border-0 hover:bg-slate/50">
-                        <td className="py-4 px-4">{isAdmin ? <input type="number" value={slab.quantityKg} onChange={(e) => { const v = Number(e.target.value); setSlabsState((prev) => prev.map((s, i) => i === index ? { ...s, quantityKg: v, total: v * s.pricePerKg } : s)); }} className="input w-32 font-mono" /> : <span className="font-mono">{slab.quantityKg}</span>}</td>
-                        <td className="py-4 px-4">{isAdmin ? <input type="number" value={slab.pricePerKg} step="0.01" onChange={(e) => { const v = Number(e.target.value); setSlabsState((prev) => prev.map((s, i) => i === index ? { ...s, pricePerKg: v, total: v * s.quantityKg } : s)); }} className="input w-32 font-mono" /> : <span className="font-mono">{slab.pricePerKg.toFixed(2)}</span>}</td>
+                        <td className="py-4 px-4">{can('markupPercent') ? <input type="number" value={slab.quantityKg} onChange={(e) => { const v = Number(e.target.value); setSlabsState((prev) => prev.map((s, i) => i === index ? { ...s, quantityKg: v, total: v * s.pricePerKg } : s)); }} className="input w-32 font-mono" /> : <span className="font-mono">{slab.quantityKg}</span>}</td>
+                        <td className="py-4 px-4">{can('markupPercent') ? <input type="number" value={slab.pricePerKg} step="0.01" onChange={(e) => { const v = Number(e.target.value); setSlabsState((prev) => prev.map((s, i) => i === index ? { ...s, pricePerKg: v, total: v * s.quantityKg } : s)); }} className="input w-32 font-mono" /> : <span className="font-mono">{slab.pricePerKg.toFixed(2)}</span>}</td>
                         <td className="py-4 px-4 font-display font-semibold">{estimate?.displayCurrency || 'USD'} {Number((slab.quantityKg || 0) * (slab.pricePerKg || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        {isAdmin && <td className="py-4 px-4"><button onClick={() => setSlabsState((prev) => prev.filter((_, i) => i !== index))} className="text-sm text-mist hover:text-danger">Remove</button></td>}
+                        {can('markupPercent') && <td className="py-4 px-4"><button onClick={() => setSlabsState((prev) => prev.filter((_, i) => i !== index))} className="text-sm text-mist hover:text-danger">Remove</button></td>}
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              {isAdmin && <button onClick={() => setSlabsState((prev) => [...prev, { quantityKg: 1000, pricePerKg: 0, total: 0 }])} className="btn-secondary">+ Add Slab Row</button>}
+              {can('markupPercent') && <button onClick={() => setSlabsState((prev) => [...prev, { quantityKg: 1000, pricePerKg: 0, total: 0 }])} className="btn-secondary">+ Add Slab Row</button>}
             </div>
           )}
 
           {/* Markup (admin only) */}
-          {isAdmin && activeSection === 'markup' && (
+          {can('markupPercent') && activeSection === 'markup' && (
             <div className="card space-y-6">
               <h3 className="text-lg font-display font-semibold text-navy">Markup & Additional Costs</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div><label className="block text-sm font-medium text-navy mb-2">Markup %</label><input type="number" value={markupPercent} onChange={(e) => setMarkupPercent(Number(e.target.value))} className="input w-full" /></div>
+                <div><label className="block text-sm font-medium text-navy mb-2">Markup % (on material)</label><input type="number" value={markupPercent} onChange={(e) => setMarkupPercent(Number(e.target.value))} className="input w-full" /></div>
+                <div><label className="block text-sm font-medium text-navy mb-2">Effective margin % (on sale price)</label><p className="input w-full bg-slate font-mono">{effectiveMarginPercent(Number(estimate?.materialCostPerKg) || 0, markupPercent, Number(estimate?.salePricePerKg) || 1).toFixed(1)}%</p></div>
                 <div><label className="block text-sm font-medium text-navy mb-2">Plates/kg ({estimate?.displayCurrency || 'USD'})</label><input type="number" value={platesPerKg} onChange={(e) => setPlatesPerKg(Number(e.target.value))} step="0.01" className="input w-full" /></div>
                 <div><label className="block text-sm font-medium text-navy mb-2">Delivery/kg ({estimate?.displayCurrency || 'USD'})</label><input type="number" value={deliveryPerKg} onChange={(e) => setDeliveryPerKg(Number(e.target.value))} step="0.01" className="input w-full" /></div>
               </div>
@@ -775,17 +855,17 @@ const EstimateEditor = () => {
               <div className="space-y-3">
                 <div className="flex justify-between"><span className="text-mist">Total GSM</span><span className="font-mono font-semibold">{totalGsm.toFixed(1)}</span></div>
                 <div className="flex justify-between"><span className="text-mist">Total µ</span><span className="font-mono font-semibold">{totalMicron}</span></div>
-                {isAdmin && <div className="flex justify-between"><span className="text-mist">Film density</span><span className="font-mono font-semibold">{density}</span></div>}
+                {can('filmDensity') && <div className="flex justify-between"><span className="text-mist">Film density</span><span className="font-mono font-semibold">{density}</span></div>}
               </div>
             </div>
 
             <div className="card bg-gold/5 border-gold/20">
               <h3 className="font-display font-semibold text-navy mb-2">Selling Price</h3>
               <div className="text-3xl font-display font-bold text-gold mb-2">{estimate?.displayCurrency || 'USD'} {displaySalePrice.toFixed(2)} /kg</div>
-              {isAdmin && <div className="text-sm text-mist">{calculating ? 'Saving to server...' : 'Live preview — save to persist'}</div>}
+              {can('costBreakdown') && <div className="text-sm text-mist">{calculating ? 'Saving to server...' : 'Live preview — save to persist'}</div>}
             </div>
 
-            {isAdmin && <div className="card">
+            {can('costBreakdown') && <div className="card">
               <h3 className="font-display font-semibold text-navy mb-4">Cost Breakdown</h3>
               <div className="space-y-2">{(() => {
                 const mat = Number(estimate?.materialCostPerKg) || 0;
@@ -805,7 +885,7 @@ const EstimateEditor = () => {
             </div>}
 
             <div className="space-y-2">
-              <button onClick={handleSaveEstimate} className="btn-primary w-full">Save Estimate</button>
+              <button onClick={handleSaveAndCalculate} className="btn-primary w-full">Save & Calculate</button>
               <button onClick={downloadProposalPdf} className="btn-secondary w-full">Generate Proposal PDF</button>
               <button onClick={handleRequote} className="text-sm text-mist hover:text-ink w-full text-center py-2">Duplicate for re-quote</button>
             </div>
@@ -845,7 +925,7 @@ const EstimateEditor = () => {
               {estimate?.displayCurrency || 'USD'} {displaySalePrice.toFixed(2)}/kg
             </p>
           </div>
-          <button onClick={handleSaveEstimate} disabled={saving} className="btn-primary px-4 py-2 text-sm min-h-[48px]">
+          <button onClick={handleSaveAndCalculate} disabled={saving} className="btn-primary px-4 py-2 text-sm min-h-[48px]">
             {saving ? 'Saving...' : 'Save'}
           </button>
         </div>

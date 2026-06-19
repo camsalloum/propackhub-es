@@ -11,9 +11,20 @@ export interface ClientCalcMaterial {
   isSolventBased?: boolean;
 }
 
+export interface ClientCalcProcess {
+  id?: string;
+  name: string;
+  costPerHour: number;
+  speedBasis: 'kg_per_hour' | 'm_per_min' | 'pcs_per_min';
+  speedValue: number;
+  setupHours: number;
+  enabled: boolean;
+}
+
 export interface ClientCalcInput {
   layers: Array<{ id?: string; materialId: string; micron: number; position: number }>;
   materials: ClientCalcMaterial[];
+  processes?: ClientCalcProcess[];
   productType: 'roll' | 'sleeve' | 'pouch';
   printingWebClass: 'wide_web' | 'narrow_web';
   dimensions: Record<string, number | undefined>;
@@ -25,6 +36,7 @@ export interface ClientCalcInput {
   exchangeRateUsdToDisplay: number;
   solventCostPerKgUsd?: number;
   solventRatio?: number;
+  orderQuantityKg?: number;
 }
 
 function toMaterial(m: ClientCalcMaterial): Material {
@@ -46,7 +58,7 @@ export function runClientCalculation(input: ClientCalcInput) {
     materialMap.set(m.id, toMaterial(m));
   }
 
-  const orderQty = input.slabs[0]?.quantityKg ?? 1000;
+  const orderQty = input.orderQuantityKg ?? input.slabs[0]?.quantityKg ?? 1000;
   const estimate: Estimate = {
     id: 'client-preview',
     tenantId: 'preview',
@@ -68,7 +80,15 @@ export function runClientCalculation(input: ClientCalcInput) {
     markupPercent: input.markupPercent,
     platesPerKg: input.platesPerKg,
     deliveryPerKg: input.deliveryPerKg,
-    processes: [],
+    processes: (input.processes || []).map((p, i) => ({
+      id: p.id || `proc-${i}`,
+      name: p.name,
+      costPerHour: p.costPerHour,
+      speedBasis: p.speedBasis,
+      speedValue: p.speedValue,
+      setupHours: p.setupHours,
+      enabled: p.enabled,
+    })),
     slabs: input.slabs.map((s) => ({
       quantityKg: s.quantityKg,
       pricePerKg: s.pricePerKg ?? 0,
@@ -84,4 +104,11 @@ export function runClientCalculation(input: ClientCalcInput) {
   };
 
   return calculateEstimate(estimate, materialMap);
+}
+
+/** Effective margin % on sale price (PRD §7.3.1) */
+export function effectiveMarginPercent(materialCost: number, markupPercent: number, salePrice: number): number {
+  if (salePrice <= 0) return 0;
+  const markupAmount = materialCost * (markupPercent / 100);
+  return (markupAmount / salePrice) * 100;
 }

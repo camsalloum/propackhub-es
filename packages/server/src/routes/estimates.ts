@@ -2,7 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, isNull, asc } from 'drizzle-orm';
 import { calculateEstimate, type VisibilityProfile, type Estimate as EngineEstimate } from '@es/engine';
 import { getEffectiveProfile, stripEstimateRow, stripCalculationResult } from '../utils/visibility';
 import { usdToDisplay } from '../utils/currency';
@@ -80,7 +80,7 @@ export async function getEstimatesRoute(
     const estimates = await db
       .select()
       .from(schema.estimates)
-      .where(eq(schema.estimates.tenantId, tenantId))
+      .where(and(eq(schema.estimates.tenantId, tenantId), isNull(schema.estimates.deletedAt)))
       .orderBy(desc(schema.estimates.createdAt));
 
     // Enrich with customer names
@@ -178,13 +178,15 @@ export async function createEstimateRoute(
     }
 
     // Create slabs
-    for (const slab of data.slabs) {
+    for (let i = 0; i < data.slabs.length; i++) {
+      const slab = data.slabs[i];
       await db
         .insert(schema.slabs)
         .values({
           estimateId: estimate.id,
           quantityKg: slab.quantityKg.toString(),
           pricePerKg: slab.pricePerKg.toString(),
+          sortOrder: i,
         });
     }
 
@@ -273,7 +275,7 @@ export async function generateProposalPdfRoute(
       .select()
       .from(schema.slabs)
       .where(eq(schema.slabs.estimateId, id))
-      .orderBy(schema.slabs.quantityKg);
+      .orderBy(asc(schema.slabs.sortOrder), asc(schema.slabs.quantityKg));
 
     const estimateForEngine: EngineEstimate = {
       id: estimate.id,
@@ -561,7 +563,7 @@ async function getEstimateRoute(
       .select()
       .from(schema.slabs)
       .where(eq(schema.slabs.estimateId, id))
-      .orderBy(schema.slabs.quantityKg);
+      .orderBy(asc(schema.slabs.sortOrder), asc(schema.slabs.quantityKg));
 
     // Get activity logs for this estimate
     const logs = await db
@@ -579,12 +581,17 @@ async function getEstimateRoute(
       .from(schema.materials)
       .where(eq(schema.materials.tenantId, tenantId));
     const materialMap = new Map<string, MaterialRow>(allMaterials.map((m: MaterialRow) => [m.id, m]));
-    const enrichedLayers = layers.map((l: (typeof layers)[number]) => ({
-      ...l,
-      materialName: materialMap.get(l.materialId)?.name ?? 'Unknown',
-      materialType: materialMap.get(l.materialId)?.type ?? 'substrate',
-      isSolventBased: materialMap.get(l.materialId)?.isSolventBased ?? false,
-    }));
+    const enrichedLayers = layers.map((l: (typeof layers)[number]) => {
+      const mat = materialMap.get(l.materialId);
+      const stale = l.materialStale || !mat;
+      return {
+        ...l,
+        materialName: l.materialName || mat?.name || 'Unknown',
+        materialType: mat?.type ?? 'substrate',
+        isSolventBased: mat?.isSolventBased ?? false,
+        materialStale: stale,
+      };
+    });
 
     return reply.send({
       ...stripEstimateRow(estimate, profile),
@@ -592,6 +599,7 @@ async function getEstimateRoute(
       processes: profile.operationCost ? processes : [],
       slabs: profile.slabTable ? slabs : [],
       activityLogs: logs || [],
+      lastCalculatedAt: estimate.lastCalculatedAt,
     });
   } catch (error: any) {
     console.error('Get estimate error:', error);
@@ -646,6 +654,16 @@ async function updateEstimateRoute(
         const validDays = tenant?.quotationValidDays ?? 30;
         updates.sentAt = sentAt;
         updates.validUntil = new Date(sentAt.getTime() + validDays * 86400000);
+        try {
+          await db.insert(schema.proposals).values({
+            tenantId,
+            estimateId: id,
+            validUntil: updates.validUntil,
+            sentAt,
+          });
+        } catch (propErr) {
+          console.warn('Failed to create proposal record:', propErr);
+        }
       }
     }
     if (request.body.productType !== undefined) updates.productType = request.body.productType;
@@ -655,6 +673,18 @@ async function updateEstimateRoute(
     if (request.body.deliveryPerKg !== undefined) updates.deliveryPerKg = request.body.deliveryPerKg.toString();
     if (request.body.dimensions !== undefined) updates.dimensions = request.body.dimensions;
     if (request.body.notes !== undefined) updates.notes = request.body.notes;
+    if ((request.body as any).orderQuantityKg !== undefined) {
+      updates.orderQuantityKg = String((request.body as any).orderQuantityKg);
+    }
+    if ((request.body as any).orderQuantityUnit !== undefined) {
+      updates.orderQuantityUnit = (request.body as any).orderQuantityUnit;
+    }
+    if ((request.body as any).solventCostPerKgUsd !== undefined) {
+      updates.solventCostPerKgUsd = String((request.body as any).solventCostPerKgUsd);
+    }
+    if ((request.body as any).solventRatio !== undefined) {
+      updates.solventRatio = String((request.body as any).solventRatio);
+    }
 
     const [updated] = await db
       .update(schema.estimates)
@@ -694,11 +724,13 @@ async function updateEstimateRoute(
     // Update slabs (delete + re-insert)
     if (request.body.slabs !== undefined) {
       await db.delete(schema.slabs).where(eq(schema.slabs.estimateId, id));
-      for (const slab of request.body.slabs) {
+      for (let i = 0; i < request.body.slabs.length; i++) {
+        const slab = request.body.slabs[i];
         await db.insert(schema.slabs).values({
           estimateId: id,
           quantityKg: slab.quantityKg.toString(),
           pricePerKg: slab.pricePerKg.toString(),
+          sortOrder: i,
         });
       }
     }
@@ -742,7 +774,8 @@ async function deleteEstimateRoute(
     const db = getDatabase();
 
     const [deleted] = await db
-      .delete(schema.estimates)
+      .update(schema.estimates)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
       .where(
         and(
           eq(schema.estimates.id, id),
@@ -890,21 +923,28 @@ async function requoteEstimateRoute(
     const priceChanges = sourceLayers.map((layer: (typeof sourceLayers)[number]) => {
       const mat = materialMap.get(layer.materialId);
       const newCostUsd = mat ? parseFloat(mat.costPerKgUsd) : 0;
+      const snapshotCost = layer.costPerKgUsd ? parseFloat(layer.costPerKgUsd) : null;
       const oldCostPerSqM = Number(layer.costPerM2 || 0);
       const micron = parseFloat(layer.micron);
-      const density = mat ? parseFloat(mat.density) : 1;
+      const density = layer.density ? parseFloat(layer.density) : mat ? parseFloat(mat.density) : 1;
       const gsm = micron * density;
       const oldCostUsd =
-        gsm > 0 && oldCostPerSqM > 0 ? (oldCostPerSqM / gsm) * 1000 : newCostUsd;
+        snapshotCost ??
+        (gsm > 0 && oldCostPerSqM > 0 ? (oldCostPerSqM / gsm) * 1000 : newCostUsd);
       const deltaPct = oldCostUsd > 0 ? ((newCostUsd - oldCostUsd) / oldCostUsd) * 100 : 0;
       return {
         materialId: layer.materialId,
-        materialName: mat?.name ?? 'Unknown',
+        materialName: layer.materialName || mat?.name || 'Unknown',
+        materialStale: !mat,
         oldCostUsd,
         newCostUsd,
         deltaPct: Math.round(deltaPct * 100) / 100,
       };
     });
+
+    const warnings = priceChanges
+      .filter((pc: { materialStale?: boolean }) => pc.materialStale)
+      .map((pc: { materialName: string }) => `Material "${pc.materialName}" is no longer in the library — cost set to 0.`);
 
     // E6: auto-calculate with refreshed library prices
     let calcResult;
@@ -922,6 +962,7 @@ async function requoteEstimateRoute(
     return reply.status(201).send({
       ...refreshed,
       price_changes: priceChanges,
+      warnings,
       calculated: calcResult
         ? {
             salePricePerKg: calcResult.estimate.salePricePerKg,
@@ -933,6 +974,123 @@ async function requoteEstimateRoute(
   } catch (error: any) {
     console.error('Requote estimate error:', error);
     return reply.status(500).send({ error: 'Failed to requote estimate' });
+  }
+}
+
+// Duplicate estimate — frozen prices (PRD §9.6)
+async function duplicateEstimateRoute(
+  _fastify: FastifyInstance,
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  try {
+    await request.jwtVerify();
+    const tenantId = extractTenantFromRequest(request);
+    const { id } = request.params;
+    const db = getDatabase();
+
+    const [source] = await db
+      .select()
+      .from(schema.estimates)
+      .where(and(eq(schema.estimates.id, id), eq(schema.estimates.tenantId, tenantId)));
+
+    if (!source) {
+      return reply.status(404).send({ error: 'Source estimate not found' });
+    }
+
+    const sourceLayers = await db
+      .select()
+      .from(schema.layers)
+      .where(eq(schema.layers.estimateId, id))
+      .orderBy(schema.layers.position);
+
+    const sourceProcesses = await db
+      .select()
+      .from(schema.processes)
+      .where(eq(schema.processes.estimateId, id));
+
+    const sourceSlabs = await db
+      .select()
+      .from(schema.slabs)
+      .where(eq(schema.slabs.estimateId, id))
+      .orderBy(asc(schema.slabs.sortOrder), asc(schema.slabs.quantityKg));
+
+    const newRefNumber = await generateRefNumber(db, tenantId);
+
+    const [newEstimate] = await db
+      .insert(schema.estimates)
+      .values({
+        tenantId,
+        customerId: source.customerId,
+        refNumber: newRefNumber,
+        jobName: `${source.jobName} (Copy)`,
+        status: 'draft',
+        productType: source.productType,
+        printingWebClass: source.printingWebClass,
+        dimensions: source.dimensions,
+        markupPercent: source.markupPercent,
+        platesPerKg: source.platesPerKg,
+        deliveryPerKg: source.deliveryPerKg,
+        displayCurrency: source.displayCurrency,
+        exchangeRateUsdToDisplay: source.exchangeRateUsdToDisplay,
+        solventCostPerKgUsd: source.solventCostPerKgUsd,
+        solventRatio: source.solventRatio,
+        orderQuantityKg: source.orderQuantityKg,
+        orderQuantityUnit: source.orderQuantityUnit,
+        totalGsm: source.totalGsm,
+        totalMicron: source.totalMicron,
+        materialCostPerKg: source.materialCostPerKg,
+        salePricePerKg: source.salePricePerKg,
+        lastCalculatedAt: source.lastCalculatedAt,
+        sourceEstimationId: id,
+      })
+      .returning();
+
+    for (const layer of sourceLayers) {
+      await db.insert(schema.layers).values({
+        estimateId: newEstimate.id,
+        materialId: layer.materialId,
+        position: layer.position,
+        micron: layer.micron,
+        gsm: layer.gsm,
+        costPerM2: layer.costPerM2,
+        materialName: layer.materialName,
+        density: layer.density,
+        solidPercent: layer.solidPercent,
+        wastePercent: layer.wastePercent,
+        costPerKgUsd: layer.costPerKgUsd,
+        materialStale: layer.materialStale,
+      });
+    }
+
+    for (const process of sourceProcesses) {
+      await db.insert(schema.processes).values({
+        estimateId: newEstimate.id,
+        name: process.name,
+        costPerHour: process.costPerHour,
+        speedBasis: process.speedBasis,
+        speedValue: process.speedValue,
+        setupHours: process.setupHours,
+        enabled: process.enabled,
+        runHours: process.runHours,
+        totalCost: process.totalCost,
+      });
+    }
+
+    for (let i = 0; i < sourceSlabs.length; i++) {
+      const slab = sourceSlabs[i];
+      await db.insert(schema.slabs).values({
+        estimateId: newEstimate.id,
+        quantityKg: slab.quantityKg,
+        pricePerKg: slab.pricePerKg,
+        sortOrder: slab.sortOrder ?? i,
+      });
+    }
+
+    return reply.status(201).send(newEstimate);
+  } catch (error: any) {
+    console.error('Duplicate estimate error:', error);
+    return reply.status(500).send({ error: 'Failed to duplicate estimate' });
   }
 }
 
@@ -969,6 +1127,11 @@ export async function registerEstimateRoutes(fastify: FastifyInstance) {
   fastify.post<{ Params: { id: string } }>(
     '/api/v1/estimates/:id/requote',
     async (request, reply) => requoteEstimateRoute(fastify, request, reply)
+  );
+
+  fastify.post<{ Params: { id: string } }>(
+    '/api/v1/estimates/:id/duplicate',
+    async (request, reply) => duplicateEstimateRoute(fastify, request, reply)
   );
 
   fastify.get<{ Params: { id: string } }>(

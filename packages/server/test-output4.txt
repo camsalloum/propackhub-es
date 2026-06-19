@@ -1,0 +1,54 @@
+
+> @es/server@0.1.0 test
+> vitest run
+
+
+[7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mD:/ProPackHub/apps/estimation-studio/packages/server[39m
+
+ [32mΓ£ô[39m src/utils/visibility.test.ts [2m ([22m[2m2 tests[22m[2m)[22m[90m 23[2mms[22m[39m
+ [32mΓ£ô[39m src/utils/currency.test.ts [2m ([22m[2m2 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+[90mstdout[2m | src/test/auth-estimates.integration.test.ts[2m > [22m[2mAPI integration ΓÇö auth + estimates[22m[39m
+Γ£ô Database connected
+
+[90mstdout[2m | src/test/auth-estimates.integration.test.ts[2m > [22m[2mAPI integration ΓÇö auth + estimates[2m > [22m[2mregisters a tenant, seeds materials, and returns JWT[22m[39m
+Γ£ô Fetched FX rate: 1 USD = 3.67 AED
+
+[90mstdout[2m | src/test/auth-estimates.integration.test.ts[2m > [22m[2mAPI integration ΓÇö auth + estimates[2m > [22m[2mregisters a tenant, seeds materials, and returns JWT[22m[39m
+Γ£ô Seeded 14 materials for tenant 5b8f4684-6e85-4874-bd7e-df0dec433e6d
+
+[90mstdout[2m | src/test/auth-estimates.integration.test.ts[2m > [22m[2mAPI integration ΓÇö auth + estimates[2m > [22m[2mregisters a tenant, seeds materials, and returns JWT[22m[39m
+Γ£ô Seeded 11 structure templates for tenant 5b8f4684-6e85-4874-bd7e-df0dec433e6d
+
+[90mstdout[2m | src/test/auth-estimates.integration.test.ts[2m > [22m[2mAPI integration ΓÇö auth + estimates[2m > [22m[2mcreates an estimate, calculates price, and persists salePricePerKg[22m[39m
+[ENGINE SLAB] {
+  input: { quantityKg: [33m1000[39m, pricePerKg: [33m0[39m },
+  calculated: {
+    quantityKg: [33m1000[39m,
+    pricePerKg: [33m6.00040206185567[39m,
+    total: [33m6000.402061855671[39m
+  },
+  slabSalePricePerKg: [33m6.00040206185567[39m
+}
+[CALC DEBUG] {
+  estimateId: [32m'dde5c5bf-2e31-41ab-b75d-66900877ec5b'[39m,
+  slabsCount: [33m2[39m,
+  firstSlab: {
+    quantityKg: [33m1000[39m,
+    pricePerKg: [33m6.00040206185567[39m,
+    total: [33m6000.402061855671[39m
+  },
+  salePricePerKg: [33m6.00040206185567[39m,
+  materialCostPerKg: [33m4.5655670103092785[39m,
+  totalGsm: [33m29.1[39m
+}
+
+[90mstdout[2m | src/test/auth-estimates.integration.test.ts[2m > [22m[2mAPI integration ΓÇö auth + estimates[22m[39m
+Database connection closed
+
+ [32mΓ£ô[39m src/test/auth-estimates.integration.test.ts [2m ([22m[2m3 tests[22m[2m)[22m[33m 3355[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[32m7 passed[39m[22m[90m (7)[39m
+[2m   Start at [22m 08:17:03
+[2m   Duration [22m 12.80s[2m (transform 2.00s, setup 1ms, collect 6.96s, tests 3.39s, environment 3ms, prepare 3.15s)[22m
+

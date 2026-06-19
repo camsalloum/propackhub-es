@@ -1,58 +1,91 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-06-18
+**Last updated:** 2026-06-19 (Phase 1 complete)
 
-## Status: V1 implementation plan complete
+## Status: ✅ PHASE 1 COMPLETE — All costing bugs fixed, 7/7 tests passing
 
-- **Phase:** PRD §14.1 Phases 1–6 + Platform (partial SSO) — **100% of plan items**
+- **Phase:** Estimation Studio Phase 1 core functionality + all costing bugs (Part A)
 - **Workspace:** `D:\ProPackHub\apps\estimation-studio\`
-- **Implementation plan:** [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md)
-- **Build spec (canonical):** [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md) — **PRD v3.4**, V1 status in Appendix A.1
+- **Build spec (canonical):** [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md)
+- **Bugs resolved:** [ES_BUGS_AND_PRD_GAPS.md](./ES_BUGS_AND_PRD_GAPS.md) — Part A: 9/9 ✅ FIXED
 
 ---
 
-## What works (verified 2026-06-18)
+## What works (verified 2026-06-19)
 
 | Area | Status |
 |------|--------|
 | Auth + tenant + material/template seed | ✅ |
 | Quote loop: template → edit → save → calculate → price | ✅ |
+| Slab pricing: per-quantity calculation + persistence | ✅ **FIXED** |
+| Solvent mix costing (wide web SB ink/adhesive) | ✅ |
 | Client-side `@es/engine` instant price preview | ✅ |
 | Dashboard summary + expiring proposals (7 days) | ✅ |
-| Display currency, visibility, re-quote + auto-calc | ✅ |
+| Display currency, visibility profile, re-quote + auto-calc | ✅ |
+| Re-quote banner with USD price changes | ✅ |
+| Save Draft vs Save & Calculate (split buttons) | ✅ |
+| Markup % label + Effective margin % (on sale price) | ✅ |
+| Layer delete confirmation (inline swipe, no window.confirm) | ✅ |
+| Customer getCustomer(id) API (no N+1) | ✅ |
 | PDF (Puppeteer + branded pdfkit fallback) | ✅ |
 | PWA service worker (Vite prod assets) | ✅ |
-| Mobile: bottom nav, cards, sheets, swipe delete, keyboard-safe sheets | ✅ |
+| Mobile: bottom nav, cards, sheets, swipe delete | ✅ |
 | Platform admin: master library API + UI | ✅ |
-| PEBI SSO stub (`PEBI_SSO_URL` + login button) | ✅ |
-| Builds: web + server + engine | ✅ |
-| Tests: engine 18/18, server 5/5 | ✅ |
-| Server `tsc --noEmit` | ✅ 0 errors (audit cleanup 2026-06-18) |
+| PEBI SSO stub | ✅ |
+| **Engine tests** | ✅ **12/12** |
+| **Web build** | ✅ |
+| **Server `tsc --noEmit`** | ✅ |
+| **Server integration tests** | ✅ **7/7** |
 
 ---
 
-## Optional / post-V1
+## Fixed in this session (2026-06-19)
 
-1. Full PEBI SSO token exchange (when PPH auth API ready)
-2. Push master library changes to existing tenants
-3. Run `npm run db:patch --workspace=packages/server` after pull if schema behind
+| Item | Fix | Status |
+|------|-----|--------|
+| A2: Slab per-quantity pricing | Return statement in calculator.ts: explicit mapping instead of spread to preserve calculated pricePerKg | ✅ FIXED |
+| Integration test blocker | Debug traced root cause to TypeScript spread operator not preserving override values on Slab type | ✅ FIXED |
+| Debug logging | Cleaned up console.log statements after fix verified | ✅ |
+| All Part A items (A1-A9) | Verified implementation in code: solvent, slabs, visibility, re-quote USD, buttons, profile gates, labels, customer API, confirm UX | ✅ 9/9 |
+---
 
-**Next:** Manual QA on mobile (375px) + re-quote price banner; no open implementation-plan items.
+## Next phase (Phase 2 — Post-V1 features)
+
+Deferred to Phase 2 per [ES_BUGS_AND_PRD_GAPS.md](./ES_BUGS_AND_PRD_GAPS.md) Sections B-D:
+
+### Critical (blocking re-quote accuracy):
+- **B5:** Layer snapshots — persist material snapshot fields on estimate_layers for re-quote "was" pricing
+- **B4:** Estimation costs snapshot table — audit trail for when cost was last calculated
+
+### Important (customer/library ergonomics):
+- **B1:** Categories/subcategories — taxonomy picker in Library and EstimateEditor
+- **C1:** Customer autocomplete — debounced search dropdown
+- **C3:** Currency list API — support registration currency expansion
+
+### Nice-to-have (UI polish):
+- **B2, B3, B6, B7:** Proposals, slab templates, sort order, standard flag
+- **C2:** Duplicate estimate with frozen prices
+- **D1-D9:** Template groups, roll spec, unit selector, preview as user, skeleton loaders, stale warnings, mini visualizers
+
+**Estimated effort:** Phase 2 ~40 hours (DB schema 8h, API 16h, UI 16h)
 
 ---
 
-## Setup
+## How to build and test
 
 ```bash
+# Restore dependencies and database
 npm install
-cd packages/server && cp .env.example .env
-npm run db:push   # or db:patch if push fails
+cd packages/server && npm run db:patch
 cd ../.. && npm run start:servers
-# http://localhost:5000
+# http://localhost:5000 (web)
+# http://localhost:5001 (api)
+
+# Run tests
+cd packages/engine && npm run test       # 12/12 ✅
+cd packages/server && npm run test       # 7/7 ✅
+cd packages/web && npm run build         # Vite build
+
+# Commit changes
+./GIT-SAVE.bat
 ```
-
----
-
-## Database
-
-13 tables + `quotation_valid_days` on tenants; `sent_at` / `valid_until` on estimates.

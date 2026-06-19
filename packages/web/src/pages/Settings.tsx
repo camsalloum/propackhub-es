@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Users, DollarSign, FileText, Globe } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
+import { useVisibilityProfile, VISIBILITY_KEYS } from '../hooks/useVisibilityProfile';
 
 const Settings = () => {
   const { user } = useAuth();
@@ -31,6 +32,9 @@ const Settings = () => {
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [teamError, setTeamError] = useState<string | null>(null);
   const [teamLoading, setTeamLoading] = useState(false);
+  const [customizeUserId, setCustomizeUserId] = useState<string | null>(null);
+  const [customProfile, setCustomProfile] = useState<Record<string, boolean>>({});
+  const { setPreviewPreset } = useVisibilityProfile(user?.role);
 
   const loadSettings = async () => {
     try {
@@ -225,7 +229,18 @@ const Settings = () => {
                     </div>
                   )}
                   <div>
-                    <h3 className="font-display font-semibold text-navy mb-4">Visibility Presets</h3>
+                    <h3 className="font-display font-semibold text-navy mb-4">Preview as user</h3>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" className="btn-secondary text-sm" onClick={() => setPreviewPreset('sales_rep')}>
+                        Preview as Sales rep
+                      </button>
+                      <button type="button" className="btn-secondary text-sm" onClick={() => setPreviewPreset(null)}>
+                        Exit preview
+                      </button>
+                    </div>
+                    <p className="text-xs text-mist mt-2">Opens estimate editor with sales rep visibility. Stored in session.</p>
+                  </div>
+                  <div>
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(visibilityPresets).map(([key, preset]) => (
                         <span key={key} className="text-xs px-3 py-1 bg-slate rounded-full text-ink">{preset.name}</span>
@@ -257,7 +272,42 @@ const Settings = () => {
                                 {preset.name}
                               </button>
                             ))}
+                            <button
+                              type="button"
+                              className="text-xs btn-secondary py-1 px-2"
+                              onClick={() => {
+                                setCustomizeUserId(customizeUserId === member.id ? null : member.id);
+                                setCustomProfile(member.visibilityProfile || visibilityPresets.sales_rep?.profile || {});
+                              }}
+                            >
+                              Customize…
+                            </button>
                           </div>
+                          {customizeUserId === member.id && (
+                            <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                              {VISIBILITY_KEYS.map((key) => (
+                                <label key={key} className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!customProfile[key]}
+                                    onChange={(e) => setCustomProfile((p) => ({ ...p, [key]: e.target.checked }))}
+                                  />
+                                  {key.replace(/([A-Z])/g, ' $1')}
+                                </label>
+                              ))}
+                              <button
+                                type="button"
+                                className="btn-primary col-span-full mt-2"
+                                onClick={async () => {
+                                  await apiClient.updateUserVisibility(member.id, customProfile);
+                                  await loadTeamSettings();
+                                  setCustomizeUserId(null);
+                                }}
+                              >
+                                Save custom profile
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

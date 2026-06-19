@@ -81,7 +81,13 @@ export class ApiClient {
 
   getMe() {
     return this.request<{
-      user: { id: string; email: string; displayName: string; role: 'user' | 'tenant_admin' | 'platform_admin' };
+      user: {
+        id: string;
+        email: string;
+        displayName: string;
+        role: 'user' | 'tenant_admin' | 'platform_admin';
+        visibilityProfile: Record<string, boolean>;
+      };
       tenant: { id: string; name: string; displayCurrency: string };
     }>('GET', '/api/v1/auth/me');
   }
@@ -106,6 +112,17 @@ export class ApiClient {
   // Customers
   getCustomers() {
     return this.request<any[]>('GET', '/api/v1/customers');
+  }
+
+  autocompleteCustomers(q: string) {
+    return this.request<Array<{ id: string; companyName: string; contactName?: string }>>(
+      'GET',
+      `/api/v1/customers/autocomplete?q=${encodeURIComponent(q)}`
+    );
+  }
+
+  getCustomer(id: string) {
+    return this.request<any>('GET', `/api/v1/customers/${id}`);
   }
 
   getCustomerEstimates(customerId: string) {
@@ -169,6 +186,27 @@ export class ApiClient {
     return this.request<any>('POST', `/api/v1/estimates/${id}/requote`);
   }
 
+  duplicateEstimate(id: string) {
+    return this.request<any>('POST', `/api/v1/estimates/${id}/duplicate`);
+  }
+
+  getSupportedCurrencies(q?: string) {
+    const qs = q ? `?q=${encodeURIComponent(q)}` : '';
+    return this.request<Array<{ code: string; name: string }>>('GET', `/api/v1/settings/currency/supported${qs}`);
+  }
+
+  getCategories() {
+    return this.request<any[]>('GET', '/api/v1/categories');
+  }
+
+  getSlabTemplates() {
+    return this.request<any[]>('GET', '/api/v1/settings/slab-templates');
+  }
+
+  getMyTemplates() {
+    return this.request<any[]>('GET', '/api/v1/templates?standard_only=false');
+  }
+
   async getProposalPdf(id: string) {
     const token = this.getToken();
     const headers: Record<string, string> = {};
@@ -214,8 +252,9 @@ export class ApiClient {
   }
 
   // Templates
-  getTemplates() {
-    return this.request<any[]>('GET', '/api/v1/templates');
+  getTemplates(standardOnly = true) {
+    const qs = standardOnly ? '' : '?standard_only=false';
+    return this.request<any[]>('GET', `/api/v1/templates${qs}`);
   }
 
   getTemplate(id: string) {

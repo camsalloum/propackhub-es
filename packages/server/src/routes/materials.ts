@@ -34,6 +34,8 @@ export async function getMaterialsRoute(
     const profile = getEffectiveProfile(user.role, userRecord?.visibilityProfile);
 
     await ensureMaterialsForTenant(tenantId);
+    const { ensureCategoriesForTenant } = await import('../db/seed-categories');
+    await ensureCategoriesForTenant(tenantId);
 
     const materials = await db
       .select()

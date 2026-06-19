@@ -1,5 +1,44 @@
 import type { CalculationResult, VisibilityProfile } from '@es/engine';
 
+/** Keys for Settings customize grid */
+export const VISIBILITY_PROFILE_KEYS: Array<keyof VisibilityProfile> = [
+  'structureLayers', 'layerMicrons', 'dimensions', 'totalGsm', 'printingWebClass',
+  'productDimensionInputs', 'printingWebWidth', 'filmDensity', 'gramsPerPiece',
+  'yieldConversions', 'rollAfterSlitting', 'orderQtyUnitBreakdown', 'alternatePriceUnits',
+  'materialCostPerKg', 'costPerSqm', 'rmCostPerKg', 'markupPercent', 'markupAmount',
+  'platesPerKg', 'deliveryPerKg', 'operationCost', 'costBreakdown', 'solventMixCost',
+  'sellingPrice', 'slabTable', 'proposalPdf',
+];
+
+export const VISIBILITY_LABELS: Record<keyof VisibilityProfile, string> = {
+  structureLayers: 'Layer stack',
+  layerMicrons: 'Layer microns',
+  dimensions: 'Dimensions',
+  totalGsm: 'Total GSM / µ',
+  printingWebClass: 'Printing web class',
+  productDimensionInputs: 'Dimension inputs',
+  printingWebWidth: 'Printing web width',
+  filmDensity: 'Film density',
+  gramsPerPiece: 'Grams per piece',
+  yieldConversions: 'Yield conversions',
+  rollAfterSlitting: 'Roll after slitting',
+  orderQtyUnitBreakdown: 'Order qty breakdown',
+  alternatePriceUnits: 'Alternate price units',
+  materialCostPerKg: 'Material cost/kg',
+  costPerSqm: 'Cost per m²',
+  rmCostPerKg: 'RM cost/kg',
+  markupPercent: 'Markup %',
+  markupAmount: 'Markup amount',
+  platesPerKg: 'Plates/kg',
+  deliveryPerKg: 'Delivery/kg',
+  operationCost: 'Operation cost',
+  costBreakdown: 'Cost breakdown',
+  solventMixCost: 'Solvent mix',
+  sellingPrice: 'Selling price',
+  slabTable: 'Slab table',
+  proposalPdf: 'Proposal PDF',
+};
+
 export const DEFAULT_SALES_REP_PROFILE: VisibilityProfile = {
   structureLayers: true,
   layerMicrons: true,
@@ -9,11 +48,11 @@ export const DEFAULT_SALES_REP_PROFILE: VisibilityProfile = {
   productDimensionInputs: true,
   printingWebWidth: true,
   filmDensity: true,
-  gramsPerPiece: true,
+  gramsPerPiece: false, // PRD §6.8: false for sales rep
   yieldConversions: false,
   rollAfterSlitting: false,
   orderQtyUnitBreakdown: false,
-  alternatePriceUnits: true,
+  alternatePriceUnits: false, // PRD §6.8: false for sales rep
   materialCostPerKg: false,
   costPerSqm: false,
   rmCostPerKg: false,

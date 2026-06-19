@@ -43,6 +43,7 @@ const LayerCard = ({
 }: LayerCardProps) => {
   const [offsetX, setOffsetX] = useState(0);
   const [swiping, setSwiping] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const startX = useRef(0);
   const startY = useRef(0);
   const locked = useRef<'x' | 'y' | null>(null);
@@ -79,9 +80,12 @@ const LayerCard = ({
   }, [offsetX]);
 
   const confirmRemove = () => {
-    if (window.confirm(`Remove ${layer.material}?`)) {
-      onRemove?.();
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
     }
+    onRemove?.();
+    setConfirmingDelete(false);
     setOffsetX(0);
   };
 
@@ -94,10 +98,10 @@ const LayerCard = ({
         <button
           type="button"
           onClick={confirmRemove}
-          className="flex-1 bg-danger text-white flex items-center justify-center min-h-[48px]"
+          className="flex-1 bg-danger text-white flex items-center justify-center min-h-[48px] text-xs font-medium"
           aria-label="Delete layer"
         >
-          <Trash2 className="w-5 h-5" />
+          {confirmingDelete ? 'Confirm' : <Trash2 className="w-5 h-5" />}
         </button>
       </div>
 

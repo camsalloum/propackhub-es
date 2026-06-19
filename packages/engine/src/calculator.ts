@@ -77,11 +77,30 @@ export function calculateEstimate(
     processResults.operationCostPerKg
   );
   
-  // Step 10: Calculate slab prices
-  const slabsWithTotals = estimate.slabs.map(slab => ({
-    ...slab,
-    total: slab.quantityKg * salePricePerKg
-  }));
+  // Step 10: Calculate per‑slab prices and totals
+  // Each slab may have a different order quantity, affecting process costs and thus sale price.
+  const slabsWithTotals = estimate.slabs.map(slab => {
+    // Re‑calculate process costs for this slab's quantity
+    const slabProcessResults = calculateProcessCosts(
+      estimate.processes,
+      slab.quantityKg,
+      productMetrics
+    );
+
+    const slabSalePricePerKg = calculateSalePrice(
+      materialCostPerKg + (solventMix.costPerM2 || 0) / totalGsm * 1000,
+      estimate.markupPercent,
+      estimate.platesPerKg,
+      estimate.deliveryPerKg,
+      slabProcessResults.operationCostPerKg
+    );
+
+    return {
+      quantityKg: slab.quantityKg,
+      pricePerKg: slabSalePricePerKg,
+      total: slab.quantityKg * slabSalePricePerKg
+    };
+  });
   
   // Step 11: Calculate cost breakdown percentages
   const materialCost = materialCostPerKg + (solventMix.costPerM2 || 0) / totalGsm * 1000;
@@ -140,7 +159,7 @@ export function calculateEstimate(
   
   return {
     estimate: updatedEstimate,
-    slabs: slabsWithTotals,
+    slabs: slabsWithTotals.map(s => ({ quantityKg: s.quantityKg, pricePerKg: s.pricePerKg, total: s.total })),
     costBreakdown,
     warnings
   };
@@ -330,8 +349,9 @@ function calculateSolventMix(
   const solventCostPerKg = estimate.solventCostPerKgUsd || 2.0;
   const solventRatio = estimate.solventRatio || 0.5;
   
-  // cost_m2_solvent = (sum_gsm / total_gsm) × (cost_per_kg / 1000)
-  const costPerM2 = (solventBasedGsm / totalGsm) * (solventCostPerKg / 1000);
+  // PRD §7.3: cost_m2_solvent = (sum_gsm / gsm_ratio_denominator) × (cost_per_kg / 1000)
+  // solventRatio is the gsm_ratio_denominator (ink-to-solvent ratio)
+  const costPerM2 = (solventBasedGsm / solventRatio) * (solventCostPerKg / 1000);
   
   return { costPerM2, ratio: solventRatio };
 }

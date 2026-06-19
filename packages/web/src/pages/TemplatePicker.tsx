@@ -1,15 +1,27 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Grid3x3, Layers } from 'lucide-react';
+import { Search, Grid3x3, Layers, User } from 'lucide-react';
 import { apiClient } from '../lib/api';
+import CustomerAutocomplete from '../components/CustomerAutocomplete';
+import LaminateVisualizer from '../components/LaminateVisualizer';
+import { SkeletonCard } from '../components/Skeleton';
+
+function templateGroup(t: any): string {
+  const mc = t.materialClass || '';
+  const st = t.structureType || '';
+  if (mc === 'PE' && st === 'Mono') return 'PE Mono';
+  if (mc === 'Non PE' && st === 'Mono') return 'Non PE Mono';
+  if (st === 'Multilayer' || st === 'Multilayer') return 'Non PE Multilayer';
+  return 'Other';
+}
 
 const TemplatePicker = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'standard' | 'blank'>('standard');
-  const [customers, setCustomers] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'standard' | 'my' | 'blank'>('standard');
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
+  const [myTemplates, setMyTemplates] = useState<any[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -19,7 +31,7 @@ const TemplatePicker = () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const tmplData = await apiClient.getTemplates();
+      const tmplData = await apiClient.getTemplates(true);
       setTemplates(tmplData || []);
     } catch (err) {
       console.error('Failed to load templates', err);
@@ -27,10 +39,10 @@ const TemplatePicker = () => {
       setLoadError('Could not load standard templates. Check that the API server is running, then retry.');
     }
     try {
-      const custData = await apiClient.getCustomers();
-      setCustomers(custData || []);
-    } catch (err) {
-      console.error('Failed to load customers', err);
+      const mine = await apiClient.getMyTemplates();
+      setMyTemplates((mine || []).filter((t: any) => t.isStandard === false));
+    } catch {
+      setMyTemplates([]);
     } finally {
       setLoading(false);
     }
@@ -44,10 +56,18 @@ const TemplatePicker = () => {
     loadData();
   }, []);
 
-  const filteredTemplates = templates.filter(t =>
+  const listForTab = activeTab === 'my' ? myTemplates : templates;
+  const filteredTemplates = listForTab.filter(t =>
     t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (t.pebiParentPg || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const grouped = filteredTemplates.reduce<Record<string, any[]>>((acc, t) => {
+    const g = templateGroup(t);
+    if (!acc[g]) acc[g] = [];
+    acc[g].push(t);
+    return acc;
+  }, {});
 
   const handleUseTemplate = async () => {
     if (!selectedTemplate) return;
@@ -75,25 +95,7 @@ const TemplatePicker = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-navy mb-2">Customer</label>
-            <div className="flex space-x-2">
-              <select className="input flex-1" value={selectedCustomer || ''} onChange={(e) => setSelectedCustomer(e.target.value || null)}>
-                <option value="">Select a customer</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>{c.companyName}</option>
-                ))}
-              </select>
-              <button className="btn-secondary whitespace-nowrap" onClick={async () => {
-                const name = prompt('Customer company name');
-                if (!name) return;
-                try {
-                  const created = await apiClient.createCustomer({ companyName: name }) as any;
-                  setCustomers((prev) => [created, ...prev]);
-                  setSelectedCustomer(created.id);
-                } catch (err) {
-                  alert('Failed to create customer');
-                }
-              }}>+ New</button>
-            </div>
+            <CustomerAutocomplete value={selectedCustomer || ''} onChange={setSelectedCustomer} />
           </div>
           <div>
             <label className="block text-sm font-medium text-navy mb-2">Job Name</label>
@@ -135,6 +137,17 @@ const TemplatePicker = () => {
             Standard Templates
           </button>
           <button
+            onClick={() => setActiveTab('my')}
+            className={`pb-4 px-1 font-medium text-sm border-b-2 transition-colors ${
+              activeTab === 'my'
+                ? 'border-gold text-gold'
+                : 'border-transparent text-mist hover:text-ink'
+            }`}
+          >
+            <User className="w-4 h-4 inline-block mr-2" />
+            My Templates
+          </button>
+          <button
             onClick={() => setActiveTab('blank')}
             className={`pb-4 px-1 font-medium text-sm border-b-2 transition-colors ${
               activeTab === 'blank'
@@ -149,11 +162,13 @@ const TemplatePicker = () => {
       </div>
 
       {/* Content based on active tab */}
-      {activeTab === 'standard' && (
+      {(activeTab === 'standard' || activeTab === 'my') && (
         <div>
           {loading ? (
-            <div className="card text-center py-12 text-mist">Loading templates…</div>
-          ) : loadError ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <SkeletonCard /><SkeletonCard /><SkeletonCard />
+            </div>
+          ) : loadError && activeTab === 'standard' ? (
             <div className="card text-center py-12">
               <p className="text-danger mb-4">{loadError}</p>
               <button type="button" className="btn-primary" onClick={loadData}>
@@ -164,26 +179,31 @@ const TemplatePicker = () => {
             <div className="card text-center py-12">
               <Grid3x3 className="w-12 h-12 text-mist mx-auto mb-4" />
               <h3 className="text-xl font-display font-semibold text-navy mb-2">
-                {searchTerm ? 'No templates match your search' : 'No templates yet'}
+                {activeTab === 'my' ? 'No saved templates yet' : searchTerm ? 'No templates match your search' : 'No templates yet'}
               </h3>
-              <p className="text-mist">
-                {searchTerm
-                  ? 'Try a different search term'
-                  : 'Standard product-group templates are loading — refresh the page. If this persists, restart the API server.'}
-              </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredTemplates.map((template) => (
+            Object.entries(grouped).map(([group, items]) => (
+              <div key={group} className="mb-8">
+                <h3 className="text-lg font-display font-semibold text-navy mb-4">{group}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {items.map((template) => (
                 <div
                   key={template.id}
                   onClick={() => setSelectedTemplate(template.id)}
                   className={`card hover:shadow-md transition-shadow cursor-pointer ${selectedTemplate === template.id ? 'ring-2 ring-gold' : ''}`}
                 >
                   <div className="flex items-start space-x-4">
-                    <div className="w-10 h-10 bg-gold/10 rounded-lg flex items-center justify-center">
-                      <Layers className="w-5 h-5 text-gold" />
-                    </div>
+                    <LaminateVisualizer
+                      layers={(template.defaultLayers || []).map((l: any, i: number) => ({
+                        id: String(i),
+                        type: l.layer_type || 'substrate',
+                        material: l.ref_material_key || 'Layer',
+                        micron: l.default_micron || 10,
+                      }))}
+                      width={48}
+                      height={64}
+                    />
                     <div className="flex-1">
                       <h4 className="font-display font-semibold text-navy mb-1">{template.name}</h4>
                       <p className="text-sm text-mist mb-2">{template.pebiParentPg || template.structureType || ''}</p>
@@ -196,8 +216,10 @@ const TemplatePicker = () => {
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+                  ))}
+                </div>
+              </div>
+            ))
           )}
         </div>
       )}
@@ -248,7 +270,7 @@ const TemplatePicker = () => {
       </div>
 
       {/* Sticky mobile CTA */}
-      {activeTab === 'standard' && selectedTemplate && (
+      {(activeTab === 'standard' || activeTab === 'my') && selectedTemplate && (
         <div className="lg:hidden fixed bottom-16 left-0 right-0 z-30 px-4 safe-area-pb">
           <button
             type="button"

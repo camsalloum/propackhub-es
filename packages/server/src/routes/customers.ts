@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, ilike } from 'drizzle-orm';
 import { z } from 'zod';
 import * as schema from '../db/schema';
 import { getDatabase } from '../db';
@@ -30,6 +30,37 @@ async function getCustomersRoute(
     .from(schema.customers)
     .where(eq(schema.customers.tenantId, tenantId))
     .orderBy(schema.customers.companyName);
+
+  return reply.send(customers);
+}
+
+// Autocomplete customers (PRD §9.2)
+async function autocompleteCustomersRoute(
+  request: FastifyRequest<{ Querystring: { q?: string } }>,
+  reply: FastifyReply
+) {
+  await request.jwtVerify();
+  const tenantId = extractTenantFromRequest(request);
+  const q = (request.query.q || '').trim();
+  if (q.length < 2) {
+    return reply.send([]);
+  }
+  const db = getDatabase();
+
+  const customers = await db
+    .select({
+      id: schema.customers.id,
+      companyName: schema.customers.companyName,
+      contactName: schema.customers.contactName,
+    })
+    .from(schema.customers)
+    .where(
+      and(
+        eq(schema.customers.tenantId, tenantId),
+        ilike(schema.customers.companyName, `%${q}%`)
+      )
+    )
+    .limit(20);
 
   return reply.send(customers);
 }
@@ -179,11 +210,38 @@ async function getCustomerEstimatesRoute(
     )
     .orderBy(schema.estimates.createdAt);
 
-  return reply.send(estimates);
+  const layersByEstimate = new Map<string, Array<{
+    materialName: string | null;
+    micron: string;
+    position: number;
+    materialId: string;
+  }>>();
+
+  for (const est of estimates) {
+    const estLayers = await db
+      .select({
+        materialName: schema.layers.materialName,
+        micron: schema.layers.micron,
+        position: schema.layers.position,
+        materialId: schema.layers.materialId,
+      })
+      .from(schema.layers)
+      .where(eq(schema.layers.estimateId, est.id))
+      .orderBy(schema.layers.position);
+    layersByEstimate.set(est.id, estLayers);
+  }
+
+  const enriched = estimates.map((est: (typeof estimates)[number]) => ({
+    ...est,
+    layers: layersByEstimate.get(est.id) || [],
+  }));
+
+  return reply.send(enriched);
 }
 
 // Register routes
 export async function registerCustomerRoutes(fastify: FastifyInstance) {
+  fastify.get('/api/v1/customers/autocomplete', autocompleteCustomersRoute);
   fastify.get('/api/v1/customers', getCustomersRoute);
   fastify.post('/api/v1/customers', createCustomerRoute);
   fastify.get('/api/v1/customers/:id', getCustomerRoute);

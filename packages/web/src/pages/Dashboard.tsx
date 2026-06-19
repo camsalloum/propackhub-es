@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { PlusCircle, FileText, Users, TrendingUp, AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
+import { SkeletonDashboard } from '../components/Skeleton';
 
 interface SummaryEstimate {
   id: string;
@@ -86,8 +87,8 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-mist">Loading dashboard...</p>
+      <div className="max-w-6xl mx-auto">
+        <SkeletonDashboard />
       </div>
     );
   }

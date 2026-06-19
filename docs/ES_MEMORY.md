@@ -274,7 +274,14 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 
 ---
 
-*Last updated: 2026-06-16 (Phase A + B complete)*
+*Last updated: 2026-06-18 (Phase 1 A1/A3 fixes complete)*
+
+### 2026-06-18 — Phase 1 fixes (A1, A3)
+
+- **A1 fixed:** Solvent mix ratio now correctly used as denominator in `calculateSolventMix()`
+- **A3 fixed:** `DEFAULT_SALES_REP_PROFILE.gramsPerPiece` and `alternatePriceUnits` set to `false` per PRD §6.8
+- Added `visibility.test.ts` for profile validation
+- Updated golden test expected values for solvent mix cost changes
 ### 2026-06-14 — Implementation Scaffold Started
 
 - **Owner requested implementation start** despite audit pending
@@ -636,3 +643,32 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 **Review:** Same class of bugs as empty template picker — `Promise.all` masking partial failures, console-only errors, wrong new-estimate routes.
 
 **Fixed:** CustomersList/CustomerDetail → `/estimate/choose`; CustomerDetail `?customer=` preselect; independent API loads + Retry on Dashboard, Estimates, Customers, Library, Settings, EstimateEditor, MasterLibrary; `ensureMaterialsForTenant` on materials GET + admin backfill.
+
+### 2026-06-18 — Bugs & PRD gaps backlog doc
+
+**Context:** User verified schema/API/UI gaps vs PRD §8–§9 and engine bugs from prior audit; asked for implementation plan doc (no code yet).
+
+**Created:** `docs/ES_BUGS_AND_PRD_GAPS.md` — 9 engine bugs (A1–A9), 8 schema gaps (B1–B7), 3 API gaps (C1–C3), 9 UI gaps (D1–D9), 6-phase implementation plan. All user-listed items confirmed ✅; correction: `GET /customers/:id` exists server-side, frontend gap only.
+
+### 2026-06-18 — ES_BUGS_AND_PRD_GAPS bulk implementation (paused)
+
+**Context:** User asked to review and finish all implementation from gaps doc. Large uncommitted diff across engine, server, web.
+
+**Delivered (mostly complete):**
+- **Engine:** A1 solvent denominator ✅; A2 per-slab process `pricePerKg` loop ✅; engine tests **20/20** ✅
+- **Schema:** categories, subcategories, estimation_costs, layer snapshots, slab sortOrder, slab_templates, proposals, isStandard, soft-delete estimates — `schema-patches.sql` + `npm run db:patch` ✅
+- **Server APIs:** customer autocomplete, duplicate estimate, currency/supported, categories, slab-templates, visibility on `/auth/me`, standard_only templates, requote warnings/materialStale, proposal row on mark-sent
+- **Web:** visibility profile hook + Settings preview, CustomerAutocomplete, skeletons, EstimateEditor (save/calculate split, requote banner, order qty, roll spec, per-slab preview), TemplatePicker (My Templates tab, ES groups, visualizer), CustomerDetail duplicate + stack, LayerCard swipe confirm
+
+**Build/tests at pause:**
+- Engine **20/20** ✅ | Web build ✅ | Server `tsc` ✅
+- Server integration **6/7** ❌ — `auth-estimates.integration.test.ts`: `calcBody.slabs[0].pricePerKg` returns **0** after calculate (estimate `salePricePerKg` > 0). Root cause: `result.slabs` overwritten at end of `estimate-calculation.ts` with **display-currency** values in `pricePerKg` field; test expects USD. Fix: return USD in `pricePerKg` + separate `pricePerKgDisplay`, or update test to check display field.
+
+**Remaining for next session:**
+1. Fix slab `pricePerKg` in calculate API response (P0 — unblocks 7/7 server tests)
+2. Wire `Register.tsx` currency dropdown → `GET /settings/currency/supported`
+3. My Templates create flow (POST user template API + UI)
+4. Library page grouped by category taxonomy
+5. Proposals PDF persistence (`POST /proposals`, stored files)
+6. Mark complete items in `ES_BUGS_AND_PRD_GAPS.md`
+7. All changes still **uncommitted** — user to commit when ready

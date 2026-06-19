@@ -147,9 +147,9 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       totalGsm: 66.16,
       totalMicron: 65.6,
       filmDensity: 1.0085,
-      materialCostPerKg: 2.988,
-      solventMixCostPerKg: 0.0016,
-      salePricePerKg: 3.666,
+      materialCostPerKg: 3.204, // layer cost/m2 + solvent/m2, converted to /kg
+      solventMixCostPerKg: 0.2177, // (3.6 / 0.5) * (2.0 / 1000) = 0.0144 m2, then /kg = 0.0144 / 66.16 * 1000
+      salePricePerKg: 3.9146, // 3.204 + 15% markup (0.4806) + plates (0.15) + delivery (0.08)
       piecesPerKg: 31.49,
       linearMPerKgWeb: 9.39,
       linearMPerKgReel: 18.89,
@@ -207,9 +207,9 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       totalGsm: 37.7,
       totalMicron: 40.9,
       filmDensity: 0.9218,
-      materialCostPerKg: 3.204,
-      solventMixCostPerKg: 0.0013,
-      salePricePerKg: 3.915,
+      materialCostPerKg: 3.298, // layer cost/m2 + solvent/m2, converted to /kg
+      solventMixCostPerKg: 0.0955, // (0.9 / 0.5) * (2.0 / 1000) = 0.0036 m2, then /kg = 0.0036 / 37.7 * 1000
+      salePricePerKg: 4.023, // 3.298 + 15% markup + plates + delivery
       piecesPerKg: 221.0,
       linearMPerKgWeb: 32.83,
       linearMPerKgReel: 66.31,
@@ -250,8 +250,8 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       totalGsm: 53.96,
       totalMicron: 52.6,
       filmDensity: 1.0259,
-      materialCostPerKg: 2.896,
-      salePricePerKg: 3.675,
+      materialCostPerKg: 2.94, // layer cost/m2 + solvent/m2, converted to /kg
+      salePricePerKg: 3.7257, // 2.94 + 15% markup + plates + delivery + operation
       operationCostPerKg: 0.115,
       linearMPerKgWeb: 11.51,
     },

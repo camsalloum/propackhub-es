@@ -3,6 +3,7 @@ import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest } from '../utils/auth';
 import { eq, and } from 'drizzle-orm';
 import { ensureTemplatesForTenant } from '../db/seed-templates';
+import { quantitiesForSlabTemplateKey } from '../db/seed-slab-templates';
 
 /**
  * GET /api/v1/templates
@@ -12,25 +13,29 @@ import { ensureTemplatesForTenant } from '../db/seed-templates';
  */
 export async function getTemplatesRoute(
   _fastify: FastifyInstance,
-  request: FastifyRequest,
+  request: FastifyRequest<{ Querystring: { standard_only?: string } }>,
   reply: FastifyReply
 ) {
   try {
     await request.jwtVerify();
     const tenantId = extractTenantFromRequest(request);
     const db = getDatabase();
+    const standardOnly = request.query.standard_only !== 'false';
 
     await ensureTemplatesForTenant(tenantId);
+
+    const conditions = [
+      eq(schema.structureTemplates.tenantId, tenantId),
+      eq(schema.structureTemplates.isActive, true),
+    ];
+    if (standardOnly) {
+      conditions.push(eq(schema.structureTemplates.isStandard, true));
+    }
 
     const templates = await db
       .select()
       .from(schema.structureTemplates)
-      .where(
-        and(
-          eq(schema.structureTemplates.tenantId, tenantId),
-          eq(schema.structureTemplates.isActive, true)
-        )
-      )
+      .where(and(...conditions))
       .orderBy(schema.structureTemplates.displayOrder);
 
     return reply.send(templates);
@@ -209,17 +214,14 @@ export async function instantiateTemplateRoute(
       });
     }
 
-    // Create default slab tiers
-    const defaultSlabs = [
-      { quantityKg: 1000, pricePerKg: 0 },
-      { quantityKg: 2000, pricePerKg: 0 },
-      { quantityKg: 5000, pricePerKg: 0 },
-    ];
-    for (const slab of defaultSlabs) {
+    // Create default slab tiers from tenant preset
+    const slabQtys = quantitiesForSlabTemplateKey(tenant.defaultSlabTemplate || 'standard');
+    for (let i = 0; i < slabQtys.length; i++) {
       await db.insert(schema.slabs).values({
         estimateId: estimate.id,
-        quantityKg: slab.quantityKg.toString(),
-        pricePerKg: slab.pricePerKg.toString(),
+        quantityKg: slabQtys[i].toString(),
+        pricePerKg: '0',
+        sortOrder: i,
       });
     }
 
@@ -236,7 +238,10 @@ export async function instantiateTemplateRoute(
 }
 
 export async function registerTemplateRoutes(fastify: FastifyInstance) {
-  fastify.get('/api/v1/templates', async (request, reply) => getTemplatesRoute(fastify, request, reply));
+  fastify.get<{ Querystring: { standard_only?: string } }>(
+    '/api/v1/templates',
+    async (request, reply) => getTemplatesRoute(fastify, request, reply)
+  );
   fastify.get<{ Params: { id: string } }>(
     '/api/v1/templates/:id',
     async (request, reply) => getTemplateByIdRoute(fastify, request, reply)

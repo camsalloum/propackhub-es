@@ -13,6 +13,10 @@ export function toEngineMaterial(m: MaterialRow): Material {
     costPerKgUsd: parseFloat(m.costPerKgUsd),
     wastePercent: m.wastePercent,
     isSolventBased: m.isSolventBased ?? false,
+    substrateFamily: m.substrateFamily,
+    substrateGrade: m.substrateGrade,
+    hoover: m.hoover,
+    marketPriceUsd: m.marketPriceUsd ? parseFloat(m.marketPriceUsd) : null,
   };
 }
 

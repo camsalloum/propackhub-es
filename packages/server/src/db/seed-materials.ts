@@ -8,7 +8,7 @@ import masterMaterials from './master-materials-seed.json';
  */
 export async function seedMaterialsForTenant(tenantId: string): Promise<number> {
   const db = getDatabase();
-  
+
   try {
     const materialsToInsert = masterMaterials.map((material: any) => ({
       tenantId,
@@ -17,8 +17,12 @@ export async function seedMaterialsForTenant(tenantId: string): Promise<number> 
       solidPercent: material.solidPercent,
       density: material.density.toString(),
       costPerKgUsd: material.costPerKgUsd.toString(),
-      wastePercent: material.wastePercent,
+      wastePercent: material.wastePercent ?? 0,
       isSolventBased: material.isSolventBased || false,
+      substrateFamily: material.substrateFamily || null,
+      substrateGrade: material.substrateGrade || null,
+      hoover: material.hoover || null,
+      marketPriceUsd: (material.marketPriceUsd ?? material.costPerKgUsd)?.toString() || null,
     }));
 
     const inserted = await db

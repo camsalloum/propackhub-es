@@ -15,8 +15,8 @@
 | **Customer type** | Packaging sales professionals |
 | **Primary users** | **Independent consultant**, **independent sales professional** — not enterprise org workflows in V1 |
 | **User model** | **Individual-first SaaS** — anyone can register; not plant/PEBI-tenant-only |
-| **Relationship to PEBI** | ES is **standalone**; PEBI has its own internal `/estimator` — different product |
-| **Platform** | ProPackHub hosts PEBI + FS + ES as separate products with SSO/entitlements |
+| **Relationship to PEBI** | ES is **standalone**; PEBI has its own internal `/estimator` — different product, different users, different license |
+| **Platform** | ProPackHub hosts PEBI + FS + ES as separate products; **no cross-app navigation, no SSO** — each app has its own auth and user base; shared brand + domain only |
 
 ### Hero features (locked)
 

@@ -13,6 +13,10 @@ const MaterialSchema = z.object({
   density: z.number().positive(),
   costPerKgUsd: z.number().nonnegative(),
   wastePercent: z.number().min(0).default(0),
+  substrateFamily: z.string().nullable().optional(),
+  substrateGrade: z.string().nullable().optional(),
+  hoover: z.string().nullable().optional(),
+  marketPriceUsd: z.number().nonnegative().nullable().optional(),
 });
 
 export async function getMaterialsRoute(
@@ -68,6 +72,7 @@ export async function createMaterialRoute(
       .values({
         tenantId,
         ...data,
+        marketPriceUsd: data.marketPriceUsd ?? data.costPerKgUsd,
       })
       .returning();
 
@@ -98,6 +103,7 @@ export async function updateMaterialRoute(
       .update(schema.materials)
       .set({
         ...data,
+        marketPriceUsd: data.marketPriceUsd ?? data.costPerKgUsd,
         updatedAt: new Date(),
       })
       .where(and(eq(schema.materials.id, id), eq(schema.materials.tenantId, tenantId)))
@@ -153,6 +159,26 @@ export async function registerMaterialRoutes(fastify: FastifyInstance) {
   fastify.patch<{ Params: { id: string }; Body: Partial<z.infer<typeof MaterialSchema>> }>(
     '/api/v1/materials/:id',
     async (request, reply) => updateMaterialRoute(fastify, request, reply)
+  );
+
+  // Refresh market prices (platform admin only)
+  fastify.post(
+    '/api/v1/materials/refresh-prices',
+    async (request, reply) => {
+      try {
+        await request.jwtVerify();
+        const user = extractUserFromRequest(request);
+        if (user.role !== 'platform_admin') {
+          return reply.status(403).send({ error: 'Platform admin only' });
+        }
+        const { refreshMaterialPrices } = await import('../services/price-scraper');
+        const result = await refreshMaterialPrices();
+        return reply.send(result);
+      } catch (error: any) {
+        console.error('Refresh prices error:', error);
+        return reply.status(500).send({ error: 'Failed to refresh prices' });
+      }
+    }
   );
 
   fastify.delete<{ Params: { id: string } }>(

@@ -30,6 +30,7 @@
 - **Users:** Independent sales / consultants — **not** PEBI plant operators
 - **Simplicity rule:** Same math and flow as **legacy Laravel** estimator — **not** PEBI MES depth
 - **Hero UI:** Laminate Stack Visualizer + slab table + branded PDF + re-quote
+- **Platform relationship:** ES and PEBI are **separate products** on the same SaaS platform (ProPackHub). Separate users, separate licenses, separate auth. No cross-app navigation, no SSO. Shared brand + domain only.
 
 ---
 

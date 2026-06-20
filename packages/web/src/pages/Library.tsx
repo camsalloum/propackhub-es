@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, RefreshCw } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { SkeletonTableRows } from '../components/Skeleton';
 
@@ -11,26 +11,48 @@ interface Material {
   density: number;
   wastePercent: number;
   costPerKgUsd: number;
+  substrateFamily?: string | null;
+  substrateGrade?: string | null;
+  hoover?: string | null;
+  marketPriceUsd?: number | null;
 }
+
+const SUBSTRATE_FAMILIES = ['BOPP', 'PET', 'PE', 'CPP', 'PA', 'ALU', 'PAPER', 'SLEEVE', 'SPECIALTY'] as const;
 
 const Library = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'substrate' | 'ink' | 'adhesive'>('all');
+  const [familyFilter, setFamilyFilter] = useState<string>('all');
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const openCreateModal = () => {
-    setEditingMaterial({ id: '', name: '', type: 'substrate', solidPercent: 30, density: 0.92, wastePercent: 0, costPerKgUsd: 0 });
+    setEditingMaterial({ id: '', name: '', type: 'substrate', solidPercent: 100, density: 0.91, wastePercent: 0, costPerKgUsd: 0, substrateFamily: 'BOPP', substrateGrade: '', hoover: '' });
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditingMaterial(null);
+  };
+
+  const handleRefreshPrices = async () => {
+    if (!confirm('Refresh market prices from free sources? This may take a minute.')) return;
+    try {
+      setRefreshing(true);
+      const result = await apiClient.refreshMaterialPrices();
+      alert(`Refreshed ${result.updated} materials. Check console for details.`);
+      fetchMaterials();
+    } catch (err) {
+      alert('Failed to refresh prices: ' + (err instanceof Error ? err.message : 'Unknown'));
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleSaveMaterial = async () => {
@@ -63,6 +85,7 @@ const Library = () => {
         type: m.type || m.materialType,
         density: Number(m.density),
         costPerKgUsd: Number(m.costPerKgUsd),
+        marketPriceUsd: m.marketPriceUsd ? Number(m.marketPriceUsd) : null,
       })));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load materials');
@@ -74,7 +97,7 @@ const Library = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this material? This cannot be undone.')) return;
-    
+
     try {
       setDeleting(id);
       await apiClient.deleteMaterial(id);
@@ -87,9 +110,12 @@ const Library = () => {
   };
 
   const filteredMaterials = materials.filter(material => {
-    const matchesSearch = material.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (material.substrateFamily || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (material.hoover || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = activeFilter === 'all' || material.type === activeFilter;
-    return matchesSearch && matchesFilter;
+    const matchesFamily = familyFilter === 'all' || material.substrateFamily === familyFilter;
+    return matchesSearch && matchesFilter && matchesFamily;
   });
 
   const getTypeColor = (type: string) => {
@@ -98,6 +124,21 @@ const Library = () => {
       case 'ink': return 'bg-purple-100 text-purple-800';
       case 'adhesive': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getFamilyColor = (family: string | null | undefined) => {
+    switch (family) {
+      case 'BOPP': return 'bg-sky-50 text-sky-700 border-sky-200';
+      case 'PET': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+      case 'PE': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'CPP': return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'PA': return 'bg-rose-50 text-rose-700 border-rose-200';
+      case 'ALU': return 'bg-gray-100 text-gray-700 border-gray-300';
+      case 'PAPER': return 'bg-orange-50 text-orange-700 border-orange-200';
+      case 'SLEEVE': return 'bg-violet-50 text-violet-700 border-violet-200';
+      case 'SPECIALTY': return 'bg-pink-50 text-pink-700 border-pink-200';
+      default: return 'bg-gray-50 text-gray-600 border-gray-200';
     }
   };
 
@@ -112,7 +153,7 @@ const Library = () => {
   if (error) {
     return (
       <div className="card bg-red-50 border border-red-200">
-        <p className="text-red-800 font-medium">Error loading materials</p>
+        <p className="text-red-800 font-medium">Error loading raw materials</p>
         <p className="text-red-600 text-sm mt-1">{error}</p>
         <button type="button" className="btn-primary mt-4" onClick={fetchMaterials}>
           Retry
@@ -125,13 +166,19 @@ const Library = () => {
     <div>
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Material Library</h1>
-          <p className="text-mist mt-2">Manage your raw material prices and properties</p>
+          <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Raw Materials</h1>
+          <p className="text-mist mt-2">Manage substrate prices, properties & grades</p>
         </div>
-        <button onClick={openCreateModal} className="mt-4 lg:mt-0 btn-primary inline-flex items-center space-x-2">
-          <Plus className="w-5 h-5" />
-          <span>Add Material</span>
-        </button>
+        <div className="mt-4 lg:mt-0 flex space-x-2">
+          <button onClick={handleRefreshPrices} disabled={refreshing} className="btn-secondary inline-flex items-center space-x-2">
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            <span>{refreshing ? 'Refreshing...' : 'Refresh Prices'}</span>
+          </button>
+          <button onClick={openCreateModal} className="btn-primary inline-flex items-center space-x-2">
+            <Plus className="w-5 h-5" />
+            <span>Add Material</span>
+          </button>
+        </div>
       </div>
 
       {/* Search and filters */}
@@ -141,13 +188,13 @@ const Library = () => {
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-mist" />
             <input
               type="text"
-              placeholder="Search materials..."
+              placeholder="Search by name, family, or description..."
               className="input w-full pl-12"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex space-x-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setActiveFilter('all')}
               className={`px-4 py-2 rounded-lg text-sm font-medium ${activeFilter === 'all' ? 'bg-gold text-white' : 'bg-slate text-ink hover:bg-border'}`}
@@ -174,6 +221,27 @@ const Library = () => {
             </button>
           </div>
         </div>
+        {/* Family filter row — only when substrate filter active */}
+        {activeFilter === 'all' || activeFilter === 'substrate' ? (
+          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border">
+            <span className="text-xs text-mist self-center mr-1">Family:</span>
+            <button
+              onClick={() => setFamilyFilter('all')}
+              className={`px-3 py-1 rounded-md text-xs font-medium border ${familyFilter === 'all' ? 'bg-gold text-white border-gold' : 'bg-white text-ink border-border hover:bg-slate'}`}
+            >
+              All
+            </button>
+            {SUBSTRATE_FAMILIES.map(fam => (
+              <button
+                key={fam}
+                onClick={() => setFamilyFilter(fam)}
+                className={`px-3 py-1 rounded-md text-xs font-medium border ${familyFilter === fam ? getFamilyColor(fam) + ' ring-2 ring-offset-1 ring-blue-300' : 'bg-white text-ink border-border hover:bg-slate'}`}
+              >
+                {fam}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {/* Materials — mobile cards */}
@@ -184,16 +252,23 @@ const Library = () => {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-medium">{material.name}</div>
-                  <span className={`text-xs px-2 py-0.5 rounded-md mt-1 inline-block ${getTypeColor(material.type)}`}>
-                    {material.type}
-                  </span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    <span className={`text-xs px-2 py-0.5 rounded-md ${getTypeColor(material.type)}`}>
+                      {material.type}
+                    </span>
+                    {material.substrateFamily && (
+                      <span className={`text-xs px-2 py-0.5 rounded-md border ${getFamilyColor(material.substrateFamily)}`}>
+                        {material.substrateFamily}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="font-mono font-semibold text-gold">${material.costPerKgUsd.toFixed(2)}</div>
               </div>
-              <div className="grid grid-cols-3 gap-2 mt-3 text-xs text-mist">
+              <div className="grid grid-cols-2 gap-2 mt-3 text-xs text-mist">
+                <div>ρ {material.density.toFixed(2)} g/cm³</div>
                 <div>Solid {material.solidPercent}%</div>
-                <div>ρ {material.density.toFixed(2)}</div>
-                <div>Waste {material.wastePercent}%</div>
+                {material.hoover && <div className="col-span-2">📝 {material.hoover}</div>}
               </div>
               <div className="flex gap-2 mt-3">
                 <button
@@ -233,12 +308,14 @@ const Library = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Material</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-mist">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Solid %</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Family</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Grade / Name</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-mist">Density</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Waste %</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Cost/kg (USD)</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Solid %</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Hoover</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">User Price</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Market Price</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-mist">Actions</th>
                 </tr>
               </thead>
@@ -246,18 +323,35 @@ const Library = () => {
                 {filteredMaterials.map((material) => (
                   <tr key={material.id} className="border-b border-border last:border-0 hover:bg-slate/50">
                     <td className="py-4 px-4">
-                      <div className="font-medium">{material.name}</div>
-                    </td>
-                    <td className="py-4 px-4">
                       <span className={`text-xs px-2 py-1 rounded-md ${getTypeColor(material.type)}`}>
                         {material.type}
                       </span>
                     </td>
-                    <td className="py-4 px-4 font-mono text-sm">{material.solidPercent}</td>
+                    <td className="py-4 px-4">
+                      {material.substrateFamily ? (
+                        <span className={`text-xs px-2 py-1 rounded-md border ${getFamilyColor(material.substrateFamily)}`}>
+                          {material.substrateFamily}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-mist">—</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="font-medium">{material.name}</div>
+                      {material.substrateGrade && material.substrateGrade !== material.name && (
+                        <div className="text-xs text-mist">{material.substrateGrade}</div>
+                      )}
+                    </td>
                     <td className="py-4 px-4 font-mono text-sm">{material.density.toFixed(2)}</td>
-                    <td className="py-4 px-4 font-mono text-sm">{material.wastePercent}</td>
+                    <td className="py-4 px-4 font-mono text-sm">{material.solidPercent}</td>
+                    <td className="py-4 px-4 text-sm text-mist max-w-[200px] truncate" title={material.hoover || ''}>
+                      {material.hoover || '—'}
+                    </td>
                     <td className="py-4 px-4">
                       <div className="font-mono font-semibold">${material.costPerKgUsd.toFixed(2)}</div>
+                    </td>
+                    <td className="py-4 px-4 font-mono text-sm text-mist">
+                      {material.marketPriceUsd ? `$${material.marketPriceUsd.toFixed(2)}` : '—'}
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex space-x-2">
@@ -307,15 +401,71 @@ const Library = () => {
                 <div>
                   <label className="block text-sm text-navy mb-1">Type</label>
                   <select value={editingMaterial.type} onChange={(e) => setEditingMaterial({ ...editingMaterial, type: e.target.value as any })} className="input w-full">
-                    <option value="substrate">substrate</option>
-                    <option value="ink">ink</option>
-                    <option value="adhesive">adhesive</option>
+                    <option value="substrate">Substrate</option>
+                    <option value="ink">Ink</option>
+                    <option value="adhesive">Adhesive</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-navy mb-1">Cost/kg (USD)</label>
-                  <input type="number" value={editingMaterial.costPerKgUsd} onChange={(e) => setEditingMaterial({ ...editingMaterial, costPerKgUsd: Number(e.target.value) })} className="input w-full" />
+                  <label className="block text-sm text-navy mb-1">Substrate Family</label>
+                  <select
+                    value={editingMaterial.substrateFamily || ''}
+                    onChange={(e) => setEditingMaterial({ ...editingMaterial, substrateFamily: e.target.value || null })}
+                    className="input w-full"
+                    disabled={editingMaterial.type !== 'substrate'}
+                  >
+                    <option value="">— None —</option>
+                    {SUBSTRATE_FAMILIES.map(fam => (
+                      <option key={fam} value={fam}>{fam}</option>
+                    ))}
+                  </select>
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm text-navy mb-1">Substrate Grade</label>
+                <input
+                  value={editingMaterial.substrateGrade || ''}
+                  onChange={(e) => setEditingMaterial({ ...editingMaterial, substrateGrade: e.target.value || null })}
+                  className="input w-full"
+                  placeholder="e.g. BOPP Transparent, PET Metalized HB"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-navy mb-1">Hoover (Description)</label>
+                <input
+                  value={editingMaterial.hoover || ''}
+                  onChange={(e) => setEditingMaterial({ ...editingMaterial, hoover: e.target.value || null })}
+                  className="input w-full"
+                  placeholder="e.g. Heat Resistant, High Barrier"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm text-navy mb-1">Density (g/cm³)</label>
+                  <input type="number" step="0.01" value={editingMaterial.density} onChange={(e) => setEditingMaterial({ ...editingMaterial, density: Number(e.target.value) })} className="input w-full" />
+                </div>
+                <div>
+                  <label className="block text-sm text-navy mb-1">Solid %</label>
+                  <input type="number" value={editingMaterial.solidPercent} onChange={(e) => setEditingMaterial({ ...editingMaterial, solidPercent: Number(e.target.value) })} className="input w-full" />
+                </div>
+                <div>
+                  <label className="block text-sm text-navy mb-1">User Price/kg</label>
+                  <input type="number" step="0.01" value={editingMaterial.costPerKgUsd} onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setEditingMaterial({ ...editingMaterial, costPerKgUsd: val, marketPriceUsd: editingMaterial.marketPriceUsd ?? val });
+                  }} className="input w-full" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-navy mb-1">Market Price/kg (USD)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editingMaterial.marketPriceUsd ?? ''}
+                  onChange={(e) => setEditingMaterial({ ...editingMaterial, marketPriceUsd: e.target.value ? Number(e.target.value) : null })}
+                  className="input w-full"
+                  placeholder="Defaults to User Price if empty"
+                />
               </div>
               <div className="flex justify-end space-x-2 mt-4">
                 <button onClick={closeModal} className="btn-secondary">Cancel</button>

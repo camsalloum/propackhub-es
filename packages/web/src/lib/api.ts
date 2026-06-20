@@ -148,6 +148,10 @@ export class ApiClient {
     return this.request('DELETE', `/api/v1/materials/${id}`);
   }
 
+  refreshMaterialPrices() {
+    return this.request<{ updated: number; errors: string[]; changes: any[] }>('POST', '/api/v1/materials/refresh-prices');
+  }
+
   // Estimates
   getEstimates() {
     return this.request<any[]>('GET', '/api/v1/estimates');

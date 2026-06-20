@@ -105,6 +105,11 @@ export const materials = pgTable('materials', {
   costPerKgUsd: decimal('cost_per_kg_usd', { precision: 12, scale: 4 }).notNull(),
   wastePercent: integer('waste_percent').notNull().default(0),
   isSolventBased: boolean('is_solvent_based').default(false), // True for SB ink/adhesive
+  // Substrate-specific fields (from Substrates Master)
+  substrateFamily: varchar('substrate_family', { length: 100 }), // BOPP, PET, PE, CPP, PA, ALU, PAPER, SLEEVE, SPECIALTY
+  substrateGrade: varchar('substrate_grade', { length: 255 }), // e.g. BOPP Transparent, PET Metalized HB
+  hoover: varchar('hoover', { length: 255 }), // Description / grade notes
+  marketPriceUsd: decimal('market_price_usd', { precision: 12, scale: 4 }), // Market reference price
   // B1: taxonomy FK (nullable — added via SQL patch, backfilled by seed-categories)
   subcategoryId: uuid('subcategory_id').references(() => subcategories.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
@@ -112,6 +117,7 @@ export const materials = pgTable('materials', {
 }, (table) => ({
   tenantIdIdx: index('materials_tenant_id_idx').on(table.tenantId),
   typeIdx: index('materials_type_idx').on(table.type),
+  familyIdx: index('materials_substrate_family_idx').on(table.substrateFamily),
 }));
 
 // Customers (tenant-owned)
@@ -138,48 +144,48 @@ export const estimates = pgTable('estimates', {
   refNumber: varchar('ref_number', { length: 20 }).notNull(), // QT-2026-XXXXX
   jobName: varchar('job_name', { length: 255 }).notNull(),
   status: estimateStatusEnum('status').notNull().default('draft'),
-  
+
   // Structure
   productType: productTypeEnum('product_type').notNull(),
   printingWebClass: printingWebClassEnum('printing_web_class').notNull().default('wide_web'),
-  
+
   // Dimensions (stored as JSON for flexibility)
   dimensions: jsonb('dimensions').notNull(), // EstimateDimensions type
-  
+
   // Pricing
   markupPercent: decimal('markup_percent', { precision: 5, scale: 2 }).notNull(),
   platesPerKg: decimal('plates_per_kg', { precision: 12, scale: 4 }).notNull().default('0'),
   deliveryPerKg: decimal('delivery_per_kg', { precision: 12, scale: 4 }).notNull().default('0'),
-  
+
   // Currency snapshot
   displayCurrency: varchar('display_currency', { length: 3 }).notNull(),
   exchangeRateUsdToDisplay: decimal('exchange_rate_usd_to_display', { precision: 10, scale: 6 }).notNull(),
-  
+
   // Solvent mix config (for SB ink/adhesive)
   solventCostPerKgUsd: decimal('solvent_cost_per_kg_usd', { precision: 12, scale: 4 }),
   solventRatio: decimal('solvent_ratio', { precision: 5, scale: 4 }),
   orderQuantityKg: decimal('order_quantity_kg', { precision: 12, scale: 2 }),
-  
+
   // Calculated
   totalGsm: decimal('total_gsm', { precision: 12, scale: 2 }),
   totalMicron: decimal('total_micron', { precision: 12, scale: 2 }),
   materialCostPerKg: decimal('material_cost_per_kg', { precision: 12, scale: 4 }),
   salePricePerKg: decimal('sale_price_per_kg', { precision: 12, scale: 4 }),
-  
+
   // Proposal lifecycle
   sentAt: timestamp('sent_at', { withTimezone: true }),
   validUntil: timestamp('valid_until', { withTimezone: true }),
-  
+
   // Notes
   notes: text('notes'),
-  
+
   // Re-quote tracking
   // @ts-expect-error Drizzle self-referential FK callback
   sourceEstimationId: uuid('source_estimation_id').references(() => estimates.id, { onDelete: 'set null' }),
-  
+
   // Soft delete support
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
-  
+
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
@@ -197,7 +203,7 @@ export const layers = pgTable('layers', {
   materialId: uuid('material_id').notNull().references(() => materials.id),
   position: integer('position').notNull(),
   micron: decimal('micron', { precision: 10, scale: 2 }).notNull(),
-  
+
   // Cached calculations
   gsm: decimal('gsm', { precision: 12, scale: 4 }),
   costPerM2: decimal('cost_per_m2', { precision: 12, scale: 4 }),
@@ -206,7 +212,7 @@ export const layers = pgTable('layers', {
   // Snapshot fields for re‑quote "was" pricing (B5)
   material_name_snapshot: varchar('material_name_snapshot', { length: 255 }),
   unit_cost_snapshot_usd: decimal('unit_cost_snapshot_usd', { precision: 12, scale: 4 }),
-  
+
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
@@ -224,11 +230,11 @@ export const processes = pgTable('processes', {
   speedValue: decimal('speed_value', { precision: 12, scale: 2 }).notNull(),
   setupHours: decimal('setup_hours', { precision: 10, scale: 2 }).notNull().default('0'),
   enabled: boolean('enabled').notNull().default(true),
-  
+
   // Cached calculations
   runHours: decimal('run_hours', { precision: 10, scale: 2 }),
   totalCost: decimal('total_cost', { precision: 12, scale: 4 }),
-  
+
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
@@ -243,7 +249,7 @@ export const slabs = pgTable('slabs', {
   pricePerKg: decimal('price_per_kg', { precision: 12, scale: 4 }).notNull(),
   // Optional explicit ordering for UI display (SCHEMA-01)
   sortOrder: integer('sort_order').notNull().default(0),
-  
+
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
@@ -306,6 +312,19 @@ export const activityLogs = pgTable('activity_logs', {
   tenantIdIdx: index('activity_logs_tenant_id_idx').on(table.tenantId),
   userIdIdx: index('activity_logs_user_id_idx').on(table.userId),
   createdAtIdx: index('activity_logs_created_at_idx').on(table.createdAt),
+}));
+
+// Price history for auto-refreshed market prices
+export const priceHistory = pgTable('price_history', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  materialId: uuid('material_id').notNull().references(() => materials.id, { onDelete: 'cascade' }),
+  oldPrice: decimal('old_price', { precision: 12, scale: 4 }).notNull(),
+  newPrice: decimal('new_price', { precision: 12, scale: 4 }).notNull(),
+  source: varchar('source', { length: 100 }).notNull(), // 'investing', 'tradingeconomics', etc.
+  scrapedAt: timestamp('scraped_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  materialIdIdx: index('price_history_material_id_idx').on(table.materialId),
+  scrapedAtIdx: index('price_history_scraped_at_idx').on(table.scrapedAt),
 }));
 
 // Structure Templates (seeded per tenant from ES_STANDARD_TEMPLATES_SEED.json)

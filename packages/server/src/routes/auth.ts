@@ -264,6 +264,9 @@ export async function registerAuthRoutes(fastify: FastifyInstance) {
 
   fastify.get('/api/v1/auth/me', async (request, reply) => meRoute(fastify, request, reply));
 
+  // NOTE: ES and PEBI are separate products with separate users and separate licenses.
+  // No cross-app navigation, no SSO. This route is intentionally disabled (PEBI_SSO_URL not set).
+  // Kept as a stub in case platform-level entitlement checks are needed in the future.
   fastify.get('/api/v1/auth/sso/pebi', async (_request, reply) => {
     const baseUrl = process.env.PEBI_SSO_URL || '';
     const returnUrl = process.env.ES_PUBLIC_URL || process.env.CORS_ORIGIN || 'http://localhost:5000';

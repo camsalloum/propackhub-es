@@ -254,8 +254,20 @@ export async function generateProposalPdfRoute(
     }
 
     const layers = await db
-      .select()
+      .select({
+        id: schema.layers.id,
+        materialId: schema.layers.materialId,
+        position: schema.layers.position,
+        micron: schema.layers.micron,
+        gsm: schema.layers.gsm,
+        materialName: schema.materials.name,
+        materialType: schema.materials.type,
+        materialHoover: schema.materials.hoover,
+        materialIsSolventBased: schema.materials.isSolventBased,
+        materialCostPerKgUsd: schema.materials.costPerKgUsd,
+      })
       .from(schema.layers)
+      .leftJoin(schema.materials, eq(schema.layers.materialId, schema.materials.id))
       .where(eq(schema.layers.estimateId, id))
       .orderBy(schema.layers.position);
 
@@ -588,6 +600,7 @@ async function getEstimateRoute(
         ...l,
         materialName: l.materialName || mat?.name || 'Unknown',
         materialType: mat?.type ?? 'substrate',
+        materialHoover: mat?.hoover ?? null,
         isSolventBased: mat?.isSolventBased ?? false,
         materialStale: stale,
       };

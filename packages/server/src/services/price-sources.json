@@ -1,0 +1,27 @@
+{
+  "sources": [
+    {
+      "name": "yahoo",
+      "type": "api",
+      "url": "https://query1.finance.yahoo.com/v7/finance/quote",
+      "note": "Free Yahoo Finance API - no auth required"
+    }
+  ],
+  "resin_mapping": {
+    "LDPE": ["yahoo:LLDPE=F"],
+    "LLDPE": ["yahoo:LLDPE=F"],
+    "HDPE": ["yahoo:HDPE=F"],
+    "PP": ["yahoo:PP=F"],
+    "PET": ["yahoo:PET-F"]
+  },
+  "conversion_factors": {
+    "PE": 1.15,
+    "BOPP": 1.20,
+    "PET": 1.25,
+    "CPP": 1.18,
+    "PA": 1.30,
+    "PAPER": 1.10,
+    "SLEEVE": 1.22
+  },
+  "alert_threshold_percent": 5
+}

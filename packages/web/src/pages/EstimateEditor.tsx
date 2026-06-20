@@ -14,11 +14,13 @@ import CustomerAutocomplete from '../components/CustomerAutocomplete';
 interface MaterialItem {
   id: string; name: string; type: string; solidPercent: number;
   density: string; costPerKgUsd: string; wastePercent: number; isSolventBased: boolean;
+  hoover?: string | null; substrateFamily?: string | null;
 }
 
 interface LayerItem {
   id: string; materialId: string; materialName: string; materialType: string;
   micron: number; gsm: number; costPerKgUsd: number; isSolventBased: boolean; position: number;
+  hoover?: string | null;
 }
 
 interface DimensionState {
@@ -118,6 +120,7 @@ const EstimateEditor = () => {
       costPerKgUsd: defaultMat ? parseFloat(defaultMat.costPerKgUsd) : 0,
       isSolventBased: defaultMat?.isSolventBased || false,
       position: layers.length,
+      hoover: defaultMat?.hoover || null,
     };
     setLayers((prev) => [...prev, newLayer]);
     setAddLayerSheetOpen(false);
@@ -200,6 +203,7 @@ const EstimateEditor = () => {
       id: crypto.randomUUID(), materialId: mat?.id || '', materialName: mat?.name || 'Select material',
       materialType: mat?.type || 'substrate', micron, gsm: gsmHint || micron * (mat?.density ? parseFloat(mat.density) : 0.9),
       costPerKgUsd: mat?.costPerKgUsd ? parseFloat(mat.costPerKgUsd) : 0, isSolventBased: mat?.isSolventBased || false, position,
+      hoover: mat?.hoover || null,
     });
     if (templateId === 11) {
       const pet = findMat('pet') || defaultSubstrate;
@@ -218,6 +222,7 @@ const EstimateEditor = () => {
         materialType: l.materialType || 'substrate', micron: parseFloat(l.micron) || 0,
         gsm: parseFloat(l.gsm) || 0, costPerKgUsd: parseFloat(l.materialCostPerKgUsd) || 0,
         isSolventBased: l.materialIsSolventBased || false, position: l.position || 0,
+        hoover: l.materialHoover || null,
       }));
       setEstimate(data);
       setLayers(mappedLayers);
@@ -660,13 +665,13 @@ const EstimateEditor = () => {
                               setLayers((prev) => prev.map((l) => l.id === layer.id ? {
                                 ...l, materialId: mat.id, materialName: mat.name, materialType: mat.type,
                                 costPerKgUsd: parseFloat(mat.costPerKgUsd) || 0, isSolventBased: mat.isSolventBased || false,
-                                gsm: l.micron * (parseFloat(mat.density) || 0.9),
+                                gsm: l.micron * (parseFloat(mat.density) || 0.9), hoover: mat.hoover,
                               } : l));
-                            }} className="input w-full font-medium text-sm">
+                            }} className="input w-full font-medium text-sm" title={materials.find(m => m.id === layer.materialId)?.hoover || ''}>
                               <option value="">Select material</option>
-                              {materials.filter(m => m.type === layer.materialType).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                              {materials.filter(m => m.type === layer.materialType).map(m => <option key={m.id} value={m.id} title={m.hoover || ''}>{m.substrateFamily ? `${m.substrateFamily} – ` : ''}{m.name}</option>)}
                               <option value="" disabled>── All ──</option>
-                              {materials.filter(m => m.type !== layer.materialType).map(m => <option key={m.id} value={m.id}>{m.name} ({m.type})</option>)}
+                              {materials.filter(m => m.type !== layer.materialType).map(m => <option key={m.id} value={m.id} title={m.hoover || ''}>{m.name} ({m.type})</option>)}
                             </select>
                           </td>
                           <td className="py-4 px-4">
@@ -696,7 +701,7 @@ const EstimateEditor = () => {
                     if (!type) return;
                     const defaultMat = materials.find(m => m.type === type);
                     const micron = type === 'substrate' ? 25 : type === 'ink' ? 5 : 3;
-                    const newLayer: LayerItem = { id: crypto.randomUUID(), materialId: defaultMat?.id || '', materialName: defaultMat?.name || 'Select material', materialType: type, micron, gsm: micron * (defaultMat?.density ? parseFloat(defaultMat.density) : 0.9), costPerKgUsd: defaultMat ? parseFloat(defaultMat.costPerKgUsd) : 0, isSolventBased: defaultMat?.isSolventBased || false, position: layers.length };
+                    const newLayer: LayerItem = { id: crypto.randomUUID(), materialId: defaultMat?.id || '', materialName: defaultMat?.name || 'Select material', materialType: type, micron, gsm: micron * (defaultMat?.density ? parseFloat(defaultMat.density) : 0.9), costPerKgUsd: defaultMat ? parseFloat(defaultMat.costPerKgUsd) : 0, isSolventBased: defaultMat?.isSolventBased || false, position: layers.length, hoover: defaultMat?.hoover || null };
                     setLayers((prev) => [...prev, newLayer]);
                     e.target.value = '';
                   }} defaultValue="">
@@ -709,9 +714,9 @@ const EstimateEditor = () => {
                     const adhesive = materials.find(m => m.name.toLowerCase().includes('adhesive sb')) || materials.find(m => m.type === 'adhesive');
                     const alu = materials.find(m => m.name.toLowerCase().includes('aluminium') || m.name.toLowerCase().includes('aluminum'));
                     setLayers((prev) => [...prev,
-                      { id: crypto.randomUUID(), materialId: adhesive?.id || '', materialName: adhesive?.name || 'Adhesive SB', materialType: 'adhesive', micron: 3, gsm: 3, costPerKgUsd: adhesive ? parseFloat(adhesive.costPerKgUsd) : 0, isSolventBased: true, position: prev.length },
-                      { id: crypto.randomUUID(), materialId: alu?.id || '', materialName: alu?.name || 'Aluminium', materialType: 'substrate', micron: 7, gsm: 19, costPerKgUsd: alu ? parseFloat(alu.costPerKgUsd) : 0, isSolventBased: false, position: prev.length + 1 },
-                      { id: crypto.randomUUID(), materialId: adhesive?.id || '', materialName: adhesive?.name || 'Adhesive SB', materialType: 'adhesive', micron: 3, gsm: 3, costPerKgUsd: adhesive ? parseFloat(adhesive.costPerKgUsd) : 0, isSolventBased: true, position: prev.length + 2 },
+                      { id: crypto.randomUUID(), materialId: adhesive?.id || '', materialName: adhesive?.name || 'Adhesive SB', materialType: 'adhesive', micron: 3, gsm: 3, costPerKgUsd: adhesive ? parseFloat(adhesive.costPerKgUsd) : 0, isSolventBased: true, position: prev.length, hoover: adhesive?.hoover || null },
+                      { id: crypto.randomUUID(), materialId: alu?.id || '', materialName: alu?.name || 'Aluminium', materialType: 'substrate', micron: 7, gsm: 19, costPerKgUsd: alu ? parseFloat(alu.costPerKgUsd) : 0, isSolventBased: false, position: prev.length + 1, hoover: alu?.hoover || null },
+                      { id: crypto.randomUUID(), materialId: adhesive?.id || '', materialName: adhesive?.name || 'Adhesive SB', materialType: 'adhesive', micron: 3, gsm: 3, costPerKgUsd: adhesive ? parseFloat(adhesive.costPerKgUsd) : 0, isSolventBased: true, position: prev.length + 2, hoover: adhesive?.hoover || null },
                     ]);
                   }} className="btn-secondary">+ Metallized Barrier</button>
                 </div>

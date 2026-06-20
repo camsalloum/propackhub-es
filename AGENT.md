@@ -15,6 +15,7 @@
 
 - **Name:** ProPackHub Estimation Studio
 - **Not** PEBI MES `/estimator` — mirrors legacy Laravel estimator only
+- **Separate product from PEBI** — different users, different licenses, different auth. No SSO, no cross-app navigation. Shared brand + domain only.
 - **Repo:** `https://github.com/camsalloum/propackhub-es.git` (main — docs pushed 2026-06-13)
 
 ## Session end (automatic)

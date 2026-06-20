@@ -12,6 +12,10 @@ interface MasterMaterial {
   costPerKgUsd: number;
   wastePercent: number;
   isSolventBased: boolean;
+  substrateFamily?: string | null;
+  substrateGrade?: string | null;
+  hoover?: string | null;
+  marketPriceUsd?: number | null;
 }
 
 const MasterLibrary = () => {
@@ -59,7 +63,7 @@ const MasterLibrary = () => {
   return (
     <div className="max-w-4xl mx-auto pb-24 lg:pb-0">
       <div className="mb-6">
-        <h1 className="text-2xl font-display font-bold text-navy">Master Material Library</h1>
+        <h1 className="text-2xl font-display font-bold text-navy">Master Raw Materials</h1>
         <p className="text-mist mt-1 text-sm">Platform seed copied to every new tenant at registration.</p>
       </div>
 

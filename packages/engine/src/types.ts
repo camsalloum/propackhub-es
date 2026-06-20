@@ -12,6 +12,10 @@ export interface Material {
   costPerKgUsd: number;
   wastePercent: number;
   isSolventBased?: boolean; // True for SB ink/adhesive (replaces name.includes('SB') check)
+  substrateFamily?: string | null; // BOPP, PET, PE, CPP, PA, ALU, PAPER, SLEEVE, SPECIALTY
+  substrateGrade?: string | null; // e.g. BOPP Transparent, PET Metalized HB
+  hoover?: string | null; // Description / grade notes
+  marketPriceUsd?: number | null; // Market reference price
 }
 
 export interface Layer {
@@ -67,31 +71,31 @@ export interface Estimate {
   customerId?: string;
   jobName: string;
   status: 'draft' | 'sent' | 'won' | 'lost';
-  
+
   // Structure
   layers: Layer[];
   dimensions: EstimateDimensions;
-  
+
   // Pricing
   markupPercent: number;
   platesPerKg: number; // In display currency
   deliveryPerKg: number; // In display currency
   processes: Process[];
   slabs: Slab[];
-  
+
   // Solvent mix config (for SB ink/adhesive)
   solventCostPerKgUsd?: number; // Cost of solvent in USD (default: 2.0)
   solventRatio?: number; // Ratio (0-1) (default: 0.5)
-  
+
   // Currency
   displayCurrencyCode: string;
   exchangeRateUsdToDisplay: number;
-  
+
   // Metadata
   sourceEstimationId?: string; // For re-quote tracking
   createdAt?: Date;
   updatedAt?: Date;
-  
+
   // Calculated fields (output)
   totalGsm?: number;
   totalMicron?: number;
@@ -101,17 +105,17 @@ export interface Estimate {
   gramsPerPiece?: number;
   linearMPerKgWeb?: number;
   linearMPerKgReel?: number;
-  
+
   // Cost breakdown
   materialCostPerKg?: number;
   markupAmountPerKg?: number;
   operationCostPerKg?: number;
   salePricePerKg?: number;
-  
+
   // Solvent mix (when SB ink/adhesive present)
   solventMixCostPerKg?: number;
   solventMixRatio?: number;
-  
+
   // Order quantities
   orderQuantityKg: number;
   orderQuantityKpcs?: number;
@@ -138,19 +142,19 @@ export interface VisibilityProfile {
   dimensions: boolean;
   totalGsm: boolean;
   printingWebClass: boolean;
-  
+
   // Dimensions
   productDimensionInputs: boolean;
   printingWebWidth: boolean;
   filmDensity: boolean;
   gramsPerPiece: boolean;
-  
+
   // Dimensions — internal yield
   yieldConversions: boolean;
   rollAfterSlitting: boolean;
   orderQtyUnitBreakdown: boolean;
   alternatePriceUnits: boolean;
-  
+
   // Costing
   materialCostPerKg: boolean;
   costPerSqm: boolean;
@@ -162,7 +166,7 @@ export interface VisibilityProfile {
   operationCost: boolean;
   costBreakdown: boolean;
   solventMixCost: boolean;
-  
+
   // Output
   sellingPrice: boolean;
   slabTable: boolean;

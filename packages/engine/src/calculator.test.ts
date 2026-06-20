@@ -698,4 +698,41 @@ describe('Engine calculator — golden tests', () => {
     expect(costWithRatio08).toBeGreaterThan(0);
     expect(costWithRatio05).toBeGreaterThan(costWithRatio08);
   });
+
+  it('throws when layer material is missing from map', () => {
+    const materials = new Map<string, Material>([
+      ['mat-1', {
+        id: 'mat-1',
+        name: 'BOPP',
+        type: 'substrate',
+        solidPercent: 100,
+        density: 0.91,
+        costPerKgUsd: 2,
+        wastePercent: 0,
+      }],
+    ]);
+
+    const estimate: Estimate = {
+      id: 'est-1',
+      tenantId: 't1',
+      jobName: 'test',
+      status: 'draft',
+      layers: [
+        { id: 'l1', materialId: 'missing-id', micron: 25, position: 0 },
+      ],
+      dimensions: { productType: 'roll', printingWebClass: 'wide_web' },
+      markupPercent: 15,
+      platesPerKg: 0,
+      deliveryPerKg: 0,
+      processes: [],
+      slabs: [{ quantityKg: 1000, pricePerKg: 0 }],
+      displayCurrencyCode: 'USD',
+      exchangeRateUsdToDisplay: 1,
+      orderQuantityKg: 1000,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    expect(() => calculateEstimate(estimate, materials)).toThrow(/Missing material data/);
+  });
 });

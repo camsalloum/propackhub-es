@@ -413,7 +413,7 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 **Solution:** Auto-seed 14 platform master materials on tenant registration.
 
 **Master materials added:**
-- **Substrates (10):** LDPE Natural, LDPE Shrink, PET Transparent, PET Metalized, BOPP Transparent, BOPP White, BOPP Metalized, Aluminium Foil, Nylon, Paper Kraft
+- **Substrates (46 grades from Substrates Master.xlsx):** BOPP, PET, PE, CPP, PA, ALU, PAPER, SLEEVE, SPECIALTY families — see `master-materials-seed.json`
 - **Inks (2):** Ink SB (30% solid, $12/kg), Ink UV (100% solid, $15/kg)
 - **Adhesives (2):** Adhesive SB ($6.50/kg), Adhesive WB ($5.80/kg)
 
@@ -673,3 +673,39 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 5. Proposals PDF persistence (`POST /proposals`, stored files)
 6. Mark complete items in `ES_BUGS_AND_PRD_GAPS.md`
 7. All changes still **uncommitted** — user to commit when ready
+
+### 2026-06-20 — Substrates Master import + tenant sync
+
+**Context:** User flagged substrate RM library not fully applied from `Substrates Master.xlsx` (46 grades). Prior session had expanded seed JSON manually but import script was broken and existing tenants were not updated.
+
+**Delivered:**
+- `master-materials-io.ts` — reads Excel sheet `Substrate Costing Master` columns (`Substrate Family`, `Substrate Grade`, `Density (g/cm3)`, `Hoover`, `User Price`, `Market Price`); preserves 4 ink/adhesive rows
+- Fixed `update-materials-from-excel.ts` (path resolution, default `xlsx` import, column mapping)
+- `syncMaterialsForTenant` in `seed-materials.ts` — upsert by `substrateGrade`/`name` (substrates) or `type`+`name` (ink/adhesive); legacy rows left in place
+- `npm run db:sync-materials` — backfills all tenants
+- Regenerated `master-materials-seed.json`: **50 materials** (46 substrates + 4 ink/adhesive); fixed bad `hoover` values (e.g. `=B2` → `BOPP Transparent`)
+
+**Commands:**
+```bash
+npm run update-materials      # Excel → master-materials-seed.json
+npm run db:sync-materials     # seed JSON → all tenant DBs
+```
+
+**Verified:** import + sync on 34 tenants (+34 inserted, 1666 updated).
+
+**Fix (same day):** User Price vs Market Price — `costPerKgUsd` ← Excel **User Price**; `marketPriceUsd` ← Excel **Market Price** or defaults to User Price (both editable in Library). Tenant admins always get full material prices from API (fixes `$NaN` from visibility stripping).
+
+**Library refresh buttons:**
+- **Refresh from Excel** — `POST /api/v1/materials/refresh-from-excel` (tenant_admin+): reads `Substrates Master.xlsx` → seed JSON → upsert tenant library (platform_admin syncs all tenants)
+- **Refresh market prices** — `POST /api/v1/materials/refresh-prices`: free Yahoo Finance polymer futures (USD/lb→kg), family conversion factors, grade premium vs family avg user price; **never changes User Price**; ALU skipped (no free feed)
+
+**Library inline price save (same day):** Replaced blur-only save with per-row **Save prices** / **Cancel** when User or Market $/kg is edited; Enter saves, Escape cancels; drafts cleared on fetch/successful save.
+
+**Substrate sync audit implementation (2026-06-20):**
+- Dynamic substrate families in Library (from DB + defaults); free-text family in Add Material (datalist)
+- Excel refresh reports inserted/updated/orphans; optional prune on refresh; **Prune orphans** button; `npm run db:prune-orphan-substrates`
+- `SUBSTRATES_EXCEL_PATH` env for production Excel location
+- Category filter in Library; hierarchical material picker in EstimateEditor (`materialTaxonomy.ts`)
+- `POST /api/v1/templates` + **Save as Template** in estimate editor
+- Engine throws `MissingMaterialsError` instead of $0 placeholder; API returns 400
+- Mark-sent persists proposal PDF to `uploads/proposals/`; `GET /estimates/:id/proposals` + `GET /proposals/:id/pdf`

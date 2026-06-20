@@ -1,7 +1,13 @@
-import { useState, useEffect } from 'react';
-import { Search, Plus, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Search, Plus, RefreshCw, FileSpreadsheet } from 'lucide-react';
 import { apiClient } from '../lib/api';
+import { roundUsd } from '../lib/currency';
 import { SkeletonTableRows } from '../components/Skeleton';
+import {
+  deriveSubstrateFamilies,
+  materialMatchesCategory,
+  type CategoryNode,
+} from '../lib/materialTaxonomy';
 
 interface Material {
   id: string;
@@ -15,21 +21,95 @@ interface Material {
   substrateGrade?: string | null;
   hoover?: string | null;
   marketPriceUsd?: number | null;
+  subcategoryId?: string | null;
 }
 
-const SUBSTRATE_FAMILIES = ['BOPP', 'PET', 'PE', 'CPP', 'PA', 'ALU', 'PAPER', 'SLEEVE', 'SPECIALTY'] as const;
+type PriceDraft = { costPerKgUsd: string; marketPriceUsd: string };
+
+function savedMarket(m: Material): number {
+  return roundUsd(m.marketPriceUsd ?? m.costPerKgUsd);
+}
+
+function formatUsd(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return '—';
+  return `$${roundUsd(value).toFixed(2)}`;
+}
+
+function priceInputValue(value: number | null | undefined): string {
+  return roundUsd(value ?? 0).toFixed(2);
+}
+
+function parseMaterialRow(m: Record<string, unknown>): Material {
+  const cost = Number(m.costPerKgUsd);
+  const marketRaw = m.marketPriceUsd;
+  const market =
+    marketRaw != null && marketRaw !== '' ? Number(marketRaw) : null;
+  return {
+    ...(m as Material),
+    type: (m.type || m.materialType) as Material['type'],
+    density: Number(m.density),
+    costPerKgUsd: Number.isFinite(cost) ? roundUsd(cost) : 0,
+    marketPriceUsd: market != null && Number.isFinite(market) ? roundUsd(market) : null,
+  };
+}
 
 const Library = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'substrate' | 'ink' | 'adhesive'>('all');
   const [familyFilter, setFamilyFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [categories, setCategories] = useState<CategoryNode[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshingMarket, setRefreshingMarket] = useState(false);
+  const [refreshingExcel, setRefreshingExcel] = useState(false);
+  const [savingPriceId, setSavingPriceId] = useState<string | null>(null);
+  const [priceDrafts, setPriceDrafts] = useState<Record<string, PriceDraft>>({});
+
+  const draftFor = (material: Material): PriceDraft => {
+    if (priceDrafts[material.id]) return priceDrafts[material.id];
+    return {
+      costPerKgUsd: priceInputValue(material.costPerKgUsd),
+      marketPriceUsd: priceInputValue(savedMarket(material)),
+    };
+  };
+
+  const isPriceDirty = (material: Material): boolean => {
+    const draft = draftFor(material);
+    const user = roundUsd(Number(draft.costPerKgUsd));
+    const market = roundUsd(Number(draft.marketPriceUsd));
+    if (!Number.isFinite(user) || !Number.isFinite(market)) return true;
+    return (
+      user !== roundUsd(material.costPerKgUsd) ||
+      market !== savedMarket(material)
+    );
+  };
+
+  const setPriceDraft = (id: string, patch: Partial<PriceDraft>) => {
+    setPriceDrafts((prev) => {
+      const material = materials.find((m) => m.id === id);
+      if (!material) return prev;
+      const current = prev[id] ?? {
+        costPerKgUsd: priceInputValue(material.costPerKgUsd),
+        marketPriceUsd: priceInputValue(savedMarket(material)),
+      };
+      return { ...prev, [id]: { ...current, ...patch } };
+    });
+  };
+
+  const resetPriceDraft = (id: string) => {
+    setPriceDrafts((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  };
+
+  const substrateFamilies = useMemo(() => deriveSubstrateFamilies(materials), [materials]);
 
   const openCreateModal = () => {
     setEditingMaterial({ id: '', name: '', type: 'substrate', solidPercent: 100, density: 0.91, wastePercent: 0, costPerKgUsd: 0, substrateFamily: 'BOPP', substrateGrade: '', hoover: '' });
@@ -41,29 +121,99 @@ const Library = () => {
     setEditingMaterial(null);
   };
 
-  const handleRefreshPrices = async () => {
-    if (!confirm('Refresh market prices from free sources? This may take a minute.')) return;
+  const handleRefreshFromExcel = async () => {
+    const proceed = confirm(
+      'Reload substrates from Substrates Master.xlsx?\n\n' +
+        'Save the Excel file at project root (or SUBSTRATES_EXCEL_PATH) before continuing.\n\n' +
+        'User prices and new rows will be synced. Market prices follow Excel.'
+    );
+    if (!proceed) return;
+
+    const alsoPrune = confirm(
+      'Remove orphan substrates?\n\n' +
+        'Yes = delete tenant substrate rows that are NOT in Excel (keeps ink/adhesive).\n' +
+        'No = sync only (orphans remain in library).'
+    );
+
     try {
-      setRefreshing(true);
-      const result = await apiClient.refreshMaterialPrices();
-      alert(`Refreshed ${result.updated} materials. Check console for details.`);
-      fetchMaterials();
+      setRefreshingExcel(true);
+      const result = await apiClient.refreshMaterialsFromExcel(alsoPrune);
+      await fetchMaterials();
+      const orphanNote =
+        result.orphans > 0
+          ? `\n${result.orphans} orphan(s) in library${alsoPrune ? `, ${result.pruned} removed` : ' (not removed)'}.`
+          : '';
+      alert(
+        `Excel refresh complete.\n${result.substrateCount} substrates in file.\n` +
+          `${result.inserted} inserted, ${result.updated} updated.${orphanNote}`
+      );
     } catch (err) {
-      alert('Failed to refresh prices: ' + (err instanceof Error ? err.message : 'Unknown'));
+      alert('Failed to refresh from Excel: ' + (err instanceof Error ? err.message : 'Unknown'));
     } finally {
-      setRefreshing(false);
+      setRefreshingExcel(false);
+    }
+  };
+
+  const handlePruneOrphans = async () => {
+    if (
+      !confirm(
+        'Remove substrate rows in your library that are NOT in Substrates Master.xlsx?\n\nInk and adhesive rows are never removed.'
+      )
+    ) {
+      return;
+    }
+    try {
+      setRefreshingExcel(true);
+      const result = await apiClient.pruneOrphanSubstrates();
+      await fetchMaterials();
+      alert(`Pruned ${result.pruned} orphan substrate row(s).`);
+    } catch (err) {
+      alert('Failed to prune orphans: ' + (err instanceof Error ? err.message : 'Unknown'));
+    } finally {
+      setRefreshingExcel(false);
+    }
+  };
+
+  const handleRefreshMarketPrices = async () => {
+    if (
+      !confirm(
+        'Update Market Price from free polymer futures (Yahoo Finance)?\n\nUser Price is not changed. ALU has no free feed.'
+      )
+    ) {
+      return;
+    }
+    try {
+      setRefreshingMarket(true);
+      const result = await apiClient.refreshMaterialPrices();
+      await fetchMaterials();
+      const sourceSummary = result.sources
+        .map((s) => `${s.family}: ${s.symbol ?? 'fallback'} → $${s.filmUsdPerKg.toFixed(2)}/kg`)
+        .join('\n');
+      const errSummary = result.errors.length ? `\n\nNotes:\n${result.errors.join('\n')}` : '';
+      alert(
+        `Market refresh: ${result.updated} updated, ${result.skipped} unchanged (<2%).${errSummary}${sourceSummary ? `\n\nSources:\n${sourceSummary}` : ''}`
+      );
+    } catch (err) {
+      alert('Failed to refresh market prices: ' + (err instanceof Error ? err.message : 'Unknown'));
+    } finally {
+      setRefreshingMarket(false);
     }
   };
 
   const handleSaveMaterial = async () => {
     if (!editingMaterial) return;
+    const payload = {
+      ...editingMaterial,
+      costPerKgUsd: roundUsd(editingMaterial.costPerKgUsd),
+      marketPriceUsd: roundUsd(editingMaterial.marketPriceUsd ?? editingMaterial.costPerKgUsd),
+    };
     try {
       if (editingMaterial.id) {
-        const updated = await apiClient.updateMaterial(editingMaterial.id, editingMaterial) as Material;
-        setMaterials((prev) => prev.map(m => m.id === updated.id ? updated : m));
+        const updated = await apiClient.updateMaterial(editingMaterial.id, payload) as Material;
+        setMaterials((prev) => prev.map(m => m.id === updated.id ? parseMaterialRow(updated as unknown as Record<string, unknown>) : m));
       } else {
-        const created = await apiClient.createMaterial(editingMaterial) as Material;
-        setMaterials((prev) => [created, ...prev]);
+        const created = await apiClient.createMaterial(payload) as Material;
+        setMaterials((prev) => [parseMaterialRow(created as unknown as Record<string, unknown>), ...prev]);
       }
       closeModal();
     } catch (err) {
@@ -79,20 +229,78 @@ const Library = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiClient.getMaterials();
-      setMaterials((data || []).map((m: any) => ({
-        ...m,
-        type: m.type || m.materialType,
-        density: Number(m.density),
-        costPerKgUsd: Number(m.costPerKgUsd),
-        marketPriceUsd: m.marketPriceUsd ? Number(m.marketPriceUsd) : null,
-      })));
+      const [data, cats] = await Promise.all([
+        apiClient.getMaterials(),
+        apiClient.getCategories().catch(() => []),
+      ]);
+      setMaterials((data || []).map((m: Record<string, unknown>) => parseMaterialRow(m)));
+      setCategories(cats || []);
+      setPriceDrafts({});
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load materials');
       console.error('Error fetching materials:', err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleInlinePriceSave = async (material: Material, patch: { costPerKgUsd: number; marketPriceUsd: number }) => {
+    const costPerKgUsd = roundUsd(patch.costPerKgUsd);
+    const marketPriceUsd = roundUsd(patch.marketPriceUsd);
+
+    setSavingPriceId(material.id);
+    try {
+      const updated = await apiClient.updateMaterial(material.id, {
+        costPerKgUsd,
+        marketPriceUsd,
+      }) as Material;
+      setMaterials((prev) =>
+        prev.map((m) =>
+          m.id === material.id ? parseMaterialRow(updated as unknown as Record<string, unknown>) : m
+        )
+      );
+      resetPriceDraft(material.id);
+    } catch (err) {
+      alert('Failed to save price: ' + (err instanceof Error ? err.message : 'Unknown'));
+    } finally {
+      setSavingPriceId(null);
+    }
+  };
+
+  const savePriceDraft = (material: Material) => {
+    const draft = draftFor(material);
+    const costPerKgUsd = roundUsd(Number(draft.costPerKgUsd));
+    const marketPriceUsd = roundUsd(Number(draft.marketPriceUsd));
+    if (!Number.isFinite(costPerKgUsd) || costPerKgUsd < 0 || !Number.isFinite(marketPriceUsd) || marketPriceUsd < 0) {
+      alert('Enter valid prices (0 or greater).');
+      return;
+    }
+    void handleInlinePriceSave(material, { costPerKgUsd, marketPriceUsd });
+  };
+
+  const renderPriceSaveActions = (material: Material, compact = false) => {
+    if (!isPriceDirty(material)) return null;
+    const saving = savingPriceId === material.id;
+    return (
+      <div className={`flex gap-2 ${compact ? 'mt-2' : ''}`}>
+        <button
+          type="button"
+          onClick={() => savePriceDraft(material)}
+          disabled={saving}
+          className={compact ? 'btn-primary flex-1 text-sm py-1.5' : 'text-sm text-white bg-gold px-3 py-1 rounded-md font-medium hover:opacity-90 disabled:opacity-50'}
+        >
+          {saving ? 'Saving…' : 'Save prices'}
+        </button>
+        <button
+          type="button"
+          onClick={() => resetPriceDraft(material.id)}
+          disabled={saving}
+          className={compact ? 'btn-secondary flex-1 text-sm py-1.5' : 'text-sm text-mist px-2 py-1 hover:underline disabled:opacity-50'}
+        >
+          Cancel
+        </button>
+      </div>
+    );
   };
 
   const handleDelete = async (id: string) => {
@@ -115,7 +323,8 @@ const Library = () => {
       (material.hoover || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = activeFilter === 'all' || material.type === activeFilter;
     const matchesFamily = familyFilter === 'all' || material.substrateFamily === familyFilter;
-    return matchesSearch && matchesFilter && matchesFamily;
+    const matchesCategory = materialMatchesCategory(material, categoryFilter, categories);
+    return matchesSearch && matchesFilter && matchesFamily && matchesCategory;
   });
 
   const getTypeColor = (type: string) => {
@@ -167,12 +376,34 @@ const Library = () => {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
         <div>
           <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Raw Materials</h1>
-          <p className="text-mist mt-2">Manage substrate prices, properties & grades</p>
+          <p className="text-mist mt-2">Manage substrate prices, properties & grades. Edit prices in the table, then click <strong>Save prices</strong> on that row.</p>
         </div>
-        <div className="mt-4 lg:mt-0 flex space-x-2">
-          <button onClick={handleRefreshPrices} disabled={refreshing} className="btn-secondary inline-flex items-center space-x-2">
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            <span>{refreshing ? 'Refreshing...' : 'Refresh Prices'}</span>
+        <div className="mt-4 lg:mt-0 flex flex-wrap gap-2">
+          <button
+            onClick={handleRefreshFromExcel}
+            disabled={refreshingExcel || refreshingMarket}
+            className="btn-secondary inline-flex items-center space-x-2"
+            title="Reload from Substrates Master.xlsx at project root"
+          >
+            <FileSpreadsheet className={`w-4 h-4 ${refreshingExcel ? 'animate-pulse' : ''}`} />
+            <span>{refreshingExcel ? 'Loading Excel…' : 'Refresh from Excel'}</span>
+          </button>
+          <button
+            onClick={handlePruneOrphans}
+            disabled={refreshingExcel || refreshingMarket}
+            className="btn-secondary inline-flex items-center space-x-2"
+            title="Delete substrate rows not in Excel"
+          >
+            <span>Prune orphans</span>
+          </button>
+          <button
+            onClick={handleRefreshMarketPrices}
+            disabled={refreshingMarket || refreshingExcel}
+            className="btn-secondary inline-flex items-center space-x-2"
+            title="Update market prices from Yahoo Finance polymer futures (free)"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshingMarket ? 'animate-spin' : ''}`} />
+            <span>{refreshingMarket ? 'Fetching market…' : 'Refresh market prices'}</span>
           </button>
           <button onClick={openCreateModal} className="btn-primary inline-flex items-center space-x-2">
             <Plus className="w-5 h-5" />
@@ -231,7 +462,7 @@ const Library = () => {
             >
               All
             </button>
-            {SUBSTRATE_FAMILIES.map(fam => (
+            {substrateFamilies.map(fam => (
               <button
                 key={fam}
                 onClick={() => setFamilyFilter(fam)}
@@ -242,13 +473,39 @@ const Library = () => {
             ))}
           </div>
         ) : null}
+        {categories.length > 0 ? (
+          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border">
+            <span className="text-xs text-mist self-center mr-1">Category:</span>
+            <button
+              onClick={() => setCategoryFilter('all')}
+              className={`px-3 py-1 rounded-md text-xs font-medium border ${categoryFilter === 'all' ? 'bg-gold text-white border-gold' : 'bg-white text-ink border-border hover:bg-slate'}`}
+            >
+              All
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setCategoryFilter(cat.id)}
+                className={`px-3 py-1 rounded-md text-xs font-medium border ${categoryFilter === cat.id ? 'bg-gold text-white border-gold' : 'bg-white text-ink border-border hover:bg-slate'}`}
+              >
+                {cat.name}
+              </button>
+            ))}
+            <button
+              onClick={() => setCategoryFilter('uncategorized')}
+              className={`px-3 py-1 rounded-md text-xs font-medium border ${categoryFilter === 'uncategorized' ? 'bg-gold text-white border-gold' : 'bg-white text-ink border-border hover:bg-slate'}`}
+            >
+              Uncategorized
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {/* Materials — mobile cards */}
-      <div className="md:hidden space-y-3">
+      <div className="md:hidden space-y-2">
         {filteredMaterials.length > 0 ? (
           filteredMaterials.map((material) => (
-            <div key={material.id} className="card p-4">
+            <div key={material.id} className="card !p-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-medium">{material.name}</div>
@@ -263,18 +520,52 @@ const Library = () => {
                     )}
                   </div>
                 </div>
-                <div className="font-mono font-semibold text-gold">${material.costPerKgUsd.toFixed(2)}</div>
               </div>
-              <div className="grid grid-cols-2 gap-2 mt-3 text-xs text-mist">
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <div>
+                  <label className="text-xs text-mist block mb-1">User $/kg</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="input !min-h-0 h-8 w-full font-mono text-sm py-0.5 px-2"
+                    value={draftFor(material).costPerKgUsd}
+                    disabled={savingPriceId === material.id}
+                    onChange={(e) => setPriceDraft(material.id, { costPerKgUsd: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && isPriceDirty(material)) savePriceDraft(material);
+                      if (e.key === 'Escape') resetPriceDraft(material.id);
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-mist block mb-1">Market $/kg</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="input !min-h-0 h-8 w-full font-mono text-sm py-0.5 px-2"
+                    value={draftFor(material).marketPriceUsd}
+                    disabled={savingPriceId === material.id}
+                    onChange={(e) => setPriceDraft(material.id, { marketPriceUsd: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && isPriceDirty(material)) savePriceDraft(material);
+                      if (e.key === 'Escape') resetPriceDraft(material.id);
+                    }}
+                  />
+                </div>
+              </div>
+              {renderPriceSaveActions(material, true)}
+              <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-mist">
                 <div>ρ {material.density.toFixed(2)} g/cm³</div>
                 <div>Solid {material.solidPercent}%</div>
                 {material.hoover && <div className="col-span-2">📝 {material.hoover}</div>}
               </div>
-              <div className="flex gap-2 mt-3">
+              <div className="flex gap-2 mt-2">
                 <button
                   type="button"
                   onClick={() => { setEditingMaterial(material); setShowModal(true); }}
-                  className="flex-1 min-h-[44px] rounded-lg bg-slate text-sm font-medium text-navy"
+                  className="flex-1 min-h-[36px] rounded-lg bg-slate text-sm font-medium text-navy"
                 >
                   Edit
                 </button>
@@ -282,7 +573,7 @@ const Library = () => {
                   type="button"
                   onClick={() => handleDelete(material.id)}
                   disabled={deleting === material.id}
-                  className="min-h-[44px] px-4 rounded-lg bg-red-50 text-red-600 text-sm font-medium"
+                  className="min-h-[36px] px-4 rounded-lg bg-red-50 text-red-600 text-sm font-medium"
                 >
                   Delete
                 </button>
@@ -308,53 +599,76 @@ const Library = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Family</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Grade / Name</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Density</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Solid %</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Hoover</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">User Price</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Market Price</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Actions</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-mist">Type</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-mist">Family</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-mist">Grade / Name</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-mist">Density</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-mist">Solid %</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-mist">Hoover</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-mist">User Price</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-mist">Market Price</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-mist">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredMaterials.map((material) => (
                   <tr key={material.id} className="border-b border-border last:border-0 hover:bg-slate/50">
-                    <td className="py-4 px-4">
-                      <span className={`text-xs px-2 py-1 rounded-md ${getTypeColor(material.type)}`}>
+                    <td className="py-1.5 px-3">
+                      <span className={`text-xs px-1.5 py-0.5 rounded-md ${getTypeColor(material.type)}`}>
                         {material.type}
                       </span>
                     </td>
-                    <td className="py-4 px-4">
+                    <td className="py-1.5 px-3">
                       {material.substrateFamily ? (
-                        <span className={`text-xs px-2 py-1 rounded-md border ${getFamilyColor(material.substrateFamily)}`}>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-md border ${getFamilyColor(material.substrateFamily)}`}>
                           {material.substrateFamily}
                         </span>
                       ) : (
                         <span className="text-xs text-mist">—</span>
                       )}
                     </td>
-                    <td className="py-4 px-4">
-                      <div className="font-medium">{material.name}</div>
-                      {material.substrateGrade && material.substrateGrade !== material.name && (
-                        <div className="text-xs text-mist">{material.substrateGrade}</div>
-                      )}
+                    <td className="py-1.5 px-3">
+                      <div className="font-medium text-sm leading-tight">{material.name}</div>
                     </td>
-                    <td className="py-4 px-4 font-mono text-sm">{material.density.toFixed(2)}</td>
-                    <td className="py-4 px-4 font-mono text-sm">{material.solidPercent}</td>
-                    <td className="py-4 px-4 text-sm text-mist max-w-[200px] truncate" title={material.hoover || ''}>
+                    <td className="py-1.5 px-3 font-mono text-sm">{material.density.toFixed(2)}</td>
+                    <td className="py-1.5 px-3 font-mono text-sm">{material.solidPercent}</td>
+                    <td className="py-1.5 px-3 text-sm text-mist max-w-[200px] truncate" title={material.hoover || ''}>
                       {material.hoover || '—'}
                     </td>
-                    <td className="py-4 px-4">
-                      <div className="font-mono font-semibold">${material.costPerKgUsd.toFixed(2)}</div>
+                    <td className="py-1.5 px-3">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="input !min-h-0 h-8 w-24 font-mono text-sm py-0.5 px-2 font-semibold"
+                        value={draftFor(material).costPerKgUsd}
+                        disabled={savingPriceId === material.id}
+                        onChange={(e) => setPriceDraft(material.id, { costPerKgUsd: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && isPriceDirty(material)) savePriceDraft(material);
+                          if (e.key === 'Escape') resetPriceDraft(material.id);
+                        }}
+                      />
                     </td>
-                    <td className="py-4 px-4 font-mono text-sm text-mist">
-                      {material.marketPriceUsd ? `$${material.marketPriceUsd.toFixed(2)}` : '—'}
+                    <td className="py-1.5 px-3">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        className="input !min-h-0 h-8 w-24 font-mono text-sm py-0.5 px-2 text-mist"
+                        value={draftFor(material).marketPriceUsd}
+                        disabled={savingPriceId === material.id}
+                        onChange={(e) => setPriceDraft(material.id, { marketPriceUsd: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && isPriceDirty(material)) savePriceDraft(material);
+                          if (e.key === 'Escape') resetPriceDraft(material.id);
+                        }}
+                      />
                     </td>
-                    <td className="py-4 px-4">
-                      <div className="flex space-x-2">
+                    <td className="py-1.5 px-3">
+                      <div className="flex flex-col gap-1">
+                        {renderPriceSaveActions(material)}
+                        <div className="flex space-x-2">
                         <button onClick={() => { setEditingMaterial(material); setShowModal(true); }} className="text-sm text-gold font-medium hover:underline">
                           Edit
                         </button>
@@ -365,6 +679,7 @@ const Library = () => {
                         >
                           {deleting === material.id ? 'Deleting...' : 'Delete'}
                         </button>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -408,17 +723,24 @@ const Library = () => {
                 </div>
                 <div>
                   <label className="block text-sm text-navy mb-1">Substrate Family</label>
-                  <select
+                  <input
+                    list="substrate-family-options"
                     value={editingMaterial.substrateFamily || ''}
-                    onChange={(e) => setEditingMaterial({ ...editingMaterial, substrateFamily: e.target.value || null })}
+                    onChange={(e) =>
+                      setEditingMaterial({
+                        ...editingMaterial,
+                        substrateFamily: e.target.value.trim() || null,
+                      })
+                    }
                     className="input w-full"
                     disabled={editingMaterial.type !== 'substrate'}
-                  >
-                    <option value="">— None —</option>
-                    {SUBSTRATE_FAMILIES.map(fam => (
-                      <option key={fam} value={fam}>{fam}</option>
+                    placeholder="Pick or type new family (e.g. EVOH)"
+                  />
+                  <datalist id="substrate-family-options">
+                    {substrateFamilies.map((fam) => (
+                      <option key={fam} value={fam} />
                     ))}
-                  </select>
+                  </datalist>
                 </div>
               </div>
               <div>
@@ -450,9 +772,16 @@ const Library = () => {
                 </div>
                 <div>
                   <label className="block text-sm text-navy mb-1">User Price/kg</label>
-                  <input type="number" step="0.01" value={editingMaterial.costPerKgUsd} onChange={(e) => {
-                    const val = Number(e.target.value);
-                    setEditingMaterial({ ...editingMaterial, costPerKgUsd: val, marketPriceUsd: editingMaterial.marketPriceUsd ?? val });
+                  <input type="number" step="0.01" min="0" value={priceInputValue(editingMaterial.costPerKgUsd)} onChange={(e) => {
+                    const val = roundUsd(Number(e.target.value));
+                    setEditingMaterial({
+                      ...editingMaterial,
+                      costPerKgUsd: val,
+                      marketPriceUsd:
+                        editingMaterial.marketPriceUsd == null && !editingMaterial.id
+                          ? val
+                          : editingMaterial.marketPriceUsd,
+                    });
                   }} className="input w-full" />
                 </div>
               </div>
@@ -461,10 +790,10 @@ const Library = () => {
                 <input
                   type="number"
                   step="0.01"
-                  value={editingMaterial.marketPriceUsd ?? ''}
-                  onChange={(e) => setEditingMaterial({ ...editingMaterial, marketPriceUsd: e.target.value ? Number(e.target.value) : null })}
+                  value={priceInputValue(editingMaterial.marketPriceUsd ?? editingMaterial.costPerKgUsd)}
+                  onChange={(e) => setEditingMaterial({ ...editingMaterial, marketPriceUsd: roundUsd(Number(e.target.value)) })}
                   className="input w-full"
-                  placeholder="Defaults to User Price if empty"
+                  placeholder="Defaults to User Price"
                 />
               </div>
               <div className="flex justify-end space-x-2 mt-4">
@@ -479,8 +808,9 @@ const Library = () => {
       {/* Library info */}
       <div className="mt-6 text-sm text-mist">
         <p>
-          <strong>Note:</strong> Material costs are stored in USD. Display prices are converted using your tenant's exchange rate.
-          Changes here affect all new estimates and re-quotes.
+          <strong>Excel:</strong> Save <code className="text-xs bg-slate px-1 rounded">Substrates Master.xlsx</code> at project root (or set <code className="text-xs bg-slate px-1 rounded">SUBSTRATES_EXCEL_PATH</code>), then <strong>Refresh from Excel</strong> — new rows insert, matched rows update. <strong>Prune orphans</strong> removes DB substrates not in Excel.
+          <strong className="ml-2">Market:</strong> <strong>Refresh market prices</strong> uses Yahoo futures (does not change User Price).
+          Edit prices inline, then <strong>Save prices</strong> on that row.
         </p>
       </div>
     </div>

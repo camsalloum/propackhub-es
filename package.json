@@ -15,7 +15,8 @@
     "test": "npm run test --workspaces",
     "lint": "npm run lint --workspaces",
     "format": "prettier --write .",
-    "update-materials": "tsx packages/server/src/scripts/update-materials-from-excel.ts"
+    "update-materials": "npm run update-materials --workspace=packages/server",
+    "db:sync-materials": "npm run db:sync-materials --workspace=packages/server"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

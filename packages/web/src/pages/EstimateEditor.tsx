@@ -10,11 +10,12 @@ import { usdToDisplay } from '../lib/currency';
 import { runClientCalculation, effectiveMarginPercent } from '../lib/estimateCalc';
 import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
 import CustomerAutocomplete from '../components/CustomerAutocomplete';
+import { groupMaterialsForPicker, type CategoryNode } from '../lib/materialTaxonomy';
 
 interface MaterialItem {
   id: string; name: string; type: string; solidPercent: number;
   density: string; costPerKgUsd: string; wastePercent: number; isSolventBased: boolean;
-  hoover?: string | null; substrateFamily?: string | null;
+  hoover?: string | null; substrateFamily?: string | null; subcategoryId?: string | null;
 }
 
 interface LayerItem {
@@ -44,6 +45,8 @@ const EstimateEditor = () => {
   const [layers, setLayers] = useState<LayerItem[]>([]);
   const [slabsState, setSlabsState] = useState<any[]>([]);
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
+  const [categories, setCategories] = useState<CategoryNode[]>([]);
+  const [proposals, setProposals] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [priceChanges, setPriceChanges] = useState<any[]>([]);
   const [requoteWarnings, setRequoteWarnings] = useState<string[]>([]);
@@ -77,6 +80,36 @@ const EstimateEditor = () => {
   const location = useLocation();
 
   const editingLayer = layers.find((l) => l.id === editingLayerId) ?? null;
+
+  const materialGroupsByType = useMemo(() => {
+    const types = ['substrate', 'ink', 'adhesive'] as const;
+    return Object.fromEntries(
+      types.map((t) => [t, groupMaterialsForPicker(materials, categories, t)])
+    ) as Record<string, ReturnType<typeof groupMaterialsForPicker>>;
+  }, [materials, categories]);
+
+  const renderMaterialOptions = (layerType: string, includeCrossType = false) => (
+    <>
+      {(materialGroupsByType[layerType] || []).map((group) => (
+        <optgroup key={group.label} label={group.label}>
+          {group.materials.map((m) => (
+            <option key={m.id} value={m.id} title={m.hoover || ''}>
+              {m.substrateFamily ? `${m.substrateFamily} – ` : ''}{m.name}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+      {includeCrossType && (
+        <optgroup label="Other types">
+          {materials.filter((m) => m.type !== layerType).map((m) => (
+            <option key={m.id} value={m.id} title={m.hoover || ''}>
+              {m.name} ({m.type})
+            </option>
+          ))}
+        </optgroup>
+      )}
+    </>
+  );
 
   const densityForMaterial = (materialId: string) => {
     const mat = materials.find((m) => m.id === materialId);
@@ -137,8 +170,13 @@ const EstimateEditor = () => {
     let custs: any[] = [];
 
     try {
-      mats = (await apiClient.getMaterials()) || [];
+      const [mats, cats] = await Promise.all([
+        apiClient.getMaterials(),
+        apiClient.getCategories().catch(() => []),
+      ]);
+      mats = mats || [];
       setMaterials(mats);
+      setCategories(cats || []);
     } catch (err) {
       console.error('Failed to load materials:', err);
       setLoadError('Could not load materials. Layer defaults may be incomplete.');
@@ -225,6 +263,12 @@ const EstimateEditor = () => {
         hoover: l.materialHoover || null,
       }));
       setEstimate(data);
+      try {
+        const propRows = await apiClient.getEstimateProposals(estimateId);
+        setProposals(propRows || []);
+      } catch {
+        setProposals([]);
+      }
       setLayers(mappedLayers);
       setSlabsState((data.slabs || []).map((s: any) => ({
         ...s, quantityKg: parseFloat(s.quantityKg) || 0, pricePerKg: parseFloat(s.pricePerKg) || 0,
@@ -390,7 +434,10 @@ const EstimateEditor = () => {
         try {
           const result = await apiClient.calculateEstimate(saved.id);
           applyCalculationResult({ ...estimate, ...saved }, result);
-        } catch (calcErr) { console.error('Calculate failed:', calcErr); }
+        } catch (calcErr) {
+          const msg = calcErr instanceof Error ? calcErr.message : 'Calculate failed';
+          alert(`Calculate failed: ${msg}`);
+        }
         finally { setCalculating(false); }
       }
     } catch (err: any) {
@@ -425,9 +472,49 @@ const EstimateEditor = () => {
     } catch (error) { console.error('Failed to download proposal PDF', error); }
   };
 
+  const handleSaveAsTemplate = async () => {
+    if (!estimate?.id) {
+      alert('Save the estimate before creating a template.');
+      return;
+    }
+    const name = prompt('Template name:', jobName || estimate.jobName);
+    if (!name?.trim()) return;
+    try {
+      await apiClient.createTemplate(name.trim(), estimate.id);
+      alert(`Template "${name.trim()}" saved. Find it under My Templates.`);
+    } catch (err) {
+      alert('Failed to save template: ' + (err instanceof Error ? err.message : 'Unknown'));
+    }
+  };
+
+  const downloadStoredProposal = async (proposalId: string) => {
+    try {
+      const blob = await apiClient.getStoredProposalPdf(proposalId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `proposal-${proposalId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download stored proposal PDF', error);
+      alert('Could not download stored proposal PDF.');
+    }
+  };
+
   const changeStatus = async (newStatus: 'sent' | 'won' | 'lost') => {
     if (!estimate?.id) { alert('Save the estimate before changing status'); return; }
-    try { await apiClient.updateEstimate(estimate.id, { status: newStatus }); await fetchEstimate(estimate.id); alert(`Status changed to ${newStatus}`); }
+    try {
+      await apiClient.updateEstimate(estimate.id, { status: newStatus });
+      await fetchEstimate(estimate.id);
+      if (newStatus === 'sent') {
+        alert('Marked sent. Proposal PDF saved to history when generation succeeded.');
+      } else {
+        alert(`Status changed to ${newStatus}`);
+      }
+    }
     catch (err) { alert('Failed to change status'); }
   };
 
@@ -669,9 +756,7 @@ const EstimateEditor = () => {
                               } : l));
                             }} className="input w-full font-medium text-sm" title={materials.find(m => m.id === layer.materialId)?.hoover || ''}>
                               <option value="">Select material</option>
-                              {materials.filter(m => m.type === layer.materialType).map(m => <option key={m.id} value={m.id} title={m.hoover || ''}>{m.substrateFamily ? `${m.substrateFamily} – ` : ''}{m.name}</option>)}
-                              <option value="" disabled>── All ──</option>
-                              {materials.filter(m => m.type !== layer.materialType).map(m => <option key={m.id} value={m.id} title={m.hoover || ''}>{m.name} ({m.type})</option>)}
+                              {renderMaterialOptions(layer.materialType, true)}
                             </select>
                           </td>
                           <td className="py-4 px-4">
@@ -891,6 +976,7 @@ const EstimateEditor = () => {
 
             <div className="space-y-2">
               <button onClick={handleSaveAndCalculate} className="btn-primary w-full">Save & Calculate</button>
+              <button onClick={handleSaveAsTemplate} className="btn-secondary w-full">Save as Template</button>
               <button onClick={downloadProposalPdf} className="btn-secondary w-full">Generate Proposal PDF</button>
               <button onClick={handleRequote} className="text-sm text-mist hover:text-ink w-full text-center py-2">Duplicate for re-quote</button>
             </div>
@@ -904,6 +990,31 @@ const EstimateEditor = () => {
               </div>
               <div className="mt-3 text-sm text-mist">Current: <strong>{estimate?.status || 'draft'}</strong></div>
             </div>
+
+            {proposals.length > 0 && (
+              <div className="card">
+                <h4 className="font-display font-semibold text-navy mb-3">Proposal history</h4>
+                <div className="space-y-2">
+                  {proposals.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between gap-2 text-sm border-b border-border pb-2 last:border-0">
+                      <div>
+                        <div>{p.sentAt ? new Date(p.sentAt).toLocaleString() : 'Sent'}</div>
+                        {p.validUntil && (
+                          <div className="text-xs text-mist">Valid until {new Date(p.validUntil).toLocaleDateString()}</div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="text-gold font-medium hover:underline shrink-0"
+                        onClick={() => downloadStoredProposal(p.id)}
+                      >
+                        PDF
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="card">
               <h4 className="font-display font-semibold text-navy mb-3">Activity</h4>
@@ -972,9 +1083,7 @@ const EstimateEditor = () => {
                 className="input w-full min-h-[48px]"
               >
                 <option value="">Select material</option>
-                {materials.map((m) => (
-                  <option key={m.id} value={m.id}>{m.name} ({m.type})</option>
-                ))}
+                {renderMaterialOptions(editingLayer.materialType, true)}
               </select>
             </div>
             <div>

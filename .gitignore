@@ -50,3 +50,6 @@ packages/*/.turbo/
 # Logs
 *.log
 logs/
+
+# Stored proposal PDFs
+packages/server/uploads/

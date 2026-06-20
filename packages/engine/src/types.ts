@@ -135,6 +135,17 @@ export interface CalculationResult {
   warnings: string[];
 }
 
+/** Thrown when a layer references a material ID not in the materials map. */
+export class MissingMaterialsError extends Error {
+  readonly materialIds: string[];
+
+  constructor(materialIds: string[]) {
+    super(`Missing material data for layer(s): ${materialIds.join(', ')}`);
+    this.name = 'MissingMaterialsError';
+    this.materialIds = materialIds;
+  }
+}
+
 export interface VisibilityProfile {
   // Structure & spec
   structureLayers: boolean;

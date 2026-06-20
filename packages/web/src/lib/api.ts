@@ -28,9 +28,11 @@ export class ApiClient {
     body?: unknown
   ): Promise<T> {
     const headers: Record<string, string> = {};
+    const writeMethods = new Set(['POST', 'PUT', 'PATCH']);
+    const payload =
+      body !== undefined ? body : writeMethods.has(method) ? {} : undefined;
 
-    // Only set Content-Type if there's a body
-    if (body) {
+    if (payload !== undefined) {
       headers['Content-Type'] = 'application/json';
     }
 
@@ -42,7 +44,7 @@ export class ApiClient {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      body: payload !== undefined ? JSON.stringify(payload) : undefined,
     });
 
     if (!response.ok) {
@@ -149,7 +151,32 @@ export class ApiClient {
   }
 
   refreshMaterialPrices() {
-    return this.request<{ updated: number; errors: string[]; changes: any[] }>('POST', '/api/v1/materials/refresh-prices');
+    return this.request<{
+      updated: number;
+      skipped: number;
+      errors: string[];
+      changes: { material: string; family: string; old: number; new: number; source: string }[];
+      sources: { family: string; resin: string; symbol: string | null; resinUsdPerKg: number; filmUsdPerKg: number }[];
+      note: string;
+    }>('POST', '/api/v1/materials/refresh-prices');
+  }
+
+  refreshMaterialsFromExcel(prune = false) {
+    return this.request<{
+      excelPath: string;
+      seedPath: string;
+      substrateCount: number;
+      totalMaterials: number;
+      tenantsSynced: number;
+      inserted: number;
+      updated: number;
+      orphans: number;
+      pruned: number;
+    }>('POST', '/api/v1/materials/refresh-from-excel', { prune });
+  }
+
+  pruneOrphanSubstrates() {
+    return this.request<{ pruned: number }>('POST', '/api/v1/materials/prune-orphans');
   }
 
   // Estimates
@@ -212,6 +239,39 @@ export class ApiClient {
 
   getMyTemplates() {
     return this.request<any[]>('GET', '/api/v1/templates?standard_only=false');
+  }
+
+  createTemplate(name: string, estimateId: string) {
+    return this.request<any>('POST', '/api/v1/templates', { name, estimateId });
+  }
+
+  getEstimateProposals(estimateId: string) {
+    return this.request<Array<{
+      id: string;
+      estimateId: string;
+      pdfPath: string | null;
+      validUntil: string | null;
+      sentAt: string | null;
+      createdAt: string | null;
+    }>>('GET', `/api/v1/estimates/${estimateId}/proposals`);
+  }
+
+  async getStoredProposalPdf(proposalId: string) {
+    const token = this.getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE_URL}/api/v1/proposals/${proposalId}/pdf`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || `API error: ${res.status}`);
+    }
+
+    return res.blob();
   }
 
   async getProposalPdf(id: string) {

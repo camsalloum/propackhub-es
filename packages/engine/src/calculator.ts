@@ -1,6 +1,6 @@
 import {
   Estimate, Layer, Material, CalculationResult,
-  EstimateDimensions, Process
+  EstimateDimensions, Process, MissingMaterialsError,
 } from './types';
 import { hasSolventBasedLayers } from './validator';
 
@@ -23,19 +23,7 @@ export function calculateEstimate(
   });
 
   if (missingMaterials.length > 0) {
-    warnings.push(`Missing material data for IDs: ${missingMaterials.join(', ')}`);
-    // Use placeholder materials for calculation to continue
-    missingMaterials.forEach(id => {
-      materials.set(id, {
-        id,
-        name: 'Unknown',
-        type: 'substrate',
-        solidPercent: 100,
-        density: 1.0,
-        costPerKgUsd: 0,
-        wastePercent: 0
-      });
-    });
+    throw new MissingMaterialsError(missingMaterials);
   }
 
   // Step 1: Calculate layer GSM and cost/m² (Laravel formulas)

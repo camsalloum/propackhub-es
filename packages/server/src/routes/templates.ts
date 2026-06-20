@@ -1,7 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest } from '../utils/auth';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, asc } from 'drizzle-orm';
 import { ensureTemplatesForTenant } from '../db/seed-templates';
 import { quantitiesForSlabTemplateKey } from '../db/seed-slab-templates';
 
@@ -237,10 +238,102 @@ export async function instantiateTemplateRoute(
   }
 }
 
+const CreateTemplateSchema = z.object({
+  name: z.string().min(1),
+  estimateId: z.string().uuid(),
+});
+
+/**
+ * POST /api/v1/templates
+ * Save current estimate structure as a tenant template (My Templates).
+ */
+export async function createTemplateRoute(
+  _fastify: FastifyInstance,
+  request: FastifyRequest<{ Body: z.infer<typeof CreateTemplateSchema> }>,
+  reply: FastifyReply
+) {
+  try {
+    await request.jwtVerify();
+    const tenantId = extractTenantFromRequest(request);
+    const { name, estimateId } = CreateTemplateSchema.parse(request.body);
+    const db = getDatabase();
+
+    const [estimate] = await db
+      .select()
+      .from(schema.estimates)
+      .where(and(eq(schema.estimates.id, estimateId), eq(schema.estimates.tenantId, tenantId)));
+
+    if (!estimate) {
+      return reply.status(404).send({ error: 'Estimate not found' });
+    }
+
+    const layers = await db
+      .select({
+        materialId: schema.layers.materialId,
+        micron: schema.layers.micron,
+        position: schema.layers.position,
+        materialType: schema.materials.type,
+      })
+      .from(schema.layers)
+      .leftJoin(schema.materials, eq(schema.layers.materialId, schema.materials.id))
+      .where(eq(schema.layers.estimateId, estimateId))
+      .orderBy(asc(schema.layers.position));
+
+    const processes = await db
+      .select()
+      .from(schema.processes)
+      .where(eq(schema.processes.estimateId, estimateId));
+
+    const defaultLayers = layers.map((l, i) => ({
+      layer_order: i + 1,
+      layer_type: l.materialType || 'substrate',
+      materialId: l.materialId,
+      default_micron: parseFloat(l.micron),
+    }));
+
+    const defaultProcesses = processes.map((p) => ({
+      process_key: p.name.toLowerCase().replace(/\s+/g, '_'),
+      enabled: p.enabled,
+    }));
+
+    const [template] = await db
+      .insert(schema.structureTemplates)
+      .values({
+        tenantId,
+        name,
+        pebiParentPg: name,
+        productType: estimate.productType,
+        materialClass: 'Custom',
+        structureType: 'Custom',
+        displayOrder: 900,
+        isStandard: false,
+        defaultDimensions: estimate.dimensions,
+        defaultLayers,
+        defaultProcesses,
+        defaultPrintingWebClass: estimate.printingWebClass,
+        solventMixEnabled: estimate.printingWebClass === 'wide_web',
+        isActive: true,
+      })
+      .returning();
+
+    return reply.status(201).send(template);
+  } catch (error: unknown) {
+    if (error instanceof z.ZodError) {
+      return reply.status(400).send({ error: 'Validation failed', details: error.errors });
+    }
+    console.error('Create template error:', error);
+    return reply.status(500).send({ error: 'Failed to create template' });
+  }
+}
+
 export async function registerTemplateRoutes(fastify: FastifyInstance) {
   fastify.get<{ Querystring: { standard_only?: string } }>(
     '/api/v1/templates',
     async (request, reply) => getTemplatesRoute(fastify, request, reply)
+  );
+  fastify.post<{ Body: z.infer<typeof CreateTemplateSchema> }>(
+    '/api/v1/templates',
+    async (request, reply) => createTemplateRoute(fastify, request, reply)
   );
   fastify.get<{ Params: { id: string } }>(
     '/api/v1/templates/:id',

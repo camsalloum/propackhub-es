@@ -219,9 +219,16 @@ export async function calculateEstimateRoute(
     const profile = await getUserVisibilityProfile(db, user.userId);
     const result = await calculateAndPersistEstimate(db, id, tenantId);
     return reply.send(stripCalculationResult(result, profile));
-  } catch (error: any) {
-    if (error.message === 'Estimate not found') {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'Estimate not found') {
       return reply.status(404).send({ error: 'Estimate not found' });
+    }
+    const { MissingMaterialsError } = await import('@es/engine');
+    if (error instanceof MissingMaterialsError) {
+      return reply.status(400).send({
+        error: error.message,
+        materialIds: error.materialIds,
+      });
     }
     console.error('Calculate estimate error:', error);
     return reply.status(500).send({ error: 'Failed to calculate estimate' });
@@ -632,6 +639,7 @@ async function updateEstimateRoute(
   try {
     await request.jwtVerify();
     const tenantId = extractTenantFromRequest(request);
+    const user = extractUserFromRequest(request);
     const { id } = request.params;
     const db = getDatabase();
 
@@ -668,12 +676,24 @@ async function updateEstimateRoute(
         updates.sentAt = sentAt;
         updates.validUntil = new Date(sentAt.getTime() + validDays * 86400000);
         try {
-          await db.insert(schema.proposals).values({
+          const [proposal] = await db.insert(schema.proposals).values({
             tenantId,
             estimateId: id,
             validUntil: updates.validUntil,
             sentAt,
-          });
+          }).returning();
+
+          try {
+            const { buildProposalPdfBuffer, saveProposalPdf } = await import('../services/proposal-pdf');
+            const pdfBuffer = await buildProposalPdfBuffer(db, id, tenantId, user.userId);
+            const pdfPath = saveProposalPdf(tenantId, proposal.id, pdfBuffer);
+            await db
+              .update(schema.proposals)
+              .set({ pdfPath })
+              .where(eq(schema.proposals.id, proposal.id));
+          } catch (pdfErr) {
+            console.warn('Failed to persist proposal PDF:', pdfErr);
+          }
         } catch (propErr) {
           console.warn('Failed to create proposal record:', propErr);
         }
@@ -1164,5 +1184,67 @@ export async function registerEstimateRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { id: string } }>(
     '/api/v1/estimates/:id/proposal-pdf',
     async (request, reply) => generateProposalPdfRoute(fastify, request, reply)
+  );
+
+  fastify.get<{ Params: { id: string } }>(
+    '/api/v1/estimates/:id/proposals',
+    async (request, reply) => {
+      try {
+        await request.jwtVerify();
+        const tenantId = extractTenantFromRequest(request);
+        const { id } = request.params;
+        const db = getDatabase();
+
+        const rows = await db
+          .select()
+          .from(schema.proposals)
+          .where(and(eq(schema.proposals.estimateId, id), eq(schema.proposals.tenantId, tenantId)))
+          .orderBy(desc(schema.proposals.sentAt));
+
+        return reply.send(rows);
+      } catch (error: unknown) {
+        console.error('List proposals error:', error);
+        return reply.status(500).send({ error: 'Failed to list proposals' });
+      }
+    }
+  );
+
+  fastify.get<{ Params: { proposalId: string } }>(
+    '/api/v1/proposals/:proposalId/pdf',
+    async (request, reply) => {
+      try {
+        await request.jwtVerify();
+        const tenantId = extractTenantFromRequest(request);
+        const { proposalId } = request.params;
+        const db = getDatabase();
+
+        const [proposal] = await db
+          .select()
+          .from(schema.proposals)
+          .where(and(eq(schema.proposals.id, proposalId), eq(schema.proposals.tenantId, tenantId)));
+
+        if (!proposal) {
+          return reply.status(404).send({ error: 'Proposal not found' });
+        }
+
+        if (proposal.pdfPath) {
+          const { readStoredProposalPdf } = await import('../services/proposal-pdf');
+          const buffer = readStoredProposalPdf(proposal.pdfPath);
+          if (buffer) {
+            reply.header('Content-Type', 'application/pdf');
+            return reply.send(buffer);
+          }
+        }
+
+        const { buildProposalPdfBuffer } = await import('../services/proposal-pdf');
+        const user = extractUserFromRequest(request);
+        const buffer = await buildProposalPdfBuffer(db, proposal.estimateId, tenantId, user.userId);
+        reply.header('Content-Type', 'application/pdf');
+        return reply.send(buffer);
+      } catch (error: unknown) {
+        console.error('Get proposal PDF error:', error);
+        return reply.status(500).send({ error: 'Failed to get proposal PDF' });
+      }
+    }
   );
 }

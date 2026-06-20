@@ -71,6 +71,10 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       return reply.status(403).send({ error: 'Forbidden' });
     }
 
+    if (error.statusCode === 415) {
+      return reply.status(415).send({ error: 'Content-Type must be application/json' });
+    }
+
     return reply.status(500).send({ error: 'Internal server error' });
   });
 

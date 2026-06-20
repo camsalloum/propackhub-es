@@ -5,13 +5,13 @@
     "type": "substrate",
     "solidPercent": 100,
     "density": 0.91,
-    "costPerKgUsd": 2.2,
+    "costPerKgUsd": 3,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "BOPP",
     "substrateGrade": "BOPP Transparent",
-    "hoover": "=B2",
-    "marketPriceUsd": 2.2
+    "hoover": "BOPP Transparent",
+    "marketPriceUsd": 3
   },
   {
     "key": "bopp-transparent-hr",
@@ -210,8 +210,8 @@
     "marketPriceUsd": 2.9
   },
   {
-    "key": "pet-twist-transparent",
-    "name": "PET Twist Transparent",
+    "key": "pet-twist-transparent-twist-transparent",
+    "name": "PET Twist Transparent — Twist Transparent",
     "type": "substrate",
     "solidPercent": 100,
     "density": 1.4,
@@ -224,8 +224,8 @@
     "marketPriceUsd": 2.3
   },
   {
-    "key": "pet-twist-transparent",
-    "name": "PET Twist Transparent",
+    "key": "pet-twist-transparent-twist-white",
+    "name": "PET Twist Transparent — Twist White",
     "type": "substrate",
     "solidPercent": 100,
     "density": 1.4,
@@ -313,13 +313,13 @@
     "type": "substrate",
     "solidPercent": 100,
     "density": 0.92,
-    "costPerKgUsd": 2.1,
+    "costPerKgUsd": 2.2,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "PE",
     "substrateGrade": "PE Shrink PCR",
     "hoover": "Collation Film with 50% PCR",
-    "marketPriceUsd": 2.1
+    "marketPriceUsd": 2.2
   },
   {
     "key": "cpp-transparent",
@@ -374,7 +374,7 @@
     "isSolventBased": false,
     "substrateFamily": "CPP",
     "substrateGrade": "CPP Retort",
-    "hoover": "Retort ",
+    "hoover": "Retort",
     "marketPriceUsd": 2.5
   },
   {
@@ -458,7 +458,7 @@
     "isSolventBased": false,
     "substrateFamily": "PAPER",
     "substrateGrade": "Paper White Coated",
-    "hoover": "=Table11[[#This Row],[Substrate Grade]]",
+    "hoover": "Paper White Coated",
     "marketPriceUsd": 1.5
   },
   {
@@ -472,7 +472,7 @@
     "isSolventBased": false,
     "substrateFamily": "PAPER",
     "substrateGrade": "Kraft Paper Brown",
-    "hoover": "=Table11[[#This Row],[Substrate Grade]]",
+    "hoover": "Kraft Paper Brown",
     "marketPriceUsd": 1.1
   },
   {
@@ -486,7 +486,7 @@
     "isSolventBased": false,
     "substrateFamily": "PAPER",
     "substrateGrade": "Kraft Paper White",
-    "hoover": "=Table11[[#This Row],[Substrate Grade]]",
+    "hoover": "Kraft Paper White",
     "marketPriceUsd": 1.3
   },
   {
@@ -500,7 +500,7 @@
     "isSolventBased": false,
     "substrateFamily": "PAPER",
     "substrateGrade": "MG Paper",
-    "hoover": "=Table11[[#This Row],[Substrate Grade]]",
+    "hoover": "MG Paper",
     "marketPriceUsd": 1
   },
   {
@@ -514,7 +514,7 @@
     "isSolventBased": false,
     "substrateFamily": "PAPER",
     "substrateGrade": "GP Paper",
-    "hoover": "=Table11[[#This Row],[Substrate Grade]]",
+    "hoover": "GP Paper",
     "marketPriceUsd": 2
   },
   {
@@ -528,7 +528,7 @@
     "isSolventBased": false,
     "substrateFamily": "PAPER",
     "substrateGrade": "C1S Paper",
-    "hoover": "=Table11[[#This Row],[Substrate Grade]]",
+    "hoover": "C1S Paper",
     "marketPriceUsd": 1.5
   },
   {
@@ -542,12 +542,12 @@
     "isSolventBased": false,
     "substrateFamily": "PAPER",
     "substrateGrade": "C2S Paper",
-    "hoover": "=Table11[[#This Row],[Substrate Grade]]",
+    "hoover": "C2S Paper",
     "marketPriceUsd": 1.4
   },
   {
-    "key": "pvc-shrink",
-    "name": "PVC Shrink",
+    "key": "pvc-shrink-normal-shrink-blown",
+    "name": "PVC Shrink — Normal Shrink Blown",
     "type": "substrate",
     "solidPercent": 100,
     "density": 1.35,
@@ -560,8 +560,8 @@
     "marketPriceUsd": 1.5
   },
   {
-    "key": "pvc-shrink",
-    "name": "PVC Shrink",
+    "key": "pvc-shrink-high-shrink-cast",
+    "name": "PVC Shrink — High Shrink Cast",
     "type": "substrate",
     "solidPercent": 100,
     "density": 1.35,
@@ -648,35 +648,35 @@
     "name": "Ink SB (Solvent Based)",
     "type": "ink",
     "solidPercent": 30,
-    "density": 1.0,
-    "costPerKgUsd": 12.0,
+    "density": 1,
+    "costPerKgUsd": 12,
     "wastePercent": 0,
     "isSolventBased": true,
     "substrateFamily": null,
     "substrateGrade": null,
     "hoover": null,
-    "marketPriceUsd": 12.0
+    "marketPriceUsd": 12
   },
   {
     "key": "ink-uv",
     "name": "Ink UV",
     "type": "ink",
     "solidPercent": 100,
-    "density": 1.0,
-    "costPerKgUsd": 15.0,
+    "density": 1,
+    "costPerKgUsd": 15,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": null,
     "substrateGrade": null,
     "hoover": null,
-    "marketPriceUsd": 15.0
+    "marketPriceUsd": 15
   },
   {
     "key": "adhesive-sb",
     "name": "Adhesive SB (Solvent Based)",
     "type": "adhesive",
     "solidPercent": 100,
-    "density": 1.0,
+    "density": 1,
     "costPerKgUsd": 6.5,
     "wastePercent": 0,
     "isSolventBased": true,
@@ -690,7 +690,7 @@
     "name": "Adhesive WB (Water Based)",
     "type": "adhesive",
     "solidPercent": 100,
-    "density": 1.0,
+    "density": 1,
     "costPerKgUsd": 5.8,
     "wastePercent": 0,
     "isSolventBased": false,

@@ -3,8 +3,8 @@
     {
       "name": "yahoo",
       "type": "api",
-      "url": "https://query1.finance.yahoo.com/v7/finance/quote",
-      "note": "Free Yahoo Finance API - no auth required"
+      "url": "https://query1.finance.yahoo.com/v8/finance/chart",
+      "note": "Free Yahoo Finance chart/quote API — polymer futures in USD/lb"
     }
   ],
   "resin_mapping": {
@@ -12,16 +12,18 @@
     "LLDPE": ["yahoo:LLDPE=F"],
     "HDPE": ["yahoo:HDPE=F"],
     "PP": ["yahoo:PP=F"],
-    "PET": ["yahoo:PET-F"]
+    "PET": ["yahoo:PET=F"]
   },
   "conversion_factors": {
     "PE": 1.15,
-    "BOPP": 1.20,
+    "BOPP": 1.2,
     "PET": 1.25,
     "CPP": 1.18,
-    "PA": 1.30,
-    "PAPER": 1.10,
-    "SLEEVE": 1.22
+    "PA": 1.3,
+    "PAPER": 1.1,
+    "SLEEVE": 1.22,
+    "SPECIALTY": 1.2
   },
-  "alert_threshold_percent": 5
+  "alert_threshold_percent": 2,
+  "futures_unit": "USD_per_lb"
 }

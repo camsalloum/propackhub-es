@@ -5,6 +5,20 @@ import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth'
 import { eq, and } from 'drizzle-orm';
 import { getEffectiveProfile, stripMaterialRow } from '../utils/visibility';
 import { ensureMaterialsForTenant } from '../db/seed-materials';
+import { roundUsd } from '../utils/usd';
+
+function normalizeMaterialPrices<T extends { costPerKgUsd?: number; marketPriceUsd?: number | null }>(
+  data: T
+): T {
+  const out = { ...data };
+  if (data.costPerKgUsd != null) {
+    out.costPerKgUsd = roundUsd(data.costPerKgUsd);
+  }
+  if (data.marketPriceUsd != null) {
+    out.marketPriceUsd = roundUsd(data.marketPriceUsd);
+  }
+  return out;
+}
 
 const MaterialSchema = z.object({
   name: z.string().min(1),
@@ -36,6 +50,7 @@ export async function getMaterialsRoute(
       .where(eq(schema.users.id, user.userId));
 
     const profile = getEffectiveProfile(user.role, userRecord?.visibilityProfile);
+    const isRmManager = user.role === 'tenant_admin' || user.role === 'platform_admin';
 
     await ensureMaterialsForTenant(tenantId);
     const { ensureCategoriesForTenant } = await import('../db/seed-categories');
@@ -46,7 +61,9 @@ export async function getMaterialsRoute(
       .from(schema.materials)
       .where(eq(schema.materials.tenantId, tenantId));
 
-    const visibleMaterials = materials.map((mat: (typeof materials)[number]) => stripMaterialRow(mat, profile));
+    const visibleMaterials = isRmManager
+      ? materials
+      : materials.map((mat: (typeof materials)[number]) => stripMaterialRow(mat, profile));
 
     return reply.send(visibleMaterials);
   } catch (error: any) {
@@ -63,7 +80,7 @@ export async function createMaterialRoute(
   try {
     await request.jwtVerify();
     const tenantId = extractTenantFromRequest(request);
-    const data = MaterialSchema.parse(request.body);
+    const data = normalizeMaterialPrices(MaterialSchema.parse(request.body));
 
     const db = getDatabase();
 
@@ -72,7 +89,7 @@ export async function createMaterialRoute(
       .values({
         tenantId,
         ...data,
-        marketPriceUsd: data.marketPriceUsd ?? data.costPerKgUsd,
+        marketPriceUsd: roundUsd(data.marketPriceUsd ?? data.costPerKgUsd),
       })
       .returning();
 
@@ -95,17 +112,19 @@ export async function updateMaterialRoute(
     await request.jwtVerify();
     const tenantId = extractTenantFromRequest(request);
     const { id } = request.params;
-    const data = MaterialSchema.partial().parse(request.body);
+    const data = normalizeMaterialPrices(MaterialSchema.partial().parse(request.body));
 
     const db = getDatabase();
 
+    const { marketPriceUsd, ...rest } = data;
+    const patch: Record<string, unknown> = { ...rest, updatedAt: new Date() };
+    if (marketPriceUsd !== undefined) {
+      patch.marketPriceUsd = marketPriceUsd;
+    }
+
     const [material] = await db
       .update(schema.materials)
-      .set({
-        ...data,
-        marketPriceUsd: data.marketPriceUsd ?? data.costPerKgUsd,
-        updatedAt: new Date(),
-      })
+      .set(patch)
       .where(and(eq(schema.materials.id, id), eq(schema.materials.tenantId, tenantId)))
       .returning();
 
@@ -161,25 +180,77 @@ export async function registerMaterialRoutes(fastify: FastifyInstance) {
     async (request, reply) => updateMaterialRoute(fastify, request, reply)
   );
 
-  // Refresh market prices (platform admin only)
-  fastify.post(
-    '/api/v1/materials/refresh-prices',
+  // Refresh user prices from Substrates Master.xlsx
+  fastify.post<{ Body: { prune?: boolean } }>(
+    '/api/v1/materials/refresh-from-excel',
     async (request, reply) => {
-      try {
-        await request.jwtVerify();
-        const user = extractUserFromRequest(request);
-        if (user.role !== 'platform_admin') {
-          return reply.status(403).send({ error: 'Platform admin only' });
-        }
-        const { refreshMaterialPrices } = await import('../services/price-scraper');
-        const result = await refreshMaterialPrices();
-        return reply.send(result);
-      } catch (error: any) {
-        console.error('Refresh prices error:', error);
-        return reply.status(500).send({ error: 'Failed to refresh prices' });
+    try {
+      await request.jwtVerify();
+      const user = extractUserFromRequest(request);
+      const tenantId = extractTenantFromRequest(request);
+      if (user.role !== 'tenant_admin' && user.role !== 'platform_admin') {
+        return reply.status(403).send({ error: 'Admin only' });
       }
+
+      const prune = request.body?.prune === true;
+      const { refreshMaterialsFromExcel } = await import('../services/materials-excel-refresh');
+      const result = await refreshMaterialsFromExcel(tenantId, {
+        syncAllTenants: false,
+        pruneOrphans: prune,
+      });
+      return reply.send(result);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Refresh from Excel error:', error);
+      return reply.status(500).send({
+        error: message.includes('not found')
+          ? 'Substrates Master.xlsx not found (set SUBSTRATES_EXCEL_PATH or place at project root)'
+          : `Failed to refresh from Excel: ${message}`,
+      });
     }
-  );
+  });
+
+  // Prune substrate rows not in Excel (no price sync)
+  fastify.post('/api/v1/materials/prune-orphans', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+      const user = extractUserFromRequest(request);
+      const tenantId = extractTenantFromRequest(request);
+      if (user.role !== 'tenant_admin' && user.role !== 'platform_admin') {
+        return reply.status(403).send({ error: 'Admin only' });
+      }
+
+      const { buildMasterMaterialsFromExcel, resolveSubstratesExcelPath } = await import(
+        '../db/master-materials-io'
+      );
+      const { pruneOrphanSubstratesForTenant } = await import('../db/seed-materials');
+      const materials = buildMasterMaterialsFromExcel(resolveSubstratesExcelPath());
+      const pruned = await pruneOrphanSubstratesForTenant(tenantId, materials);
+      return reply.send({ pruned });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Prune orphans error:', error);
+      return reply.status(500).send({ error: `Failed to prune orphans: ${message}` });
+    }
+  });
+
+  // Refresh market prices from free futures feeds (market column only)
+  fastify.post('/api/v1/materials/refresh-prices', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+      const user = extractUserFromRequest(request);
+      const tenantId = extractTenantFromRequest(request);
+      if (user.role !== 'tenant_admin' && user.role !== 'platform_admin') {
+        return reply.status(403).send({ error: 'Admin only' });
+      }
+      const { refreshMaterialPrices } = await import('../services/price-scraper');
+      const result = await refreshMaterialPrices(tenantId);
+      return reply.send(result);
+    } catch (error: any) {
+      console.error('Refresh prices error:', error);
+      return reply.status(500).send({ error: 'Failed to refresh market prices' });
+    }
+  });
 
   fastify.delete<{ Params: { id: string } }>(
     '/api/v1/materials/:id',

@@ -1,9 +1,9 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-06-19 23:50 UTC  
-**Session:** Phase 2 Complete — All 50+ spec items implemented ✅
+**Last updated:** 2026-06-20  
+**Session:** Substrate sync audit plan implemented (families, Excel prune, templates, proposals)
 
-## Status: ✅ PHASE 1 + PHASE 2 100% COMPLETE
+## Status: ✅ PHASE 1 + PHASE 2 COMPLETE | Substrate library synced
 
 - **Workspace:** `D:\ProPackHub\apps\estimation-studio\`
 - **Spec:** [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md) — 50+ items
@@ -34,6 +34,7 @@
 | PWA service worker (Vite prod assets) | ✅ |
 | Mobile: bottom nav, cards, sheets, swipe delete | ✅ |
 | Platform admin: master library API + UI | ✅ |
+| **Substrates Master (46 grades)** | ✅ Excel import + `db:sync-materials` |
 | PEBI SSO stub | ✅ |
 | Categories + subcategories (taxonomy, seeded on register) | ✅ |
 | Slab templates (standard/large, seeded on register) | ✅ |
@@ -98,6 +99,11 @@ cd packages/server && npm run db:patch
 cd ../.. && npm run start:servers
 # http://localhost:5000 (web)
 # http://localhost:5001 (api)
+
+# Refresh substrate library from Excel
+npm run update-materials
+npm run db:sync-materials
+# Or use Library → "Refresh from Excel" (tenant admin)
 
 # Run tests
 cd packages/engine && npm run test       # 12/12 ✅

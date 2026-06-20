@@ -3,11 +3,7 @@ import { Search, Plus, RefreshCw, FileSpreadsheet } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { roundUsd } from '../lib/currency';
 import { SkeletonTableRows } from '../components/Skeleton';
-import {
-  deriveSubstrateFamilies,
-  materialMatchesCategory,
-  type CategoryNode,
-} from '../lib/materialTaxonomy';
+import { deriveSubstrateFamilies, deriveSubstrateGrades } from '../lib/materialTaxonomy';
 
 interface Material {
   id: string;
@@ -21,10 +17,25 @@ interface Material {
   substrateGrade?: string | null;
   hoover?: string | null;
   marketPriceUsd?: number | null;
-  subcategoryId?: string | null;
 }
 
 type PriceDraft = { costPerKgUsd: string; marketPriceUsd: string };
+
+const PACKAGING_FAMILY = 'Packaging';
+type MaterialFormKind = 'substrate' | 'ink' | 'adhesive' | 'packaging';
+
+function isPackagingMaterial(m: Pick<Material, 'type' | 'substrateFamily'>): boolean {
+  return m.type === 'substrate' && m.substrateFamily === PACKAGING_FAMILY;
+}
+
+function formKindFromMaterial(m: Material): MaterialFormKind {
+  if (isPackagingMaterial(m)) return 'packaging';
+  return m.type;
+}
+
+function displayMaterialType(m: Material): string {
+  return isPackagingMaterial(m) ? 'packaging' : m.type;
+}
 
 function savedMarket(m: Material): number {
   return roundUsd(m.marketPriceUsd ?? m.costPerKgUsd);
@@ -55,10 +66,8 @@ function parseMaterialRow(m: Record<string, unknown>): Material {
 
 const Library = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'substrate' | 'ink' | 'adhesive'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'substrate' | 'ink' | 'adhesive' | 'packaging'>('all');
   const [familyFilter, setFamilyFilter] = useState<string>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [categories, setCategories] = useState<CategoryNode[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,9 +119,33 @@ const Library = () => {
   };
 
   const substrateFamilies = useMemo(() => deriveSubstrateFamilies(materials), [materials]);
+  const substrateGrades = useMemo(
+    () => deriveSubstrateGrades(materials, editingMaterial?.substrateFamily),
+    [materials, editingMaterial?.substrateFamily]
+  );
+  const packagingItems = useMemo(
+    () =>
+      materials
+        .filter((m) => isPackagingMaterial(m))
+        .map((m) => m.substrateGrade || m.name)
+        .filter(Boolean),
+    [materials]
+  );
+  const editingFormKind = editingMaterial ? formKindFromMaterial(editingMaterial) : 'substrate';
 
   const openCreateModal = () => {
-    setEditingMaterial({ id: '', name: '', type: 'substrate', solidPercent: 100, density: 0.91, wastePercent: 0, costPerKgUsd: 0, substrateFamily: 'BOPP', substrateGrade: '', hoover: '' });
+    setEditingMaterial({
+      id: '',
+      name: '',
+      type: 'substrate',
+      solidPercent: 100,
+      density: 0.91,
+      wastePercent: 0,
+      costPerKgUsd: 0,
+      substrateFamily: '',
+      substrateGrade: '',
+      hoover: '',
+    });
     setShowModal(true);
   };
 
@@ -123,28 +156,26 @@ const Library = () => {
 
   const handleRefreshFromExcel = async () => {
     const proceed = confirm(
-      'Reload substrates from Substrates Master.xlsx?\n\n' +
-        'Save the Excel file at project root (or SUBSTRATES_EXCEL_PATH) before continuing.\n\n' +
-        'User prices and new rows will be synced. Market prices follow Excel.'
+      'Reload all Master Data.xlsx sheets?\n\n' +
+        'Substrate, Ink & Coating, Adhesive, Packaging, plus product types and units.\n\n' +
+        'Rows removed from Excel will be deleted from your library.\n' +
+        'Save the Excel file before continuing.'
     );
     if (!proceed) return;
 
-    const alsoPrune = confirm(
-      'Remove orphan substrates?\n\n' +
-        'Yes = delete tenant substrate rows that are NOT in Excel (keeps ink/adhesive).\n' +
-        'No = sync only (orphans remain in library).'
-    );
-
     try {
       setRefreshingExcel(true);
-      const result = await apiClient.refreshMaterialsFromExcel(alsoPrune);
+      const result = await apiClient.refreshMaterialsFromExcel(true);
       await fetchMaterials();
       const orphanNote =
         result.orphans > 0
-          ? `\n${result.orphans} orphan(s) in library${alsoPrune ? `, ${result.pruned} removed` : ' (not removed)'}.`
+          ? `\n${result.orphans} orphan(s) removed (${result.pruned} deleted).`
           : '';
       alert(
-        `Excel refresh complete.\n${result.substrateCount} substrates in file.\n` +
+        `Excel refresh complete.\n` +
+          `${result.substrateCount} substrates, ${result.inkCount} inks, ` +
+          `${result.adhesiveCount} adhesives, ${result.packagingCount} packaging.\n` +
+          `${result.reference.productTypes} product types, ${result.reference.units} units.\n` +
           `${result.inserted} inserted, ${result.updated} updated.${orphanNote}`
       );
     } catch (err) {
@@ -157,7 +188,7 @@ const Library = () => {
   const handlePruneOrphans = async () => {
     if (
       !confirm(
-        'Remove substrate rows in your library that are NOT in Substrates Master.xlsx?\n\nInk and adhesive rows are never removed.'
+        'Remove library rows that are NOT in Master Data.xlsx?\n\nGeneric costing inks/adhesives are never removed.'
       )
     ) {
       return;
@@ -202,11 +233,48 @@ const Library = () => {
 
   const handleSaveMaterial = async () => {
     if (!editingMaterial) return;
+
+    const isPackaging = isPackagingMaterial(editingMaterial);
+    const isSubstrate = editingMaterial.type === 'substrate' && !isPackaging;
+    const family = editingMaterial.substrateFamily?.trim().toUpperCase() || null;
+    const grade = editingMaterial.substrateGrade?.trim() || null;
+    let name = editingMaterial.name.trim();
+
+    if (isPackaging) {
+      const item = grade || name;
+      if (!item) {
+        alert('Enter a packaging item name (e.g. Pallet, Wrapping Film).');
+        return;
+      }
+      name = item;
+    } else if (isSubstrate) {
+      if (!family) {
+        alert('Enter a substrate family (pick from list or type a new one, e.g. EVOH).');
+        return;
+      }
+      if (!grade) {
+        alert('Enter a substrate grade (type a new grade name).');
+        return;
+      }
+      if (!name) name = grade;
+    } else if (!name) {
+      alert('Enter a material name.');
+      return;
+    }
+
     const payload = {
-      ...editingMaterial,
+      name,
+      type: editingMaterial.type,
+      solidPercent: editingMaterial.solidPercent,
+      density: editingMaterial.density,
+      wastePercent: editingMaterial.wastePercent ?? 0,
       costPerKgUsd: roundUsd(editingMaterial.costPerKgUsd),
       marketPriceUsd: roundUsd(editingMaterial.marketPriceUsd ?? editingMaterial.costPerKgUsd),
+      substrateFamily: isPackaging ? PACKAGING_FAMILY : isSubstrate ? family : editingMaterial.substrateFamily,
+      substrateGrade: isPackaging ? name : isSubstrate ? grade : editingMaterial.substrateGrade,
+      hoover: editingMaterial.hoover?.trim() || null,
     };
+
     try {
       if (editingMaterial.id) {
         const updated = await apiClient.updateMaterial(editingMaterial.id, payload) as Material;
@@ -229,12 +297,8 @@ const Library = () => {
     try {
       setLoading(true);
       setError(null);
-      const [data, cats] = await Promise.all([
-        apiClient.getMaterials(),
-        apiClient.getCategories().catch(() => []),
-      ]);
+      const data = await apiClient.getMaterials();
       setMaterials((data || []).map((m: Record<string, unknown>) => parseMaterialRow(m)));
-      setCategories(cats || []);
       setPriceDrafts({});
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load materials');
@@ -321,10 +385,16 @@ const Library = () => {
     const matchesSearch = material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (material.substrateFamily || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (material.hoover || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = activeFilter === 'all' || material.type === activeFilter;
+    const matchesFilter =
+      activeFilter === 'all' ||
+      (activeFilter === 'packaging' && material.substrateFamily === 'Packaging') ||
+      (activeFilter === 'substrate' &&
+        material.type === 'substrate' &&
+        material.substrateFamily !== 'Packaging') ||
+      (activeFilter === 'ink' && material.type === 'ink') ||
+      (activeFilter === 'adhesive' && material.type === 'adhesive');
     const matchesFamily = familyFilter === 'all' || material.substrateFamily === familyFilter;
-    const matchesCategory = materialMatchesCategory(material, categoryFilter, categories);
-    return matchesSearch && matchesFilter && matchesFamily && matchesCategory;
+    return matchesSearch && matchesFilter && matchesFamily;
   });
 
   const getTypeColor = (type: string) => {
@@ -332,6 +402,7 @@ const Library = () => {
       case 'substrate': return 'bg-blue-100 text-blue-800';
       case 'ink': return 'bg-purple-100 text-purple-800';
       case 'adhesive': return 'bg-green-100 text-green-800';
+      case 'packaging': return 'bg-teal-100 text-teal-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -347,6 +418,12 @@ const Library = () => {
       case 'PAPER': return 'bg-orange-50 text-orange-700 border-orange-200';
       case 'SLEEVE': return 'bg-violet-50 text-violet-700 border-violet-200';
       case 'SPECIALTY': return 'bg-pink-50 text-pink-700 border-pink-200';
+      case 'Packaging': return 'bg-teal-50 text-teal-700 border-teal-200';
+      case 'Solvent Based': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'UV-LED': return 'bg-violet-50 text-violet-700 border-violet-200';
+      case 'Solvent Base': return 'bg-green-50 text-green-700 border-green-200';
+      case 'Solvent Less': return 'bg-lime-50 text-lime-700 border-lime-200';
+      case 'Mono Component': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       default: return 'bg-gray-50 text-gray-600 border-gray-200';
     }
   };
@@ -373,42 +450,53 @@ const Library = () => {
 
   return (
     <div>
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Raw Materials</h1>
-          <p className="text-mist mt-2">Manage substrate prices, properties & grades. Edit prices in the table, then click <strong>Save prices</strong> on that row.</p>
-        </div>
-        <div className="mt-4 lg:mt-0 flex flex-wrap gap-2">
+      <div className="mb-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Raw Materials</h1>
+            <p className="text-mist mt-2 text-sm">
+              Edit prices in the table, then <strong>Save prices</strong> on that row.
+            </p>
+          </div>
           <button
-            onClick={handleRefreshFromExcel}
-            disabled={refreshingExcel || refreshingMarket}
-            className="btn-secondary inline-flex items-center space-x-2"
-            title="Reload from Substrates Master.xlsx at project root"
+            onClick={openCreateModal}
+            className="btn-primary inline-flex items-center justify-center space-x-2 shrink-0 w-full sm:w-auto"
           >
-            <FileSpreadsheet className={`w-4 h-4 ${refreshingExcel ? 'animate-pulse' : ''}`} />
-            <span>{refreshingExcel ? 'Loading Excel…' : 'Refresh from Excel'}</span>
-          </button>
-          <button
-            onClick={handlePruneOrphans}
-            disabled={refreshingExcel || refreshingMarket}
-            className="btn-secondary inline-flex items-center space-x-2"
-            title="Delete substrate rows not in Excel"
-          >
-            <span>Prune orphans</span>
-          </button>
-          <button
-            onClick={handleRefreshMarketPrices}
-            disabled={refreshingMarket || refreshingExcel}
-            className="btn-secondary inline-flex items-center space-x-2"
-            title="Update market prices from Yahoo Finance polymer futures (free)"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshingMarket ? 'animate-spin' : ''}`} />
-            <span>{refreshingMarket ? 'Fetching market…' : 'Refresh market prices'}</span>
-          </button>
-          <button onClick={openCreateModal} className="btn-primary inline-flex items-center space-x-2">
             <Plus className="w-5 h-5" />
             <span>Add Material</span>
           </button>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-lg border border-border bg-slate/40">
+          <span className="text-xs font-medium text-mist uppercase tracking-wide shrink-0">Data sync</span>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleRefreshFromExcel}
+              disabled={refreshingExcel || refreshingMarket}
+              className="btn-secondary inline-flex items-center space-x-2 text-sm py-2"
+              title="Reload from Master Data.xlsx"
+            >
+              <FileSpreadsheet className={`w-4 h-4 ${refreshingExcel ? 'animate-pulse' : ''}`} />
+              <span>{refreshingExcel ? 'Loading Excel…' : 'Refresh from Excel'}</span>
+            </button>
+            <button
+              onClick={handlePruneOrphans}
+              disabled={refreshingExcel || refreshingMarket}
+              className="btn-secondary text-sm py-2"
+              title="Delete substrate rows not in Excel"
+            >
+              Prune orphans
+            </button>
+            <button
+              onClick={handleRefreshMarketPrices}
+              disabled={refreshingMarket || refreshingExcel}
+              className="btn-secondary inline-flex items-center space-x-2 text-sm py-2"
+              title="Update market prices from Yahoo Finance"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshingMarket ? 'animate-spin' : ''}`} />
+              <span>{refreshingMarket ? 'Fetching…' : 'Refresh market prices'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -450,9 +538,15 @@ const Library = () => {
             >
               Adhesive
             </button>
+            <button
+              onClick={() => setActiveFilter('packaging')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium ${activeFilter === 'packaging' ? 'bg-teal-100 text-teal-800' : 'bg-slate text-ink hover:bg-border'}`}
+            >
+              Packaging
+            </button>
           </div>
         </div>
-        {/* Family filter row — only when substrate filter active */}
+        {/* Family filter row — substrate families only */}
         {activeFilter === 'all' || activeFilter === 'substrate' ? (
           <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border">
             <span className="text-xs text-mist self-center mr-1">Family:</span>
@@ -462,7 +556,7 @@ const Library = () => {
             >
               All
             </button>
-            {substrateFamilies.map(fam => (
+            {substrateFamilies.filter((fam) => fam !== 'Packaging').map(fam => (
               <button
                 key={fam}
                 onClick={() => setFamilyFilter(fam)}
@@ -471,32 +565,6 @@ const Library = () => {
                 {fam}
               </button>
             ))}
-          </div>
-        ) : null}
-        {categories.length > 0 ? (
-          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border">
-            <span className="text-xs text-mist self-center mr-1">Category:</span>
-            <button
-              onClick={() => setCategoryFilter('all')}
-              className={`px-3 py-1 rounded-md text-xs font-medium border ${categoryFilter === 'all' ? 'bg-gold text-white border-gold' : 'bg-white text-ink border-border hover:bg-slate'}`}
-            >
-              All
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setCategoryFilter(cat.id)}
-                className={`px-3 py-1 rounded-md text-xs font-medium border ${categoryFilter === cat.id ? 'bg-gold text-white border-gold' : 'bg-white text-ink border-border hover:bg-slate'}`}
-              >
-                {cat.name}
-              </button>
-            ))}
-            <button
-              onClick={() => setCategoryFilter('uncategorized')}
-              className={`px-3 py-1 rounded-md text-xs font-medium border ${categoryFilter === 'uncategorized' ? 'bg-gold text-white border-gold' : 'bg-white text-ink border-border hover:bg-slate'}`}
-            >
-              Uncategorized
-            </button>
           </div>
         ) : null}
       </div>
@@ -510,8 +578,8 @@ const Library = () => {
                 <div>
                   <div className="font-medium">{material.name}</div>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    <span className={`text-xs px-2 py-0.5 rounded-md ${getTypeColor(material.type)}`}>
-                      {material.type}
+                    <span className={`text-xs px-2 py-0.5 rounded-md ${getTypeColor(displayMaterialType(material))}`}>
+                      {displayMaterialType(material)}
                     </span>
                     {material.substrateFamily && (
                       <span className={`text-xs px-2 py-0.5 rounded-md border ${getFamilyColor(material.substrateFamily)}`}>
@@ -614,8 +682,8 @@ const Library = () => {
                 {filteredMaterials.map((material) => (
                   <tr key={material.id} className="border-b border-border last:border-0 hover:bg-slate/50">
                     <td className="py-1.5 px-3">
-                      <span className={`text-xs px-1.5 py-0.5 rounded-md ${getTypeColor(material.type)}`}>
-                        {material.type}
+                      <span className={`text-xs px-1.5 py-0.5 rounded-md ${getTypeColor(displayMaterialType(material))}`}>
+                        {displayMaterialType(material)}
                       </span>
                     </td>
                     <td className="py-1.5 px-3">
@@ -705,114 +773,263 @@ const Library = () => {
       {/* Modal */}
       {showModal && editingMaterial && (
         <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-          <div className="bg-white rounded-t-2xl sm:rounded-lg w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto safe-area-pb">
-            <h3 className="font-display font-semibold text-navy mb-4">{editingMaterial.id ? 'Edit Material' : 'Add Material'}</h3>
-            <div className="space-y-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-xl safe-area-pb">
+            <div className="px-6 pt-6 pb-4 border-b border-border shrink-0">
+              <h3 className="font-display font-semibold text-navy text-lg">
+                {editingMaterial.id ? 'Edit Material' : 'Add Material'}
+              </h3>
+              <p className="text-sm text-mist mt-1">
+                {editingFormKind === 'substrate'
+                  ? 'Type a new family or grade — suggestions appear as you type.'
+                  : editingFormKind === 'packaging'
+                    ? 'Packaging items are saved to your library (not written back to Excel).'
+                    : 'Set name and pricing for ink or adhesive.'}
+              </p>
+            </div>
+
+            <div className="px-6 py-4 overflow-y-auto flex-1 space-y-5">
               <div>
-                <label className="block text-sm text-navy mb-1">Name</label>
-                <input value={editingMaterial.name} onChange={(e) => setEditingMaterial({ ...editingMaterial, name: e.target.value })} className="input w-full" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-navy mb-1">Type</label>
-                  <select value={editingMaterial.type} onChange={(e) => setEditingMaterial({ ...editingMaterial, type: e.target.value as any })} className="input w-full">
-                    <option value="substrate">Substrate</option>
-                    <option value="ink">Ink</option>
-                    <option value="adhesive">Adhesive</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm text-navy mb-1">Substrate Family</label>
-                  <input
-                    list="substrate-family-options"
-                    value={editingMaterial.substrateFamily || ''}
-                    onChange={(e) =>
+                <label className="block text-sm font-medium text-navy mb-1">Material type</label>
+                <select
+                  value={editingFormKind}
+                  onChange={(e) => {
+                    const kind = e.target.value as MaterialFormKind;
+                    if (kind === 'packaging') {
                       setEditingMaterial({
                         ...editingMaterial,
-                        substrateFamily: e.target.value.trim() || null,
-                      })
+                        type: 'substrate',
+                        substrateFamily: PACKAGING_FAMILY,
+                        substrateGrade: '',
+                        name: '',
+                        solidPercent: 100,
+                        density: 1,
+                      });
+                    } else if (kind === 'substrate') {
+                      setEditingMaterial({
+                        ...editingMaterial,
+                        type: 'substrate',
+                        substrateFamily:
+                          editingMaterial.substrateFamily === PACKAGING_FAMILY
+                            ? ''
+                            : editingMaterial.substrateFamily,
+                        substrateGrade:
+                          editingMaterial.substrateFamily === PACKAGING_FAMILY
+                            ? ''
+                            : editingMaterial.substrateGrade,
+                      });
+                    } else {
+                      setEditingMaterial({
+                        ...editingMaterial,
+                        type: kind,
+                        substrateFamily: null,
+                        substrateGrade: null,
+                      });
                     }
+                  }}
+                  className="input w-full"
+                >
+                  <option value="substrate">Substrate</option>
+                  <option value="ink">Ink</option>
+                  <option value="adhesive">Adhesive</option>
+                  <option value="packaging">Packaging</option>
+                </select>
+              </div>
+
+              {editingFormKind === 'substrate' ? (
+                <div className="space-y-4 p-4 rounded-lg border border-border bg-slate/30">
+                  <p className="text-xs font-medium text-navy uppercase tracking-wide">Substrate identity</p>
+                  <div>
+                    <label className="block text-sm font-medium text-navy mb-1">
+                      Family <span className="text-mist font-normal">(required — pick or type new)</span>
+                    </label>
+                    <input
+                      list="substrate-family-options"
+                      value={editingMaterial.substrateFamily || ''}
+                      onChange={(e) =>
+                        setEditingMaterial({
+                          ...editingMaterial,
+                          substrateFamily: e.target.value.trim().toUpperCase() || null,
+                        })
+                      }
+                      className="input w-full"
+                      placeholder="e.g. BOPP, PET, EVOH"
+                      autoComplete="off"
+                    />
+                    <datalist id="substrate-family-options">
+                      {substrateFamilies.map((fam) => (
+                        <option key={fam} value={fam} />
+                      ))}
+                    </datalist>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-navy mb-1">
+                      Grade <span className="text-mist font-normal">(required — pick or type new)</span>
+                    </label>
+                    <input
+                      list="substrate-grade-options"
+                      value={editingMaterial.substrateGrade || ''}
+                      onChange={(e) =>
+                        setEditingMaterial({
+                          ...editingMaterial,
+                          substrateGrade: e.target.value.trim() || null,
+                          name: e.target.value.trim() || editingMaterial.name,
+                        })
+                      }
+                      className="input w-full"
+                      placeholder="e.g. BOPP Transparent, LDPE Natural"
+                      autoComplete="off"
+                    />
+                    <datalist id="substrate-grade-options">
+                      {substrateGrades.map((grade) => (
+                        <option key={grade} value={grade} />
+                      ))}
+                    </datalist>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-navy mb-1">Hoover (description)</label>
+                    <input
+                      value={editingMaterial.hoover || ''}
+                      onChange={(e) => setEditingMaterial({ ...editingMaterial, hoover: e.target.value || null })}
+                      className="input w-full"
+                      placeholder="Optional — e.g. Heat Resistant"
+                    />
+                  </div>
+                  <p className="text-xs text-mist">
+                    Library name:{' '}
+                    <span className="font-medium text-navy">
+                      {editingMaterial.substrateGrade?.trim() || editingMaterial.name || '—'}
+                    </span>
+                  </p>
+                </div>
+              ) : editingFormKind === 'packaging' ? (
+                <div className="space-y-4 p-4 rounded-lg border border-border bg-slate/30">
+                  <p className="text-xs font-medium text-navy uppercase tracking-wide">Packaging item</p>
+                  <div>
+                    <label className="block text-sm font-medium text-navy mb-1">
+                      Item name <span className="text-mist font-normal">(required)</span>
+                    </label>
+                    <input
+                      list="packaging-item-options"
+                      value={editingMaterial.substrateGrade || editingMaterial.name || ''}
+                      onChange={(e) => {
+                        const val = e.target.value.trim();
+                        setEditingMaterial({
+                          ...editingMaterial,
+                          substrateGrade: val || null,
+                          name: val,
+                          hoover: val || null,
+                        });
+                      }}
+                      className="input w-full"
+                      placeholder="e.g. Pallet, Wrapping Film, Paper Sheet"
+                      autoComplete="off"
+                    />
+                    <datalist id="packaging-item-options">
+                      {packagingItems.map((item) => (
+                        <option key={item} value={item} />
+                      ))}
+                    </datalist>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-navy mb-1">Name</label>
+                  <input
+                    value={editingMaterial.name}
+                    onChange={(e) => setEditingMaterial({ ...editingMaterial, name: e.target.value })}
                     className="input w-full"
-                    disabled={editingMaterial.type !== 'substrate'}
-                    placeholder="Pick or type new family (e.g. EVOH)"
+                    placeholder="e.g. Ink SB, Adhesive SB"
                   />
-                  <datalist id="substrate-family-options">
-                    {substrateFamilies.map((fam) => (
-                      <option key={fam} value={fam} />
-                    ))}
-                  </datalist>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm text-navy mb-1">Substrate Grade</label>
-                <input
-                  value={editingMaterial.substrateGrade || ''}
-                  onChange={(e) => setEditingMaterial({ ...editingMaterial, substrateGrade: e.target.value || null })}
-                  className="input w-full"
-                  placeholder="e.g. BOPP Transparent, PET Metalized HB"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-navy mb-1">Hoover (Description)</label>
-                <input
-                  value={editingMaterial.hoover || ''}
-                  onChange={(e) => setEditingMaterial({ ...editingMaterial, hoover: e.target.value || null })}
-                  className="input w-full"
-                  placeholder="e.g. Heat Resistant, High Barrier"
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
+              )}
+
+              <div className="space-y-4">
+                <p className="text-xs font-medium text-navy uppercase tracking-wide">Properties &amp; prices</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-sm text-navy mb-1">Density</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={editingMaterial.density}
+                      onChange={(e) => setEditingMaterial({ ...editingMaterial, density: Number(e.target.value) })}
+                      className="input w-full !min-h-0 h-10 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-navy mb-1">Solid %</label>
+                    <input
+                      type="number"
+                      value={editingMaterial.solidPercent}
+                      onChange={(e) => setEditingMaterial({ ...editingMaterial, solidPercent: Number(e.target.value) })}
+                      className="input w-full !min-h-0 h-10 text-sm"
+                    />
+                  </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="block text-sm text-navy mb-1">User $/kg</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={priceInputValue(editingMaterial.costPerKgUsd)}
+                      onChange={(e) => {
+                        const val = roundUsd(Number(e.target.value));
+                        setEditingMaterial({
+                          ...editingMaterial,
+                          costPerKgUsd: val,
+                          marketPriceUsd:
+                            editingMaterial.marketPriceUsd == null && !editingMaterial.id
+                              ? val
+                              : editingMaterial.marketPriceUsd,
+                        });
+                      }}
+                      className="input w-full !min-h-0 h-10 text-sm"
+                    />
+                  </div>
+                </div>
                 <div>
-                  <label className="block text-sm text-navy mb-1">Density (g/cm³)</label>
-                  <input type="number" step="0.01" value={editingMaterial.density} onChange={(e) => setEditingMaterial({ ...editingMaterial, density: Number(e.target.value) })} className="input w-full" />
-                </div>
-                <div>
-                  <label className="block text-sm text-navy mb-1">Solid %</label>
-                  <input type="number" value={editingMaterial.solidPercent} onChange={(e) => setEditingMaterial({ ...editingMaterial, solidPercent: Number(e.target.value) })} className="input w-full" />
-                </div>
-                <div>
-                  <label className="block text-sm text-navy mb-1">User Price/kg</label>
-                  <input type="number" step="0.01" min="0" value={priceInputValue(editingMaterial.costPerKgUsd)} onChange={(e) => {
-                    const val = roundUsd(Number(e.target.value));
-                    setEditingMaterial({
-                      ...editingMaterial,
-                      costPerKgUsd: val,
-                      marketPriceUsd:
-                        editingMaterial.marketPriceUsd == null && !editingMaterial.id
-                          ? val
-                          : editingMaterial.marketPriceUsd,
-                    });
-                  }} className="input w-full" />
+                  <label className="block text-sm text-navy mb-1">Market $/kg</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={priceInputValue(editingMaterial.marketPriceUsd ?? editingMaterial.costPerKgUsd)}
+                    onChange={(e) =>
+                      setEditingMaterial({ ...editingMaterial, marketPriceUsd: roundUsd(Number(e.target.value)) })
+                    }
+                    className="input w-full !min-h-0 h-10 text-sm"
+                    placeholder="Defaults to User Price"
+                  />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm text-navy mb-1">Market Price/kg (USD)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={priceInputValue(editingMaterial.marketPriceUsd ?? editingMaterial.costPerKgUsd)}
-                  onChange={(e) => setEditingMaterial({ ...editingMaterial, marketPriceUsd: roundUsd(Number(e.target.value)) })}
-                  className="input w-full"
-                  placeholder="Defaults to User Price"
-                />
-              </div>
-              <div className="flex justify-end space-x-2 mt-4">
-                <button onClick={closeModal} className="btn-secondary">Cancel</button>
-                <button onClick={handleSaveMaterial} className="btn-primary">Save</button>
-              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-border bg-white shrink-0 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 rounded-b-xl">
+              <button type="button" onClick={closeModal} className="btn-secondary w-full sm:w-auto">
+                Cancel
+              </button>
+              <button type="button" onClick={handleSaveMaterial} className="btn-primary w-full sm:w-auto">
+                {editingMaterial.id ? 'Save changes' : 'Add material'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {/* Library info */}
-      <div className="mt-6 text-sm text-mist">
-        <p>
-          <strong>Excel:</strong> Save <code className="text-xs bg-slate px-1 rounded">Substrates Master.xlsx</code> at project root (or set <code className="text-xs bg-slate px-1 rounded">SUBSTRATES_EXCEL_PATH</code>), then <strong>Refresh from Excel</strong> — new rows insert, matched rows update. <strong>Prune orphans</strong> removes DB substrates not in Excel.
-          <strong className="ml-2">Market:</strong> <strong>Refresh market prices</strong> uses Yahoo futures (does not change User Price).
-          Edit prices inline, then <strong>Save prices</strong> on that row.
+      <details className="mt-6 text-sm text-mist group">
+        <summary className="cursor-pointer text-navy font-medium list-none flex items-center gap-1">
+          <span className="group-open:rotate-90 transition-transform">▸</span> Excel &amp; market sync help
+        </summary>
+        <p className="mt-2 pl-4 border-l-2 border-border">
+          Save <code className="text-xs bg-slate px-1 rounded">Master Data.xlsx</code> at project root (or set{' '}
+          <code className="text-xs bg-slate px-1 rounded">MASTER_DATA_EXCEL_PATH</code>), then use{' '}
+          <strong>Refresh from Excel</strong> reloads all sheets (substrates, inks, adhesives, packaging, units, product types).{' '}
+          <strong>Prune orphans</strong> removes Excel-managed rows no longer in the file.{' '}
+          <strong>Add Material</strong> saves custom rows to your tenant library only (not written back to Excel).{' '}
+          <strong>Refresh market prices</strong> updates Market $ only (Yahoo futures).
         </p>
-      </div>
+      </details>
     </div>
   );
 };

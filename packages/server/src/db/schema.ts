@@ -105,7 +105,7 @@ export const materials = pgTable('materials', {
   costPerKgUsd: decimal('cost_per_kg_usd', { precision: 12, scale: 4 }).notNull(),
   wastePercent: integer('waste_percent').notNull().default(0),
   isSolventBased: boolean('is_solvent_based').default(false), // True for SB ink/adhesive
-  // Substrate-specific fields (from Substrates Master)
+  // Substrate-specific fields (from Master Data.xlsx Substrate sheet)
   substrateFamily: varchar('substrate_family', { length: 100 }), // BOPP, PET, PE, CPP, PA, ALU, PAPER, SLEEVE, SPECIALTY
   substrateGrade: varchar('substrate_grade', { length: 255 }), // e.g. BOPP Transparent, PET Metalized HB
   hoover: varchar('hoover', { length: 255 }), // Description / grade notes

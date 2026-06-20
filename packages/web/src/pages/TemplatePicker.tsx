@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Grid3x3, Layers, User } from 'lucide-react';
+import { Search, Grid3x3, Layers, User, Loader2 } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import CustomerAutocomplete from '../components/CustomerAutocomplete';
 import LaminateVisualizer from '../components/LaminateVisualizer';
@@ -11,7 +11,7 @@ function templateGroup(t: any): string {
   const st = t.structureType || '';
   if (mc === 'PE' && st === 'Mono') return 'PE Mono';
   if (mc === 'Non PE' && st === 'Mono') return 'Non PE Mono';
-  if (st === 'Multilayer' || st === 'Multilayer') return 'Non PE Multilayer';
+  if (st === 'Multilayer') return 'Non PE Multilayer';
   return 'Other';
 }
 
@@ -19,11 +19,12 @@ const TemplatePicker = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'standard' | 'my' | 'blank'>('standard');
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [jobName, setJobName] = useState('');
   const [templates, setTemplates] = useState<any[]>([]);
   const [myTemplates, setMyTemplates] = useState<any[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [instantiating, setInstantiating] = useState<string | null>(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -57,9 +58,10 @@ const TemplatePicker = () => {
   }, []);
 
   const listForTab = activeTab === 'my' ? myTemplates : templates;
-  const filteredTemplates = listForTab.filter(t =>
-    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (t.pebiParentPg || '').toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTemplates = listForTab.filter(
+    (t) =>
+      t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (t.pebiParentPg || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const grouped = filteredTemplates.reduce<Record<string, any[]>>((acc, t) => {
@@ -69,17 +71,18 @@ const TemplatePicker = () => {
     return acc;
   }, {});
 
-  const handleUseTemplate = async () => {
-    if (!selectedTemplate) return;
+  const handleUseTemplate = async (templateId: string, templateName: string) => {
+    setInstantiating(templateId);
     try {
-      const jobNameInput = (document.querySelector('input[placeholder*="Chips duplex"]') as HTMLInputElement)?.value;
-      const instantiated = await apiClient.instantiateTemplate(selectedTemplate, {
+      const instantiated = await apiClient.instantiateTemplate(templateId, {
         customerId: selectedCustomer || undefined,
-        jobName: jobNameInput || undefined,
+        jobName: jobName.trim() || templateName,
       });
       navigate(`/estimate/${instantiated.id}`);
     } catch (err) {
       alert('Failed to create estimate from template');
+    } finally {
+      setInstantiating(null);
     }
   };
 
@@ -87,10 +90,11 @@ const TemplatePicker = () => {
     <div className="max-w-6xl mx-auto pb-28 lg:pb-0">
       <div className="mb-8">
         <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy mb-2">New Estimate</h1>
-        <p className="text-mist">Start from a standard template, your saved template, or a blank canvas</p>
+        <p className="text-mist">
+          Click a template to open the editor, or start from a blank canvas
+        </p>
       </div>
 
-      {/* Customer and job name inputs */}
       <div className="card mb-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div>
@@ -103,12 +107,13 @@ const TemplatePicker = () => {
               type="text"
               placeholder="e.g., Chips duplex laminate"
               className="input w-full"
+              value={jobName}
+              onChange={(e) => setJobName(e.target.value)}
             />
           </div>
         </div>
       </div>
 
-      {/* Search */}
       <div className="mb-6">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-mist" />
@@ -122,10 +127,10 @@ const TemplatePicker = () => {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="border-b border-border mb-8">
         <nav className="flex space-x-8">
           <button
+            type="button"
             onClick={() => setActiveTab('standard')}
             className={`pb-4 px-1 font-medium text-sm border-b-2 transition-colors ${
               activeTab === 'standard'
@@ -137,6 +142,7 @@ const TemplatePicker = () => {
             Standard Templates
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('my')}
             className={`pb-4 px-1 font-medium text-sm border-b-2 transition-colors ${
               activeTab === 'my'
@@ -148,6 +154,7 @@ const TemplatePicker = () => {
             My Templates
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('blank')}
             className={`pb-4 px-1 font-medium text-sm border-b-2 transition-colors ${
               activeTab === 'blank'
@@ -161,12 +168,13 @@ const TemplatePicker = () => {
         </nav>
       </div>
 
-      {/* Content based on active tab */}
       {(activeTab === 'standard' || activeTab === 'my') && (
         <div>
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <SkeletonCard /><SkeletonCard /><SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
             </div>
           ) : loadError && activeTab === 'standard' ? (
             <div className="card text-center py-12">
@@ -181,6 +189,12 @@ const TemplatePicker = () => {
               <h3 className="text-xl font-display font-semibold text-navy mb-2">
                 {activeTab === 'my' ? 'No saved templates yet' : searchTerm ? 'No templates match your search' : 'No templates yet'}
               </h3>
+              {activeTab === 'my' && (
+                <p className="text-mist text-sm mt-2 max-w-md mx-auto">
+                  Start from a standard template, edit layers in the estimate editor, then use{' '}
+                  <strong>Save as Template</strong> to add it here.
+                </p>
+              )}
             </div>
           ) : (
             Object.entries(grouped).map(([group, items]) => (
@@ -188,34 +202,42 @@ const TemplatePicker = () => {
                 <h3 className="text-lg font-display font-semibold text-navy mb-4">{group}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {items.map((template) => (
-                <div
-                  key={template.id}
-                  onClick={() => setSelectedTemplate(template.id)}
-                  className={`card hover:shadow-md transition-shadow cursor-pointer ${selectedTemplate === template.id ? 'ring-2 ring-gold' : ''}`}
-                >
-                  <div className="flex items-start space-x-4">
-                    <LaminateVisualizer
-                      layers={(template.defaultLayers || []).map((l: any, i: number) => ({
-                        id: String(i),
-                        type: l.layer_type || 'substrate',
-                        material: l.ref_material_key || 'Layer',
-                        micron: l.default_micron || 10,
-                      }))}
-                      width={48}
-                      height={64}
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-display font-semibold text-navy mb-1">{template.name}</h4>
-                      <p className="text-sm text-mist mb-2">{template.pebiParentPg || template.structureType || ''}</p>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs px-2 py-1 bg-slate rounded-md">
-                          {template.productType}
-                        </span>
-                        <span className="text-xs text-mist">{template.materialClass || ''}</span>
+                    <button
+                      key={template.id}
+                      type="button"
+                      disabled={instantiating !== null}
+                      onClick={() => handleUseTemplate(template.id, template.name)}
+                      className={`card hover:shadow-md transition-shadow cursor-pointer text-left w-full ${
+                        instantiating === template.id ? 'ring-2 ring-gold opacity-90' : ''
+                      }`}
+                    >
+                      <div className="flex items-start space-x-4">
+                        <LaminateVisualizer
+                          layers={(template.defaultLayers || []).map((l: any, i: number) => ({
+                            id: String(i),
+                            type: l.layer_type || 'substrate',
+                            material: l.ref_material_key || 'Layer',
+                            micron: l.default_micron || 10,
+                          }))}
+                          width={48}
+                          height={64}
+                        />
+                        <div className="flex-1">
+                          <h4 className="font-display font-semibold text-navy mb-1">{template.name}</h4>
+                          <p className="text-sm text-mist mb-2">{template.pebiParentPg || template.structureType || ''}</p>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs px-2 py-1 bg-slate rounded-md">{template.productType}</span>
+                            <span className="text-xs text-mist">{template.materialClass || ''}</span>
+                          </div>
+                          {instantiating === template.id && (
+                            <p className="text-xs text-gold mt-2 flex items-center gap-1">
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Opening editor…
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -233,52 +255,17 @@ const TemplatePicker = () => {
               Build your structure layer by layer. Choose your product type and add materials from your library.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to="/estimate/new?template=blank&type=roll"
-                className="btn-secondary"
-              >
+              <Link to="/estimate/new?template=blank&type=roll" className="btn-secondary">
                 Create Roll Estimate
               </Link>
-              <Link
-                to="/estimate/new?template=blank&type=pouch"
-                className="btn-secondary"
-              >
+              <Link to="/estimate/new?template=blank&type=pouch" className="btn-secondary">
                 Create Pouch Estimate
               </Link>
-              <Link
-                to="/estimate/new?template=blank&type=sleeve"
-                className="btn-secondary"
-              >
+              <Link to="/estimate/new?template=blank&type=sleeve" className="btn-secondary">
                 Create Sleeve Estimate
               </Link>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Continue — desktop */}
-      <div className="mt-8 pt-8 border-t border-border hidden lg:block">
-        <div className="flex justify-end">
-          <button
-            className="btn-primary"
-            disabled={!selectedTemplate}
-            onClick={handleUseTemplate}
-          >
-            Continue to Estimate Editor
-          </button>
-        </div>
-      </div>
-
-      {/* Sticky mobile CTA */}
-      {(activeTab === 'standard' || activeTab === 'my') && selectedTemplate && (
-        <div className="lg:hidden fixed bottom-16 left-0 right-0 z-30 px-4 safe-area-pb">
-          <button
-            type="button"
-            className="btn-primary w-full shadow-lg"
-            onClick={handleUseTemplate}
-          >
-            Continue to editor
-          </button>
         </div>
       )}
     </div>

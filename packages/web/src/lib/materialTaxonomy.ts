@@ -35,6 +35,26 @@ export function deriveSubstrateFamilies(
   });
 }
 
+export function deriveSubstrateGrades(
+  materials: Array<{
+    type: string;
+    substrateFamily?: string | null;
+    substrateGrade?: string | null;
+    name: string;
+  }>,
+  family?: string | null
+): string[] {
+  const fam = family?.trim().toUpperCase();
+  const grades = new Set<string>();
+  for (const m of materials) {
+    if (m.type !== 'substrate') continue;
+    if (fam && (m.substrateFamily || '').toUpperCase() !== fam) continue;
+    const grade = (m.substrateGrade || m.name || '').trim();
+    if (grade) grades.add(grade);
+  }
+  return [...grades].sort((a, b) => a.localeCompare(b));
+}
+
 export interface MaterialPickerGroup {
   label: string;
   materials: Array<{
@@ -69,7 +89,18 @@ export function groupMaterialsForPicker(
   const groups = new Map<string, MaterialPickerGroup['materials']>();
   for (const mat of filtered) {
     const meta = mat.subcategoryId ? subToMeta.get(mat.subcategoryId) : undefined;
-    const label = meta ? `${meta.category} › ${meta.subcategory}` : `Other › ${mat.type}`;
+    let label: string;
+    if (meta) {
+      label = `${meta.category} › ${meta.subcategory}`;
+    } else if (mat.type === 'substrate' && mat.substrateFamily) {
+      label = `Substrates › ${mat.substrateFamily}`;
+    } else if (mat.type === 'ink') {
+      label = 'Inks';
+    } else if (mat.type === 'adhesive') {
+      label = 'Adhesives';
+    } else {
+      label = 'Materials';
+    }
     const list = groups.get(label) ?? [];
     list.push(mat);
     groups.set(label, list);
@@ -81,22 +112,4 @@ export function groupMaterialsForPicker(
       label,
       materials: mats.sort((x, y) => x.name.localeCompare(y.name)),
     }));
-}
-
-export function materialMatchesCategory(
-  material: { subcategoryId?: string | null },
-  categoryFilter: string,
-  categories: CategoryNode[]
-): boolean {
-  if (categoryFilter === 'all') return true;
-  if (!material.subcategoryId) return categoryFilter === 'uncategorized';
-  for (const cat of categories) {
-    if (cat.id === categoryFilter) {
-      return cat.subcategories.some((s) => s.id === material.subcategoryId);
-    }
-    if (cat.subcategories.some((s) => s.id === categoryFilter && s.id === material.subcategoryId)) {
-      return true;
-    }
-  }
-  return false;
 }

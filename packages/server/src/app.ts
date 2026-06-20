@@ -12,6 +12,7 @@ import { registerUserRoutes } from './routes/users';
 import { registerDashboardRoutes } from './routes/dashboard';
 import { registerPlatformRoutes } from './routes/platform';
 import { registerCategoryRoutes } from './routes/categories';
+import { registerMasterDataRoutes } from './routes/master-data';
 
 export type BuildAppOptions = {
   jwtSecret?: string;
@@ -59,6 +60,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   registerDashboardRoutes(fastify);
   registerPlatformRoutes(fastify);
   registerCategoryRoutes(fastify);
+  registerMasterDataRoutes(fastify);
 
   fastify.setErrorHandler((error, _request, reply) => {
     fastify.log.error(error);

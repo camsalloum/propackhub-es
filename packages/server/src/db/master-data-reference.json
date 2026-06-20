@@ -1,0 +1,45 @@
+{
+  "productTypes": [
+    "Roll",
+    "Sleeve",
+    "Bag"
+  ],
+  "units": [
+    "Kgs",
+    "Kpcs",
+    "SQM",
+    "LM",
+    "Roll 500 LM"
+  ],
+  "rmTypes": [
+    "Substrate",
+    "Ink",
+    "Adhesive",
+    "Packaging"
+  ],
+  "packaging": [
+    "Wraping Film",
+    "Pallet",
+    "Paper Sheet"
+  ],
+  "inkCoating": [
+    "Solvent Based — Common Colors",
+    "Solvent Based — Special Colors",
+    "Solvent Based — Primer",
+    "Solvent Based — Glossy Varnish",
+    "Solvent Based — Matt Varnish",
+    "Solvent Based — Heat Seal",
+    "Solvent Based — Wax",
+    "Solvent Based — Cold Seal",
+    "UV-LED — Common Colors",
+    "UV-LED — Special Colors",
+    "UV-LED — Primer",
+    "UV-LED — Glossy Varnish",
+    "UV-LED — Matt Varnish"
+  ],
+  "adhesive": [
+    "Solvent Base",
+    "Solvent Less",
+    "Mono Component"
+  ]
+}

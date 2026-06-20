@@ -1,6 +1,11 @@
 import { getDatabase, schema } from './index';
 import templateSeed from './structure-templates-seed.json';
 import { eq } from 'drizzle-orm';
+import {
+  buildTemplateMaterialLookup,
+  resolveTemplateLayers,
+  type TemplateLayerRef,
+} from '../utils/template-material-lookup';
 
 interface TemplateLayerSeed {
   layer_order: number;
@@ -27,67 +32,27 @@ interface TemplateSeedEntry {
   substrate_options?: string[];
 }
 
+async function loadTenantMaterials(tenantId: string) {
+  const db = getDatabase();
+  return db
+    .select()
+    .from(schema.materials)
+    .where(eq(schema.materials.tenantId, tenantId));
+}
+
 export async function seedTemplatesForTenant(tenantId: string): Promise<number> {
   const db = getDatabase();
 
   try {
-    // Load tenant materials to map ref_material_key → material ID
-    const materials = await db
-      .select()
-      .from(schema.materials)
-      .where(eq(schema.materials.tenantId, tenantId));
-
-    // Build lookup map: lowercase name fragment → material ID
-    const materialLookup = new Map<string, string>();
-    for (const mat of materials) {
-      materialLookup.set(mat.name.toLowerCase().replace(/\s+/g, '-'), mat.id);
-      // Also store by partial match keys
-      if (mat.name.toLowerCase().includes('ldpe') && mat.name.toLowerCase().includes('natural')) {
-        materialLookup.set('ldpe-natural', mat.id);
-      }
-      if (mat.name.toLowerCase().includes('ldpe') && mat.name.toLowerCase().includes('shrink')) {
-        materialLookup.set('ldpe-shrink', mat.id);
-      }
-      if (mat.name.toLowerCase().includes('pet') && mat.name.toLowerCase().includes('transparent')) {
-        materialLookup.set('pet-transparent', mat.id);
-      }
-      if (mat.name.toLowerCase().includes('pet') && mat.name.toLowerCase().includes('shrink')) {
-        materialLookup.set('pet-shrink', mat.id);
-      }
-      if (mat.name.toLowerCase().includes('pvc') && mat.name.toLowerCase().includes('shrink')) {
-        materialLookup.set('pvc-shrink', mat.id);
-      }
-      if (mat.name.toLowerCase().includes('bopp')) {
-        materialLookup.set('bopp', mat.id);
-      }
-      if (mat.name.toLowerCase().includes('cpp')) {
-        materialLookup.set('cpp', mat.id);
-      }
-      if (mat.name.toLowerCase().includes('aluminium') || mat.name.toLowerCase().includes('aluminum') || mat.name.toLowerCase().includes('alu')) {
-        materialLookup.set('alu-foil', mat.id);
-      }
-      if (mat.name.toLowerCase().includes('ink') && mat.name.toLowerCase().includes('sb')) {
-        materialLookup.set('ink-sb', mat.id);
-      }
-      if (mat.name.toLowerCase().includes('ink') && mat.name.toLowerCase().includes('uv')) {
-        materialLookup.set('ink-uv', mat.id);
-      }
-      if (mat.name.toLowerCase().includes('adhesive') && mat.name.toLowerCase().includes('sb')) {
-        materialLookup.set('adhesive-sb', mat.id);
-      }
-      if (mat.name.toLowerCase().includes('solvent') && mat.name.toLowerCase().includes('base')) {
-        materialLookup.set('solvent-base', mat.id);
-      }
-    }
-
+    const materials = await loadTenantMaterials(tenantId);
+    const materialLookup = buildTemplateMaterialLookup(materials);
     const templates = (templateSeed as any).templates as TemplateSeedEntry[];
 
     const templatesToInsert = templates.map((t) => {
-      // Resolve material IDs in default_layers
-      const resolvedLayers = t.default_layers.map((layer) => ({
-        ...layer,
-        materialId: materialLookup.get(layer.ref_material_key) || null,
-      }));
+      const resolvedLayers = resolveTemplateLayers(
+        t.default_layers.map((layer) => ({ ...layer })),
+        materialLookup
+      );
 
       return {
         tenantId,
@@ -136,4 +101,35 @@ export async function ensureTemplatesForTenant(tenantId: string): Promise<number
   }
 
   return seedTemplatesForTenant(tenantId);
+}
+
+/** Re-resolve materialId on all templates from current tenant library (e.g. after Excel refresh). */
+export async function relinkTemplatesForTenant(tenantId: string): Promise<number> {
+  const db = getDatabase();
+  const materials = await loadTenantMaterials(tenantId);
+  const lookup = buildTemplateMaterialLookup(materials);
+
+  const templates = await db
+    .select()
+    .from(schema.structureTemplates)
+    .where(eq(schema.structureTemplates.tenantId, tenantId));
+
+  let updated = 0;
+  for (const template of templates) {
+    const layers = (template.defaultLayers as TemplateLayerRef[]) || [];
+    const resolved = resolveTemplateLayers(layers, lookup);
+    const changed = resolved.some((layer, i) => layer.materialId !== layers[i]?.materialId);
+    if (!changed) continue;
+
+    await db
+      .update(schema.structureTemplates)
+      .set({ defaultLayers: resolved, updatedAt: new Date() })
+      .where(eq(schema.structureTemplates.id, template.id));
+    updated++;
+  }
+
+  if (updated > 0) {
+    console.log(`✓ Relinked materials on ${updated} templates for tenant ${tenantId}`);
+  }
+  return updated;
 }

@@ -9,6 +9,7 @@ import CustomerDetail from './pages/CustomerDetail';
 import CustomersList from './pages/CustomersList';
 import Library from './pages/Library';
 import Settings from './pages/Settings';
+import StandardTemplates from './pages/StandardTemplates';
 import MasterLibrary from './pages/MasterLibrary';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -51,6 +52,7 @@ function App() {
           <Route path="" element={<Dashboard />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="estimate/choose" element={<TemplatePicker />} />
+          <Route path="templates" element={<StandardTemplates />} />
           <Route path="estimate/new" element={<EstimateEditor />} />
           <Route path="estimate/:id" element={<EstimateEditor />} />
           <Route path="estimates" element={<EstimatesList />} />

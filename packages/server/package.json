@@ -4,8 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch --exclude src/db/master-materials-seed.json src/index.ts",
+    "dev": "tsx watch --exclude src/db/master-materials-seed.json --exclude src/db/master-data-reference.json src/index.ts",
     "update-materials": "tsx src/scripts/update-materials-from-excel.ts",
+    "fix-master-data-excel": "tsx src/scripts/fix-master-data-excel.ts",
+    "repair-master-data-excel": "python scripts/repair-master-data-excel.py",
     "db:sync-materials": "tsx scripts/sync-materials.ts",
     "db:prune-orphan-substrates": "tsx scripts/prune-orphan-substrates.ts",
     "build": "tsup",

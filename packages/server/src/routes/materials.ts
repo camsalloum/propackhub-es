@@ -180,7 +180,7 @@ export async function registerMaterialRoutes(fastify: FastifyInstance) {
     async (request, reply) => updateMaterialRoute(fastify, request, reply)
   );
 
-  // Refresh user prices from Substrates Master.xlsx
+  // Refresh platform master from Master Data.xlsx
   fastify.post<{ Body: { prune?: boolean } }>(
     '/api/v1/materials/refresh-from-excel',
     async (request, reply) => {
@@ -204,7 +204,7 @@ export async function registerMaterialRoutes(fastify: FastifyInstance) {
       console.error('Refresh from Excel error:', error);
       return reply.status(500).send({
         error: message.includes('not found')
-          ? 'Substrates Master.xlsx not found (set SUBSTRATES_EXCEL_PATH or place at project root)'
+          ? 'Master Data.xlsx not found (set MASTER_DATA_EXCEL_PATH or place at project root)'
           : `Failed to refresh from Excel: ${message}`,
       });
     }
@@ -220,11 +220,11 @@ export async function registerMaterialRoutes(fastify: FastifyInstance) {
         return reply.status(403).send({ error: 'Admin only' });
       }
 
-      const { buildMasterMaterialsFromExcel, resolveSubstratesExcelPath } = await import(
+      const { buildMasterMaterialsFromExcel, resolveMasterDataExcelPath } = await import(
         '../db/master-materials-io'
       );
       const { pruneOrphanSubstratesForTenant } = await import('../db/seed-materials');
-      const materials = buildMasterMaterialsFromExcel(resolveSubstratesExcelPath());
+      const materials = buildMasterMaterialsFromExcel(resolveMasterDataExcelPath());
       const pruned = await pruneOrphanSubstratesForTenant(tenantId, materials);
       return reply.send({ pruned });
     } catch (error: unknown) {

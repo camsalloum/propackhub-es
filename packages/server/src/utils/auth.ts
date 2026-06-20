@@ -31,3 +31,7 @@ export function extractUserFromRequest(request: FastifyRequest): TokenPayload {
   }
   return user;
 }
+
+export function isTenantAdmin(role: TokenPayload['role']): boolean {
+  return role === 'tenant_admin' || role === 'platform_admin';
+}

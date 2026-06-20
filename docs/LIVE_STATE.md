@@ -1,11 +1,14 @@
 # LIVE STATE — Estimation Studio
 
 **Last updated:** 2026-06-20  
-**Session:** Substrate sync audit plan implemented (families, Excel prune, templates, proposals)
+**Session:** Standard Templates admin page + material relink + single-click New Estimate
 
-## Status: ✅ PHASE 1 + PHASE 2 COMPLETE | Substrate library synced
+## Status: ✅ Standard Templates E2E | Library sync from Master Data.xlsx
 
 - **Workspace:** `D:\ProPackHub\apps\estimation-studio\`
+- **Excel:** `Master Data.xlsx` — structured tables (`tbl*`), Name Manager structured refs
+- **Import:** 66 materials (47 substrate + 13 ink + 3 adhesive + 3 packaging)
+- **All changes uncommitted** — user to commit when ready
 - **Spec:** [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md) — 50+ items
 - **Bugs:** [ES_BUGS_AND_PRD_GAPS.md](./ES_BUGS_AND_PRD_GAPS.md) — A1-A9: 10/10 ✅
 - **Deployment:** Tests 26/26 ✅, TypeScript clean ✅, Console clear ✅
@@ -34,7 +37,7 @@
 | PWA service worker (Vite prod assets) | ✅ |
 | Mobile: bottom nav, cards, sheets, swipe delete | ✅ |
 | Platform admin: master library API + UI | ✅ |
-| **Substrates Master (46 grades)** | ✅ Excel import + `db:sync-materials` |
+| **Master Data.xlsx (all sheets)** | ✅ Substrate + ink + packaging + reference lists |
 | PEBI SSO stub | ✅ |
 | Categories + subcategories (taxonomy, seeded on register) | ✅ |
 | Slab templates (standard/large, seeded on register) | ✅ |
@@ -47,6 +50,8 @@
 | Register.tsx: full currency dropdown from API | ✅ |
 | Library: skeleton loader (D6) | ✅ |
 | TemplatePicker: skeleton + grouped templates + My Templates tab | ✅ |
+| **Standard Templates nav + admin CRUD** | ✅ `/templates` — edit/delete standard (admin), My Templates, relink materials |
+| **New Estimate: single-click template → editor** | ✅ instantiate with resolved layers |
 | Settings: preview as user + customize visibility grid | ✅ |
 | EstimateEditor: order qty + unit selector, roll spec panel | ✅ |
 | Printing web width tooltip (D7) | ✅ |
@@ -100,10 +105,12 @@ cd ../.. && npm run start:servers
 # http://localhost:5000 (web)
 # http://localhost:5001 (api)
 
-# Refresh substrate library from Excel
+# Refresh full library from Master Data.xlsx
+npm run repair-master-data-excel   # if Excel shows #REF! or repair dialog
 npm run update-materials
 npm run db:sync-materials
-# Or use Library → "Refresh from Excel" (tenant admin)
+# Restart API → Library → Refresh from Excel (tenant admin)
+# Env: MASTER_DATA_EXCEL_PATH
 
 # Run tests
 cd packages/engine && npm run test       # 12/12 ✅
@@ -132,15 +139,13 @@ cd packages/web && npm run build         # Vite build
 
 ---
 
-## Next Phase (Phase 3)
+## Next session
 
-- Advanced PDF export with charts and watermarks
-- Email/WhatsApp notification system
-- Bulk operations and CSV import
-- Win rate tracking and analytics dashboard
-- API documentation (OpenAPI/Swagger)
-- Performance optimization (caching, pagination)
+1. Smoke-test Library: all tabs (Substrate, Ink, Adhesive, Packaging) after **Refresh from Excel**
+2. Confirm Excel opens clean (no repair dialog) — run `npm run repair-master-data-excel` if needed
+3. Optional: ink/adhesive Add Material family+grade fields (match Excel columns)
+4. Commit when ready
 
 ---
 
-**Project Status:** ✅ READY FOR ACCEPTANCE OR PRODUCTION DEPLOYMENT
+**Project Status:** ✅ Master Data pipeline wired; post-restart verification recommended

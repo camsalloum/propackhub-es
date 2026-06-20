@@ -10,6 +10,7 @@ import {
   X,
   LogOut,
   PlusCircle,
+  LayoutTemplate,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
@@ -22,6 +23,7 @@ const Layout = () => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Estimates', href: '/estimates', icon: FileText },
+    { name: 'Standard Templates', href: '/templates', icon: LayoutTemplate },
     { name: 'Customers', href: '/customers', icon: Users },
     { name: 'Raw Materials', href: '/library', icon: FolderOpen },
     { name: 'Settings', href: '/settings', icon: SettingsIcon },

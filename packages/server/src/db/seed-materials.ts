@@ -2,7 +2,9 @@ import { getDatabase, schema } from './index';
 import { eq, and } from 'drizzle-orm';
 import masterMaterials from './master-materials-seed.json';
 import type { MasterMaterial } from './master-materials-io';
+import { PACKAGING_FAMILY, materialSyncKey } from './master-materials-io';
 import { roundUsd } from '../utils/usd';
+import { backfillMaterialSubcategories } from './seed-categories';
 
 type DbMaterial = typeof schema.materials.$inferSelect;
 
@@ -31,21 +33,65 @@ function substrateMatchKey(m: {
   return `${m.substrateFamily || ''}|${m.substrateGrade || ''}|${m.hoover || ''}`;
 }
 
+const LEGACY_ADHESIVE_NAMES: Record<string, string[]> = {
+  'adhesive-sb': ['Adhesive SB (Solvent Based)', 'Solvent Base'],
+  'adhesive-wb': ['Adhesive WB (Water Based)', 'Solvent Less'],
+  'adhesive-mono-component': ['Mono Component'],
+};
+
+const LEGACY_INK_NAMES: Record<string, string[]> = {
+  'ink-sb': ['Ink SB (Solvent Based)', 'Common Colors'],
+  'ink-uv': ['Ink UV'],
+};
+
+function rmMatchKey(m: {
+  type: string;
+  substrateFamily?: string | null;
+  substrateGrade?: string | null;
+  hoover?: string | null;
+}): string {
+  return `${m.substrateFamily || ''}|${m.substrateGrade || ''}|${m.hoover || ''}`;
+}
+
+function excelSourceKey(m: {
+  type: string;
+  name: string;
+  substrateFamily?: string | null;
+  substrateGrade?: string | null;
+  hoover?: string | null;
+}): string {
+  return materialSyncKey(m);
+}
+
 export function findOrphanSubstrateRows(
   existing: DbMaterial[],
   sourceMaterials: MasterMaterial[]
 ): DbMaterial[] {
-  const sourceKeys = new Set(
-    sourceMaterials
-      .filter((m) => m.type === 'substrate')
-      .map((m) => substrateMatchKey(m))
-  );
-  return existing.filter(
-    (row) => row.type === 'substrate' && !sourceKeys.has(substrateMatchKey(row))
-  );
+  const sourceKeys = new Set(sourceMaterials.map((m) => excelSourceKey(m)));
+  return existing.filter((row) => {
+    if (row.type === 'substrate' && row.substrateFamily === PACKAGING_FAMILY) {
+      return !sourceKeys.has(excelSourceKey(row));
+    }
+    if (row.type === 'substrate') {
+      return !sourceKeys.has(excelSourceKey(row));
+    }
+    if (row.type === 'ink' || row.type === 'adhesive') {
+      return !sourceKeys.has(excelSourceKey(row));
+    }
+    return false;
+  });
 }
 
 function findExistingMatch(existing: DbMaterial[], material: MasterMaterial): DbMaterial | undefined {
+  if (material.type === 'substrate' && material.substrateFamily === PACKAGING_FAMILY) {
+    return existing.find(
+      (row) =>
+        row.type === 'substrate' &&
+        row.substrateFamily === PACKAGING_FAMILY &&
+        (row.substrateGrade || row.name) === (material.substrateGrade || material.name)
+    );
+  }
+
   if (material.type === 'substrate') {
     const byFamilyGradeHoover = existing.find(
       (row) =>
@@ -58,12 +104,36 @@ function findExistingMatch(existing: DbMaterial[], material: MasterMaterial): Db
     return existing.find((row) => row.type === 'substrate' && row.name === material.name);
   }
 
+  if (material.type === 'ink' || material.type === 'adhesive') {
+    const byFamilyGradeHoover = existing.find(
+      (row) =>
+        row.type === material.type &&
+        rmMatchKey(row) === rmMatchKey(material)
+    );
+    if (byFamilyGradeHoover) return byFamilyGradeHoover;
+
+    const legacyNames = (
+      material.type === 'ink' ? LEGACY_INK_NAMES : LEGACY_ADHESIVE_NAMES
+    )[material.key];
+    if (legacyNames) {
+      const byLegacy = existing.find(
+        (row) => row.type === material.type && legacyNames.includes(row.name)
+      );
+      if (byLegacy) return byLegacy;
+    }
+    return existing.find((row) => row.type === material.type && row.name === material.name);
+  }
+
   return existing.find((row) => row.type === material.type && row.name === material.name);
 }
 
 /**
- * Seed master materials library for a new tenant
- * Called automatically on tenant registration
+ * Tenant materials library — seeded from platform master on first registration.
+ *
+ * Source of truth:
+ * - **Platform:** `Master Data.xlsx` → `master-materials-seed.json` (build via `npm run update-materials`)
+ * - **Tenant DB:** copy of platform seed on register; licensed users may add/edit rows in the app (tenant-only, not written to Excel)
+ * - **Refresh:** admin "Refresh from Excel" upserts matched substrates from workbook; optional prune removes tenant substrates not in Excel
  */
 export async function seedMaterialsForTenant(tenantId: string): Promise<number> {
   const db = getDatabase();
@@ -118,13 +188,14 @@ export async function syncMaterialsForTenant(
 
   let inserted = 0;
   let updated = 0;
+  const syncedIds = new Set<string>();
 
   for (const material of list) {
     const match = findExistingMatch(existing, material);
     const row = mapMasterToDbRow(tenantId, material);
 
     if (match) {
-      await db
+      const [updatedRow] = await db
         .update(schema.materials)
         .set({
           name: row.name,
@@ -140,16 +211,27 @@ export async function syncMaterialsForTenant(
           marketPriceUsd: row.marketPriceUsd,
           updatedAt: new Date(),
         })
-        .where(eq(schema.materials.id, match.id));
+        .where(eq(schema.materials.id, match.id))
+        .returning();
+
+      syncedIds.add(match.id);
+      const idx = existing.findIndex((e) => e.id === match.id);
+      if (idx >= 0 && updatedRow) existing[idx] = updatedRow;
       updated++;
     } else {
       const [created] = await db.insert(schema.materials).values(row).returning();
       existing.push(created);
+      syncedIds.add(created.id);
       inserted++;
     }
   }
 
-  const orphans = findOrphanSubstrateRows(existing, list);
+  // Prune rows not matched this sync — use IDs, not stale key compare (ink/adhesive family fields change on update)
+  const orphans = existing.filter(
+    (row) =>
+      (row.type === 'substrate' || row.type === 'ink' || row.type === 'adhesive') &&
+      !syncedIds.has(row.id)
+  );
   let pruned = 0;
   if (options?.pruneOrphans && orphans.length > 0) {
     for (const row of orphans) {
@@ -159,6 +241,8 @@ export async function syncMaterialsForTenant(
       pruned++;
     }
   }
+
+  await backfillMaterialSubcategories(tenantId);
 
   return { inserted, updated, orphans: orphans.length, pruned };
 }

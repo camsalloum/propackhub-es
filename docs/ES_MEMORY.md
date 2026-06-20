@@ -413,7 +413,7 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 **Solution:** Auto-seed 14 platform master materials on tenant registration.
 
 **Master materials added:**
-- **Substrates (46 grades from Substrates Master.xlsx):** BOPP, PET, PE, CPP, PA, ALU, PAPER, SLEEVE, SPECIALTY families — see `master-materials-seed.json`
+- **Substrates (47 grades from Master Data.xlsx):** BOPP, PET, PE, CPP, PA, ALU, PAPER, SLEEVE, SPECIALTY families — see `master-materials-seed.json`
 - **Inks (2):** Ink SB (30% solid, $12/kg), Ink UV (100% solid, $15/kg)
 - **Adhesives (2):** Adhesive SB ($6.50/kg), Adhesive WB ($5.80/kg)
 
@@ -709,3 +709,120 @@ npm run db:sync-materials     # seed JSON → all tenant DBs
 - `POST /api/v1/templates` + **Save as Template** in estimate editor
 - Engine throws `MissingMaterialsError` instead of $0 placeholder; API returns 400
 - Mark-sent persists proposal PDF to `uploads/proposals/`; `GET /estimates/:id/proposals` + `GET /proposals/:id/pdf`
+
+### 2026-06-20 — Master Data.xlsx (single platform workbook)
+
+**Context:** User renamed workbook to **Master Data.xlsx** and consolidated Excel Name Manager so all lists live in one file (no external `Costing_form ES.xlsx` refs). ES must use only this workbook for platform master data.
+
+**Architecture:**
+
+| Layer | Role |
+|-------|------|
+| `Master Data.xlsx` (project root) | Platform master — sheets: Substrate, Ink & Coating, Adhesive, Packaging, Unit, PT, RM Type |
+| `master-materials-seed.json` | Built from Excel Substrate sheet + 4 ink/adhesive costing rows (`npm run update-materials`) |
+| `master-data-reference.json` | Named-list sheets (PT, Unit, RM Type, Packaging, Ink & Coating, Adhesive) — reference for future UI/API |
+| Tenant `materials` table | Seeded on **first registration** from seed JSON; user additions via Library stay in PostgreSQL only |
+
+**Env:** `MASTER_DATA_EXCEL_PATH` (preferred); legacy `SUBSTRATES_EXCEL_PATH` still accepted.
+
+**Commands:**
+```bash
+npm run update-materials      # Master Data.xlsx → seed + reference JSON
+npm run db:sync-materials     # seed → all tenants (upsert)
+npm run db:prune-orphan-substrates
+```
+
+**Current import (2026-06-20):** 51 materials — **47 substrates** + 4 ink/adhesive. Reference lists synced to `master-data-reference.json` (Adhesive sheet empty in workbook — fix named range in Excel when populated).
+
+**Code:** `master-materials-io.ts` (`resolveMasterDataExcelPath`, `readMasterDataReference`, `writeMasterDataReference`); refresh service writes both JSON files; Library UI strings + prune script updated.
+
+**User Excel note:** Populate `Adhesive` sheet and point Name Manager `Adhesive` range to local sheet (was external ref in prior audit).
+
+### 2026-06-20 — Full Master Data refresh (all sheets → UI)
+
+**Context:** User expected **Refresh from Excel** to sync every workbook sheet, not substrates only.
+
+**Delivered:**
+- `buildMasterMaterialsFromExcel` now imports **Ink & Coating** (catalog ink rows), **Adhesive** list, **Packaging** (family `Packaging`), plus Substrate sheet + 4 costing ink/adhesive rows
+- `master-data-reference.json` + `GET /api/v1/master-data/reference` — PT, Unit, RM Type lists for estimate UI
+- **EstimateEditor:** product type buttons + order quantity units from Excel reference
+- **Library:** Packaging filter tab; refresh summary shows counts per sheet category
+- Prune orphans extended to ink/adhesive/packaging catalog rows (generic costing rows preserved)
+
+**Counts after import:** 66 materials — 47 substrates + 3 packaging + 13 ink + 3 adhesive; reference: 3 PT, 5 units, 4 RM types.
+
+### 2026-06-20 — Structured Excel tables (Family, Grade, Solid %)
+
+**Context:** User reformatted Ink & Coating, Adhesive, Packaging sheets to match Substrate layout (Family, Grade, Density, Solid %, Hoover, User Price). Deep sync review requested.
+
+**Excel layout (Master Data.xlsx):**
+
+| Sheet | Headers |
+|-------|---------|
+| Substrate | Substrate Family, Substrate Grade, Density (g/cm3), Solid %, Hoover, User Price, Market Price |
+| Ink & Coating | Family, Grade, Density, Solid %, Hoover, User Price |
+| Adhesive | Family, Grade, Density, Solid %, Hoover, User Price |
+| Packaging | Family, Grade, Density, Solid %, Hoover, User Price |
+| Unit | Units (table) |
+| PT | Product Type |
+| RM Type | RM Type |
+
+**Fixes applied:**
+- Rewrote `master-materials-io.ts` — unified structured parser; reads sheets directly (not broken Name Manager refs)
+- Sync keys: `family + grade + hoover` for substrate, ink, adhesive, packaging (no name-only conflicts)
+- Costing keys from Excel: `ink-sb` = first Solvent Based row (Common Colors); `ink-uv` = first UV-LED row; `adhesive-sb/wb/mono-component` from Family
+- No duplicate hardcoded Ink SB / Adhesive SB rows when Excel sheets populated
+- `repair-master-data-excel.py` — restores Excel Tables (auto-expand) + Name Manager structured refs
+- ~~`fix-master-data-excel.ts`~~ — **do not use** (Node xlsx destroyed tables → `#REF!`)
+
+**Excel Tables + Name Manager:**
+
+| Table name (ListObject) | Sheet | Name Manager (friendly) |
+|-------------------------|-------|-------------------------|
+| tblSubstrates | Substrate | SubstrateFamily, BOPP_Transparent |
+| tblInkCoating | Ink & Coating | InkCoating |
+| tblAdhesive | Adhesive | Adhesive |
+| tblPackaging | Packaging | Packaging |
+| tblUnits | Unit | Unit |
+| tblPtypes | PT | Ptypes |
+| tblRMTypes | RM Type | Type |
+
+**Excel repair dialog fix:** Table `displayName` must not equal a defined name (e.g. table `Adhesive` + name `Adhesive` corrupted table3.xml). Tables use `tbl*` prefix; names stay user-friendly.
+
+**Commands:** `npm run repair-master-data-excel` → `npm run update-materials` → Library **Refresh from Excel**
+
+**Never** rewrite Master Data.xlsx with Node `xlsx` — use openpyxl repair script only.
+
+### 2026-06-20 — Session close: Master Data sync hardening
+
+**Bugs fixed this session:**
+1. **Refresh only substrates in UI** — prune compared stale in-memory keys after update → deleted all ink/adhesive/packaging; fixed in `seed-materials.ts` (track `syncedIds`).
+2. **Legacy adhesive rows reappearing** — hardcoded Adhesive SB/WB injected on refresh; Excel Adhesive sheet is now sole source; costing keys map to Solvent Base/Less/Mono Component.
+3. **Excel #REF! / repair dialog** — Node `xlsx` stripped ListObjects; `repair-master-data-excel.py` (openpyxl) recreates tables; `tbl*` table names avoid Name Manager collision (`Adhesive` name ≠ `Adhesive` table).
+4. **Add Material missing Packaging** — modal now has Packaging type (stored as `substrate` + family `Packaging`).
+
+**Current state (66 materials from Excel):** 47 substrates + 13 ink + 3 adhesive + 3 packaging; `GET /api/v1/master-data/reference` for PT/units.
+
+**Ops checklist for new session:**
+```bash
+npm run repair-master-data-excel   # only if Excel tables/names break
+npm run update-materials
+# Restart API, then Library → Refresh from Excel
+```
+
+**Do not:** edit `Master Data.xlsx` with Node `xlsx` or `fix-master-data-excel.ts`.
+
+**Uncommitted** — user to commit when ready.
+
+### 2026-06-20 — Standard Templates admin + material relink
+
+**Problem:** Template `defaultLayers` had null `materialId` after Excel library refresh; instantiate created estimates with 0 layers. TemplatePicker required two clicks (select + Continue).
+
+**Fixes:**
+1. **`template-material-lookup.ts`** — shared `ref_material_key` → tenant material id map (substrates, Ink SB/UV fallbacks, Adhesive SB = Solvent Base).
+2. **`relinkTemplatesForTenant`** — runs on GET/instantiate; updates stored `materialId` on all templates.
+3. **Instantiate** — resolves `materialId` at runtime if still missing.
+4. **API** — `PATCH /api/v1/templates/:id`, `DELETE /api/v1/templates/:id` (standard soft-deactivate admin-only; My Templates hard delete).
+5. **UI** — `/templates` Standard Templates page in left nav (browse, admin edit/delete, My Templates tab); TemplatePicker single-click → editor; Save as Template → My Templates.
+
+**User flow:** New estimate → pick standard → edit → Save as Template → appears under My Templates.

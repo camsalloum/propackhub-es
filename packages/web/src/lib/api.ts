@@ -165,14 +165,32 @@ export class ApiClient {
     return this.request<{
       excelPath: string;
       seedPath: string;
+      referencePath: string;
       substrateCount: number;
+      inkCount: number;
+      adhesiveCount: number;
+      packagingCount: number;
       totalMaterials: number;
       tenantsSynced: number;
       inserted: number;
       updated: number;
       orphans: number;
       pruned: number;
+      reference: { productTypes: number; units: number; rmTypes: number };
     }>('POST', '/api/v1/materials/refresh-from-excel', { prune });
+  }
+
+  getMasterDataReference() {
+    return this.request<{
+      productTypes: string[];
+      units: string[];
+      rmTypes: string[];
+      packaging: string[];
+      inkCoating: string[];
+      adhesive: string[];
+      productTypeOptions: Array<{ label: string; value: 'roll' | 'sleeve' | 'pouch' }>;
+      unitOptions: Array<{ label: string; value: string }>;
+    }>('GET', '/api/v1/master-data/reference');
   }
 
   pruneOrphanSubstrates() {
@@ -326,6 +344,17 @@ export class ApiClient {
 
   getTemplate(id: string) {
     return this.request<any>('GET', `/api/v1/templates/${id}`);
+  }
+
+  updateTemplate(id: string, data: Record<string, unknown>) {
+    return this.request<any>('PATCH', `/api/v1/templates/${id}`, data);
+  }
+
+  deleteTemplate(id: string) {
+    return this.request<{ ok: boolean; deactivated?: boolean; deleted?: boolean }>(
+      'DELETE',
+      `/api/v1/templates/${id}`
+    );
   }
 
   instantiateTemplate(id: string, data: { customerId?: string; jobName?: string }) {

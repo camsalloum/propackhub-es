@@ -1,13 +1,13 @@
 /**
- * Remove substrate rows in tenant DBs that are not in Substrates Master.xlsx.
+ * Remove substrate rows in tenant DBs that are not in Master Data.xlsx (Substrate sheet).
  * Usage: npm run db:prune-orphan-substrates
  */
 import { getDatabase, schema } from '../src/db';
-import { buildMasterMaterialsFromExcel, resolveSubstratesExcelPath } from '../src/db/master-materials-io';
+import { buildMasterMaterialsFromExcel, resolveMasterDataExcelPath } from '../src/db/master-materials-io';
 import { pruneOrphanSubstratesForTenant } from '../src/db/seed-materials';
 
 async function main() {
-  const excelPath = resolveSubstratesExcelPath();
+  const excelPath = resolveMasterDataExcelPath();
   const materials = buildMasterMaterialsFromExcel(excelPath);
   const db = getDatabase();
   const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);

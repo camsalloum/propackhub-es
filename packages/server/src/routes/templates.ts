@@ -1,16 +1,44 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { getDatabase, schema } from '../db';
-import { extractTenantFromRequest } from '../utils/auth';
+import { extractTenantFromRequest, extractUserFromRequest, isTenantAdmin } from '../utils/auth';
 import { eq, and, asc } from 'drizzle-orm';
-import { ensureTemplatesForTenant } from '../db/seed-templates';
+import { ensureTemplatesForTenant, relinkTemplatesForTenant } from '../db/seed-templates';
 import { quantitiesForSlabTemplateKey } from '../db/seed-slab-templates';
+import {
+  buildTemplateMaterialLookup,
+  resolveLayerMaterialId,
+  type TemplateLayerRef,
+} from '../utils/template-material-lookup';
+
+const TemplateLayerSchema = z.object({
+  layer_order: z.number().int().positive(),
+  layer_type: z.enum(['substrate', 'ink', 'adhesive']),
+  ref_material_key: z.string().optional(),
+  materialId: z.string().uuid().nullable().optional(),
+  default_micron: z.number(),
+  swappable_with: z.string().optional(),
+});
+
+const UpdateTemplateSchema = z.object({
+  name: z.string().min(1).optional(),
+  productType: z.enum(['roll', 'sleeve', 'pouch']).optional(),
+  materialClass: z.string().nullable().optional(),
+  structureType: z.string().nullable().optional(),
+  displayOrder: z.number().int().optional(),
+  defaultDimensions: z.record(z.any()).optional(),
+  defaultLayers: z.array(TemplateLayerSchema).optional(),
+  defaultProcesses: z
+    .array(z.object({ process_key: z.string(), enabled: z.boolean() }))
+    .optional(),
+  defaultPrintingWebClass: z.enum(['wide_web', 'narrow_web']).optional(),
+  solventMixEnabled: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+});
 
 /**
  * GET /api/v1/templates
  * List structure templates for the current tenant.
- * Query params:
- *   - standard_only=true: only return active templates
  */
 export async function getTemplatesRoute(
   _fastify: FastifyInstance,
@@ -24,6 +52,7 @@ export async function getTemplatesRoute(
     const standardOnly = request.query.standard_only !== 'false';
 
     await ensureTemplatesForTenant(tenantId);
+    await relinkTemplatesForTenant(tenantId);
 
     const conditions = [
       eq(schema.structureTemplates.tenantId, tenantId),
@@ -48,7 +77,6 @@ export async function getTemplatesRoute(
 
 /**
  * GET /api/v1/templates/:id
- * Get a single structure template by ID with full details.
  */
 export async function getTemplateByIdRoute(
   _fastify: FastifyInstance,
@@ -60,6 +88,8 @@ export async function getTemplateByIdRoute(
     const tenantId = extractTenantFromRequest(request);
     const { id } = request.params;
     const db = getDatabase();
+
+    await relinkTemplatesForTenant(tenantId);
 
     const [template] = await db
       .select()
@@ -84,8 +114,6 @@ export async function getTemplateByIdRoute(
 
 /**
  * POST /api/v1/templates/:id/instantiate
- * Create a new estimate from a structure template.
- * The template's default layers are resolved to actual material IDs.
  */
 export async function instantiateTemplateRoute(
   _fastify: FastifyInstance,
@@ -105,14 +133,16 @@ export async function instantiateTemplateRoute(
     const { customerId, jobName } = request.body || {};
     const db = getDatabase();
 
-    // Get template
+    await relinkTemplatesForTenant(tenantId);
+
     const [template] = await db
       .select()
       .from(schema.structureTemplates)
       .where(
         and(
           eq(schema.structureTemplates.id, id),
-          eq(schema.structureTemplates.tenantId, tenantId)
+          eq(schema.structureTemplates.tenantId, tenantId),
+          eq(schema.structureTemplates.isActive, true)
         )
       );
 
@@ -120,7 +150,6 @@ export async function instantiateTemplateRoute(
       return reply.status(404).send({ error: 'Template not found' });
     }
 
-    // Get tenant for currency info
     const [tenant] = await db
       .select()
       .from(schema.tenants)
@@ -130,7 +159,12 @@ export async function instantiateTemplateRoute(
       return reply.status(404).send({ error: 'Tenant not found' });
     }
 
-    // Generate ref number
+    const materials = await db
+      .select()
+      .from(schema.materials)
+      .where(eq(schema.materials.tenantId, tenantId));
+    const materialLookup = buildTemplateMaterialLookup(materials);
+
     const year = new Date().getFullYear();
     const countResult = await db
       .select({ count: schema.estimates.id })
@@ -139,13 +173,11 @@ export async function instantiateTemplateRoute(
     const count = countResult.length;
     const refNumber = `QT-${year}-${String(count + 1).padStart(5, '0')}`;
 
-    // Build dimensions from template defaults
     const defaultDims = (template.defaultDimensions as any) || {};
     const dimensions: Record<string, any> = {
       ...defaultDims,
     };
 
-    // Map template dimensions to schema dimensions
     if (template.productType === 'roll' || template.productType === 'sleeve') {
       dimensions.reelWidthMm = defaultDims.width_mm || defaultDims.reel_width_mm || 800;
       dimensions.cutoffMm = defaultDims.length_mm || defaultDims.cutoff_mm || 600;
@@ -157,7 +189,6 @@ export async function instantiateTemplateRoute(
       dimensions.openHeightMm = defaultDims.length_mm || 250;
     }
 
-    // Create estimate
     const [estimate] = await db
       .insert(schema.estimates)
       .values({
@@ -177,22 +208,26 @@ export async function instantiateTemplateRoute(
       })
       .returning();
 
-    // Create layers from template defaults
-    const defaultLayers = (template.defaultLayers as any[]) || [];
+    const defaultLayers = (template.defaultLayers as TemplateLayerRef[]) || [];
+    let layerPosition = 0;
     for (const layer of defaultLayers) {
-      if (layer.materialId) {
-        await db.insert(schema.layers).values({
-          estimateId: estimate.id,
-          materialId: layer.materialId,
-          micron: (layer.default_micron || 0).toString(),
-          position: layer.layer_order - 1, // 0-indexed
-        });
+      const materialId = resolveLayerMaterialId(layer, materialLookup);
+      if (!materialId) {
+        console.warn(
+          `Template ${template.name}: unresolved layer ${layer.ref_material_key || layer.layer_order}`
+        );
+        continue;
       }
+      await db.insert(schema.layers).values({
+        estimateId: estimate.id,
+        materialId,
+        micron: (layer.default_micron || 0).toString(),
+        position: layerPosition,
+      });
+      layerPosition++;
     }
 
-    // Create default processes from template
     const defaultProcesses = (template.defaultProcesses as any[]) || [];
-    // Map process_key to sensible defaults
     const processDefaults: Record<string, { costPerHour: number; speedBasis: string; speedValue: number; setupHours: number }> = {
       extrusion: { costPerHour: 50, speedBasis: 'kg_per_hour', speedValue: 200, setupHours: 2 },
       printing: { costPerHour: 80, speedBasis: 'm_per_min', speedValue: 100, setupHours: 4 },
@@ -215,7 +250,6 @@ export async function instantiateTemplateRoute(
       });
     }
 
-    // Create default slab tiers from tenant preset
     const slabQtys = quantitiesForSlabTemplateKey(tenant.defaultSlabTemplate || 'standard');
     for (let i = 0; i < slabQtys.length; i++) {
       await db.insert(schema.slabs).values({
@@ -244,8 +278,7 @@ const CreateTemplateSchema = z.object({
 });
 
 /**
- * POST /api/v1/templates
- * Save current estimate structure as a tenant template (My Templates).
+ * POST /api/v1/templates — save estimate as My Template
  */
 export async function createTemplateRoute(
   _fastify: FastifyInstance,
@@ -284,14 +317,14 @@ export async function createTemplateRoute(
       .from(schema.processes)
       .where(eq(schema.processes.estimateId, estimateId));
 
-    const defaultLayers = layers.map((l, i) => ({
+    const defaultLayers = layers.map((l: (typeof layers)[number], i: number) => ({
       layer_order: i + 1,
-      layer_type: l.materialType || 'substrate',
+      layer_type: (l.materialType || 'substrate') as 'substrate' | 'ink' | 'adhesive',
       materialId: l.materialId,
       default_micron: parseFloat(l.micron),
     }));
 
-    const defaultProcesses = processes.map((p) => ({
+    const defaultProcesses = processes.map((p: (typeof processes)[number]) => ({
       process_key: p.name.toLowerCase().replace(/\s+/g, '_'),
       enabled: p.enabled,
     }));
@@ -326,6 +359,126 @@ export async function createTemplateRoute(
   }
 }
 
+/**
+ * PATCH /api/v1/templates/:id — admin edits standard; any user edits own My Templates
+ */
+export async function updateTemplateRoute(
+  _fastify: FastifyInstance,
+  request: FastifyRequest<{
+    Params: { id: string };
+    Body: z.infer<typeof UpdateTemplateSchema>;
+  }>,
+  reply: FastifyReply
+) {
+  try {
+    await request.jwtVerify();
+    const user = extractUserFromRequest(request);
+    const tenantId = extractTenantFromRequest(request);
+    const { id } = request.params;
+    const body = UpdateTemplateSchema.parse(request.body);
+    const db = getDatabase();
+
+    const [existing] = await db
+      .select()
+      .from(schema.structureTemplates)
+      .where(
+        and(
+          eq(schema.structureTemplates.id, id),
+          eq(schema.structureTemplates.tenantId, tenantId)
+        )
+      );
+
+    if (!existing) {
+      return reply.status(404).send({ error: 'Template not found' });
+    }
+
+    if (existing.isStandard && !isTenantAdmin(user.role)) {
+      return reply.status(403).send({ error: 'Only admins can edit standard templates' });
+    }
+
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (body.name !== undefined) updates.name = body.name;
+    if (body.productType !== undefined) updates.productType = body.productType;
+    if (body.materialClass !== undefined) updates.materialClass = body.materialClass;
+    if (body.structureType !== undefined) updates.structureType = body.structureType;
+    if (body.displayOrder !== undefined) updates.displayOrder = body.displayOrder;
+    if (body.defaultDimensions !== undefined) updates.defaultDimensions = body.defaultDimensions;
+    if (body.defaultProcesses !== undefined) updates.defaultProcesses = body.defaultProcesses;
+    if (body.defaultPrintingWebClass !== undefined) {
+      updates.defaultPrintingWebClass = body.defaultPrintingWebClass;
+    }
+    if (body.solventMixEnabled !== undefined) updates.solventMixEnabled = body.solventMixEnabled;
+    if (body.isActive !== undefined) updates.isActive = body.isActive;
+
+    if (body.defaultLayers !== undefined) {
+      updates.defaultLayers = body.defaultLayers;
+    }
+
+    const [template] = await db
+      .update(schema.structureTemplates)
+      .set(updates)
+      .where(eq(schema.structureTemplates.id, id))
+      .returning();
+
+    return reply.send(template);
+  } catch (error: unknown) {
+    if (error instanceof z.ZodError) {
+      return reply.status(400).send({ error: 'Validation failed', details: error.errors });
+    }
+    console.error('Update template error:', error);
+    return reply.status(500).send({ error: 'Failed to update template' });
+  }
+}
+
+/**
+ * DELETE /api/v1/templates/:id
+ * Standard → soft-deactivate (admin). My Templates → hard delete (any tenant user).
+ */
+export async function deleteTemplateRoute(
+  _fastify: FastifyInstance,
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  try {
+    await request.jwtVerify();
+    const user = extractUserFromRequest(request);
+    const tenantId = extractTenantFromRequest(request);
+    const { id } = request.params;
+    const db = getDatabase();
+
+    const [existing] = await db
+      .select()
+      .from(schema.structureTemplates)
+      .where(
+        and(
+          eq(schema.structureTemplates.id, id),
+          eq(schema.structureTemplates.tenantId, tenantId)
+        )
+      );
+
+    if (!existing) {
+      return reply.status(404).send({ error: 'Template not found' });
+    }
+
+    if (existing.isStandard) {
+      if (!isTenantAdmin(user.role)) {
+        return reply.status(403).send({ error: 'Only admins can delete standard templates' });
+      }
+      await db
+        .update(schema.structureTemplates)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(schema.structureTemplates.id, id));
+      return reply.send({ ok: true, deactivated: true });
+    }
+
+    await db.delete(schema.structureTemplates).where(eq(schema.structureTemplates.id, id));
+    return reply.send({ ok: true, deleted: true });
+  } catch (error: any) {
+    console.error('Delete template error:', error);
+    return reply.status(500).send({ error: 'Failed to delete template' });
+  }
+}
+
 export async function registerTemplateRoutes(fastify: FastifyInstance) {
   fastify.get<{ Querystring: { standard_only?: string } }>(
     '/api/v1/templates',
@@ -338,6 +491,14 @@ export async function registerTemplateRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { id: string } }>(
     '/api/v1/templates/:id',
     async (request, reply) => getTemplateByIdRoute(fastify, request, reply)
+  );
+  fastify.patch<{ Params: { id: string }; Body: z.infer<typeof UpdateTemplateSchema> }>(
+    '/api/v1/templates/:id',
+    async (request, reply) => updateTemplateRoute(fastify, request, reply)
+  );
+  fastify.delete<{ Params: { id: string } }>(
+    '/api/v1/templates/:id',
+    async (request, reply) => deleteTemplateRoute(fastify, request, reply)
   );
   fastify.post<{ Params: { id: string }; Body: { customerId?: string; jobName?: string } }>(
     '/api/v1/templates/:id/instantiate',

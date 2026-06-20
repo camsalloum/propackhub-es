@@ -29,6 +29,25 @@ interface DimensionState {
   extraPrintingTrimMm: number; piecesPerCut: number; openWidthMm: number; openHeightMm: number;
 }
 
+type MasterReference = {
+  productTypeOptions: Array<{ label: string; value: 'roll' | 'sleeve' | 'pouch' }>;
+  unitOptions: Array<{ label: string; value: string }>;
+};
+
+const DEFAULT_PRODUCT_TYPE_OPTIONS: MasterReference['productTypeOptions'] = [
+  { label: 'Roll', value: 'roll' },
+  { label: 'Sleeve', value: 'sleeve' },
+  { label: 'Bag or Pouch', value: 'pouch' },
+];
+
+const DEFAULT_UNIT_OPTIONS: MasterReference['unitOptions'] = [
+  { label: 'Kgs', value: 'kgs' },
+  { label: 'Kpcs', value: 'kpcs' },
+  { label: 'SQM', value: 'sqm' },
+  { label: 'LM', value: 'lm' },
+  { label: 'Roll 500 LM', value: 'roll_500_lm' },
+];
+
 const EstimateEditor = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -54,6 +73,7 @@ const EstimateEditor = () => {
   const [orderQuantityUnit, setOrderQuantityUnit] = useState('kgs');
   const [rollSpecOpen, setRollSpecOpen] = useState(false);
   const [processesState, setProcessesState] = useState<any[]>([]);
+  const [masterReference, setMasterReference] = useState<MasterReference | null>(null);
 
   // UI state
   const [activeSection, setActiveSection] = useState<'structure' | 'dimensions' | 'slabs' | 'markup'>('structure');
@@ -164,19 +184,31 @@ const EstimateEditor = () => {
     setLayerSheetOpen(true);
   };
 
+  const productTypeOptions = masterReference?.productTypeOptions ?? DEFAULT_PRODUCT_TYPE_OPTIONS;
+  const unitOptions = masterReference?.unitOptions ?? DEFAULT_UNIT_OPTIONS;
+
   // Load materials + customers on mount
   const loadBaseData = useCallback(async () => {
     let mats: MaterialItem[] = [];
     let custs: any[] = [];
 
     try {
-      const [mats, cats] = await Promise.all([
+      const [materialRows, cats, ref] = await Promise.all([
         apiClient.getMaterials(),
         apiClient.getCategories().catch(() => []),
+        apiClient.getMasterDataReference().catch(() => null),
       ]);
-      mats = mats || [];
+      mats = materialRows || [];
       setMaterials(mats);
       setCategories(cats || []);
+      if (ref) {
+        setMasterReference({
+          productTypeOptions: ref.productTypeOptions?.length
+            ? ref.productTypeOptions
+            : DEFAULT_PRODUCT_TYPE_OPTIONS,
+          unitOptions: ref.unitOptions?.length ? ref.unitOptions : DEFAULT_UNIT_OPTIONS,
+        });
+      }
     } catch (err) {
       console.error('Failed to load materials:', err);
       setLoadError('Could not load materials. Layer defaults may be incomplete.');
@@ -481,7 +513,7 @@ const EstimateEditor = () => {
     if (!name?.trim()) return;
     try {
       await apiClient.createTemplate(name.trim(), estimate.id);
-      alert(`Template "${name.trim()}" saved. Find it under My Templates.`);
+      alert(`Template "${name.trim()}" saved under My Templates. Find it in New Estimate or Standard Templates.`);
     } catch (err) {
       alert('Failed to save template: ' + (err instanceof Error ? err.message : 'Unknown'));
     }
@@ -632,11 +664,11 @@ const EstimateEditor = () => {
                   <div>
                     <label className="block text-sm font-medium text-navy mb-2">Unit</label>
                     <select value={orderQuantityUnit} onChange={(e) => setOrderQuantityUnit(e.target.value)} className="input w-full">
-                      <option value="kgs">kgs</option>
-                      <option value="sqm">sqm</option>
-                      <option value="kpcs">kpcs</option>
-                      <option value="lm">lm</option>
-                      <option value="roll_500_lm">roll (500 lm)</option>
+                      {unitOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </>
@@ -826,9 +858,15 @@ const EstimateEditor = () => {
               <h3 className="text-lg font-display font-semibold text-navy">Dimensions</h3>
               <div className="p-4 bg-slate rounded-lg">
                 <label className="block text-sm font-medium text-navy mb-2">Product Type</label>
-                <div className="flex space-x-4">
-                  {(['roll', 'sleeve', 'pouch'] as const).map(pt => (
-                    <button key={pt} onClick={() => setProductType(pt)} className={`px-4 py-2 rounded-lg capitalize ${productType === pt ? 'bg-gold text-white' : 'bg-white border border-border'}`}>{pt}</button>
+                <div className="flex flex-wrap gap-2">
+                  {productTypeOptions.map((pt) => (
+                    <button
+                      key={pt.value}
+                      onClick={() => setProductType(pt.value)}
+                      className={`px-4 py-2 rounded-lg ${productType === pt.value ? 'bg-gold text-white' : 'bg-white border border-border'}`}
+                    >
+                      {pt.label}
+                    </button>
                   ))}
                 </div>
               </div>

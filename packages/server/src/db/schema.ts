@@ -20,6 +20,67 @@ export const layerTypeEnum = pgEnum('layer_type', ['substrate', 'ink', 'adhesive
 export const productTypeEnum = pgEnum('product_type', ['roll', 'sleeve', 'pouch']);
 export const tenantTypeEnum = pgEnum('tenant_type', ['individual', 'company']);
 export const printingWebClassEnum = pgEnum('printing_web_class', ['wide_web', 'narrow_web']);
+export const materialPriceSourceEnum = pgEnum('material_price_source', ['excel', 'manual']);
+export const platformReferenceCategoryEnum = pgEnum('platform_reference_category', [
+  'product_type',
+  'unit',
+  'rm_type',
+  'printing_web',
+  'ink_coating',
+  'adhesive',
+  'packaging',
+]);
+
+// Platform master (replaces Master Data.xlsx + JSON seed files)
+export const platformMasterMaterials = pgTable(
+  'platform_master_materials',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    key: varchar('key', { length: 128 }).notNull().unique(),
+    name: varchar('name', { length: 255 }).notNull(),
+    type: layerTypeEnum('type').notNull(),
+    solidPercent: integer('solid_percent').notNull(),
+    density: decimal('density', { precision: 10, scale: 4 }).notNull(),
+    costPerKgUsd: decimal('cost_per_kg_usd', { precision: 12, scale: 4 }).notNull(),
+    wastePercent: integer('waste_percent').notNull().default(0),
+    isSolventBased: boolean('is_solvent_based').notNull().default(false),
+    substrateFamily: varchar('substrate_family', { length: 100 }),
+    substrateGrade: varchar('substrate_grade', { length: 255 }),
+    hoover: varchar('hoover', { length: 255 }),
+    marketPriceUsd: decimal('market_price_usd', { precision: 12, scale: 4 }),
+    costingKey: varchar('costing_key', { length: 64 }),
+    sortOrder: integer('sort_order').notNull().default(0),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  },
+  (table) => ({
+    typeIdx: index('platform_master_materials_type_idx').on(table.type),
+    familyIdx: index('platform_master_materials_family_idx').on(table.substrateFamily),
+  })
+);
+
+export const platformReferenceItems = pgTable(
+  'platform_reference_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    category: platformReferenceCategoryEnum('category').notNull(),
+    label: varchar('label', { length: 255 }).notNull(),
+    code: varchar('code', { length: 64 }),
+    metadata: jsonb('metadata'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  },
+  (table) => ({
+    categoryIdx: index('platform_reference_items_category_idx').on(table.category),
+    categoryCodeIdx: index('platform_reference_items_category_code_idx').on(
+      table.category,
+      table.code
+    ),
+  })
+);
 
 // Tenants
 export const tenants = pgTable('tenants', {
@@ -112,6 +173,12 @@ export const materials = pgTable('materials', {
   marketPriceUsd: decimal('market_price_usd', { precision: 12, scale: 4 }), // Market reference price
   // B1: taxonomy FK (nullable — added via SQL patch, backfilled by seed-categories)
   subcategoryId: uuid('subcategory_id').references(() => subcategories.id, { onDelete: 'set null' }),
+  /** Template ref_material_key alias for standard stack resolution (e.g. ink-sb, ldpe-shrink) */
+  costingKey: varchar('costing_key', { length: 64 }),
+  /** excel = from Master Data sync; manual = tenant edited price — skip overwrite on refresh */
+  priceSource: materialPriceSourceEnum('price_source').notNull().default('excel'),
+  /** Tenant-created row — never pruned on Excel refresh */
+  isTenantOnly: boolean('is_tenant_only').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({

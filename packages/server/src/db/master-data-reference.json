@@ -4,6 +4,20 @@
     "Sleeve",
     "Bag"
   ],
+  "productTypeRows": [
+    {
+      "label": "Roll",
+      "code": "roll"
+    },
+    {
+      "label": "Sleeve",
+      "code": "sleeve"
+    },
+    {
+      "label": "Bag",
+      "code": "pouch"
+    }
+  ],
   "units": [
     "Kgs",
     "Kpcs",
@@ -13,7 +27,7 @@
   ],
   "rmTypes": [
     "Substrate",
-    "Ink",
+    "Ink & Coating",
     "Adhesive",
     "Packaging"
   ],
@@ -41,5 +55,19 @@
     "Solvent Base",
     "Solvent Less",
     "Mono Component"
+  ],
+  "printingWebClasses": [
+    {
+      "label": "Wide Web",
+      "code": "wide_web",
+      "inkSystem": "Ink SB",
+      "solidPercent": 30
+    },
+    {
+      "label": "Narrow Web",
+      "code": "narrow_web",
+      "inkSystem": "Ink UV",
+      "solidPercent": 100
+    }
   ]
 }

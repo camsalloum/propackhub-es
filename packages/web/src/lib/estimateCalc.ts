@@ -1,4 +1,10 @@
-import { calculateEstimate, type Estimate, type Material } from '@es/engine';
+import {
+  calculateEstimate,
+  derivePrintingWebClass,
+  stackNeedsSolventMix,
+  type Estimate,
+  type Material,
+} from '@es/engine';
 
 export interface ClientCalcMaterial {
   id: string;
@@ -26,7 +32,6 @@ export interface ClientCalcInput {
   materials: ClientCalcMaterial[];
   processes?: ClientCalcProcess[];
   productType: 'roll' | 'sleeve' | 'pouch';
-  printingWebClass: 'wide_web' | 'narrow_web';
   dimensions: Record<string, number | undefined>;
   markupPercent: number;
   platesPerKg: number;
@@ -59,6 +64,10 @@ export function runClientCalculation(input: ClientCalcInput) {
   }
 
   const orderQty = input.orderQuantityKg ?? input.slabs[0]?.quantityKg ?? 1000;
+  const layerRefs = input.layers.filter((l) => l.materialId);
+  const printingWebClass = derivePrintingWebClass(layerRefs, materialMap);
+  const needsSolvent = stackNeedsSolventMix(layerRefs, materialMap);
+
   const estimate: Estimate = {
     id: 'client-preview',
     tenantId: 'preview',
@@ -74,7 +83,7 @@ export function runClientCalculation(input: ClientCalcInput) {
       })),
     dimensions: {
       productType: input.productType,
-      printingWebClass: input.printingWebClass,
+      printingWebClass,
       ...input.dimensions,
     },
     markupPercent: input.markupPercent,
@@ -96,9 +105,8 @@ export function runClientCalculation(input: ClientCalcInput) {
     displayCurrencyCode: input.displayCurrency,
     exchangeRateUsdToDisplay: input.exchangeRateUsdToDisplay,
     orderQuantityKg: orderQty,
-    solventCostPerKgUsd:
-      input.printingWebClass === 'wide_web' ? input.solventCostPerKgUsd : undefined,
-    solventRatio: input.printingWebClass === 'wide_web' ? input.solventRatio : undefined,
+    solventCostPerKgUsd: needsSolvent ? input.solventCostPerKgUsd : undefined,
+    solventRatio: needsSolvent ? input.solventRatio : undefined,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

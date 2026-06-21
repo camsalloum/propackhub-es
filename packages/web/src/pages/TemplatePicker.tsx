@@ -1,111 +1,254 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Grid3x3, Layers, User, Loader2 } from 'lucide-react';
-import { apiClient } from '../lib/api';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Layers, Loader2 } from 'lucide-react';
 import CustomerAutocomplete from '../components/CustomerAutocomplete';
 import LaminateVisualizer from '../components/LaminateVisualizer';
-import { SkeletonCard } from '../components/Skeleton';
+import { useMasterDataReference } from '../hooks/useMasterDataReference';
+import { apiClient } from '../lib/api';
+import {
+  getTemplateClassification,
+  matchesClassFilter,
+  type ClassFilter,
+  type TemplateStructureTier,
+} from '../lib/templateCatalog';
 
-function templateGroup(t: any): string {
-  const mc = t.materialClass || '';
-  const st = t.structureType || '';
-  if (mc === 'PE' && st === 'Mono') return 'PE Mono';
-  if (mc === 'Non PE' && st === 'Mono') return 'Non PE Mono';
-  if (st === 'Multilayer') return 'Non PE Multilayer';
-  return 'Other';
+interface TemplateLayer {
+  layer_order: number;
+  layer_type: 'substrate' | 'ink' | 'adhesive';
+  ref_material_key?: string;
+  materialId?: string | null;
+  default_micron: number;
+}
+
+interface StructureTemplate {
+  id: string;
+  name: string;
+  productType: 'roll' | 'sleeve' | 'pouch';
+  pebiParentPg?: string | null;
+  materialClass?: string | null;
+  structureType?: string | null;
+  displayOrder?: number;
+  defaultLayers?: TemplateLayer[];
+  isStandard?: boolean;
+}
+
+interface MaterialOption {
+  id: string;
+  name: string;
+  type: string;
+}
+
+const EMPTY_FILTER: ClassFilter = { materialClass: null, isPrinted: null, structure: null };
+
+const CLASS_ROW: Array<{ label: string; value: 'PE' | 'Non PE' }> = [
+  { label: 'PE', value: 'PE' },
+  { label: 'Non PE', value: 'Non PE' },
+];
+
+const PRINT_ROW: Array<{ label: string; value: boolean }> = [
+  { label: 'Printed', value: true },
+  { label: 'Plain', value: false },
+];
+
+const STRUCTURE_ROW: Array<{ label: string; value: TemplateStructureTier }> = [
+  { label: 'Mono', value: 'mono' },
+  { label: 'Duplex', value: 'duplex' },
+  { label: 'Triplex', value: 'triplex' },
+  { label: 'Quadriplex', value: 'quadriplex' },
+];
+
+function classifyTemplate(t: StructureTemplate) {
+  return getTemplateClassification({
+    name: t.name,
+    productType: t.productType,
+    pebiParentPg: t.pebiParentPg,
+    materialClass: t.materialClass,
+    structureType: t.structureType,
+    defaultLayers: t.defaultLayers,
+    isStandard: t.isStandard,
+  });
+}
+
+function visualizerLayers(template: StructureTemplate, materials: MaterialOption[]) {
+  return (template.defaultLayers || []).map((l, i) => ({
+    id: String(i),
+    type: l.layer_type || 'substrate',
+    material: materials.find((m) => m.id === l.materialId)?.name || l.ref_material_key || 'Layer',
+    micron: l.default_micron || 10,
+  }));
+}
+
+function GridCell({
+  label,
+  active,
+  disabled,
+  wide,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  disabled: boolean;
+  wide?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={[
+        'px-4 py-2 rounded-lg text-sm font-medium border transition-all select-none',
+        wide ? 'col-span-full w-full' : '',
+        active
+          ? 'bg-gold/15 text-gold border-gold/40 shadow-sm'
+          : disabled
+          ? 'border-border text-mist/40 bg-white cursor-default'
+          : 'border-border text-ink bg-white hover:border-gold/30 hover:text-gold',
+      ]
+        .join(' ')
+        .trim()}
+    >
+      {label}
+    </button>
+  );
 }
 
 const TemplatePicker = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'standard' | 'my' | 'blank'>('standard');
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { reference: masterRef } = useMasterDataReference();
+
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [jobName, setJobName] = useState('');
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [myTemplates, setMyTemplates] = useState<any[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [templates, setTemplates] = useState<StructureTemplate[]>([]);
+  const [materials, setMaterials] = useState<MaterialOption[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [instantiating, setInstantiating] = useState<string | null>(null);
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-
-  const loadData = async () => {
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const tmplData = await apiClient.getTemplates(true);
-      setTemplates(tmplData || []);
-    } catch (err) {
-      console.error('Failed to load templates', err);
-      setTemplates([]);
-      setLoadError('Could not load standard templates. Check that the API server is running, then retry.');
-    }
-    try {
-      const mine = await apiClient.getMyTemplates();
-      setMyTemplates((mine || []).filter((t: any) => t.isStandard === false));
-    } catch {
-      setMyTemplates([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [filter, setFilter] = useState<ClassFilter>(EMPTY_FILTER);
 
   useEffect(() => {
-    const customerFromUrl = searchParams.get('customer');
-    if (customerFromUrl) {
-      setSelectedCustomer(customerFromUrl);
+    const c = searchParams.get('customer');
+    if (c) setSelectedCustomer(c);
+  }, [searchParams]);
+
+  const loadData = useCallback(async () => {
+    setLoadingTemplates(true);
+    try {
+      const [tmpl, mats] = await Promise.all([
+        apiClient.getTemplates(true),
+        apiClient.getMaterials().catch(() => []),
+      ]);
+      const unique = new Map<string, StructureTemplate>();
+      for (const t of (tmpl || []) as StructureTemplate[]) {
+        const key = t.name.trim().toLowerCase();
+        if (!unique.has(key)) unique.set(key, t);
+      }
+      setTemplates([...unique.values()].sort((a, b) => (a.displayOrder ?? 99) - (b.displayOrder ?? 99)));
+      setMaterials(
+        (mats || []).map((m: any) => ({ id: m.id, name: m.name, type: m.type || m.materialType }))
+      );
+    } finally {
+      setLoadingTemplates(false);
     }
-    loadData();
   }, []);
 
-  const listForTab = activeTab === 'my' ? myTemplates : templates;
-  const filteredTemplates = listForTab.filter(
-    (t) =>
-      t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (t.pebiParentPg || '').toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const isAllActive =
+    filter.materialClass === null && filter.isPrinted === null && filter.structure === null;
+
+  const filtered = useMemo(
+    () =>
+      isAllActive
+        ? templates
+        : templates.filter((t) =>
+            matchesClassFilter(
+              {
+                name: t.name,
+                productType: t.productType,
+                pebiParentPg: t.pebiParentPg,
+                materialClass: t.materialClass,
+                structureType: t.structureType,
+                defaultLayers: t.defaultLayers,
+                isStandard: t.isStandard,
+              },
+              filter
+            )
+          ),
+    [templates, filter, isAllActive]
   );
 
-  const grouped = filteredTemplates.reduce<Record<string, any[]>>((acc, t) => {
-    const g = templateGroup(t);
-    if (!acc[g]) acc[g] = [];
-    acc[g].push(t);
-    return acc;
-  }, {});
+  function countWithFilter(partial: Partial<ClassFilter>) {
+    const test = { ...filter, ...partial };
+    return templates.filter((t) =>
+      matchesClassFilter(
+        {
+          name: t.name,
+          productType: t.productType,
+          pebiParentPg: t.pebiParentPg,
+          materialClass: t.materialClass,
+          structureType: t.structureType,
+          defaultLayers: t.defaultLayers,
+          isStandard: t.isStandard,
+        },
+        test
+      )
+    ).length;
+  }
 
-  const handleUseTemplate = async (templateId: string, templateName: string) => {
-    setInstantiating(templateId);
+  const toggleClass = (v: 'PE' | 'Non PE') =>
+    setFilter((f) => ({ ...f, materialClass: f.materialClass === v ? null : v }));
+  const togglePrint = (v: boolean) =>
+    setFilter((f) => ({ ...f, isPrinted: f.isPrinted === v ? null : v }));
+  const toggleStructure = (v: TemplateStructureTier) =>
+    setFilter((f) => ({ ...f, structure: f.structure === v ? null : v }));
+
+  const handleUseTemplate = async (template: StructureTemplate) => {
+    if (instantiating) return;
+    setInstantiating(template.id);
     try {
-      const instantiated = await apiClient.instantiateTemplate(templateId, {
+      const created = await apiClient.instantiateTemplate(template.id, {
         customerId: selectedCustomer || undefined,
-        jobName: jobName.trim() || templateName,
+        jobName: jobName.trim() || template.name,
       });
-      navigate(`/estimate/${instantiated.id}`);
+      navigate(`/estimate/${created.id}`);
     } catch (err) {
-      alert('Failed to create estimate from template');
+      const e = err as Error & { status?: number };
+      if (e.status === 409) {
+        alert('This template has unresolved materials. Ask your admin to relink layers in Standard Templates.');
+      } else {
+        alert(e.message || 'Failed to create estimate');
+      }
     } finally {
       setInstantiating(null);
     }
   };
 
+  const blankQuery = new URLSearchParams();
+  if (selectedCustomer) blankQuery.set('customer', selectedCustomer);
+  if (jobName.trim()) blankQuery.set('jobName', jobName.trim());
+
   return (
-    <div className="max-w-6xl mx-auto pb-28 lg:pb-0">
-      <div className="mb-8">
-        <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy mb-2">New Estimate</h1>
-        <p className="text-mist">
-          Click a template to open the editor, or start from a blank canvas
-        </p>
+    <div className="max-w-5xl mx-auto pb-28 lg:pb-8">
+      <div className="mb-6">
+        <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy mb-1">New estimate</h1>
+        <p className="text-mist text-sm">Select a structure below, or start from a blank canvas.</p>
       </div>
 
-      <div className="card mb-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Customer + job */}
+      <div className="card mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-navy mb-2">Customer</label>
+            <label className="block text-sm font-medium text-navy mb-1.5">Customer</label>
             <CustomerAutocomplete value={selectedCustomer || ''} onChange={setSelectedCustomer} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-navy mb-2">Job Name</label>
+            <label className="block text-sm font-medium text-navy mb-1.5">Job name</label>
             <input
               type="text"
-              placeholder="e.g., Chips duplex laminate"
+              placeholder="e.g. Chips duplex laminate"
               className="input w-full"
               value={jobName}
               onChange={(e) => setJobName(e.target.value)}
@@ -114,160 +257,151 @@ const TemplatePicker = () => {
         </div>
       </div>
 
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-mist" />
-          <input
-            type="text"
-            placeholder="Search templates..."
-            className="input w-full pl-12"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
+      {/* Classification grid */}
+      <div className="card mb-6">
+        <h2 className="text-sm font-semibold text-navy mb-3">Choose a structure</h2>
+        <div className="space-y-2">
+          {/* Row 1 — All */}
+          <div>
+            <GridCell
+              label="All"
+              active={isAllActive}
+              disabled={false}
+              wide
+              onClick={() => setFilter(EMPTY_FILTER)}
+            />
+          </div>
 
-      <div className="border-b border-border mb-8">
-        <nav className="flex space-x-8">
-          <button
-            type="button"
-            onClick={() => setActiveTab('standard')}
-            className={`pb-4 px-1 font-medium text-sm border-b-2 transition-colors ${
-              activeTab === 'standard'
-                ? 'border-gold text-gold'
-                : 'border-transparent text-mist hover:text-ink'
-            }`}
-          >
-            <Grid3x3 className="w-4 h-4 inline-block mr-2" />
-            Standard Templates
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('my')}
-            className={`pb-4 px-1 font-medium text-sm border-b-2 transition-colors ${
-              activeTab === 'my'
-                ? 'border-gold text-gold'
-                : 'border-transparent text-mist hover:text-ink'
-            }`}
-          >
-            <User className="w-4 h-4 inline-block mr-2" />
-            My Templates
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('blank')}
-            className={`pb-4 px-1 font-medium text-sm border-b-2 transition-colors ${
-              activeTab === 'blank'
-                ? 'border-gold text-gold'
-                : 'border-transparent text-mist hover:text-ink'
-            }`}
-          >
-            <Layers className="w-4 h-4 inline-block mr-2" />
-            Blank Canvas
-          </button>
-        </nav>
-      </div>
+          {/* Row 2 — Material class */}
+          <div className="grid grid-cols-2 gap-2">
+            {CLASS_ROW.map(({ label, value }) => (
+              <GridCell
+                key={value}
+                label={label}
+                active={filter.materialClass === value}
+                disabled={!isAllActive && filter.materialClass !== value && countWithFilter({ materialClass: value }) === 0}
+                onClick={() => toggleClass(value)}
+              />
+            ))}
+          </div>
 
-      {(activeTab === 'standard' || activeTab === 'my') && (
-        <div>
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </div>
-          ) : loadError && activeTab === 'standard' ? (
-            <div className="card text-center py-12">
-              <p className="text-danger mb-4">{loadError}</p>
-              <button type="button" className="btn-primary" onClick={loadData}>
-                Retry
-              </button>
-            </div>
-          ) : filteredTemplates.length === 0 ? (
-            <div className="card text-center py-12">
-              <Grid3x3 className="w-12 h-12 text-mist mx-auto mb-4" />
-              <h3 className="text-xl font-display font-semibold text-navy mb-2">
-                {activeTab === 'my' ? 'No saved templates yet' : searchTerm ? 'No templates match your search' : 'No templates yet'}
-              </h3>
-              {activeTab === 'my' && (
-                <p className="text-mist text-sm mt-2 max-w-md mx-auto">
-                  Start from a standard template, edit layers in the estimate editor, then use{' '}
-                  <strong>Save as Template</strong> to add it here.
-                </p>
-              )}
-            </div>
-          ) : (
-            Object.entries(grouped).map(([group, items]) => (
-              <div key={group} className="mb-8">
-                <h3 className="text-lg font-display font-semibold text-navy mb-4">{group}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {items.map((template) => (
-                    <button
-                      key={template.id}
-                      type="button"
-                      disabled={instantiating !== null}
-                      onClick={() => handleUseTemplate(template.id, template.name)}
-                      className={`card hover:shadow-md transition-shadow cursor-pointer text-left w-full ${
-                        instantiating === template.id ? 'ring-2 ring-gold opacity-90' : ''
-                      }`}
-                    >
-                      <div className="flex items-start space-x-4">
-                        <LaminateVisualizer
-                          layers={(template.defaultLayers || []).map((l: any, i: number) => ({
-                            id: String(i),
-                            type: l.layer_type || 'substrate',
-                            material: l.ref_material_key || 'Layer',
-                            micron: l.default_micron || 10,
-                          }))}
-                          width={48}
-                          height={64}
-                        />
-                        <div className="flex-1">
-                          <h4 className="font-display font-semibold text-navy mb-1">{template.name}</h4>
-                          <p className="text-sm text-mist mb-2">{template.pebiParentPg || template.structureType || ''}</p>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-xs px-2 py-1 bg-slate rounded-md">{template.productType}</span>
-                            <span className="text-xs text-mist">{template.materialClass || ''}</span>
-                          </div>
-                          {instantiating === template.id && (
-                            <p className="text-xs text-gold mt-2 flex items-center gap-1">
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              Opening editor…
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+          {/* Row 3 — Printed / Plain */}
+          <div className="grid grid-cols-2 gap-2">
+            {PRINT_ROW.map(({ label, value }) => (
+              <GridCell
+                key={label}
+                label={label}
+                active={filter.isPrinted === value}
+                disabled={countWithFilter({ isPrinted: value }) === 0}
+                onClick={() => togglePrint(value)}
+              />
+            ))}
+          </div>
 
-      {activeTab === 'blank' && (
-        <div className="card">
-          <div className="text-center py-12">
-            <Layers className="w-16 h-16 text-mist mx-auto mb-6" />
-            <h3 className="text-2xl font-display font-semibold text-navy mb-3">Start from Scratch</h3>
-            <p className="text-mist max-w-md mx-auto mb-8">
-              Build your structure layer by layer. Choose your product type and add materials from your library.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/estimate/new?template=blank&type=roll" className="btn-secondary">
-                Create Roll Estimate
-              </Link>
-              <Link to="/estimate/new?template=blank&type=pouch" className="btn-secondary">
-                Create Pouch Estimate
-              </Link>
-              <Link to="/estimate/new?template=blank&type=sleeve" className="btn-secondary">
-                Create Sleeve Estimate
-              </Link>
-            </div>
+          {/* Row 4 — Structure */}
+          <div className="grid grid-cols-4 gap-2">
+            {STRUCTURE_ROW.map(({ label, value }) => (
+              <GridCell
+                key={value}
+                label={label}
+                active={filter.structure === value}
+                disabled={countWithFilter({ structure: value }) === 0}
+                onClick={() => toggleStructure(value)}
+              />
+            ))}
           </div>
         </div>
+        <p className="text-xs text-mist mt-3">
+          {isAllActive ? `${templates.length} structure(s)` : `${filtered.length} of ${templates.length} structure(s) match`}
+        </p>
+      </div>
+
+      {/* Template cards */}
+      {loadingTemplates ? (
+        <div className="flex items-center justify-center py-12 text-mist text-sm gap-2">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Loading structures…
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="card text-center py-10 text-mist text-sm">
+          No structures match the selected filters.{' '}
+          <button type="button" className="text-gold underline" onClick={() => setFilter(EMPTY_FILTER)}>
+            Reset
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-6">
+          {filtered.map((template) => {
+            const cls = classifyTemplate(template);
+            const tag =
+              cls.materialClass
+                ? `${cls.materialClass} · ${cls.isPrinted ? 'Printed' : 'Plain'} · ${cls.structure.charAt(0).toUpperCase() + cls.structure.slice(1)}`
+                : cls.structure.charAt(0).toUpperCase() + cls.structure.slice(1);
+
+            return (
+              <button
+                key={template.id}
+                type="button"
+                disabled={instantiating === template.id}
+                onClick={() => handleUseTemplate(template)}
+                className="card p-3 text-left hover:border-gold/50 hover:shadow-sm transition-all disabled:opacity-60 group"
+              >
+                <div className="flex items-start gap-2">
+                  <div className="shrink-0 mt-0.5">
+                    <LaminateVisualizer
+                      layers={visualizerLayers(template, materials)}
+                      width={24}
+                      height={32}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-semibold text-navy leading-tight line-clamp-2 group-hover:text-gold transition-colors">
+                      {template.name}
+                    </h4>
+                    <p className="text-[10px] text-mist mt-0.5 truncate">{tag}</p>
+                  </div>
+                </div>
+                {instantiating === template.id && (
+                  <div className="flex items-center gap-1 mt-2 text-[10px] text-gold">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Creating…
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
       )}
+
+      {/* Blank canvas */}
+      <div className="card">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 px-1 py-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-slate flex items-center justify-center shrink-0">
+              <Layers className="w-5 h-5 text-mist" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-navy">Blank canvas</p>
+              <p className="text-xs text-mist">Build layer by layer — no template</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 sm:ml-auto">
+            {masterRef.productTypeOptions.map((pt) => {
+              const q = new URLSearchParams(blankQuery);
+              q.set('type', pt.value);
+              return (
+                <a
+                  key={pt.value}
+                  href={`/estimate/new?template=blank&${q.toString()}`}
+                  className="btn-secondary text-xs py-1.5 px-3"
+                >
+                  {pt.label}
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

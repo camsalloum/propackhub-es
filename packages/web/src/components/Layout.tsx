@@ -90,15 +90,15 @@ const Layout = () => {
                   </Link>
                 );
               })}
-              {user?.role === 'platform_admin' && (
+              {user && (user.role === 'tenant_admin' || user.role === 'platform_admin') && (
                 <Link
-                  to="/platform/master-library"
+                  to="/platform/master-data"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center space-x-3 px-4 py-3 min-h-[48px] rounded-lg ${isActive('/platform/master-library') ? 'bg-gold/10 text-gold' : 'hover:bg-slate text-ink'
+                  className={`flex items-center space-x-3 px-4 py-3 min-h-[48px] rounded-lg ${isActive('/platform/master-data') ? 'bg-gold/10 text-gold' : 'hover:bg-slate text-ink'
                     }`}
                 >
                   <FolderOpen className="w-5 h-5" />
-                  <span className="font-medium">Master library</span>
+                  <span className="font-medium">Master Data</span>
                 </Link>
               )}
             </nav>
@@ -141,14 +141,14 @@ const Layout = () => {
                 </Link>
               );
             })}
-            {user?.role === 'platform_admin' && (
+            {user && (user.role === 'tenant_admin' || user.role === 'platform_admin') && (
               <Link
-                to="/platform/master-library"
-                className={`flex items-center space-x-3 px-4 py-3 rounded-lg ${isActive('/platform/master-library') ? 'bg-gold/10 text-gold' : 'hover:bg-slate text-ink'
+                to="/platform/master-data"
+                className={`flex items-center space-x-3 px-4 py-3 rounded-lg ${isActive('/platform/master-data') ? 'bg-gold/10 text-gold' : 'hover:bg-slate text-ink'
                   }`}
               >
                 <FolderOpen className="w-5 h-5" />
-                <span className="font-medium">Master library</span>
+                <span className="font-medium">Master Data</span>
               </Link>
             )}
           </nav>

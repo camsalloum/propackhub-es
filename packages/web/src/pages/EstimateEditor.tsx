@@ -11,6 +11,12 @@ import { runClientCalculation, effectiveMarginPercent } from '../lib/estimateCal
 import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
 import CustomerAutocomplete from '../components/CustomerAutocomplete';
 import { groupMaterialsForPicker, type CategoryNode } from '../lib/materialTaxonomy';
+import { derivePrintingWebClass, stackNeedsSolventMix, materialAllowedForTemplateLayer } from '@es/engine';
+import { useMasterDataReference } from '../hooks/useMasterDataReference';
+import {
+  DEFAULT_MASTER_REFERENCE,
+  type ProductTypeValue,
+} from '../lib/masterDataReference';
 
 interface MaterialItem {
   id: string; name: string; type: string; solidPercent: number;
@@ -29,24 +35,14 @@ interface DimensionState {
   extraPrintingTrimMm: number; piecesPerCut: number; openWidthMm: number; openHeightMm: number;
 }
 
-type MasterReference = {
-  productTypeOptions: Array<{ label: string; value: 'roll' | 'sleeve' | 'pouch' }>;
-  unitOptions: Array<{ label: string; value: string }>;
+const DEFAULT_PRODUCT_TYPE_OPTIONS = DEFAULT_MASTER_REFERENCE.productTypeOptions;
+const DEFAULT_UNIT_OPTIONS = DEFAULT_MASTER_REFERENCE.unitOptions;
+
+const LAYER_TYPE_LABELS: Record<string, string> = {
+  substrate: 'Substrate',
+  ink: 'Ink & Coating',
+  adhesive: 'Adhesive',
 };
-
-const DEFAULT_PRODUCT_TYPE_OPTIONS: MasterReference['productTypeOptions'] = [
-  { label: 'Roll', value: 'roll' },
-  { label: 'Sleeve', value: 'sleeve' },
-  { label: 'Bag or Pouch', value: 'pouch' },
-];
-
-const DEFAULT_UNIT_OPTIONS: MasterReference['unitOptions'] = [
-  { label: 'Kgs', value: 'kgs' },
-  { label: 'Kpcs', value: 'kpcs' },
-  { label: 'SQM', value: 'sqm' },
-  { label: 'LM', value: 'lm' },
-  { label: 'Roll 500 LM', value: 'roll_500_lm' },
-];
 
 const EstimateEditor = () => {
   const { id } = useParams<{ id: string }>();
@@ -73,12 +69,11 @@ const EstimateEditor = () => {
   const [orderQuantityUnit, setOrderQuantityUnit] = useState('kgs');
   const [rollSpecOpen, setRollSpecOpen] = useState(false);
   const [processesState, setProcessesState] = useState<any[]>([]);
-  const [masterReference, setMasterReference] = useState<MasterReference | null>(null);
+  const { reference: masterReference, version: masterDataVersion } = useMasterDataReference();
 
   // UI state
   const [activeSection, setActiveSection] = useState<'structure' | 'dimensions' | 'slabs' | 'markup'>('structure');
-  const [printingWebClass, setPrintingWebClass] = useState<'wide_web' | 'narrow_web'>('wide_web');
-  const [productType, setProductType] = useState<'roll' | 'sleeve' | 'pouch'>('roll');
+  const [productType, setProductType] = useState<ProductTypeValue>('roll');
   const [jobName, setJobName] = useState('New estimate');
   const [customerId, setCustomerId] = useState<string>('');
   const [markupPercent, setMarkupPercent] = useState(15);
@@ -98,17 +93,44 @@ const EstimateEditor = () => {
   const [mobileStackOpen, setMobileStackOpen] = useState(false);
 
   const location = useLocation();
+  const returnTo =
+    (location.state as { returnTo?: string } | null)?.returnTo === '/templates'
+      ? '/templates'
+      : '/estimates';
 
   const editingLayer = layers.find((l) => l.id === editingLayerId) ?? null;
 
+  const templateClassification = useMemo(() => {
+    const tc = (dimensions as { templateClassification?: { materialClass?: string; structureType?: string } })
+      .templateClassification;
+    if (!tc?.materialClass && !tc?.structureType) return null;
+    return {
+      materialClass: tc.materialClass,
+      structureType: tc.structureType,
+      productType,
+    };
+  }, [dimensions, productType]);
+
   const materialGroupsByType = useMemo(() => {
     const types = ['substrate', 'ink', 'adhesive'] as const;
+    const substrateFilter = templateClassification
+      ? (m: { type: string; substrateFamily?: string | null }) =>
+          materialAllowedForTemplateLayer(m, 'substrate', templateClassification)
+      : undefined;
     return Object.fromEntries(
-      types.map((t) => [t, groupMaterialsForPicker(materials, categories, t)])
+      types.map((t) => [
+        t,
+        groupMaterialsForPicker(
+          materials,
+          categories,
+          t,
+          t === 'substrate' ? substrateFilter : undefined
+        ),
+      ])
     ) as Record<string, ReturnType<typeof groupMaterialsForPicker>>;
-  }, [materials, categories]);
+  }, [materials, categories, templateClassification]);
 
-  const renderMaterialOptions = (layerType: string, includeCrossType = false) => (
+  const renderMaterialOptions = (layerType: string) => (
     <>
       {(materialGroupsByType[layerType] || []).map((group) => (
         <optgroup key={group.label} label={group.label}>
@@ -119,16 +141,37 @@ const EstimateEditor = () => {
           ))}
         </optgroup>
       ))}
-      {includeCrossType && (
-        <optgroup label="Other types">
-          {materials.filter((m) => m.type !== layerType).map((m) => (
-            <option key={m.id} value={m.id} title={m.hoover || ''}>
-              {m.name} ({m.type})
-            </option>
-          ))}
-        </optgroup>
-      )}
     </>
+  );
+
+  const engineMaterials = useMemo(
+    () =>
+      materials.map((m) => ({
+        id: m.id,
+        name: m.name,
+        type: m.type as 'substrate' | 'ink' | 'adhesive',
+        solidPercent: m.solidPercent,
+        density: parseFloat(m.density) || 0.9,
+        costPerKgUsd: parseFloat(m.costPerKgUsd) || 0,
+        wastePercent: m.wastePercent,
+        isSolventBased: m.isSolventBased,
+      })),
+    [materials]
+  );
+
+  const layerMaterialRefs = useMemo(
+    () => layers.filter((l) => l.materialId).map((l) => ({ materialId: l.materialId })),
+    [layers]
+  );
+
+  const derivedPrintingWebClass = useMemo(
+    () => derivePrintingWebClass(layerMaterialRefs, engineMaterials),
+    [layerMaterialRefs, engineMaterials]
+  );
+
+  const needsSolventMix = useMemo(
+    () => stackNeedsSolventMix(layerMaterialRefs, engineMaterials),
+    [layerMaterialRefs, engineMaterials]
   );
 
   const densityForMaterial = (materialId: string) => {
@@ -184,8 +227,8 @@ const EstimateEditor = () => {
     setLayerSheetOpen(true);
   };
 
-  const productTypeOptions = masterReference?.productTypeOptions ?? DEFAULT_PRODUCT_TYPE_OPTIONS;
-  const unitOptions = masterReference?.unitOptions ?? DEFAULT_UNIT_OPTIONS;
+  const productTypeOptions = masterReference.productTypeOptions ?? DEFAULT_PRODUCT_TYPE_OPTIONS;
+  const unitOptions = masterReference.unitOptions ?? DEFAULT_UNIT_OPTIONS;
 
   // Load materials + customers on mount
   const loadBaseData = useCallback(async () => {
@@ -193,22 +236,13 @@ const EstimateEditor = () => {
     let custs: any[] = [];
 
     try {
-      const [materialRows, cats, ref] = await Promise.all([
+      const [materialRows, cats] = await Promise.all([
         apiClient.getMaterials(),
         apiClient.getCategories().catch(() => []),
-        apiClient.getMasterDataReference().catch(() => null),
       ]);
       mats = materialRows || [];
       setMaterials(mats);
       setCategories(cats || []);
-      if (ref) {
-        setMasterReference({
-          productTypeOptions: ref.productTypeOptions?.length
-            ? ref.productTypeOptions
-            : DEFAULT_PRODUCT_TYPE_OPTIONS,
-          unitOptions: ref.unitOptions?.length ? ref.unitOptions : DEFAULT_UNIT_OPTIONS,
-        });
-      }
     } catch (err) {
       console.error('Failed to load materials:', err);
       setLoadError('Could not load materials. Layer defaults may be incomplete.');
@@ -249,7 +283,6 @@ const EstimateEditor = () => {
             { quantityKg: 5000, pricePerKg: 0, total: 0 },
           ]);
           setEstimate({ id: undefined, status: 'draft', displayCurrency: 'AED', salePricePerKg: 0, materialCostPerKg: 0, totalGsm: 0, totalMicron: 0 });
-          setPrintingWebClass('wide_web');
           const statePriceChanges = (location.state as any)?.priceChanges;
           if (statePriceChanges) setPriceChanges(statePriceChanges);
           setLoading(false);
@@ -262,6 +295,11 @@ const EstimateEditor = () => {
     };
     init();
   }, [id]);
+
+  useEffect(() => {
+    if (masterDataVersion === 0) return;
+    loadBaseData();
+  }, [masterDataVersion, loadBaseData]);
 
   // Map template ID → layers using real material IDs
   function getTemplateLayers(templateId: number | null, mats: MaterialItem[]): LayerItem[] {
@@ -306,7 +344,6 @@ const EstimateEditor = () => {
         ...s, quantityKg: parseFloat(s.quantityKg) || 0, pricePerKg: parseFloat(s.pricePerKg) || 0,
         total: (parseFloat(s.quantityKg) || 0) * (parseFloat(s.pricePerKg) || 0),
       })));
-      setPrintingWebClass(data.printingWebClass || 'wide_web');
       setProductType(data.productType || 'roll');
       setJobName(data.jobName || '');
       setCustomerId(data.customerId || '');
@@ -364,16 +401,18 @@ const EstimateEditor = () => {
   };
 
   const buildSavePayload = useCallback(() => ({
-    jobName, customerId: customerId || undefined, productType, printingWebClass, dimensions,
+    jobName, customerId: customerId || undefined, productType,
+    printingWebClass: derivedPrintingWebClass,
+    dimensions,
     markupPercent, platesPerKg, deliveryPerKg,
-    solventCostPerKgUsd: printingWebClass === 'wide_web' ? solventCostPerKgUsd : undefined,
-    solventRatio: printingWebClass === 'wide_web' ? solventRatio : undefined,
+    solventCostPerKgUsd: needsSolventMix ? solventCostPerKgUsd : undefined,
+    solventRatio: needsSolventMix ? solventRatio : undefined,
     orderQuantityKg: orderQuantity,
     orderQuantityUnit,
     layers: layers.map((l, i) => ({ materialId: l.materialId, micron: l.micron, position: i })),
     slabs: slabsState.map(s => ({ quantityKg: s.quantityKg, pricePerKg: s.pricePerKg })),
     processes: processesState,
-  }), [jobName, customerId, productType, printingWebClass, dimensions, markupPercent, platesPerKg, deliveryPerKg, solventCostPerKgUsd, solventRatio, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
+  }), [jobName, customerId, productType, derivedPrintingWebClass, needsSolventMix, dimensions, markupPercent, platesPerKg, deliveryPerKg, solventCostPerKgUsd, solventRatio, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   const slabQuantitiesKey = slabsState.map((s) => s.quantityKg).join(',');
   const layerInputsKey = layers.map((l) => `${l.materialId}:${l.micron}`).join('|');
@@ -386,7 +425,6 @@ const EstimateEditor = () => {
         layers: layers.map((l, i) => ({ id: l.id, materialId: l.materialId, micron: l.micron, position: i })),
         materials,
         productType,
-        printingWebClass,
         dimensions: { ...dimensions },
         markupPercent,
         platesPerKg,
@@ -403,7 +441,7 @@ const EstimateEditor = () => {
       return null;
     }
   }, [
-    loading, materials, layerInputsKey, productType, printingWebClass, dimensions,
+    loading, materials, layerInputsKey, productType, dimensions,
     markupPercent, platesPerKg, deliveryPerKg, slabQuantitiesKey,
     estimate?.displayCurrency, estimate?.exchangeRateUsdToDisplay,
     solventCostPerKgUsd, solventRatio, layers.length,
@@ -513,7 +551,7 @@ const EstimateEditor = () => {
     if (!name?.trim()) return;
     try {
       await apiClient.createTemplate(name.trim(), estimate.id);
-      alert(`Template "${name.trim()}" saved under My Templates. Find it in New Estimate or Standard Templates.`);
+      alert(`Template "${name.trim()}" saved to your account. Use it when starting a new estimate from the estimate editor.`);
     } catch (err) {
       alert('Failed to save template: ' + (err instanceof Error ? err.message : 'Unknown'));
     }
@@ -589,7 +627,9 @@ const EstimateEditor = () => {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
-            <Link to="/dashboard" className="text-mist hover:text-ink"><ArrowLeft className="w-5 h-5" /></Link>
+            <Link to={returnTo} className="text-mist hover:text-ink" title="Back">
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
             <div>
               <input type="text" value={jobName} onChange={(e) => setJobName(e.target.value)}
                 className="text-2xl lg:text-3xl font-display font-bold text-navy bg-transparent border-b border-transparent hover:border-border focus:border-gold focus:outline-none w-full" placeholder="Estimate name" />
@@ -698,14 +738,6 @@ const EstimateEditor = () => {
             <div className="card space-y-6">
               <div>
                 <h3 className="text-lg font-display font-semibold text-navy mb-4">Layer Stack</h3>
-                <div className="mb-6 p-4 bg-slate rounded-lg">
-                  <label className="block text-sm font-medium text-navy mb-2">Printing Web Class</label>
-                  <div className="flex space-x-4">
-                    <button onClick={() => setPrintingWebClass('wide_web')} className={`px-4 py-2 rounded-lg ${printingWebClass === 'wide_web' ? 'bg-gold text-white' : 'bg-white border border-border'}`}>Wide Web (Ink SB)</button>
-                    <button onClick={() => setPrintingWebClass('narrow_web')} className={`px-4 py-2 rounded-lg ${printingWebClass === 'narrow_web' ? 'bg-gold text-white' : 'bg-white border border-border'}`}>Narrow Web (Ink UV)</button>
-                  </div>
-                  <p className="text-sm text-mist mt-2">{printingWebClass === 'wide_web' ? 'Ink SB (30% solid) with solvent mix' : 'Ink UV (100% solid) without solvent for ink'}</p>
-                </div>
 
                 {/* Mobile cards + bottom sheets (PRD §5.8) */}
                 <div className="space-y-3 md:hidden pb-24">
@@ -775,20 +807,20 @@ const EstimateEditor = () => {
                         <tr key={layer.id} className="border-b border-border last:border-0 hover:bg-slate/50">
                           <td className="py-4 px-4 text-sm text-mist">{idx + 1}</td>
                           <td className="py-4 px-4">
-                            <span className={`text-xs px-2 py-1 rounded-md ${layer.materialType === 'substrate' ? 'bg-blue-100 text-blue-800' : layer.materialType === 'ink' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>{layer.materialType}</span>
+                            <span className={`text-xs px-2 py-1 rounded-md ${layer.materialType === 'substrate' ? 'bg-blue-100 text-blue-800' : layer.materialType === 'ink' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>{LAYER_TYPE_LABELS[layer.materialType] || layer.materialType}</span>
                           </td>
                           <td className="py-4 px-4">
                             <select value={layer.materialId} onChange={(e) => {
                               const mat = materials.find(m => m.id === e.target.value);
                               if (!mat) return;
                               setLayers((prev) => prev.map((l) => l.id === layer.id ? {
-                                ...l, materialId: mat.id, materialName: mat.name, materialType: mat.type,
+                                ...l, materialId: mat.id, materialName: mat.name, materialType: layer.materialType,
                                 costPerKgUsd: parseFloat(mat.costPerKgUsd) || 0, isSolventBased: mat.isSolventBased || false,
                                 gsm: l.micron * (parseFloat(mat.density) || 0.9), hoover: mat.hoover,
                               } : l));
                             }} className="input w-full font-medium text-sm" title={materials.find(m => m.id === layer.materialId)?.hoover || ''}>
                               <option value="">Select material</option>
-                              {renderMaterialOptions(layer.materialType, true)}
+                              {renderMaterialOptions(layer.materialType)}
                             </select>
                           </td>
                           <td className="py-4 px-4">
@@ -824,7 +856,7 @@ const EstimateEditor = () => {
                   }} defaultValue="">
                     <option value="" disabled>+ Add Layer...</option>
                     <option value="substrate">Substrate</option>
-                    <option value="ink">Ink</option>
+                    <option value="ink">Ink & Coating</option>
                     <option value="adhesive">Adhesive</option>
                   </select>
                   <button onClick={() => {
@@ -839,7 +871,7 @@ const EstimateEditor = () => {
                 </div>
 
                 {/* Solvent mix (admin only, wide web) */}
-                {can('solventMixCost') && printingWebClass === 'wide_web' && (
+                {can('solventMixCost') && needsSolventMix && (
                   <div className="mt-6 p-4 border border-border rounded-lg">
                     <h4 className="font-display font-semibold text-navy mb-3">Solvent Mix</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1112,7 +1144,7 @@ const EstimateEditor = () => {
                     ...l,
                     materialId: mat.id,
                     materialName: mat.name,
-                    materialType: mat.type,
+                    materialType: editingLayer.materialType,
                     costPerKgUsd: parseFloat(mat.costPerKgUsd) || 0,
                     isSolventBased: mat.isSolventBased || false,
                     gsm: l.micron * (parseFloat(mat.density) || 0.9),
@@ -1121,7 +1153,7 @@ const EstimateEditor = () => {
                 className="input w-full min-h-[48px]"
               >
                 <option value="">Select material</option>
-                {renderMaterialOptions(editingLayer.materialType, true)}
+                {renderMaterialOptions(editingLayer.materialType)}
               </select>
             </div>
             <div>
@@ -1143,7 +1175,7 @@ const EstimateEditor = () => {
               />
             </div>
             <p className="text-sm text-mist">
-              GSM: {editingLayer.gsm.toFixed(1)} · Type: {editingLayer.materialType}
+              GSM: {editingLayer.gsm.toFixed(1)} · Type: {LAYER_TYPE_LABELS[editingLayer.materialType] || editingLayer.materialType}
             </p>
           </div>
         )}
@@ -1160,9 +1192,9 @@ const EstimateEditor = () => {
               key={type}
               type="button"
               onClick={() => addLayerOfType(type)}
-              className="w-full min-h-[48px] px-4 py-3 rounded-xl bg-slate text-left font-medium capitalize"
+              className="w-full min-h-[48px] px-4 py-3 rounded-xl bg-slate text-left font-medium"
             >
-              {type}
+              {LAYER_TYPE_LABELS[type] || type}
             </button>
           ))}
         </div>

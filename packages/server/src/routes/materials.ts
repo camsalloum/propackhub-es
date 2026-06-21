@@ -7,6 +7,10 @@ import { getEffectiveProfile, stripMaterialRow } from '../utils/visibility';
 import { ensureMaterialsForTenant } from '../db/seed-materials';
 import { roundUsd } from '../utils/usd';
 
+function isMaterialAdmin(role: string): boolean {
+  return role === 'tenant_admin' || role === 'platform_admin';
+}
+
 function normalizeMaterialPrices<T extends { costPerKgUsd?: number; marketPriceUsd?: number | null }>(
   data: T
 ): T {
@@ -79,6 +83,10 @@ export async function createMaterialRoute(
 ) {
   try {
     await request.jwtVerify();
+    const user = extractUserFromRequest(request);
+    if (!isMaterialAdmin(user.role)) {
+      return reply.status(403).send({ error: 'Admin only' });
+    }
     const tenantId = extractTenantFromRequest(request);
     const data = normalizeMaterialPrices(MaterialSchema.parse(request.body));
 
@@ -90,6 +98,8 @@ export async function createMaterialRoute(
         tenantId,
         ...data,
         marketPriceUsd: roundUsd(data.marketPriceUsd ?? data.costPerKgUsd),
+        priceSource: 'manual',
+        isTenantOnly: true,
       })
       .returning();
 
@@ -110,16 +120,26 @@ export async function updateMaterialRoute(
 ) {
   try {
     await request.jwtVerify();
+    const user = extractUserFromRequest(request);
+    if (!isMaterialAdmin(user.role)) {
+      return reply.status(403).send({ error: 'Admin only' });
+    }
     const tenantId = extractTenantFromRequest(request);
     const { id } = request.params;
     const data = normalizeMaterialPrices(MaterialSchema.partial().parse(request.body));
 
     const db = getDatabase();
 
-    const { marketPriceUsd, ...rest } = data;
+    const { marketPriceUsd, costPerKgUsd, ...rest } = data;
     const patch: Record<string, unknown> = { ...rest, updatedAt: new Date() };
     if (marketPriceUsd !== undefined) {
       patch.marketPriceUsd = marketPriceUsd;
+    }
+    if (costPerKgUsd !== undefined || marketPriceUsd !== undefined) {
+      patch.priceSource = 'manual';
+    }
+    if (costPerKgUsd !== undefined) {
+      patch.costPerKgUsd = costPerKgUsd;
     }
 
     const [material] = await db
@@ -149,10 +169,28 @@ export async function deleteMaterialRoute(
 ) {
   try {
     await request.jwtVerify();
+    const user = extractUserFromRequest(request);
+    if (!isMaterialAdmin(user.role)) {
+      return reply.status(403).send({ error: 'Admin only' });
+    }
     const tenantId = extractTenantFromRequest(request);
     const { id } = request.params;
 
     const db = getDatabase();
+
+    const layerUsage = await db
+      .select({ id: schema.layers.id })
+      .from(schema.layers)
+      .innerJoin(schema.estimates, eq(schema.layers.estimateId, schema.estimates.id))
+      .where(and(eq(schema.layers.materialId, id), eq(schema.estimates.tenantId, tenantId)))
+      .limit(1);
+
+    if (layerUsage.length > 0) {
+      return reply.status(409).send({
+        error: 'Material is used in one or more estimates',
+        usedInEstimates: true,
+      });
+    }
 
     await db
       .delete(schema.materials)
@@ -160,6 +198,12 @@ export async function deleteMaterialRoute(
 
     return reply.send({ success: true });
   } catch (error: any) {
+    if (error?.code === '23503') {
+      return reply.status(409).send({
+        error: 'Material is referenced by estimates or templates',
+        usedInEstimates: true,
+      });
+    }
     console.error('Delete material error:', error);
     return reply.status(500).send({ error: 'Failed to delete material' });
   }
@@ -180,37 +224,120 @@ export async function registerMaterialRoutes(fastify: FastifyInstance) {
     async (request, reply) => updateMaterialRoute(fastify, request, reply)
   );
 
-  // Refresh platform master from Master Data.xlsx
+  // Sync tenant library from platform master (replaces Excel refresh)
+  fastify.post<{ Body: { prune?: boolean } }>(
+    '/api/v1/materials/sync-from-platform',
+    async (request, reply) => {
+      try {
+        await request.jwtVerify();
+        const user = extractUserFromRequest(request);
+        const tenantId = extractTenantFromRequest(request);
+        if (user.role !== 'tenant_admin' && user.role !== 'platform_admin') {
+          return reply.status(403).send({ error: 'Admin only' });
+        }
+
+        const pruneOrphans = request.body?.prune !== false;
+        const { syncPlatformMasterToAllTenants } = await import('../db/platform-master-data');
+        const { syncMaterialsForTenant } = await import('../db/seed-materials');
+        const { relinkTemplatesForTenant } = await import('../db/seed-templates');
+        const { listPlatformMasterMaterials } = await import('../db/platform-master-data');
+
+        if (user.role === 'platform_admin') {
+          const result = await syncPlatformMasterToAllTenants({ pruneOrphans });
+          const materials = await listPlatformMasterMaterials();
+          return reply.send({
+            ...result,
+            totalMaterials: materials.length,
+            substrateCount: materials.filter(
+              (m) => m.type === 'substrate' && m.substrateFamily !== 'Packaging'
+            ).length,
+            inkCount: materials.filter((m) => m.type === 'ink').length,
+            adhesiveCount: materials.filter((m) => m.type === 'adhesive').length,
+            packagingCount: materials.filter((m) => m.substrateFamily === 'Packaging').length,
+          });
+        }
+
+        const materials = await listPlatformMasterMaterials();
+        const result = await syncMaterialsForTenant(tenantId, materials, { pruneOrphans });
+        const templatesRelinked = await relinkTemplatesForTenant(tenantId);
+        return reply.send({
+          tenantsSynced: 1,
+          ...result,
+          templatesRelinked,
+          totalMaterials: materials.length,
+        });
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Sync from platform error:', error);
+        return reply.status(500).send({ error: `Failed to sync from platform master: ${message}` });
+      }
+    }
+  );
+
+  /** @deprecated Use POST /api/v1/materials/sync-from-platform */
   fastify.post<{ Body: { prune?: boolean } }>(
     '/api/v1/materials/refresh-from-excel',
     async (request, reply) => {
-    try {
-      await request.jwtVerify();
-      const user = extractUserFromRequest(request);
-      const tenantId = extractTenantFromRequest(request);
-      if (user.role !== 'tenant_admin' && user.role !== 'platform_admin') {
-        return reply.status(403).send({ error: 'Admin only' });
+      try {
+        await request.jwtVerify();
+        const user = extractUserFromRequest(request);
+        const tenantId = extractTenantFromRequest(request);
+        if (user.role !== 'tenant_admin' && user.role !== 'platform_admin') {
+          return reply.status(403).send({ error: 'Admin only' });
+        }
+        const prune = request.body?.prune === true;
+        const { syncPlatformMasterToAllTenants, listPlatformMasterMaterials } = await import(
+          '../db/platform-master-data'
+        );
+        const { syncMaterialsForTenant } = await import('../db/seed-materials');
+        const { relinkTemplatesForTenant } = await import('../db/seed-templates');
+
+        if (user.role === 'platform_admin') {
+          const sync = await syncPlatformMasterToAllTenants({ pruneOrphans: prune });
+          const materials = await listPlatformMasterMaterials();
+          return reply.send({
+            ...sync,
+            excelPath: '(deprecated — platform DB)',
+            seedPath: '(deprecated)',
+            referencePath: '(deprecated)',
+            substrateCount: materials.filter(
+              (m) => m.type === 'substrate' && m.substrateFamily !== 'Packaging'
+            ).length,
+            inkCount: materials.filter((m) => m.type === 'ink').length,
+            adhesiveCount: materials.filter((m) => m.type === 'adhesive').length,
+            packagingCount: materials.filter((m) => m.substrateFamily === 'Packaging').length,
+            totalMaterials: materials.length,
+            reference: { productTypes: 0, units: 0, rmTypes: 0 },
+          });
+        }
+
+        const materials = await listPlatformMasterMaterials();
+        const result = await syncMaterialsForTenant(tenantId, materials, { pruneOrphans: prune });
+        await relinkTemplatesForTenant(tenantId);
+        return reply.send({
+          excelPath: '(deprecated)',
+          seedPath: '(deprecated)',
+          referencePath: '(deprecated)',
+          substrateCount: materials.filter(
+            (m) => m.type === 'substrate' && m.substrateFamily !== 'Packaging'
+          ).length,
+          inkCount: materials.filter((m) => m.type === 'ink').length,
+          adhesiveCount: materials.filter((m) => m.type === 'adhesive').length,
+          packagingCount: materials.filter((m) => m.substrateFamily === 'Packaging').length,
+          totalMaterials: materials.length,
+          tenantsSynced: 1,
+          ...result,
+          templatesRelinked: 1,
+          reference: { productTypes: 0, units: 0, rmTypes: 0 },
+        });
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        return reply.status(500).send({ error: message });
       }
-
-      const prune = request.body?.prune === true;
-      const { refreshMaterialsFromExcel } = await import('../services/materials-excel-refresh');
-      const result = await refreshMaterialsFromExcel(tenantId, {
-        syncAllTenants: false,
-        pruneOrphans: prune,
-      });
-      return reply.send(result);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Refresh from Excel error:', error);
-      return reply.status(500).send({
-        error: message.includes('not found')
-          ? 'Master Data.xlsx not found (set MASTER_DATA_EXCEL_PATH or place at project root)'
-          : `Failed to refresh from Excel: ${message}`,
-      });
     }
-  });
+  );
 
-  // Prune substrate rows not in Excel (no price sync)
+  // Prune library rows not in platform master
   fastify.post('/api/v1/materials/prune-orphans', async (request, reply) => {
     try {
       await request.jwtVerify();
@@ -220,11 +347,9 @@ export async function registerMaterialRoutes(fastify: FastifyInstance) {
         return reply.status(403).send({ error: 'Admin only' });
       }
 
-      const { buildMasterMaterialsFromExcel, resolveMasterDataExcelPath } = await import(
-        '../db/master-materials-io'
-      );
+      const { listPlatformMasterMaterials } = await import('../db/platform-master-data');
       const { pruneOrphanSubstratesForTenant } = await import('../db/seed-materials');
-      const materials = buildMasterMaterialsFromExcel(resolveMasterDataExcelPath());
+      const materials = await listPlatformMasterMaterials();
       const pruned = await pruneOrphanSubstratesForTenant(tenantId, materials);
       return reply.send({ pruned });
     } catch (error: unknown) {

@@ -7,6 +7,7 @@ import {
   writeMasterDataReference,
 } from '../db/master-materials-io';
 import { syncMaterialsForTenant } from '../db/seed-materials';
+import { relinkTemplatesForTenant } from '../db/seed-templates';
 
 export interface ExcelRefreshResult {
   excelPath: string;
@@ -22,6 +23,7 @@ export interface ExcelRefreshResult {
   updated: number;
   orphans: number;
   pruned: number;
+  templatesRelinked: number;
   reference: {
     productTypes: number;
     units: number;
@@ -44,6 +46,7 @@ export async function refreshMaterialsFromExcel(
   let orphans = 0;
   let pruned = 0;
   let tenantsSynced = 0;
+  let templatesRelinked = 0;
 
   const tenantIds = options?.syncAllTenants
     ? (await db.select({ id: schema.tenants.id }).from(schema.tenants)).map((t: { id: string }) => t.id)
@@ -58,6 +61,7 @@ export async function refreshMaterialsFromExcel(
     updated += result.updated;
     orphans += result.orphans;
     pruned += result.pruned;
+    templatesRelinked += await relinkTemplatesForTenant(id);
     tenantsSynced++;
   }
 
@@ -83,6 +87,7 @@ export async function refreshMaterialsFromExcel(
     updated,
     orphans,
     pruned,
+    templatesRelinked,
     reference: {
       productTypes: reference.productTypes.length,
       units: reference.units.length,

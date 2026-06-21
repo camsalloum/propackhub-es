@@ -45,7 +45,7 @@ jobs:
         run: npm ci
       - name: Push database schema
         run: |
-          npm run db:push --workspace packages/server || true
+          npm run db:push --workspace packages/server
           npm run db:patch --workspace packages/server
       - name: Run engine tests
         run: npm run test --workspace packages/engine

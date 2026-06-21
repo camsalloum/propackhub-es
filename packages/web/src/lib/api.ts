@@ -2,6 +2,51 @@ const API_BASE_URL =
   import.meta.env.VITE_API_URL ??
   (import.meta.env.DEV ? '' : 'http://localhost:5001');
 
+export type TenantSyncResult = {
+  tenantsSynced: number;
+  inserted: number;
+  updated: number;
+  orphans: number;
+  pruned: number;
+  templatesRelinked: number;
+};
+
+export type PlatformReferenceCategory =
+  | 'product_type'
+  | 'unit'
+  | 'rm_type'
+  | 'printing_web'
+  | 'ink_coating'
+  | 'adhesive'
+  | 'packaging';
+
+export type PlatformReferenceItemInput = {
+  label: string;
+  code?: string | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type PlatformMasterMaterialInput = {
+  key: string;
+  name: string;
+  type: 'substrate' | 'ink' | 'adhesive';
+  solidPercent: number;
+  density: number;
+  costPerKgUsd: number;
+  wastePercent?: number;
+  isSolventBased?: boolean;
+  substrateFamily?: string | null;
+  substrateGrade?: string | null;
+  hoover?: string | null;
+  marketPriceUsd?: number | null;
+  sortOrder?: number;
+};
+
+export type PlatformMasterMaterialRow = PlatformMasterMaterialInput & {
+  id: string;
+  costingKey?: string | null;
+};
+
 export class ApiClient {
   private token: string | null = null;
 
@@ -51,7 +96,11 @@ export class ApiClient {
       const error = await response.json().catch(() => ({
         error: response.statusText,
       }));
-      throw new Error(error.error || `API error: ${response.status}`);
+      const message = error.error || `API error: ${response.status}`;
+      const err = new Error(message) as Error & { status?: number; details?: unknown };
+      err.status = response.status;
+      if (error.unresolvedLayers) err.details = error.unresolvedLayers;
+      throw err;
     }
 
     return response.json();
@@ -106,7 +155,61 @@ export class ApiClient {
   }
 
   updateMasterMaterials(materials: any[]) {
-    return this.request<{ ok: boolean; count: number }>('PUT', '/api/v1/platform/master-materials', materials);
+    return this.request<{ materials: any[]; count: number; sync: TenantSyncResult }>(
+      'PUT',
+      '/api/v1/platform/master-data/materials',
+      materials
+    );
+  }
+
+  getPlatformMasterDataMaterials() {
+    return this.request<PlatformMasterMaterialRow[]>('GET', '/api/v1/platform/master-data/materials');
+  }
+
+  createPlatformMasterMaterial(material: PlatformMasterMaterialInput) {
+    return this.request<{ material: PlatformMasterMaterialInput; sync: TenantSyncResult }>(
+      'POST',
+      '/api/v1/platform/master-data/materials',
+      material
+    );
+  }
+
+  updatePlatformMasterMaterial(id: string, material: Partial<PlatformMasterMaterialInput>) {
+    return this.request<{ material: PlatformMasterMaterialInput; sync: TenantSyncResult }>(
+      'PATCH',
+      `/api/v1/platform/master-data/materials/${id}`,
+      material
+    );
+  }
+
+  deletePlatformMasterMaterial(id: string) {
+    return this.request<{ ok: boolean; sync: TenantSyncResult }>(
+      'DELETE',
+      `/api/v1/platform/master-data/materials/${id}`
+    );
+  }
+
+  getPlatformMasterDataReference() {
+    return this.getMasterDataReference();
+  }
+
+  savePlatformReferenceCategory(
+    category: PlatformReferenceCategory,
+    items: PlatformReferenceItemInput[]
+  ) {
+    return this.request<{ items: unknown[]; sync: TenantSyncResult }>(
+      'PUT',
+      `/api/v1/platform/master-data/reference/${category}`,
+      items
+    );
+  }
+
+  syncMaterialsFromPlatform() {
+    return this.request<TenantSyncResult & { totalMaterials?: number }>(
+      'POST',
+      '/api/v1/materials/sync-from-platform',
+      {}
+    );
   }
 
   // Materials
@@ -183,13 +286,29 @@ export class ApiClient {
   getMasterDataReference() {
     return this.request<{
       productTypes: string[];
+      productTypeRows?: Array<{ label: string; code: string }>;
       units: string[];
       rmTypes: string[];
+      rmTypeRows?: Array<{ label: string; code: string }>;
       packaging: string[];
       inkCoating: string[];
       adhesive: string[];
+      printingWebClasses?: Array<{
+        label: string;
+        code: string;
+        inkSystem?: string | null;
+        solidPercent?: number | null;
+      }>;
       productTypeOptions: Array<{ label: string; value: 'roll' | 'sleeve' | 'pouch' }>;
+      printingWebClassOptions: Array<{
+        label: string;
+        value: 'wide_web' | 'narrow_web';
+        inkSystem: string | null;
+        solidPercent: number | null;
+        description: string;
+      }>;
       unitOptions: Array<{ label: string; value: string }>;
+      rmTypeOptions?: Array<{ label: string; code: string }>;
     }>('GET', '/api/v1/master-data/reference');
   }
 

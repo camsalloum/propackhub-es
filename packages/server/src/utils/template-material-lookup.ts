@@ -6,6 +6,7 @@ export interface TemplateLookupMaterial {
   type: string;
   substrateFamily?: string | null;
   substrateGrade?: string | null;
+  costingKey?: string | null;
 }
 
 export interface TemplateLayerRef {
@@ -18,11 +19,19 @@ export interface TemplateLayerRef {
   [key: string]: unknown;
 }
 
+export function buildValidMaterialIdSet(materials: TemplateLookupMaterial[]): Set<string> {
+  return new Set(materials.map((m) => m.id));
+}
+
 export function buildTemplateMaterialLookup(materials: TemplateLookupMaterial[]): Map<string, string> {
   const lookup = new Map<string, string>();
   const set = (key: string, id: string) => lookup.set(key, id);
 
   for (const mat of materials) {
+    if (mat.costingKey) {
+      set(mat.costingKey, mat.id);
+    }
+
     const n = mat.name.toLowerCase();
     const family = (mat.substrateFamily || '').toLowerCase();
     const grade = (mat.substrateGrade || '').toLowerCase();
@@ -36,7 +45,12 @@ export function buildTemplateMaterialLookup(materials: TemplateLookupMaterial[])
       if (grade === 'ldpe white' || (n.includes('ldpe') && n.includes('white'))) {
         set('ldpe-white', mat.id);
       }
-      if (grade === 'ldpe shrink' || (n.includes('ldpe') && n.includes('shrink'))) {
+      if (
+        grade === 'ldpe shrink' ||
+        grade.includes('pe shrink') ||
+        (n.includes('ldpe') && n.includes('shrink')) ||
+        (n.includes('pe') && n.includes('shrink') && !n.includes('pet'))
+      ) {
         set('ldpe-shrink', mat.id);
       }
       if (grade === 'pet transparent' || n === 'pet transparent') {
@@ -51,7 +65,10 @@ export function buildTemplateMaterialLookup(materials: TemplateLookupMaterial[])
       if (n === 'bopp' || grade === 'bopp') {
         set('bopp', mat.id);
       }
-      if (n === 'cpp' || grade === 'cpp') {
+      if (family.includes('bopp') && (grade.includes('transparent') || n.includes('transparent'))) {
+        set('bopp', mat.id);
+      }
+      if (n === 'cpp' || grade === 'cpp' || grade.includes('cpp transparent')) {
         set('cpp', mat.id);
       }
       if (
@@ -103,9 +120,7 @@ export function buildTemplateMaterialLookup(materials: TemplateLookupMaterial[])
 
   if (!lookup.has('ink-sb')) {
     const sb =
-      materials.find(
-        (m) => solventInk(m) && gradeOf(m) === 'common colors'
-      ) ||
+      materials.find((m) => solventInk(m) && gradeOf(m) === 'common colors') ||
       materials.find((m) => m.type === 'ink' && m.name.toLowerCase().includes('ink sb')) ||
       materials.find(solventInk);
     if (sb) set('ink-sb', sb.id);
@@ -117,6 +132,18 @@ export function buildTemplateMaterialLookup(materials: TemplateLookupMaterial[])
       materials.find((m) => m.type === 'ink' && m.name.toLowerCase().includes('ink uv')) ||
       materials.find(uvInk);
     if (uv) set('ink-uv', uv.id);
+  }
+
+  if (!lookup.has('bopp')) {
+    const bopp =
+      materials.find(
+        (m) =>
+          m.type === 'substrate' &&
+          (m.substrateFamily || '').toLowerCase().includes('bopp') &&
+          (m.name.toLowerCase().includes('transparent') ||
+            (m.substrateGrade || '').toLowerCase().includes('transparent'))
+      ) || materials.find((m) => (m.substrateFamily || '').toLowerCase().includes('bopp'));
+    if (bopp) set('bopp', bopp.id);
   }
 
   return lookup;
@@ -132,9 +159,10 @@ function gradeOf(m: TemplateLookupMaterial): string {
 
 export function resolveLayerMaterialId(
   layer: TemplateLayerRef,
-  lookup: Map<string, string>
+  lookup: Map<string, string>,
+  validIds?: Set<string>
 ): string | null {
-  if (layer.materialId) {
+  if (layer.materialId && (!validIds || validIds.has(layer.materialId))) {
     return layer.materialId;
   }
   if (layer.ref_material_key) {
@@ -145,10 +173,11 @@ export function resolveLayerMaterialId(
 
 export function resolveTemplateLayers<T extends TemplateLayerRef>(
   layers: T[],
-  lookup: Map<string, string>
+  lookup: Map<string, string>,
+  validIds?: Set<string>
 ): T[] {
   return layers.map((layer) => ({
     ...layer,
-    materialId: resolveLayerMaterialId(layer, lookup),
+    materialId: resolveLayerMaterialId(layer, lookup, validIds),
   }));
 }

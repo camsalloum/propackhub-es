@@ -4,7 +4,7 @@
  */
 import 'dotenv/config';
 import { initializeDatabase, closeDatabase, getDatabase, schema } from '../src/db/index.js';
-import { ensureTemplatesForTenant } from '../src/db/seed-templates.js';
+import { ensureTemplatesForTenant, syncMissingStandardTemplates } from '../src/db/seed-templates.js';
 import { ensureMaterialsForTenant } from '../src/db/seed-materials.js';
 
 async function main() {
@@ -18,10 +18,11 @@ async function main() {
   for (const tenant of tenants) {
     const matsAdded = await ensureMaterialsForTenant(tenant.id);
     const tplAdded = await ensureTemplatesForTenant(tenant.id);
-    if (matsAdded > 0 || tplAdded > 0) {
-      console.log(`✓ ${tenant.name}: +${matsAdded} materials, +${tplAdded} templates`);
+    const tplSynced = await syncMissingStandardTemplates(tenant.id);
+    if (matsAdded > 0 || tplAdded > 0 || tplSynced > 0) {
+      console.log(`✓ ${tenant.name}: +${matsAdded} materials, +${tplAdded} templates, +${tplSynced} synced`);
       totalMaterials += matsAdded;
-      totalTemplates += tplAdded;
+      totalTemplates += tplAdded + tplSynced;
     } else {
       console.log(`· ${tenant.name}: already seeded`);
     }

@@ -82,7 +82,14 @@ describe.skipIf(!hasDatabase)('API integration — auth + estimates', () => {
     expect(materials.length).toBeGreaterThan(0);
 
     const substrate = materials.find((m: { type: string }) => m.type === 'substrate');
-    const ink = materials.find((m: { type: string; name: string }) => m.type === 'ink' && m.name.toLowerCase().includes('sb'));
+    const ink =
+      materials.find((m: { type: string; costingKey?: string }) => m.costingKey === 'ink-sb') ||
+      materials.find(
+        (m: { type: string; name: string; substrateFamily?: string }) =>
+          m.type === 'ink' &&
+          (m.name.toLowerCase().includes('sb') ||
+            (m.substrateFamily || '').toLowerCase().includes('solvent based'))
+      );
     expect(substrate).toBeTruthy();
     expect(ink).toBeTruthy();
 

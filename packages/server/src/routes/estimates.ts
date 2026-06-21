@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
 import { eq, and, desc, sql, isNull, asc } from 'drizzle-orm';
-import { calculateEstimate, type VisibilityProfile, type Estimate as EngineEstimate } from '@es/engine';
+import { calculateEstimate, type VisibilityProfile, type Estimate as EngineEstimate, derivePrintingWebClass } from '@es/engine';
 import { getEffectiveProfile, stripEstimateRow, stripCalculationResult } from '../utils/visibility';
 import { usdToDisplay } from '../utils/currency';
 import { calculateAndPersistEstimate, buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
@@ -130,6 +130,16 @@ export async function createEstimateRoute(
     // Generate ref number
     const refNumber = await generateRefNumber(db, tenantId);
 
+    const tenantMaterials = await db
+      .select()
+      .from(schema.materials)
+      .where(eq(schema.materials.tenantId, tenantId));
+    const materialMap = buildEngineMaterialMap(tenantMaterials);
+    const printingWebClass = derivePrintingWebClass(
+      data.layers.map((l) => ({ materialId: l.materialId })),
+      materialMap
+    );
+
     // Create estimate
     const [estimate] = await db
       .insert(schema.estimates)
@@ -139,7 +149,7 @@ export async function createEstimateRoute(
         refNumber,
         jobName: data.jobName,
         productType: data.productType,
-        printingWebClass: data.printingWebClass,
+        printingWebClass,
         dimensions: data.dimensions,
         markupPercent: data.markupPercent.toString(),
         platesPerKg: data.platesPerKg.toString(),
@@ -700,7 +710,6 @@ async function updateEstimateRoute(
       }
     }
     if (request.body.productType !== undefined) updates.productType = request.body.productType;
-    if (request.body.printingWebClass !== undefined) updates.printingWebClass = request.body.printingWebClass;
     if (request.body.markupPercent !== undefined) updates.markupPercent = request.body.markupPercent.toString();
     if (request.body.platesPerKg !== undefined) updates.platesPerKg = request.body.platesPerKg.toString();
     if (request.body.deliveryPerKg !== undefined) updates.deliveryPerKg = request.body.deliveryPerKg.toString();
@@ -736,6 +745,20 @@ async function updateEstimateRoute(
           position: layer.position,
         });
       }
+
+      const tenantMaterials = await db
+        .select()
+        .from(schema.materials)
+        .where(eq(schema.materials.tenantId, tenantId));
+      const materialMap = buildEngineMaterialMap(tenantMaterials);
+      const derivedPrintingWeb = derivePrintingWebClass(
+        request.body.layers.map((l) => ({ materialId: l.materialId })),
+        materialMap
+      );
+      await db
+        .update(schema.estimates)
+        .set({ printingWebClass: derivedPrintingWeb, updatedAt: new Date() })
+        .where(eq(schema.estimates.id, id));
     }
 
     // Update processes (delete + re-insert)

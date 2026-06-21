@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
+import { MasterDataProvider } from './contexts/MasterDataContext';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import EstimateEditor from './pages/EstimateEditor';
@@ -10,7 +11,7 @@ import CustomersList from './pages/CustomersList';
 import Library from './pages/Library';
 import Settings from './pages/Settings';
 import StandardTemplates from './pages/StandardTemplates';
-import MasterLibrary from './pages/MasterLibrary';
+import MasterData from './pages/MasterData';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
@@ -45,7 +46,9 @@ function App() {
           path="/*"
           element={
             <ProtectedRoute>
-              <Layout />
+              <MasterDataProvider>
+                <Layout />
+              </MasterDataProvider>
             </ProtectedRoute>
           }
         >
@@ -60,7 +63,8 @@ function App() {
           <Route path="customers/:id" element={<CustomerDetail />} />
           <Route path="library" element={<Library />} />
           <Route path="settings" element={<Settings />} />
-          <Route path="platform/master-library" element={<MasterLibrary />} />
+          <Route path="platform/master-data" element={<MasterData />} />
+          <Route path="platform/master-library" element={<Navigate to="/platform/master-data" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>

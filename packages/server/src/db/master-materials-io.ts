@@ -7,7 +7,7 @@
  *   Adhesive:      Family | Grade | Density | Solid % | Hoover | User Price
  *   Packaging:     Family | Grade | Density | Solid % | Hoover | User Price
  *
- * List sheets: Unit (Units), PT (Product Type), RM Type (RM Type)
+ * List sheets: Unit (Units), PT (Product Type + Code), RM Type, Printing Web (label + code)
  *
  * Excel must use ListObject tables (auto-expand). If Name Manager shows #REF!,
  * run: npm run repair-master-data-excel
@@ -33,13 +33,29 @@ export interface MasterMaterial {
   marketPriceUsd: number | null;
 }
 
+export interface ProductTypeRow {
+  label: string;
+  code: string;
+}
+
+export interface PrintingWebRow {
+  label: string;
+  code: string;
+  inkSystem?: string | null;
+  solidPercent?: number | null;
+}
+
 export interface MasterDataReference {
   productTypes: string[];
+  productTypeRows: ProductTypeRow[];
   units: string[];
   rmTypes: string[];
+  /** Same list as rmTypes but with codes for filter/save mapping */
+  rmTypeRows?: Array<{ label: string; code: string }>;
   packaging: string[];
   inkCoating: string[];
   adhesive: string[];
+  printingWebClasses: PrintingWebRow[];
 }
 
 export const MASTER_DATA_SHEETS = {
@@ -50,9 +66,37 @@ export const MASTER_DATA_SHEETS = {
   unit: 'Unit',
   productType: 'PT',
   rmType: 'RM Type',
+  printingWeb: 'Printing Web',
 } as const;
 
 export const PACKAGING_FAMILY = 'Packaging';
+
+/** Template ref_material_key → master seed `key` (from Excel build). */
+export const TEMPLATE_REF_TO_MASTER_KEY: Record<string, string> = {
+  'ldpe-natural': 'ldpe-natural',
+  'ldpe-white': 'ldpe-white',
+  'ldpe-shrink': 'pe-shrink',
+  'pet-transparent': 'pet-transparent',
+  'pet-shrink': 'pet-shrink',
+  'pvc-shrink': 'pvc-shrink-normal-shrink-blown',
+  bopp: 'bopp-transparent',
+  cpp: 'cpp-transparent',
+  'alu-foil': 'aluminium-foil',
+  'ink-sb': 'ink-sb',
+  'ink-uv': 'ink-uv',
+  'adhesive-sb': 'adhesive-sb',
+  'adhesive-wb': 'adhesive-wb',
+  'adhesive-mono-component': 'adhesive-mono-component',
+  'solvent-base': 'adhesive-sb',
+};
+
+/** DB costingKey for a platform master row (template alias, e.g. ldpe-shrink on PE Shrink). */
+export function costingKeyForMasterKey(masterKey: string): string | null {
+  for (const [refKey, mappedKey] of Object.entries(TEMPLATE_REF_TO_MASTER_KEY)) {
+    if (mappedKey === masterKey) return refKey;
+  }
+  return null;
+}
 
 /** Costing template keys — first matching Excel row receives this key. */
 const INK_COSTING_FAMILY_KEYS: Array<{ match: (family: string) => boolean; key: string }> = [
@@ -185,6 +229,62 @@ function readNamedList(workbook: XLSX.WorkBook, sheetName: string, preferredHead
   return values;
 }
 
+/** Read label + optional code from a two-column list sheet (row 1 = headers). */
+function readLabeledCodeList(
+  workbook: XLSX.WorkBook,
+  sheetName: string,
+  labelHeaderCandidates: string[],
+  codeHeaderCandidates: string[]
+): Array<{ label: string; code: string }> {
+  const sheet = workbook.Sheets[sheetName];
+  if (!sheet) return [];
+
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null });
+  if (rows.length === 0) return [];
+
+  const first = rows[0];
+  const keys = Object.keys(first);
+  const findKey = (candidates: string[]) =>
+    keys.find((k) => candidates.some((c) => k.trim().toLowerCase() === c.toLowerCase()));
+
+  const labelKey = findKey(labelHeaderCandidates) ?? keys[0];
+  const codeKey = findKey(codeHeaderCandidates);
+
+  const out: Array<{ label: string; code: string }> = [];
+  for (const row of rows) {
+    const label = String(row[labelKey] ?? '').trim();
+    if (!label) continue;
+    const codeRaw = codeKey ? String(row[codeKey] ?? '').trim() : '';
+    out.push({ label, code: codeRaw });
+  }
+  return out;
+}
+
+function readPrintingWebRows(workbook: XLSX.WorkBook): PrintingWebRow[] {
+  const sheet = workbook.Sheets[MASTER_DATA_SHEETS.printingWeb];
+  if (!sheet) return [];
+
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null });
+  const out: PrintingWebRow[] = [];
+  for (const row of rows) {
+    const label = String(
+      cell(row, 'Printing Web', 'Label', 'Name') ?? ''
+    ).trim();
+    const code = String(cell(row, 'Code', 'Slug', 'Value') ?? '').trim();
+    if (!label || !code) continue;
+    const solidRaw = cell(row, 'Solid %', 'Solid Percent', 'solidPercent');
+    const solid =
+      solidRaw != null && solidRaw !== '' ? parseSolidPercent(solidRaw, 100) : null;
+    out.push({
+      label,
+      code,
+      inkSystem: cell(row, 'Ink System', 'Ink', 'inkSystem')?.toString().trim() || null,
+      solidPercent: solid,
+    });
+  }
+  return out;
+}
+
 interface StructuredRow {
   family: string;
   grade: string;
@@ -193,6 +293,7 @@ interface StructuredRow {
   hoover: string | null;
   userPrice: number;
   marketPrice: number;
+  effectiveCost: number;
 }
 
 function parseStructuredRow(row: Record<string, unknown>): StructuredRow | null {
@@ -210,9 +311,11 @@ function parseStructuredRow(row: Record<string, unknown>): StructuredRow | null 
     .trim();
   if (!family || !grade) return null;
 
-  const userPrice = roundUsd(parsePrice(cell(row, 'User Price', 'costPerKgUsd')) ?? 0);
+  const userPriceRaw = parsePrice(cell(row, 'User Price', 'costPerKgUsd'));
   const marketFromExcel = parsePrice(cell(row, 'Market Price ', 'Market Price', 'marketPriceUsd'));
-  const marketPrice = marketFromExcel != null ? marketFromExcel : userPrice;
+  const userPrice = userPriceRaw != null ? roundUsd(userPriceRaw) : 0;
+  const marketPrice = marketFromExcel != null ? roundUsd(marketFromExcel) : userPrice;
+  const effectiveCost = userPrice > 0 ? userPrice : marketPrice;
 
   return {
     family,
@@ -222,6 +325,7 @@ function parseStructuredRow(row: Record<string, unknown>): StructuredRow | null 
     hoover: cell(row, 'Hoover', 'hoover')?.toString().trim() || null,
     userPrice,
     marketPrice,
+    effectiveCost,
   };
 }
 
@@ -271,7 +375,7 @@ export function substratesFromExcelRows(rows: Record<string, unknown>[]): Master
       type: 'substrate',
       solidPercent: item.solidPercent,
       density: item.density,
-      costPerKgUsd: item.userPrice,
+      costPerKgUsd: item.effectiveCost,
       wastePercent: 0,
       isSolventBased: false,
       substrateFamily: item.family,
@@ -326,7 +430,7 @@ function inkMaterialsFromRows(rows: Record<string, unknown>[]): MasterMaterial[]
       type: 'ink',
       solidPercent: item.solidPercent,
       density: item.density,
-      costPerKgUsd: item.userPrice,
+      costPerKgUsd: item.effectiveCost,
       wastePercent: 0,
       isSolventBased: familyIsSolventBased(item.family),
       substrateFamily: item.family,
@@ -360,7 +464,7 @@ function adhesiveMaterialsFromRows(rows: Record<string, unknown>[]): MasterMater
       type: 'adhesive',
       solidPercent: item.solidPercent,
       density: item.density,
-      costPerKgUsd: item.userPrice,
+      costPerKgUsd: item.effectiveCost,
       wastePercent: 0,
       isSolventBased: solventBased,
       substrateFamily: item.family,
@@ -389,7 +493,7 @@ function packagingMaterialsFromRows(rows: Record<string, unknown>[]): MasterMate
       type: 'substrate',
       solidPercent: item.solidPercent,
       density: item.density,
-      costPerKgUsd: item.userPrice,
+      costPerKgUsd: item.effectiveCost,
       wastePercent: 0,
       isSolventBased: false,
       substrateFamily: PACKAGING_FAMILY,
@@ -422,13 +526,51 @@ export function readMasterDataReference(excelPath?: string): MasterDataReference
     .filter((r): r is StructuredRow => r != null)
     .map((r) => r.grade);
 
+  const ptRows = readLabeledCodeList(workbook, MASTER_DATA_SHEETS.productType, [
+    'Product Type',
+    'Ptypes',
+    'Label',
+  ], ['Code', 'Slug', 'Value']);
+  const productTypeRows: ProductTypeRow[] = ptRows.map((r) => ({
+    label: r.label,
+    code: r.code,
+  }));
+  const productTypes =
+    productTypeRows.length > 0
+      ? productTypeRows.map((r) => r.label)
+      : readNamedList(workbook, MASTER_DATA_SHEETS.productType, 'Product Type');
+
+  let printingWebClasses = readPrintingWebRows(workbook);
+
   return {
-    productTypes: readNamedList(workbook, MASTER_DATA_SHEETS.productType, 'Product Type'),
+    productTypes,
+    productTypeRows,
     units: readNamedList(workbook, MASTER_DATA_SHEETS.unit, 'Units'),
     rmTypes: readNamedList(workbook, MASTER_DATA_SHEETS.rmType, 'RM Type'),
     packaging: packagingGrades,
     inkCoating: inkGrades,
     adhesive: adhesiveGrades,
+    printingWebClasses,
+  };
+}
+
+/** Backfill reference fields when reading older master-data-reference.json */
+export function normalizeReferenceShape(ref: Partial<MasterDataReference>): MasterDataReference {
+  const productTypes = ref.productTypes ?? [];
+  const productTypeRows =
+    ref.productTypeRows && ref.productTypeRows.length > 0
+      ? ref.productTypeRows
+      : productTypes.map((label) => ({ label, code: '' }));
+
+  return {
+    productTypes,
+    productTypeRows,
+    units: ref.units ?? [],
+    rmTypes: ref.rmTypes ?? [],
+    packaging: ref.packaging ?? [],
+    inkCoating: ref.inkCoating ?? [],
+    adhesive: ref.adhesive ?? [],
+    printingWebClasses: ref.printingWebClasses ?? [],
   };
 }
 
@@ -526,7 +668,53 @@ export function buildMasterMaterialsFromExcel(
 
   const packaging = packagingMaterialsFromRows(sheetRows(workbook, MASTER_DATA_SHEETS.packaging));
 
-  return [...substrates, ...inkMaterials, ...adhesiveFromSheet, ...packaging];
+  const materials = [...substrates, ...inkMaterials, ...adhesiveFromSheet, ...packaging];
+  const withPreservedPrices = preserveSeedPricesWhenExcelBlank(materials, existingSeedPath);
+  for (const m of withPreservedPrices) {
+    if (m.costPerKgUsd <= 0) {
+      console.warn(
+        `[master-data] ${m.key} (${m.name}) has no User Price or Market Price — cost is $0`
+      );
+    }
+  }
+  return withPreservedPrices;
+}
+
+/** When Excel User/Market price is blank, keep last committed seed price for that key. */
+export function preserveSeedPricesWhenExcelBlank(
+  materials: MasterMaterial[],
+  existingSeedPath?: string
+): MasterMaterial[] {
+  const canonicalDefaults: Record<string, number> = {
+    'ink-sb': 12,
+    'ink-uv': 15,
+    'adhesive-sb': 8,
+    'adhesive-wb': 8,
+    'adhesive-mono-component': 8,
+  };
+
+  let existing: MasterMaterial[] = [];
+  try {
+    existing = readMasterSeed(existingSeedPath);
+  } catch {
+    /* no prior seed */
+  }
+  const byKey = new Map(existing.map((m) => [m.key, m]));
+
+  return materials.map((m) => {
+    if (m.costPerKgUsd > 0) return m;
+    const prev = byKey.get(m.key);
+    const fallback =
+      prev && prev.costPerKgUsd > 0
+        ? prev.costPerKgUsd
+        : canonicalDefaults[m.key] ?? 0;
+    if (fallback <= 0) return m;
+    return {
+      ...m,
+      costPerKgUsd: fallback,
+      marketPriceUsd: prev?.marketPriceUsd ?? fallback,
+    };
+  });
 }
 
 export function writeMasterSeed(materials: MasterMaterial[], seedPath?: string): string {

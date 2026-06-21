@@ -34,8 +34,15 @@ packages/server/db.sqlite
 packages/server/database.sqlite
 packages/server/init-db.js
 
-# Database files
-*.sql
+# Database files (allow committed patches; ignore local dumps)
+*.local.sql
+*.dump.sql
+!packages/server/scripts/schema-patches.sql
+!setup-db.sql
+
+# Excel temp / backup files
+~$*.xlsx
+*.backup-*.xlsx
 
 # Package manager specific
 package-lock.json

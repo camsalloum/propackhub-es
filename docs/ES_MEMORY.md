@@ -826,3 +826,73 @@ npm run update-materials
 5. **UI** — `/templates` Standard Templates page in left nav (browse, admin edit/delete, My Templates tab); TemplatePicker single-click → editor; Save as Template → My Templates.
 
 **User flow:** New estimate → pick standard → edit → Save as Template → appears under My Templates.
+
+### 2026-06-20 — Master Data + Templates hardening (unified audit plan)
+
+**P0 DB bootstrap:** Removed root `drizzle-orm`/`pg`/`xlsx` conflict; committed `packages/server/scripts/schema-patches.sql` + `setup-db.sql`; `.gitignore` allows patch SQL; deleted `check-cols.cjs`; CI `db:push` no longer masked with `|| true`.
+
+**P1 Excel integrity:** `costPerKgUsd` = User Price, fallback Market Price; `preserveSeedPricesWhenExcelBlank` for ink/adhesive canonical keys when Excel blank; platform `PUT /master-materials` read-only; `platform_admin` refresh syncs all tenants.
+
+**P2 Tenant customization:** `materials.priceSource` (`excel`|`manual`), `isTenantOnly`, `costingKey`; manual prices skipped on Excel sync; material CRUD admin-only; tenant-only rows exempt from prune.
+
+**P3 Template linking:** `TEMPLATE_REF_TO_MASTER_KEY` map (`bopp`→`bopp-transparent`, `ldpe-shrink`→`pe-shrink`); lookup uses `costingKey` first; stale UUID falls back to `ref_material_key`; relink after Excel refresh; instantiate **409** on unresolved layers; My Templates save `ref_material_key` from `costingKey`.
+
+**Verification:** `npm run verify-template-links`; server tests 12/12; engine 20/20.
+
+### 2026-06-20 — Excel-driven reference lists (PT, Printing Web, Units)
+
+**Excel sheets:** PT now has `Product Type` + `Code` columns; new **Printing Web** sheet (`Printing Web | Code | Ink System | Solid %`). `npm run repair-master-data-excel` creates them if missing.
+
+**Pipeline:** `readMasterDataReference` → `master-data-reference.json` on `update-materials` / Library Refresh → `GET /api/v1/master-data/reference` → UI.
+
+**UI:** EstimateEditor, StandardTemplates, TemplatePicker use `useMasterDataReference()` — no hardcoded product type / printing web options (fallback only if API fails).
+
+**Note:** Engine still supports `roll` | `sleeve` | `pouch` and `wide_web` | `narrow_web` only — Excel `Code` must use those slugs until DB/engine are generalized.
+
+### 2026-06-20 — Template classification drives substrate picker
+
+**Engine:** `template-classification.ts` — PE Mono → PE substrates only; Non PE Mono → no PE; Multilayer → all families; sleeve → SLEEVE/PET.
+
+**UI:** Standard Templates + EstimateEditor (when `dimensions.templateClassification` from template instantiate) filter substrate materials by classification. Changing class/structure prunes invalid layer materials.
+
+**UX:** Edit modal — 3 fields one row; Back + X + Escape; double-click card opens edit.
+
+**UX:** Estimate editor no longer shows Printing Web Class. Users add **Ink & Coating** as a layer type; material dropdown filters to `type === 'ink'` (same pattern for substrate/adhesive).
+
+**Costing:** `derivePrintingWebClass` + `stackNeedsSolventMix` in `@es/engine/layer-stack` — UV ink layer → `narrow_web`; solvent mix block when SB ink/adhesive present (not when user picked “wide web”).
+
+**Persistence:** `printing_web_class` column kept for compat; auto-derived on create/update from layer materials. Template instantiate + Standard Templates admin derive same way; printing web dropdown removed from template editor.
+
+### 2026-06-20 — In-app Master Data (Excel retired as source of truth)
+
+**Goal:** Platform admin manages all master materials + reference lists in the app; changes auto-sync to all tenants — no Excel file or refresh buttons.
+
+**Schema:** `platform_master_materials`, `platform_reference_items` (+ `platform_reference_category` enum) in `schema-patches.sql`.
+
+**Service:** `platform-master-data.ts` — CRUD, `buildMasterDataReferenceFromDb`, `syncPlatformMasterToAllTenants`, `ensurePlatformMasterSeeded` (one-time import from bundled JSON on empty tables; placeholder costs for blank ink/adhesive: $12/$8).
+
+**API:** `GET/POST/PATCH/DELETE/PUT /api/v1/platform/master-data/materials`, `PUT /api/v1/platform/master-data/reference/:category`, `GET /api/v1/master-data/reference` reads DB. `POST /api/v1/materials/sync-from-platform` replaces Excel refresh (legacy endpoint delegates to platform DB).
+
+**UI:** `/platform/master-data` — tabbed admin (substrates, ink, adhesive, packaging, PT, units, printing web, RM types). `MasterDataProvider` + `useMasterDataReference` invalidate on save → Library + EstimateEditor reload materials/dropdowns live.
+
+**Removed from Library:** Refresh from Excel, Prune orphans (platform save auto-syncs). Excel scripts kept for optional one-time import only.
+
+**Nav:** Master Data (platform_admin); `/platform/master-library` redirects.
+
+### 2026-06-20 — Master Data cleanup + TemplatePicker classification grid
+
+**Removed tabs from Master Data page:** `Printing Web`, `Ink Families`, `Adhesive Families` are all derived/absorbed — removed from `REF_TABS` and `RefTab` type (DB enum + server fn unchanged, backward-safe).
+
+**`templateCatalog.ts` — new exports:** `getTemplateClassification()` (returns `{ materialClass, isPrinted, structure }`), `TemplateStructureTier`, `ClassFilter`, `matchesClassFilter()`.
+
+**`TemplatePicker.tsx` — full rebuild:** 4-tier classification grid (All → PE/Non PE → Printed/Plain → Mono/Duplex/Triplex/Quadriplex), cumulative AND filter, client-side, no API round-trip. Template cards shown inline with LaminateVisualizer; clicking a card calls `instantiateTemplate`. Disabled cells (grey) when count=0 for that combination. Blank canvas buttons remain at bottom.
+
+### 2026-06-21 — RM Types closed-loop wiring (Library ↔ Master Data) Adding "Plate" to Master Data → RM Types did nothing — the Library page had hardcoded filter tabs and the Add Material modal had hardcoded type options. The `rm_type` reference was orphaned.
+
+**Fix — backend:** `buildMasterDataReferenceFromDb()` now returns `rmTypeRows: [{label, code}]` alongside `rmTypes: string[]`. Added `deriveRmTypeCode()` helper that maps standard labels to their DB type codes (`substrate`/`ink`/`adhesive`/`packaging`) and custom labels to kebab slugs. `enrichMasterDataReference()` now produces `rmTypeOptions: [{label, code}]` in the API response.
+
+**Fix — frontend:** `MasterDataReferenceState` now includes `rmTypeOptions`. The `MasterDataProvider`, `useMasterDataReference` hook, and `api.ts` types all carry the new field with `DEFAULT_RM_TYPE_OPTIONS` as fallback.
+
+**Library page fully dynamic:** Filter tabs are now rendered from `rmTypeOptions` — "Plate" added in Master Data instantly appears as a filter tab. Filter logic: `ink`→`type='ink'`; `adhesive`→`type='adhesive'`; `packaging`→`type='substrate'&&family='Packaging'`; `substrate`→all substrates not claimed by custom types; custom code→`type='substrate'&&family=label`. Add Material modal type dropdown also driven by `rmTypeOptions`; selecting a custom type stores as `type='substrate', substrateFamily=label`.
+
+**Master Data RM Types tab:** Added Code column (monospace, auto-lowercased). Help text explains the code semantics. Delete button shows a contextual warning: stronger warning for standard types (substrate/ink/adhesive/packaging), informational warning for custom types — materials are NOT auto-deleted, only hidden from filters.

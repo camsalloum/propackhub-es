@@ -3,10 +3,13 @@ import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest, isTenantAdmin } from '../utils/auth';
 import { eq, and, asc } from 'drizzle-orm';
-import { ensureTemplatesForTenant, relinkTemplatesForTenant } from '../db/seed-templates';
+import { ensureTemplatesForTenant, relinkTemplatesForTenant, syncMissingStandardTemplates, pruneDuplicateStandardTemplates } from '../db/seed-templates';
 import { quantitiesForSlabTemplateKey } from '../db/seed-slab-templates';
+import { derivePrintingWebClass, stackNeedsSolventMix } from '@es/engine';
+import { buildEngineMaterialMap } from '../services/estimate-calculation';
 import {
   buildTemplateMaterialLookup,
+  buildValidMaterialIdSet,
   resolveLayerMaterialId,
   type TemplateLayerRef,
 } from '../utils/template-material-lookup';
@@ -52,6 +55,8 @@ export async function getTemplatesRoute(
     const standardOnly = request.query.standard_only !== 'false';
 
     await ensureTemplatesForTenant(tenantId);
+    await syncMissingStandardTemplates(tenantId);
+    await pruneDuplicateStandardTemplates(tenantId);
     await relinkTemplatesForTenant(tenantId);
 
     const conditions = [
@@ -164,6 +169,26 @@ export async function instantiateTemplateRoute(
       .from(schema.materials)
       .where(eq(schema.materials.tenantId, tenantId));
     const materialLookup = buildTemplateMaterialLookup(materials);
+    const validIds = buildValidMaterialIdSet(materials);
+
+    const defaultLayers = (template.defaultLayers as TemplateLayerRef[]) || [];
+    const unresolvedLayers: { layer_order?: number; ref_material_key?: string }[] = [];
+    for (const layer of defaultLayers) {
+      const materialId = resolveLayerMaterialId(layer, materialLookup, validIds);
+      if (!materialId) {
+        unresolvedLayers.push({
+          layer_order: layer.layer_order,
+          ref_material_key: layer.ref_material_key,
+        });
+      }
+    }
+
+    if (unresolvedLayers.length > 0) {
+      return reply.status(409).send({
+        error: 'Template has unresolved material layers',
+        unresolvedLayers,
+      });
+    }
 
     const year = new Date().getFullYear();
     const countResult = await db
@@ -189,6 +214,20 @@ export async function instantiateTemplateRoute(
       dimensions.openHeightMm = defaultDims.length_mm || 250;
     }
 
+    dimensions.templateClassification = {
+      materialClass: template.materialClass,
+      structureType: template.structureType,
+    };
+
+    const materialMap = buildEngineMaterialMap(materials);
+    const resolvedLayerMaterialIds = defaultLayers.map(
+      (layer) => resolveLayerMaterialId(layer, materialLookup, validIds)!
+    );
+    const printingWebClass = derivePrintingWebClass(
+      resolvedLayerMaterialIds.map((materialId) => ({ materialId })),
+      materialMap
+    );
+
     const [estimate] = await db
       .insert(schema.estimates)
       .values({
@@ -197,7 +236,7 @@ export async function instantiateTemplateRoute(
         refNumber,
         jobName: jobName || template.name,
         productType: template.productType,
-        printingWebClass: template.defaultPrintingWebClass || 'wide_web',
+        printingWebClass,
         dimensions,
         markupPercent: tenant.defaultMarkupPercent || '15.00',
         platesPerKg: '0',
@@ -208,16 +247,10 @@ export async function instantiateTemplateRoute(
       })
       .returning();
 
-    const defaultLayers = (template.defaultLayers as TemplateLayerRef[]) || [];
+    const defaultLayersResolved = (template.defaultLayers as TemplateLayerRef[]) || [];
     let layerPosition = 0;
-    for (const layer of defaultLayers) {
-      const materialId = resolveLayerMaterialId(layer, materialLookup);
-      if (!materialId) {
-        console.warn(
-          `Template ${template.name}: unresolved layer ${layer.ref_material_key || layer.layer_order}`
-        );
-        continue;
-      }
+    for (const layer of defaultLayersResolved) {
+      const materialId = resolveLayerMaterialId(layer, materialLookup, validIds)!;
       await db.insert(schema.layers).values({
         estimateId: estimate.id,
         materialId,
@@ -306,6 +339,7 @@ export async function createTemplateRoute(
         micron: schema.layers.micron,
         position: schema.layers.position,
         materialType: schema.materials.type,
+        costingKey: schema.materials.costingKey,
       })
       .from(schema.layers)
       .leftJoin(schema.materials, eq(schema.layers.materialId, schema.materials.id))
@@ -321,6 +355,7 @@ export async function createTemplateRoute(
       layer_order: i + 1,
       layer_type: (l.materialType || 'substrate') as 'substrate' | 'ink' | 'adhesive',
       materialId: l.materialId,
+      ref_material_key: l.costingKey || undefined,
       default_micron: parseFloat(l.micron),
     }));
 
@@ -328,6 +363,16 @@ export async function createTemplateRoute(
       process_key: p.name.toLowerCase().replace(/\s+/g, '_'),
       enabled: p.enabled,
     }));
+
+    const tenantMaterials = await db
+      .select()
+      .from(schema.materials)
+      .where(eq(schema.materials.tenantId, tenantId));
+    const materialMap = buildEngineMaterialMap(tenantMaterials);
+    const needsSolvent = stackNeedsSolventMix(
+      layers.map((l) => ({ materialId: l.materialId })),
+      materialMap
+    );
 
     const [template] = await db
       .insert(schema.structureTemplates)
@@ -344,7 +389,7 @@ export async function createTemplateRoute(
         defaultLayers,
         defaultProcesses,
         defaultPrintingWebClass: estimate.printingWebClass,
-        solventMixEnabled: estimate.printingWebClass === 'wide_web',
+        solventMixEnabled: needsSolvent,
         isActive: true,
       })
       .returning();

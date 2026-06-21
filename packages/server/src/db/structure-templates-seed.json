@@ -236,7 +236,7 @@
     },
     {
       "pebi_parent_pg": "Laminates",
-      "name": "Laminates",
+      "name": "Laminates · Duplex",
       "product_type": "roll",
       "material_class": "Non PE",
       "structure_type": "Multilayer",
@@ -249,17 +249,59 @@
         { "layer_order": 3, "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 },
         { "layer_order": 4, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 50 }
       ],
-      "layer_expansion_hint": {
-        "label": "Add metallized barrier (typical triplex)",
-        "description": "Insert Adhesive SB + Aluminium + Adhesive SB between print side and PE sealant. Microns user-defined.",
-        "insert_before_layer_order": 4,
-        "suggested_layers": [
-          { "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 },
-          { "layer_type": "substrate", "ref_material_key": "alu-foil", "default_micron": 9 },
-          { "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 }
-        ],
-        "result_stack": "PET + Ink SB + Adhesive SB + [Adhesive SB + Alu + Adhesive SB] + LDPE"
-      },
+      "default_printing_web_class": "wide_web",
+      "default_processes": [
+        { "process_key": "printing", "enabled": true },
+        { "process_key": "lamination", "enabled": true },
+        { "process_key": "slitting", "enabled": true }
+      ],
+      "solvent_mix_enabled": true
+    },
+    {
+      "pebi_parent_pg": "Laminates",
+      "name": "Laminates · Triplex",
+      "product_type": "roll",
+      "material_class": "Non PE",
+      "structure_type": "Multilayer",
+      "substrate_origin": null,
+      "display_order": 111,
+      "default_dimensions": { "width_mm": 800, "thickness_um": 79 },
+      "default_layers": [
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "pet-transparent", "default_micron": 12 },
+        { "layer_order": 2, "layer_type": "ink", "ref_material_key": "ink-sb", "default_micron": 2 },
+        { "layer_order": 3, "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 },
+        { "layer_order": 4, "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 },
+        { "layer_order": 5, "layer_type": "substrate", "ref_material_key": "alu-foil", "default_micron": 9 },
+        { "layer_order": 6, "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 },
+        { "layer_order": 7, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 50 }
+      ],
+      "default_printing_web_class": "wide_web",
+      "default_processes": [
+        { "process_key": "printing", "enabled": true },
+        { "process_key": "lamination", "enabled": true },
+        { "process_key": "slitting", "enabled": true }
+      ],
+      "solvent_mix_enabled": true
+    },
+    {
+      "pebi_parent_pg": "Laminates",
+      "name": "Laminates · Quadriplex",
+      "product_type": "roll",
+      "material_class": "Non PE",
+      "structure_type": "Multilayer",
+      "substrate_origin": null,
+      "display_order": 112,
+      "default_dimensions": { "width_mm": 800, "thickness_um": 99 },
+      "default_layers": [
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "pet-transparent", "default_micron": 12 },
+        { "layer_order": 2, "layer_type": "ink", "ref_material_key": "ink-sb", "default_micron": 2 },
+        { "layer_order": 3, "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 },
+        { "layer_order": 4, "layer_type": "substrate", "ref_material_key": "alu-foil", "default_micron": 9 },
+        { "layer_order": 5, "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 },
+        { "layer_order": 6, "layer_type": "substrate", "ref_material_key": "bopp", "default_micron": 20 },
+        { "layer_order": 7, "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 },
+        { "layer_order": 8, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 50 }
+      ],
       "default_printing_web_class": "wide_web",
       "default_processes": [
         { "process_key": "printing", "enabled": true },

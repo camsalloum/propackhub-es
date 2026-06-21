@@ -1,5 +1,5 @@
 import { eq, and } from 'drizzle-orm';
-import { calculateEstimate, type Estimate as EngineEstimate, type CalculationResult } from '@es/engine';
+import { calculateEstimate, type Estimate as EngineEstimate, type CalculationResult, derivePrintingWebClass } from '@es/engine';
 import { schema } from '../db';
 import { usdToDisplay } from '../utils/currency';
 import { buildEngineMaterialMap, type MaterialRow } from '../utils/material-map';
@@ -48,6 +48,9 @@ export async function calculateAndPersistEstimate(
   type ProcessRow = (typeof processes)[number];
   type SlabRow = (typeof slabs)[number];
 
+  const layerRefs = layers.map((l: LayerRow) => ({ materialId: l.materialId }));
+  const derivedPrintingWebClass = derivePrintingWebClass(layerRefs, materialMap);
+
   const estimateForEngine: EngineEstimate = {
     id: estimate.id,
     tenantId,
@@ -62,7 +65,7 @@ export async function calculateAndPersistEstimate(
     })),
     dimensions: {
       productType: estimate.productType,
-      printingWebClass: estimate.printingWebClass,
+      printingWebClass: derivedPrintingWebClass,
       ...(estimate.dimensions as object),
     },
     markupPercent: parseFloat(estimate.markupPercent),

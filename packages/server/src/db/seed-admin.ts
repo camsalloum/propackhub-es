@@ -28,10 +28,18 @@ export async function seedDefaultAdmin(): Promise<void> {
 
     if (existing.length > 0) {
       const [admin] = await db
-        .select({ tenantId: schema.users.tenantId })
+        .select({ id: schema.users.id, tenantId: schema.users.tenantId, role: schema.users.role })
         .from(schema.users)
         .where(eq(schema.users.email, DEFAULT_ADMIN_EMAIL))
         .limit(1);
+
+      if (admin && admin.role !== 'platform_admin') {
+        await db
+          .update(schema.users)
+          .set({ role: 'platform_admin', updatedAt: new Date() })
+          .where(eq(schema.users.id, admin.id));
+        console.log(`✓ Promoted ${DEFAULT_ADMIN_EMAIL} to platform_admin`);
+      }
 
       if (admin) {
         try {
@@ -85,7 +93,7 @@ export async function seedDefaultAdmin(): Promise<void> {
         email: DEFAULT_ADMIN_EMAIL,
         passwordHash,
         displayName: DEFAULT_ADMIN_NAME,
-        role: 'tenant_admin',
+        role: 'platform_admin',
       })
       .returning();
 
@@ -112,7 +120,7 @@ export async function seedDefaultAdmin(): Promise<void> {
 
     console.log(`✓ Default admin created: ${DEFAULT_ADMIN_EMAIL} / ${DEFAULT_ADMIN_PASSWORD}`);
     console.log(`  Tenant: ${DEFAULT_TENANT_NAME} (${tenant.id})`);
-    console.log(`  Role: tenant_admin`);
+    console.log(`  Role: platform_admin`);
   } catch (error) {
     console.error('✗ Failed to seed default admin:', error);
     // Don't throw — server should still start even if admin seeding fails

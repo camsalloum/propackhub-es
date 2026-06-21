@@ -44,7 +44,22 @@ SHEETS: dict[str, tuple[str, dict[str, str]]] = {
     "Unit": ("tblUnits", {}),
     "PT": ("tblPtypes", {}),
     "RM Type": ("tblRMTypes", {}),
+    "Printing Web": ("tblPrintingWeb", {}),
 }
+
+PT_CODE_BY_LABEL = {
+    "Roll": "roll",
+    "Sleeve": "sleeve",
+    "Bag": "pouch",
+    "Pouch": "pouch",
+    "Bag or Pouch": "pouch",
+}
+
+PRINTING_WEB_DEFAULTS = [
+    ["Printing Web", "Code", "Ink System", "Solid %"],
+    ["Wide Web", "wide_web", "Ink SB", 30],
+    ["Narrow Web", "narrow_web", "Ink UV", 100],
+]
 
 # Friendly Name Manager name -> structured reference (uses tbl* tables)
 DEFINED_NAMES: dict[str, str] = {
@@ -55,6 +70,7 @@ DEFINED_NAMES: dict[str, str] = {
     "Packaging": "tblPackaging[Grade]",
     "Unit": "tblUnits[Units]",
     "Ptypes": "tblPtypes[Product Type]",
+    "PrintingWeb": "tblPrintingWeb[Printing Web]",
     "Type": "tblRMTypes[RM Type]",
 }
 
@@ -132,6 +148,36 @@ def validate_saved(path: Path, table_names: list[str]) -> list[str]:
     return errors
 
 
+def ensure_reference_sheets(wb) -> None:
+    """Add Printing Web sheet and PT Code column when missing."""
+    if "Printing Web" not in wb.sheetnames:
+        ws = wb.create_sheet("Printing Web")
+        for row in PRINTING_WEB_DEFAULTS:
+            ws.append(row)
+        print("  Created sheet: Printing Web (defaults)")
+
+    if "PT" in wb.sheetnames:
+        ws = wb["PT"]
+        headers = [str(ws.cell(1, c).value or "").strip() for c in range(1, ws.max_column + 1)]
+        if not any(h.lower() == "code" for h in headers):
+            ws.cell(1, ws.max_column + 1).value = "Code"
+            label_col = 1
+            code_col = ws.max_column
+            for row in range(2, ws.max_row + 1):
+                label = str(ws.cell(row, label_col).value or "").strip()
+                if not label:
+                    continue
+                existing = str(ws.cell(row, code_col).value or "").strip()
+                if not existing:
+                    ws.cell(row, code_col).value = PT_CODE_BY_LABEL.get(label, slugify(label))
+            print("  PT: added Code column")
+
+
+def slugify(text: str) -> str:
+    s = re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
+    return s or "value"
+
+
 def repair_workbook(path: Path) -> None:
     if not path.exists():
         print(f"ERROR: File not found: {path}", file=sys.stderr)
@@ -142,6 +188,8 @@ def repair_workbook(path: Path) -> None:
     print(f"Backup: {backup}")
 
     wb = openpyxl.load_workbook(path)
+
+    ensure_reference_sheets(wb)
 
     for name in list(wb.defined_names.keys()):
         del wb.defined_names[name]

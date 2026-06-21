@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Users, DollarSign, FileText, Globe } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Settings as SettingsIcon, Users, DollarSign, FileText, Globe, Database } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { useVisibilityProfile, VISIBILITY_KEYS } from '../hooks/useVisibilityProfile';
@@ -132,6 +133,20 @@ const Settings = () => {
   return (
     <div>
       <div className="mb-8">
+        {isAdmin && (
+          <Link
+            to="/platform/master-data"
+            className="card p-4 mb-6 flex items-center gap-3 hover:border-gold/40 transition-colors"
+          >
+            <Database className="w-6 h-6 text-gold shrink-0" />
+            <div>
+              <p className="font-medium text-navy">Master Data</p>
+              <p className="text-sm text-mist">
+                Platform materials, product types, units — changes sync to all tenants
+              </p>
+            </div>
+          </Link>
+        )}
         <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Settings</h1>
         <p className="text-mist mt-2">Configure your Estimation Studio workspace</p>
         {settingsError && (

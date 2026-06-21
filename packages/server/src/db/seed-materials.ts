@@ -1,10 +1,11 @@
 import { getDatabase, schema } from './index';
 import { eq, and } from 'drizzle-orm';
-import masterMaterials from './master-materials-seed.json';
+import masterMaterialsFallback from './master-materials-seed.json';
 import type { MasterMaterial } from './master-materials-io';
-import { PACKAGING_FAMILY, materialSyncKey } from './master-materials-io';
+import { PACKAGING_FAMILY, materialSyncKey, costingKeyForMasterKey } from './master-materials-io';
 import { roundUsd } from '../utils/usd';
 import { backfillMaterialSubcategories } from './seed-categories';
+import { listPlatformMasterMaterials } from './platform-master-data';
 
 type DbMaterial = typeof schema.materials.$inferSelect;
 
@@ -22,15 +23,10 @@ function mapMasterToDbRow(tenantId: string, material: MasterMaterial) {
     substrateGrade: material.substrateGrade || null,
     hoover: material.hoover || null,
     marketPriceUsd: roundUsd(material.marketPriceUsd ?? material.costPerKgUsd).toFixed(2),
+    costingKey: costingKeyForMasterKey(material.key),
+    priceSource: 'excel' as const,
+    isTenantOnly: false,
   };
-}
-
-function substrateMatchKey(m: {
-  substrateFamily?: string | null;
-  substrateGrade?: string | null;
-  hoover?: string | null;
-}): string {
-  return `${m.substrateFamily || ''}|${m.substrateGrade || ''}|${m.hoover || ''}`;
 }
 
 const LEGACY_ADHESIVE_NAMES: Record<string, string[]> = {
@@ -45,7 +41,6 @@ const LEGACY_INK_NAMES: Record<string, string[]> = {
 };
 
 function rmMatchKey(m: {
-  type: string;
   substrateFamily?: string | null;
   substrateGrade?: string | null;
   hoover?: string | null;
@@ -69,6 +64,7 @@ export function findOrphanSubstrateRows(
 ): DbMaterial[] {
   const sourceKeys = new Set(sourceMaterials.map((m) => excelSourceKey(m)));
   return existing.filter((row) => {
+    if (row.isTenantOnly) return false;
     if (row.type === 'substrate' && row.substrateFamily === PACKAGING_FAMILY) {
       return !sourceKeys.has(excelSourceKey(row));
     }
@@ -106,9 +102,7 @@ function findExistingMatch(existing: DbMaterial[], material: MasterMaterial): Db
 
   if (material.type === 'ink' || material.type === 'adhesive') {
     const byFamilyGradeHoover = existing.find(
-      (row) =>
-        row.type === material.type &&
-        rmMatchKey(row) === rmMatchKey(material)
+      (row) => row.type === material.type && rmMatchKey(row) === rmMatchKey(material)
     );
     if (byFamilyGradeHoover) return byFamilyGradeHoover;
 
@@ -131,15 +125,26 @@ function findExistingMatch(existing: DbMaterial[], material: MasterMaterial): Db
  * Tenant materials library — seeded from platform master on first registration.
  *
  * Source of truth:
- * - **Platform:** `Master Data.xlsx` → `master-materials-seed.json` (build via `npm run update-materials`)
- * - **Tenant DB:** copy of platform seed on register; licensed users may add/edit rows in the app (tenant-only, not written to Excel)
- * - **Refresh:** admin "Refresh from Excel" upserts matched substrates from workbook; optional prune removes tenant substrates not in Excel
+ * - **Platform:** `platform_master_materials` table (admin Master Data page)
+ * - **Tenant DB:** copy of platform master on register; licensed users may add/edit rows (tenant-only)
+ * - **Sync:** automatic on platform master save; respects `priceSource: manual`
  */
+async function loadPlatformMasterMaterials(): Promise<MasterMaterial[]> {
+  try {
+    const fromDb = await listPlatformMasterMaterials();
+    if (fromDb.length > 0) return fromDb;
+  } catch {
+    // DB not ready or tables missing — fall back to bundled JSON
+  }
+  return masterMaterialsFallback as MasterMaterial[];
+}
+
 export async function seedMaterialsForTenant(tenantId: string): Promise<number> {
   const db = getDatabase();
 
   try {
-    const materialsToInsert = (masterMaterials as MasterMaterial[]).map((material) =>
+    const platformMaterials = await loadPlatformMasterMaterials();
+    const materialsToInsert = platformMaterials.map((material) =>
       mapMasterToDbRow(tenantId, material)
     );
 
@@ -180,7 +185,7 @@ export async function syncMaterialsForTenant(
   options?: { pruneOrphans?: boolean }
 ): Promise<{ inserted: number; updated: number; orphans: number; pruned: number }> {
   const db = getDatabase();
-  const list = sourceMaterials ?? (masterMaterials as MasterMaterial[]);
+  const list = sourceMaterials ?? (await loadPlatformMasterMaterials());
   const existing = await db
     .select()
     .from(schema.materials)
@@ -195,22 +200,28 @@ export async function syncMaterialsForTenant(
     const row = mapMasterToDbRow(tenantId, material);
 
     if (match) {
+      const patch: Record<string, unknown> = {
+        name: row.name,
+        type: row.type,
+        solidPercent: row.solidPercent,
+        density: row.density,
+        wastePercent: row.wastePercent,
+        isSolventBased: row.isSolventBased,
+        substrateFamily: row.substrateFamily,
+        substrateGrade: row.substrateGrade,
+        hoover: row.hoover,
+        costingKey: row.costingKey,
+        updatedAt: new Date(),
+      };
+
+      if (match.priceSource !== 'manual') {
+        patch.costPerKgUsd = row.costPerKgUsd;
+        patch.marketPriceUsd = row.marketPriceUsd;
+      }
+
       const [updatedRow] = await db
         .update(schema.materials)
-        .set({
-          name: row.name,
-          type: row.type,
-          solidPercent: row.solidPercent,
-          density: row.density,
-          costPerKgUsd: row.costPerKgUsd,
-          wastePercent: row.wastePercent,
-          isSolventBased: row.isSolventBased,
-          substrateFamily: row.substrateFamily,
-          substrateGrade: row.substrateGrade,
-          hoover: row.hoover,
-          marketPriceUsd: row.marketPriceUsd,
-          updatedAt: new Date(),
-        })
+        .set(patch)
         .where(eq(schema.materials.id, match.id))
         .returning();
 
@@ -226,9 +237,9 @@ export async function syncMaterialsForTenant(
     }
   }
 
-  // Prune rows not matched this sync — use IDs, not stale key compare (ink/adhesive family fields change on update)
   const orphans = existing.filter(
     (row) =>
+      !row.isTenantOnly &&
       (row.type === 'substrate' || row.type === 'ink' || row.type === 'adhesive') &&
       !syncedIds.has(row.id)
   );
@@ -270,6 +281,6 @@ export async function pruneOrphanSubstratesForTenant(
 /**
  * Get master materials list (for preview/admin)
  */
-export function getMasterMaterialsList() {
-  return masterMaterials;
+export async function getMasterMaterialsList(): Promise<MasterMaterial[]> {
+  return loadPlatformMasterMaterials();
 }

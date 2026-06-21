@@ -1,10 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Grid3x3, User, Pencil, Trash2, Plus, Loader2 } from 'lucide-react';
+import { Search, Pencil, Trash2, Plus, Loader2, ArrowLeft, X } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import LaminateVisualizer from '../components/LaminateVisualizer';
 import { SkeletonCard } from '../components/Skeleton';
+import { useMasterDataReference } from '../hooks/useMasterDataReference';
+import { derivePrintingWebClass, filterMaterialsForTemplateLayer, materialAllowedForTemplateLayer } from '@es/engine';
+import type { LayerType, ProductTypeCode } from '@es/engine';
+import {
+  TEMPLATE_CATALOG_FILTERS,
+  deriveTemplateCatalogKey,
+  matchesCatalogFilter,
+  type TemplateCatalogFilter,
+} from '../lib/templateCatalog';
 
 interface TemplateLayer {
   layer_order: number;
@@ -33,18 +42,93 @@ interface MaterialOption {
   id: string;
   name: string;
   type: string;
+  substrateFamily?: string | null;
+  isSolventBased?: boolean;
 }
 
-const PROCESS_KEYS = ['extrusion', 'printing', 'lamination', 'slitting', 'pouch_making', 'seaming'];
+const MONO_CATALOG_FILTERS = TEMPLATE_CATALOG_FILTERS.filter((f) =>
+  ['all', 'pe_plain', 'pe_printed', 'non_pe_plain', 'non_pe_printed', 'labels', 'sleeves', 'other'].includes(f.id)
+);
+const LAMINATE_CATALOG_FILTERS = TEMPLATE_CATALOG_FILTERS.filter((f) =>
+  ['duplex', 'triplex', 'quadriplex'].includes(f.id)
+);
 
-function templateGroup(t: StructureTemplate): string {
-  const mc = t.materialClass || '';
-  const st = t.structureType || '';
-  if (mc === 'PE' && st === 'Mono') return 'PE Mono';
-  if (mc === 'Non PE' && st === 'Mono') return 'Non PE Mono';
-  if (st === 'Multilayer') return 'Non PE Multilayer';
-  if (t.isStandard === false) return 'My Templates';
-  return 'Other';
+const MATERIAL_CLASS_OPTIONS = ['PE', 'Non PE'] as const;
+const STRUCTURE_TYPE_OPTIONS = ['Mono', 'Multilayer'] as const;
+
+const PROCESS_KEYS = [
+  'extrusion',
+  'printing',
+  'lamination',
+  'slitting',
+  'pouch_making',
+  'seaming',
+] as const;
+
+function materialLookupForPrintingWeb(materials: MaterialOption[]) {
+  return materials.map((m) => ({
+    id: m.id,
+    name: m.name,
+    type: m.type as 'substrate' | 'ink' | 'adhesive',
+    solidPercent: 100,
+    density: 0.91,
+    costPerKgUsd: 0,
+    wastePercent: 0,
+    isSolventBased: m.isSolventBased ?? false,
+  }));
+}
+
+function productTypeLabel(
+  productType: StructureTemplate['productType'],
+  options: Array<{ label: string; value: string }>
+): string {
+  return options.find((o) => o.value === productType)?.label ?? productType;
+}
+
+function classificationContext(template: StructureTemplate) {
+  return {
+    materialClass: template.materialClass,
+    structureType: template.structureType,
+    productType: template.productType as ProductTypeCode,
+  };
+}
+
+function pruneInvalidLayerMaterials(
+  layers: TemplateLayer[],
+  materials: MaterialOption[],
+  template: StructureTemplate
+): TemplateLayer[] {
+  const ctx = classificationContext(template);
+  return layers.map((layer) => {
+    if (!layer.materialId) return layer;
+    const mat = materials.find((m) => m.id === layer.materialId);
+    if (!mat || !materialAllowedForTemplateLayer(mat, layer.layer_type, ctx)) {
+      return { ...layer, materialId: null };
+    }
+    return layer;
+  });
+}
+
+function classificationLabel(template: StructureTemplate): string {
+  const parts = [template.materialClass, template.structureType].filter(Boolean);
+  return parts.join(' · ');
+}
+
+function cardMetaLine(
+  template: StructureTemplate,
+  productTypeOptions: Array<{ label: string; value: string }>
+): string {
+  const pt = productTypeLabel(template.productType, productTypeOptions);
+  const tier = deriveTemplateCatalogKey(template);
+  const tierLabel = TEMPLATE_CATALOG_FILTERS.find((f) => f.id === tier)?.label;
+  if (tier === 'duplex' || tier === 'triplex' || tier === 'quadriplex') {
+    return `${pt} · ${tierLabel}`;
+  }
+  if (tier === 'labels' || tier === 'sleeves') {
+    return `${pt} · ${tierLabel}`;
+  }
+  const classLabel = classificationLabel(template);
+  return classLabel ? `${pt} · ${classLabel}` : pt;
 }
 
 function visualizerLayers(template: StructureTemplate, materials: MaterialOption[]) {
@@ -62,12 +146,12 @@ function visualizerLayers(template: StructureTemplate, materials: MaterialOption
 const StandardTemplates = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { reference: masterRef } = useMasterDataReference();
   const isAdmin = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
 
-  const [activeTab, setActiveTab] = useState<'standard' | 'my'>('standard');
+  const [catalogFilter, setCatalogFilter] = useState<TemplateCatalogFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [standardTemplates, setStandardTemplates] = useState<StructureTemplate[]>([]);
-  const [myTemplates, setMyTemplates] = useState<StructureTemplate[]>([]);
   const [materials, setMaterials] = useState<MaterialOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -80,15 +164,19 @@ const StandardTemplates = () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const [standard, mine, mats] = await Promise.all([
+      const [standard, mats] = await Promise.all([
         apiClient.getTemplates(true),
-        apiClient.getMyTemplates(),
         apiClient.getMaterials(),
       ]);
       setStandardTemplates(standard || []);
-      setMyTemplates((mine || []).filter((t: StructureTemplate) => t.isStandard === false));
       setMaterials(
-        (mats || []).map((m: any) => ({ id: m.id, name: m.name, type: m.type || m.materialType }))
+        (mats || []).map((m: any) => ({
+          id: m.id,
+          name: m.name,
+          type: m.type || m.materialType,
+          substrateFamily: m.substrateFamily ?? null,
+          isSolventBased: m.isSolventBased,
+        }))
       );
     } catch (err) {
       console.error(err);
@@ -102,19 +190,112 @@ const StandardTemplates = () => {
     loadData();
   }, [loadData]);
 
-  const listForTab = activeTab === 'my' ? myTemplates : standardTemplates;
-  const filtered = listForTab.filter(
-    (t) =>
-      t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (t.pebiParentPg || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    if (!editing) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setEditing(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [editing]);
 
-  const grouped = filtered.reduce<Record<string, StructureTemplate[]>>((acc, t) => {
-    const g = templateGroup(t);
-    if (!acc[g]) acc[g] = [];
-    acc[g].push(t);
-    return acc;
-  }, {});
+  const applyTemplatePatch = (patch: Partial<StructureTemplate>) => {
+    if (!editing) return;
+    const next = { ...editing, ...patch };
+    setEditing({
+      ...next,
+      defaultLayers: pruneInvalidLayerMaterials(next.defaultLayers || [], materials, next),
+    });
+  };
+
+  const layerMaterialOptions = (layerType: LayerType) => {
+    if (!editing) return [];
+    return filterMaterialsForTemplateLayer(materials, layerType, classificationContext(editing));
+  };
+
+  const uniqueStandard = useMemo(() => {
+    const seen = new Set<string>();
+    return standardTemplates.filter((t) => {
+      const key = t.name.trim().toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [standardTemplates]);
+
+  const filteredStandard = uniqueStandard.filter((t) => {
+    const q = searchTerm.toLowerCase();
+    const matchesSearch =
+      t.name.toLowerCase().includes(q) ||
+      (t.pebiParentPg || '').toLowerCase().includes(q);
+    return matchesSearch && matchesCatalogFilter(t, catalogFilter);
+  });
+
+  const renderTemplateCard = (template: StructureTemplate, opts: { allowEdit: boolean }) => (
+    <div
+      key={template.id}
+      className="relative rounded-lg border border-border bg-white hover:border-gold/40 hover:shadow-sm transition-all"
+      onDoubleClick={() => {
+        if (opts.allowEdit) openEdit(template);
+      }}
+    >
+      {opts.allowEdit && (
+        <div className="absolute top-1 right-1 z-10 flex gap-0.5">
+          <button
+            type="button"
+            className="p-1 rounded-md text-mist hover:text-navy hover:bg-slate/80"
+            onClick={(e) => {
+              e.stopPropagation();
+              openEdit(template);
+            }}
+            aria-label="Edit template"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            className="p-1 rounded-md text-mist hover:text-red-600 hover:bg-red-50"
+            disabled={deleting === template.id}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(template);
+            }}
+            aria-label="Delete template"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+      <button
+        type="button"
+        className="w-full p-2.5 pr-8 text-left"
+        disabled={instantiating === template.id}
+        onClick={() => handleUseTemplate(template)}
+      >
+        <div className="flex items-center gap-2">
+          <LaminateVisualizer
+            layers={visualizerLayers(template, materials)}
+            width={28}
+            height={36}
+          />
+          <div className="flex-1 min-w-0">
+            <h4 className="text-xs font-semibold text-navy leading-snug line-clamp-2 pr-1">
+              {template.name}
+            </h4>
+            <p className="text-[10px] text-mist mt-0.5 truncate">
+              {cardMetaLine(template, masterRef.productTypeOptions)}
+            </p>
+            {instantiating === template.id && (
+              <p className="text-[10px] text-gold mt-0.5 flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Creating…
+              </p>
+            )}
+          </div>
+        </div>
+      </button>
+    </div>
+  );
 
   const handleUseTemplate = async (template: StructureTemplate) => {
     setInstantiating(template.id);
@@ -122,9 +303,16 @@ const StandardTemplates = () => {
       const created = await apiClient.instantiateTemplate(template.id, {
         jobName: template.name,
       });
-      navigate(`/estimate/${created.id}`);
-    } catch {
-      alert('Failed to create estimate from template');
+      navigate(`/estimate/${created.id}`, { state: { returnTo: '/templates' } });
+    } catch (err) {
+      const e = err as Error & { status?: number };
+      if (e.status === 409) {
+        alert(
+          'This template has unresolved materials. Relink layers in Standard Templates (admin).'
+        );
+      } else {
+        alert(e.message || 'Failed to create estimate from template');
+      }
     } finally {
       setInstantiating(null);
     }
@@ -164,6 +352,9 @@ const StandardTemplates = () => {
   const addLayer = () => {
     if (!editing) return;
     const layers = editing.defaultLayers || [];
+    const ctx = classificationContext(editing);
+    const defaultMat =
+      filterMaterialsForTemplateLayer(materials, 'substrate', ctx)[0] || null;
     setEditing({
       ...editing,
       defaultLayers: [
@@ -171,7 +362,7 @@ const StandardTemplates = () => {
         {
           layer_order: layers.length + 1,
           layer_type: 'substrate',
-          materialId: materials[0]?.id || null,
+          materialId: defaultMat?.id || null,
           default_micron: 20,
         },
       ],
@@ -205,6 +396,14 @@ const StandardTemplates = () => {
     if (!editing) return;
     setSaving(true);
     try {
+      const layerRefs = (editing.defaultLayers || [])
+        .filter((l) => l.materialId)
+        .map((l) => ({ materialId: l.materialId! }));
+      const derivedPrintingWeb = derivePrintingWebClass(
+        layerRefs,
+        materialLookupForPrintingWeb(materials)
+      );
+
       await apiClient.updateTemplate(editing.id, {
         name: editing.name,
         productType: editing.productType,
@@ -214,7 +413,7 @@ const StandardTemplates = () => {
         defaultDimensions: editing.defaultDimensions,
         defaultLayers: editing.defaultLayers,
         defaultProcesses: editing.defaultProcesses,
-        defaultPrintingWebClass: editing.defaultPrintingWebClass,
+        defaultPrintingWebClass: derivedPrintingWeb,
       });
       setEditing(null);
       await loadData();
@@ -226,14 +425,14 @@ const StandardTemplates = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-28 lg:pb-0">
+    <div className="max-w-7xl mx-auto pb-28 lg:pb-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Standard Templates</h1>
-          <p className="text-mist mt-1">
+          <p className="text-mist mt-1 text-sm">
             {isAdmin
-              ? 'Manage platform templates or start a quote from any stack'
-              : 'Browse templates and save your own from the estimate editor'}
+              ? 'Platform standard stacks — pick a card to start a quote'
+              : 'Pick a standard stack to start your quote'}
           </p>
         </div>
         <button
@@ -259,33 +458,52 @@ const StandardTemplates = () => {
         </div>
       </div>
 
-      <div className="border-b border-border mb-8">
-        <nav className="flex space-x-8">
-          <button
-            type="button"
-            onClick={() => setActiveTab('standard')}
-            className={`pb-4 px-1 font-medium text-sm border-b-2 transition-colors ${
-              activeTab === 'standard' ? 'border-gold text-gold' : 'border-transparent text-mist hover:text-ink'
-            }`}
-          >
-            <Grid3x3 className="w-4 h-4 inline-block mr-2" />
-            Standard ({standardTemplates.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('my')}
-            className={`pb-4 px-1 font-medium text-sm border-b-2 transition-colors ${
-              activeTab === 'my' ? 'border-gold text-gold' : 'border-transparent text-mist hover:text-ink'
-            }`}
-          >
-            <User className="w-4 h-4 inline-block mr-2" />
-            My Templates ({myTemplates.length})
-          </button>
-        </nav>
+      <div className="mb-5 space-y-3">
+        <div>
+          <p className="text-xs font-medium text-mist uppercase tracking-wide mb-1.5">Mono & specialty</p>
+          <div className="flex flex-wrap gap-1.5">
+            {MONO_CATALOG_FILTERS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setCatalogFilter(f.id)}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                  catalogFilter === f.id
+                    ? 'bg-gold text-white shadow-sm'
+                    : 'bg-white border border-border text-ink hover:border-gold/40'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-mist uppercase tracking-wide mb-1.5">Laminates</p>
+          <div className="flex flex-wrap gap-1.5">
+            {LAMINATE_CATALOG_FILTERS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setCatalogFilter(f.id)}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                  catalogFilter === f.id
+                    ? 'bg-gold text-white shadow-sm'
+                    : 'bg-white border border-border text-ink hover:border-gold/40'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div
+          className="grid gap-2"
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))' }}
+        >
           <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
@@ -297,81 +515,20 @@ const StandardTemplates = () => {
             Retry
           </button>
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="card text-center py-12">
-          <Grid3x3 className="w-12 h-12 text-mist mx-auto mb-4" />
-          <h3 className="text-xl font-display font-semibold text-navy mb-2">
-            {activeTab === 'my' ? 'No saved templates yet' : 'No templates found'}
-          </h3>
-          {activeTab === 'my' && (
-            <p className="text-mist text-sm max-w-md mx-auto">
-              Open a standard template, adjust layers in the editor, then use <strong>Save as Template</strong>.
-            </p>
-          )}
+      ) : filteredStandard.length === 0 ? (
+        <div className="card text-center py-10">
+          <h3 className="text-lg font-display font-semibold text-navy mb-2">No templates in this category</h3>
+          <p className="text-mist text-sm">Try another filter or clear the search.</p>
         </div>
       ) : (
-        Object.entries(grouped).map(([group, items]) => (
-          <div key={group} className="mb-8">
-            <h3 className="text-lg font-display font-semibold text-navy mb-4">{group}</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {items.map((template) => (
-                <div key={template.id} className="card flex flex-col">
-                  <button
-                    type="button"
-                    className="flex items-start space-x-4 text-left flex-1 hover:opacity-90"
-                    disabled={instantiating === template.id}
-                    onClick={() => handleUseTemplate(template)}
-                  >
-                    <LaminateVisualizer
-                      layers={visualizerLayers(template, materials)}
-                      width={48}
-                      height={64}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-display font-semibold text-navy mb-1">{template.name}</h4>
-                      <p className="text-sm text-mist mb-2 truncate">
-                        {template.pebiParentPg || template.structureType || ''}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs px-2 py-1 bg-slate rounded-md">{template.productType}</span>
-                        <span className="text-xs text-mist">{template.materialClass || ''}</span>
-                      </div>
-                      {instantiating === template.id && (
-                        <p className="text-xs text-gold mt-2 flex items-center gap-1">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          Creating estimate…
-                        </p>
-                      )}
-                    </div>
-                  </button>
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-border">
-                    {(isAdmin || !template.isStandard) && (
-                      <button
-                        type="button"
-                        className="btn-secondary flex-1 text-sm py-2 inline-flex items-center justify-center gap-1"
-                        onClick={() => openEdit(template)}
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                        Edit
-                      </button>
-                    )}
-                    {(isAdmin || !template.isStandard) && (
-                      <button
-                        type="button"
-                        className="btn-secondary text-sm py-2 px-3 text-red-600 hover:bg-red-50"
-                        disabled={deleting === template.id}
-                        onClick={() => handleDelete(template)}
-                        aria-label="Delete template"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))
+        <div
+          className="grid gap-2"
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))' }}
+        >
+          {filteredStandard.map((template) =>
+            renderTemplateCard(template, { allowEdit: isAdmin })
+          )}
+        </div>
       )}
 
       {editing && (
@@ -383,6 +540,24 @@ const StandardTemplates = () => {
             onClick={() => setEditing(null)}
           />
           <div className="relative bg-white w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto rounded-t-xl sm:rounded-xl shadow-xl p-6">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 text-sm font-medium text-mist hover:text-navy"
+                onClick={() => setEditing(null)}
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to templates
+              </button>
+              <button
+                type="button"
+                className="p-2 rounded-lg text-mist hover:text-navy hover:bg-slate"
+                onClick={() => setEditing(null)}
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
             <h2 className="text-xl font-display font-bold text-navy mb-4">Edit template</h2>
 
             <div className="space-y-4">
@@ -395,38 +570,61 @@ const StandardTemplates = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-navy mb-1">Product type</label>
                   <select
                     className="input w-full"
                     value={editing.productType}
                     onChange={(e) =>
-                      setEditing({
-                        ...editing,
+                      applyTemplatePatch({
                         productType: e.target.value as StructureTemplate['productType'],
                       })
                     }
                   >
-                    <option value="roll">Roll</option>
-                    <option value="pouch">Pouch</option>
-                    <option value="sleeve">Sleeve</option>
+                    {masterRef.productTypeOptions.map((pt) => (
+                      <option key={pt.value} value={pt.value}>
+                        {pt.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-navy mb-1">Printing web</label>
+                  <label className="block text-sm font-medium text-navy mb-1">Material class</label>
                   <select
                     className="input w-full"
-                    value={editing.defaultPrintingWebClass || 'wide_web'}
+                    value={editing.materialClass || ''}
                     onChange={(e) =>
-                      setEditing({
-                        ...editing,
-                        defaultPrintingWebClass: e.target.value as 'wide_web' | 'narrow_web',
+                      applyTemplatePatch({
+                        materialClass: e.target.value || undefined,
                       })
                     }
                   >
-                    <option value="wide_web">Wide Web (Ink SB)</option>
-                    <option value="narrow_web">Narrow Web (Ink UV)</option>
+                    <option value="">—</option>
+                    {MATERIAL_CLASS_OPTIONS.map((mc) => (
+                      <option key={mc} value={mc}>
+                        {mc}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-navy mb-1">Structure</label>
+                  <select
+                    className="input w-full"
+                    value={editing.structureType || ''}
+                    onChange={(e) =>
+                      applyTemplatePatch({
+                        structureType: e.target.value || undefined,
+                      })
+                    }
+                  >
+                    <option value="">—</option>
+                    {STRUCTURE_TYPE_OPTIONS.map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -440,16 +638,35 @@ const StandardTemplates = () => {
                 </div>
                 <div className="space-y-2">
                   {(editing.defaultLayers || []).map((layer, i) => (
-                    <div key={i} className="flex gap-2 items-center">
+                    <div key={i} className="flex gap-2 items-center flex-wrap">
                       <select
-                        className="input flex-1 text-sm"
+                        className="input w-36 text-sm"
+                        value={layer.layer_type}
+                        onChange={(e) => {
+                          const layerType = e.target.value as TemplateLayer['layer_type'];
+                          const allowed = layerMaterialOptions(layerType);
+                          updateEditingLayer(i, {
+                            layer_type: layerType,
+                            materialId: allowed[0]?.id || null,
+                          });
+                        }}
+                      >
+                        <option value="substrate">Substrate</option>
+                        <option value="ink">Ink & Coating</option>
+                        <option value="adhesive">Adhesive</option>
+                      </select>
+                      <select
+                        className="input flex-1 min-w-[12rem] text-sm"
                         value={layer.materialId || ''}
                         onChange={(e) => updateEditingLayer(i, { materialId: e.target.value || null })}
                       >
                         <option value="">Select material</option>
-                        {materials.map((m) => (
+                        {layerMaterialOptions(layer.layer_type).map((m) => (
                           <option key={m.id} value={m.id}>
-                            {m.name} ({m.type})
+                            {m.substrateFamily && layer.layer_type === 'substrate'
+                              ? `${m.substrateFamily} – `
+                              : ''}
+                            {m.name}
                           </option>
                         ))}
                       </select>

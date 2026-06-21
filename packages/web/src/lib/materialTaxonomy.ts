@@ -76,9 +76,13 @@ export function groupMaterialsForPicker(
     subcategoryId?: string | null;
   }>,
   categories: CategoryNode[],
-  layerType?: string
+  layerType?: string,
+  materialFilter?: (material: { type: string; substrateFamily?: string | null }) => boolean
 ): MaterialPickerGroup[] {
-  const filtered = layerType ? materials.filter((m) => m.type === layerType) : materials;
+  let filtered = layerType ? materials.filter((m) => m.type === layerType) : materials;
+  if (materialFilter) {
+    filtered = filtered.filter(materialFilter);
+  }
   const subToMeta = new Map<string, { category: string; subcategory: string }>();
   for (const cat of categories) {
     for (const sub of cat.subcategories) {
@@ -95,7 +99,7 @@ export function groupMaterialsForPicker(
     } else if (mat.type === 'substrate' && mat.substrateFamily) {
       label = `Substrates › ${mat.substrateFamily}`;
     } else if (mat.type === 'ink') {
-      label = 'Inks';
+      label = 'Inks & Coatings';
     } else if (mat.type === 'adhesive') {
       label = 'Adhesives';
     } else {

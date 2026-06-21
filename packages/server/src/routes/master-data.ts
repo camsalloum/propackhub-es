@@ -1,25 +1,12 @@
 import { FastifyInstance } from 'fastify';
-import { readFileSync, existsSync } from 'node:fs';
-import {
-  readMasterDataReference,
-  resolveMasterDataReferencePath,
-  resolveMasterDataExcelPath,
-} from '../db/master-materials-io';
+import { buildMasterDataReferenceFromDb } from '../db/platform-master-data';
 import { enrichMasterDataReference } from '../utils/master-data-normalize';
-
-function readReferenceFromDisk() {
-  const jsonPath = resolveMasterDataReferencePath();
-  if (existsSync(jsonPath)) {
-    return JSON.parse(readFileSync(jsonPath, 'utf8'));
-  }
-  return readMasterDataReference(resolveMasterDataExcelPath());
-}
 
 export function registerMasterDataRoutes(fastify: FastifyInstance) {
   fastify.get('/api/v1/master-data/reference', async (request, reply) => {
     try {
       await request.jwtVerify();
-      const ref = readReferenceFromDisk();
+      const ref = await buildMasterDataReferenceFromDb();
       return reply.send(enrichMasterDataReference(ref));
     } catch (error: unknown) {
       if ((error as { statusCode?: number })?.statusCode === 401) {

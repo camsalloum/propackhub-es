@@ -20,6 +20,14 @@ describe.skipIf(!hasDatabase)('API integration — auth + estimates', () => {
     const path = await import('node:path');
     const dir = path.dirname(fileURLToPath(import.meta.url));
     const patchSql = readFileSync(path.join(dir, '../../scripts/schema-patches.sql'), 'utf8');
+    await db.execute(sql.raw(`
+      DO $$ BEGIN
+        ALTER TYPE material_price_source ADD VALUE IF NOT EXISTS 'platform';
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END $$;
+    `));
+    await db.execute(sql.raw(`UPDATE materials SET price_source = 'platform' WHERE price_source = 'excel'`));
     await db.execute(sql.raw(patchSql));
     app = await buildApp({ jwtSecret: 'integration-test-secret', logger: false });
     await app.ready();

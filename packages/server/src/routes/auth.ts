@@ -207,6 +207,39 @@ export async function loginRoute(
   }
 }
 
+export async function refreshRoute(
+  fastify: FastifyInstance,
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  try {
+    await request.jwtVerify();
+    const user = request.user as TokenPayload;
+
+    const db = getDatabase();
+    const [userData] = await db
+      .select({ id: schema.users.id, tenantId: schema.users.tenantId, email: schema.users.email, role: schema.users.role })
+      .from(schema.users)
+      .where(eq(schema.users.id, user.userId))
+      .limit(1);
+
+    if (!userData) {
+      return reply.status(401).send({ error: 'User not found' });
+    }
+
+    const token = fastify.jwt.sign({
+      userId: userData.id,
+      tenantId: userData.tenantId,
+      email: userData.email,
+      role: userData.role,
+    });
+
+    return reply.send({ token });
+  } catch {
+    return reply.status(401).send({ error: 'Invalid or expired token' });
+  }
+}
+
 export async function meRoute(
   _fastify: FastifyInstance,
   request: FastifyRequest,
@@ -260,6 +293,10 @@ export async function registerAuthRoutes(fastify: FastifyInstance) {
   fastify.post<{ Body: z.infer<typeof LoginSchema> }>(
     '/api/v1/auth/login',
     async (request, reply) => loginRoute(fastify, request, reply)
+  );
+
+  fastify.post('/api/v1/auth/refresh', async (request, reply) =>
+    refreshRoute(fastify, request, reply)
   );
 
   fastify.get('/api/v1/auth/me', async (request, reply) => meRoute(fastify, request, reply));

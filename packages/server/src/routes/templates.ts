@@ -3,16 +3,32 @@ import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest, isTenantAdmin } from '../utils/auth';
 import { eq, and, asc } from 'drizzle-orm';
-import { ensureTemplatesForTenant, relinkTemplatesForTenant, syncMissingStandardTemplates, pruneDuplicateStandardTemplates } from '../db/seed-templates';
+import { ensureTemplatesForTenant, relinkTemplatesForTenant, syncMissingStandardTemplates, pruneDuplicateStandardTemplates, syncTemplateKeysForTenant } from '../db/seed-templates';
 import { quantitiesForSlabTemplateKey } from '../db/seed-slab-templates';
-import { derivePrintingWebClass, stackNeedsSolventMix } from '@es/engine';
-import { buildEngineMaterialMap } from '../services/estimate-calculation';
+import { derivePrintingWebClass, stackNeedsSolventMix, resolveTemplateStoreClassification } from '@es/engine';
+import { buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
+import { getMasterDataVersion } from '../db/platform-master-data';
+import { buildLayerInsertValues, toMaterialLineageSource } from '../utils/layer-lineage';
+import { deriveSourceTemplateKey, deriveTenantTemplateKey } from '../utils/template-key';
+import {
+  buildEstimateClassificationSnapshot,
+  mergeEstimateDimensionsClassification,
+} from '../utils/estimate-classification';
 import {
   buildTemplateMaterialLookup,
   buildValidMaterialIdSet,
   resolveLayerMaterialId,
   type TemplateLayerRef,
 } from '../utils/template-material-lookup';
+
+/** Seed missing standards, dedupe legacy rows, then assign stable keys. */
+async function prepareTemplatesForTenant(tenantId: string): Promise<void> {
+  await ensureTemplatesForTenant(tenantId);
+  await syncMissingStandardTemplates(tenantId);
+  await pruneDuplicateStandardTemplates(tenantId);
+  await syncTemplateKeysForTenant(tenantId);
+  await relinkTemplatesForTenant(tenantId);
+}
 
 const TemplateLayerSchema = z.object({
   layer_order: z.number().int().positive(),
@@ -45,7 +61,7 @@ const UpdateTemplateSchema = z.object({
  */
 export async function getTemplatesRoute(
   _fastify: FastifyInstance,
-  request: FastifyRequest<{ Querystring: { standard_only?: string } }>,
+  request: FastifyRequest<{ Querystring: { standard_only?: string; template_key?: string } }>,
   reply: FastifyReply
 ) {
   try {
@@ -53,11 +69,9 @@ export async function getTemplatesRoute(
     const tenantId = extractTenantFromRequest(request);
     const db = getDatabase();
     const standardOnly = request.query.standard_only !== 'false';
+    const templateKeyFilter = request.query.template_key?.trim();
 
-    await ensureTemplatesForTenant(tenantId);
-    await syncMissingStandardTemplates(tenantId);
-    await pruneDuplicateStandardTemplates(tenantId);
-    await relinkTemplatesForTenant(tenantId);
+    await prepareTemplatesForTenant(tenantId);
 
     const conditions = [
       eq(schema.structureTemplates.tenantId, tenantId),
@@ -65,6 +79,9 @@ export async function getTemplatesRoute(
     ];
     if (standardOnly) {
       conditions.push(eq(schema.structureTemplates.isStandard, true));
+    }
+    if (templateKeyFilter) {
+      conditions.push(eq(schema.structureTemplates.templateKey, templateKeyFilter));
     }
 
     const templates = await db
@@ -118,6 +135,77 @@ export async function getTemplateByIdRoute(
 }
 
 /**
+ * POST /api/v1/templates/instantiate — by templateKey or templateId (MES Phase D)
+ */
+export async function instantiateByKeyRoute(
+  fastify: FastifyInstance,
+  request: FastifyRequest<{
+    Body: {
+      templateKey?: string;
+      templateId?: string;
+      customerId?: string;
+      jobName?: string;
+      orderQuantityKg?: number;
+      orderQuantityUnit?: string;
+    };
+  }>,
+  reply: FastifyReply
+) {
+  const { templateKey, templateId, customerId, jobName, orderQuantityKg, orderQuantityUnit } =
+    request.body || {};
+  if (!templateKey && !templateId) {
+    return reply.status(400).send({ error: 'templateKey or templateId required' });
+  }
+
+  try {
+    await request.jwtVerify();
+    const tenantId = extractTenantFromRequest(request);
+    const db = getDatabase();
+
+    let id = templateId;
+    if (templateKey) {
+      await prepareTemplatesForTenant(tenantId);
+      const [row] = await db
+        .select({ id: schema.structureTemplates.id })
+        .from(schema.structureTemplates)
+        .where(
+          and(
+            eq(schema.structureTemplates.tenantId, tenantId),
+            eq(schema.structureTemplates.templateKey, templateKey),
+            eq(schema.structureTemplates.isActive, true)
+          )
+        )
+        .limit(1);
+      if (!row) {
+        return reply.status(404).send({ error: 'Template not found for key', templateKey });
+      }
+      id = row.id;
+    }
+
+    return instantiateTemplateRoute(
+      fastify,
+      {
+        ...request,
+        params: { id: id! },
+        body: { customerId, jobName, orderQuantityKg, orderQuantityUnit },
+      } as FastifyRequest<{
+        Params: { id: string };
+        Body: {
+          customerId?: string;
+          jobName?: string;
+          orderQuantityKg?: number;
+          orderQuantityUnit?: string;
+        };
+      }>,
+      reply
+    );
+  } catch (error: unknown) {
+    console.error('Instantiate by key error:', error);
+    return reply.status(500).send({ error: 'Failed to instantiate template' });
+  }
+}
+
+/**
  * POST /api/v1/templates/:id/instantiate
  */
 export async function instantiateTemplateRoute(
@@ -127,6 +215,8 @@ export async function instantiateTemplateRoute(
     Body: {
       customerId?: string;
       jobName?: string;
+      orderQuantityKg?: number;
+      orderQuantityUnit?: string;
     };
   }>,
   reply: FastifyReply
@@ -135,7 +225,7 @@ export async function instantiateTemplateRoute(
     await request.jwtVerify();
     const tenantId = extractTenantFromRequest(request);
     const { id } = request.params;
-    const { customerId, jobName } = request.body || {};
+    const { customerId, jobName, orderQuantityKg, orderQuantityUnit } = request.body || {};
     const db = getDatabase();
 
     await relinkTemplatesForTenant(tenantId);
@@ -198,26 +288,35 @@ export async function instantiateTemplateRoute(
     const count = countResult.length;
     const refNumber = `QT-${year}-${String(count + 1).padStart(5, '0')}`;
 
-    const defaultDims = (template.defaultDimensions as any) || {};
     const dimensions: Record<string, any> = {
-      ...defaultDims,
+      configureFromTemplate: true,
+      templateClassification: {
+        materialClass: template.materialClass,
+        structureType: template.structureType,
+      },
     };
 
     if (template.productType === 'roll' || template.productType === 'sleeve') {
-      dimensions.reelWidthMm = defaultDims.width_mm || defaultDims.reel_width_mm || 800;
-      dimensions.cutoffMm = defaultDims.length_mm || defaultDims.cutoff_mm || 600;
-      dimensions.numberOfUps = defaultDims.number_of_ups || 1;
-      dimensions.extraPrintingTrimMm = defaultDims.extra_printing_trim_mm || 0;
+      dimensions.reelWidthMm = 0;
+      dimensions.cutoffMm = 0;
+      dimensions.numberOfUps = 1;
+      dimensions.extraPrintingTrimMm = 0;
       dimensions.piecesPerCut = 1;
     } else if (template.productType === 'pouch') {
-      dimensions.openWidthMm = defaultDims.width_mm || 200;
-      dimensions.openHeightMm = defaultDims.length_mm || 250;
+      dimensions.openWidthMm = 0;
+      dimensions.openHeightMm = 0;
     }
 
-    dimensions.templateClassification = {
+    const classificationSnapshot = buildEstimateClassificationSnapshot({
+      jobName: jobName || template.name,
+      productType: template.productType,
       materialClass: template.materialClass,
-      structureType: template.structureType,
-    };
+      layers: defaultLayers.map((layer) => ({ layer_type: layer.layer_type })),
+    });
+    Object.assign(
+      dimensions,
+      mergeEstimateDimensionsClassification(dimensions, classificationSnapshot)
+    );
 
     const materialMap = buildEngineMaterialMap(materials);
     const resolvedLayerMaterialIds = defaultLayers.map(
@@ -226,6 +325,21 @@ export async function instantiateTemplateRoute(
     const printingWebClass = derivePrintingWebClass(
       resolvedLayerMaterialIds.map((materialId) => ({ materialId })),
       materialMap
+    );
+
+    const masterDataVersion = await getMasterDataVersion();
+    const sourceTemplateKey =
+      template.templateKey ??
+      deriveSourceTemplateKey({
+        name: template.name,
+        pebiParentPg: template.pebiParentPg,
+        materialClass: template.materialClass,
+        structureType: template.structureType,
+        isStandard: template.isStandard,
+        templateKey: template.templateKey,
+      });
+    const materialById = new Map<string, MaterialRow>(
+      materials.map((m: MaterialRow) => [m.id, m])
     );
 
     const [estimate] = await db
@@ -244,6 +358,10 @@ export async function instantiateTemplateRoute(
         displayCurrency: tenant.displayCurrency,
         exchangeRateUsdToDisplay: tenant.exchangeRateUsdToDisplay,
         status: 'draft',
+        masterDataVersion,
+        sourceTemplateKey,
+        orderQuantityKg: orderQuantityKg != null ? String(orderQuantityKg) : undefined,
+        orderQuantityUnit: orderQuantityUnit ?? 'kgs',
       })
       .returning();
 
@@ -251,12 +369,16 @@ export async function instantiateTemplateRoute(
     let layerPosition = 0;
     for (const layer of defaultLayersResolved) {
       const materialId = resolveLayerMaterialId(layer, materialLookup, validIds)!;
-      await db.insert(schema.layers).values({
-        estimateId: estimate.id,
-        materialId,
-        micron: (layer.default_micron || 0).toString(),
-        position: layerPosition,
-      });
+      const mat = materialById.get(materialId);
+      await db.insert(schema.layers).values(
+        buildLayerInsertValues({
+          estimateId: estimate.id,
+          materialId,
+          micron: 0,
+          position: layerPosition,
+          material: mat ? toMaterialLineageSource(mat) : null,
+        })
+      );
       layerPosition++;
     }
 
@@ -370,8 +492,21 @@ export async function createTemplateRoute(
       .where(eq(schema.materials.tenantId, tenantId));
     const materialMap = buildEngineMaterialMap(tenantMaterials);
     const needsSolvent = stackNeedsSolventMix(
-      layers.map((l) => ({ materialId: l.materialId })),
+      layers.map((l: (typeof layers)[number]) => ({ materialId: l.materialId })),
       materialMap
+    );
+
+    const storedClassification = (
+      (estimate.dimensions as Record<string, unknown> | null)?.templateClassification ?? null
+    ) as { materialClass?: string; structureType?: string } | null;
+
+    const { materialClass, structureType } = resolveTemplateStoreClassification(
+      storedClassification,
+      defaultLayers,
+      tenantMaterials.map((m: (typeof tenantMaterials)[number]) => ({
+        id: m.id,
+        substrateFamily: m.substrateFamily,
+      }))
     );
 
     const [template] = await db
@@ -381,12 +516,12 @@ export async function createTemplateRoute(
         name,
         pebiParentPg: name,
         productType: estimate.productType,
-        materialClass: 'Custom',
-        structureType: 'Custom',
+        materialClass,
+        structureType,
         displayOrder: 900,
         isStandard: false,
-        defaultDimensions: estimate.dimensions,
-        defaultLayers,
+        defaultDimensions: storedClassification ? { templateClassification: storedClassification } : {},
+        defaultLayers: defaultLayers.map((l) => ({ ...l, default_micron: 0 })),
         defaultProcesses,
         defaultPrintingWebClass: estimate.printingWebClass,
         solventMixEnabled: needsSolvent,
@@ -394,7 +529,14 @@ export async function createTemplateRoute(
       })
       .returning();
 
-    return reply.status(201).send(template);
+    const templateKey = deriveTenantTemplateKey(name, template.id);
+    const [withKey] = await db
+      .update(schema.structureTemplates)
+      .set({ templateKey, updatedAt: new Date() })
+      .where(eq(schema.structureTemplates.id, template.id))
+      .returning();
+
+    return reply.status(201).send(withKey ?? { ...template, templateKey });
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return reply.status(400).send({ error: 'Validation failed', details: error.errors });
@@ -525,13 +667,23 @@ export async function deleteTemplateRoute(
 }
 
 export async function registerTemplateRoutes(fastify: FastifyInstance) {
-  fastify.get<{ Querystring: { standard_only?: string } }>(
+  fastify.get<{ Querystring: { standard_only?: string; template_key?: string } }>(
     '/api/v1/templates',
     async (request, reply) => getTemplatesRoute(fastify, request, reply)
   );
   fastify.post<{ Body: z.infer<typeof CreateTemplateSchema> }>(
     '/api/v1/templates',
     async (request, reply) => createTemplateRoute(fastify, request, reply)
+  );
+  fastify.post<{
+    Body: {
+      templateKey?: string;
+      templateId?: string;
+      customerId?: string;
+      jobName?: string;
+    };
+  }>('/api/v1/templates/instantiate', async (request, reply) =>
+    instantiateByKeyRoute(fastify, request, reply)
   );
   fastify.get<{ Params: { id: string } }>(
     '/api/v1/templates/:id',

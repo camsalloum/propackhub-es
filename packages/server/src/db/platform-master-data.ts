@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { eq, asc } from 'drizzle-orm';
+import { eq, asc, sql, or } from 'drizzle-orm';
 import { getDatabase, schema } from './index';
 import type { MasterMaterial, MasterDataReference } from './master-materials-io';
 import {
@@ -12,8 +12,92 @@ import {
 import { roundUsd } from '../utils/usd';
 import { syncMaterialsForTenant } from './seed-materials';
 import { relinkTemplatesForTenant } from './seed-templates';
+import { syncCustomRmTypeCategories } from './seed-categories';
+import {
+  appendMasterAuditEntries,
+  materialAuditSnapshot,
+  referenceEntityKey,
+  referenceItemAuditSnapshot,
+  type AuditActor,
+} from './platform-master-audit';
+import type { PlatformMasterMaterialRow, PlatformReferenceItemRow } from './platform-master-data-types';
+
+export type { AuditActor } from './platform-master-audit';
 
 const here = dirname(fileURLToPath(import.meta.url));
+
+const PLATFORM_STATE_ID = 1;
+
+/** Ensure singleton version row exists (id = 1). */
+export async function ensurePlatformMasterState(): Promise<void> {
+  const db = getDatabase();
+  const [row] = await db
+    .select({ id: schema.platformMasterState.id })
+    .from(schema.platformMasterState)
+    .where(eq(schema.platformMasterState.id, PLATFORM_STATE_ID))
+    .limit(1);
+  if (!row) {
+    await db.insert(schema.platformMasterState).values({
+      id: PLATFORM_STATE_ID,
+      masterDataVersion: 1,
+    });
+  }
+}
+
+/** Current platform master catalog revision — stamped on new estimates. */
+export async function getMasterDataVersion(): Promise<number> {
+  await ensurePlatformMasterState();
+  const db = getDatabase();
+  const [row] = await db
+    .select({ v: schema.platformMasterState.masterDataVersion })
+    .from(schema.platformMasterState)
+    .where(eq(schema.platformMasterState.id, PLATFORM_STATE_ID))
+    .limit(1);
+  return row?.v ?? 1;
+}
+
+async function incrementMasterDataVersion(): Promise<number> {
+  await ensurePlatformMasterState();
+  const db = getDatabase();
+  const [row] = await db
+    .update(schema.platformMasterState)
+    .set({
+      masterDataVersion: sql`${schema.platformMasterState.masterDataVersion} + 1`,
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.platformMasterState.id, PLATFORM_STATE_ID))
+    .returning({ v: schema.platformMasterState.masterDataVersion });
+  return row?.v ?? 1;
+}
+
+export class ReferenceItemInUseError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly materialCount: number
+  ) {
+    super(message);
+    this.name = 'ReferenceItemInUseError';
+  }
+}
+
+async function countMaterialsUsingRmTypeCode(code: string): Promise<number> {
+  const db = getDatabase();
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(schema.materials)
+    .where(or(eq(schema.materials.itemClass, code), eq(schema.materials.substrateFamily, code)));
+  return Number(row?.count ?? 0);
+}
+
+function assertUniqueReferenceCodes(
+  items: Array<{ label: string; code?: string | null }>
+): void {
+  const codes = items.map((i) => i.code?.trim().toLowerCase()).filter((c): c is string => !!c);
+  if (new Set(codes).size !== codes.length) {
+    throw new Error('Duplicate reference codes in category');
+  }
+}
 
 /** Placeholder costs when seeding ink/adhesive/packaging rows that had blank Excel prices. */
 function placeholderCost(type: string, family: string | null): number {
@@ -44,7 +128,9 @@ function rowToMasterMaterial(row: typeof schema.platformMasterMaterials.$inferSe
   };
 }
 
-export function masterMaterialInputToDbValues(m: MasterMaterial & { sortOrder?: number }) {
+export function masterMaterialInputToDbValues(
+  m: MasterMaterial & { sortOrder?: number; externalId?: string | null; externalSource?: string | null }
+) {
   const cost = roundUsd(m.costPerKgUsd);
   const market = roundUsd(m.marketPriceUsd ?? m.costPerKgUsd);
   return {
@@ -63,6 +149,8 @@ export function masterMaterialInputToDbValues(m: MasterMaterial & { sortOrder?: 
     costingKey: costingKeyForMasterKey(m.key),
     sortOrder: m.sortOrder ?? 0,
     active: true,
+    externalId: m.externalId ?? null,
+    externalSource: m.externalSource ?? null,
     updatedAt: new Date(),
   };
 }
@@ -98,17 +186,32 @@ export async function getPlatformMasterMaterialById(id: string) {
 }
 
 export async function createPlatformMasterMaterial(
-  input: MasterMaterial & { sortOrder?: number }
+  input: MasterMaterial & { sortOrder?: number },
+  actor?: AuditActor
 ): Promise<MasterMaterial> {
   const db = getDatabase();
   const values = masterMaterialInputToDbValues(input);
   const [row] = await db.insert(schema.platformMasterMaterials).values(values).returning();
+  const version = await incrementMasterDataVersion();
+  await appendMasterAuditEntries(
+    version,
+    [
+      {
+        entityType: 'material',
+        entityKey: row.key,
+        action: 'create',
+        afterJson: materialAuditSnapshot(row),
+      },
+    ],
+    actor
+  );
   return rowToMasterMaterial(row);
 }
 
 export async function updatePlatformMasterMaterial(
   id: string,
-  input: Partial<MasterMaterial> & { sortOrder?: number }
+  input: Partial<MasterMaterial> & { sortOrder?: number; externalId?: string | null; externalSource?: string | null },
+  actor?: AuditActor
 ): Promise<MasterMaterial | null> {
   const db = getDatabase();
   const existing = await getPlatformMasterMaterialById(id);
@@ -139,28 +242,68 @@ export async function updatePlatformMasterMaterial(
 
   const [row] = await db
     .update(schema.platformMasterMaterials)
-    .set(values)
+    .set({
+      ...values,
+      ...(input.externalId !== undefined ? { externalId: input.externalId } : {}),
+      ...(input.externalSource !== undefined ? { externalSource: input.externalSource } : {}),
+    })
     .where(eq(schema.platformMasterMaterials.id, id))
     .returning();
 
-  return row ? rowToMasterMaterial(row) : null;
+  if (!row) return null;
+  const version = await incrementMasterDataVersion();
+  await appendMasterAuditEntries(
+    version,
+    [
+      {
+        entityType: 'material',
+        entityKey: row.key,
+        action: 'update',
+        beforeJson: materialAuditSnapshot(existing),
+        afterJson: materialAuditSnapshot(row),
+      },
+    ],
+    actor
+  );
+  return rowToMasterMaterial(row);
 }
 
-export async function deletePlatformMasterMaterial(id: string): Promise<boolean> {
+export async function deletePlatformMasterMaterial(id: string, actor?: AuditActor): Promise<boolean> {
   const db = getDatabase();
+  const existing = await getPlatformMasterMaterialById(id);
   const [row] = await db
     .update(schema.platformMasterMaterials)
     .set({ active: false, updatedAt: new Date() })
     .where(eq(schema.platformMasterMaterials.id, id))
     .returning();
+  if (row && existing) {
+    const version = await incrementMasterDataVersion();
+    await appendMasterAuditEntries(
+      version,
+      [
+        {
+          entityType: 'material',
+          entityKey: row.key,
+          action: 'delete',
+          beforeJson: materialAuditSnapshot(existing),
+          afterJson: materialAuditSnapshot({ ...existing, active: false }),
+        },
+      ],
+      actor
+    );
+  }
   return !!row;
 }
 
 export async function replacePlatformMasterMaterials(
-  materials: Array<MasterMaterial & { sortOrder?: number }>
+  materials: Array<
+    MasterMaterial & { sortOrder?: number; externalId?: string | null; externalSource?: string | null }
+  >,
+  actor?: AuditActor
 ): Promise<MasterMaterial[]> {
   const db = getDatabase();
   const incomingKeys = new Set(materials.map((m) => m.key));
+  const auditEntries: Parameters<typeof appendMasterAuditEntries>[1] = [];
 
   const existing = await db.select().from(schema.platformMasterMaterials);
   for (const row of existing) {
@@ -169,6 +312,13 @@ export async function replacePlatformMasterMaterials(
         .update(schema.platformMasterMaterials)
         .set({ active: false, updatedAt: new Date() })
         .where(eq(schema.platformMasterMaterials.id, row.id));
+      auditEntries.push({
+        entityType: 'material',
+        entityKey: row.key,
+        action: 'delete',
+        beforeJson: materialAuditSnapshot(row),
+        afterJson: materialAuditSnapshot({ ...row, active: false }),
+      });
     }
   }
 
@@ -176,7 +326,7 @@ export async function replacePlatformMasterMaterials(
   for (let i = 0; i < materials.length; i++) {
     const m = materials[i];
     const values = masterMaterialInputToDbValues({ ...m, sortOrder: i });
-    const match = existing.find((r) => r.key === m.key);
+    const match = existing.find((r: PlatformMasterMaterialRow) => r.key === m.key);
     if (match) {
       const [row] = await db
         .update(schema.platformMasterMaterials)
@@ -184,10 +334,27 @@ export async function replacePlatformMasterMaterials(
         .where(eq(schema.platformMasterMaterials.id, match.id))
         .returning();
       out.push(rowToMasterMaterial(row));
+      auditEntries.push({
+        entityType: 'material',
+        entityKey: row.key,
+        action: 'update',
+        beforeJson: materialAuditSnapshot(match),
+        afterJson: materialAuditSnapshot(row),
+      });
     } else {
       const [row] = await db.insert(schema.platformMasterMaterials).values(values).returning();
       out.push(rowToMasterMaterial(row));
+      auditEntries.push({
+        entityType: 'material',
+        entityKey: row.key,
+        action: 'create',
+        afterJson: materialAuditSnapshot(row),
+      });
     }
+  }
+  if (auditEntries.length > 0) {
+    const version = await incrementMasterDataVersion();
+    await appendMasterAuditEntries(version, auditEntries, actor);
   }
   return out;
 }
@@ -205,7 +372,7 @@ export async function listPlatformReferenceItems(category?: RefCategory) {
         asc(schema.platformReferenceItems.sortOrder),
         asc(schema.platformReferenceItems.label)
       )
-      .then((rows) => rows.filter((r) => r.active));
+      .then((rows: PlatformReferenceItemRow[]) => rows.filter((r: PlatformReferenceItemRow) => r.active));
   }
   return db
     .select()
@@ -214,7 +381,7 @@ export async function listPlatformReferenceItems(category?: RefCategory) {
       asc(schema.platformReferenceItems.sortOrder),
       asc(schema.platformReferenceItems.label)
     )
-    .then((rows) => rows.filter((r) => r.active));
+    .then((rows: PlatformReferenceItemRow[]) => rows.filter((r: PlatformReferenceItemRow) => r.active));
 }
 
 /**
@@ -236,19 +403,19 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
   const items = await listPlatformReferenceItems();
 
   const byCategory = (cat: RefCategory) =>
-    items.filter((i) => i.category === cat).map((i) => i.label);
+    items.filter((i: PlatformReferenceItemRow) => i.category === cat).map((i: PlatformReferenceItemRow) => i.label);
 
   const productTypeRows = items
-    .filter((i) => i.category === 'product_type')
-    .map((i) => ({ label: i.label, code: i.code || '' }));
+    .filter((i: PlatformReferenceItemRow) => i.category === 'product_type')
+    .map((i: PlatformReferenceItemRow) => ({ label: i.label, code: i.code || '' }));
 
   const rmTypeRows = items
-    .filter((i) => i.category === 'rm_type')
-    .map((i) => ({ label: i.label, code: i.code?.trim() || deriveRmTypeCode(i.label) }));
+    .filter((i: PlatformReferenceItemRow) => i.category === 'rm_type')
+    .map((i: PlatformReferenceItemRow) => ({ label: i.label, code: i.code?.trim() || deriveRmTypeCode(i.label) }));
 
   const printingWebClasses = items
-    .filter((i) => i.category === 'printing_web')
-    .map((i) => {
+    .filter((i: PlatformReferenceItemRow) => i.category === 'printing_web')
+    .map((i: PlatformReferenceItemRow) => {
       const meta = (i.metadata || {}) as { inkSystem?: string; solidPercent?: number };
       return {
         label: i.label,
@@ -259,10 +426,10 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
     });
 
   return {
-    productTypes: productTypeRows.map((r) => r.label),
+    productTypes: productTypeRows.map((r: { label: string; code: string }) => r.label),
     productTypeRows,
     units: byCategory('unit'),
-    rmTypes: rmTypeRows.map((r) => r.label),
+    rmTypes: rmTypeRows.map((r: { label: string; code: string }) => r.label),
     rmTypeRows,
     packaging: byCategory('packaging'),
     inkCoating: byCategory('ink_coating'),
@@ -273,29 +440,51 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
 
 export async function replacePlatformReferenceCategory(
   category: RefCategory,
-  items: Array<{ label: string; code?: string | null; metadata?: Record<string, unknown> | null }>
+  items: Array<{ label: string; code?: string | null; metadata?: Record<string, unknown> | null }>,
+  actor?: AuditActor
 ) {
+  assertUniqueReferenceCodes(items);
   const db = getDatabase();
   const existing = await db
     .select()
     .from(schema.platformReferenceItems)
     .where(eq(schema.platformReferenceItems.category, category));
 
+  const auditEntries: Parameters<typeof appendMasterAuditEntries>[1] = [];
+
   const incomingLabels = new Set(items.map((i) => i.label.trim().toLowerCase()));
   for (const row of existing) {
     if (!incomingLabels.has(row.label.trim().toLowerCase()) && row.active) {
+      if (category === 'rm_type') {
+        const code = row.code?.trim() || deriveRmTypeCode(row.label);
+        const materialCount = await countMaterialsUsingRmTypeCode(code);
+        if (materialCount > 0) {
+          throw new ReferenceItemInUseError(
+            `Cannot remove RM type "${row.label}": ${materialCount} material row(s) reference code "${code}"`,
+            code,
+            materialCount
+          );
+        }
+      }
       await db
         .update(schema.platformReferenceItems)
         .set({ active: false, updatedAt: new Date() })
         .where(eq(schema.platformReferenceItems.id, row.id));
+      auditEntries.push({
+        entityType: 'reference_item',
+        entityKey: referenceEntityKey(category, row.label, row.code),
+        action: 'delete',
+        beforeJson: referenceItemAuditSnapshot({ ...row, category }),
+        afterJson: referenceItemAuditSnapshot({ ...row, category, active: false }),
+      });
     }
   }
 
-  const out: typeof schema.platformReferenceItems.$inferSelect[] = [];
+  const out: PlatformReferenceItemRow[] = [];
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     const label = item.label.trim();
-    const match = existing.find((r) => r.label.trim().toLowerCase() === label.toLowerCase());
+    const match = existing.find((r: PlatformReferenceItemRow) => r.label.trim().toLowerCase() === label.toLowerCase());
     const values = {
       category,
       label,
@@ -312,11 +501,38 @@ export async function replacePlatformReferenceCategory(
         .where(eq(schema.platformReferenceItems.id, match.id))
         .returning();
       out.push(row);
+      auditEntries.push({
+        entityType: 'reference_item',
+        entityKey: referenceEntityKey(category, row.label, row.code),
+        action: 'update',
+        beforeJson: referenceItemAuditSnapshot({ ...match, category }),
+        afterJson: referenceItemAuditSnapshot({ ...row, category }),
+      });
     } else {
       const [row] = await db.insert(schema.platformReferenceItems).values(values).returning();
       out.push(row);
+      auditEntries.push({
+        entityType: 'reference_item',
+        entityKey: referenceEntityKey(category, row.label, row.code),
+        action: 'create',
+        afterJson: referenceItemAuditSnapshot({ ...row, category }),
+      });
     }
   }
+  if (auditEntries.length > 0) {
+    const version = await incrementMasterDataVersion();
+    await appendMasterAuditEntries(version, auditEntries, actor);
+  }
+
+  if (category === 'rm_type') {
+    const tenantIds = (await db.select({ id: schema.tenants.id }).from(schema.tenants)).map(
+      (t: { id: string }) => t.id
+    );
+    for (const tenantId of tenantIds) {
+      await syncCustomRmTypeCategories(tenantId);
+    }
+  }
+
   return out;
 }
 
@@ -336,7 +552,7 @@ export async function syncPlatformMasterToAllTenants(options?: {
   const db = getDatabase();
   const materials = await listPlatformMasterMaterials();
   const tenantIds = (await db.select({ id: schema.tenants.id }).from(schema.tenants)).map(
-    (t) => t.id
+    (t: { id: string }) => t.id
   );
 
   let inserted = 0;
@@ -454,6 +670,8 @@ export async function ensurePlatformMasterSeeded(): Promise<{ materials: number;
     }
     console.log(`✓ Seeded ${referenceSeeded} platform reference items from JSON`);
   }
+
+  await ensurePlatformMasterState();
 
   return { materials: materialsSeeded, reference: referenceSeeded };
 }

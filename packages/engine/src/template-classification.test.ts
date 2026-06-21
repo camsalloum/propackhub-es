@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   materialAllowedForTemplateLayer,
   substrateFamilyAllowed,
+  resolveTemplateStoreClassification,
 } from './template-classification';
 
 describe('substrateFamilyAllowed', () => {
@@ -48,5 +49,46 @@ describe('materialAllowedForTemplateLayer', () => {
     expect(materialAllowedForTemplateLayer({ type: 'ink', substrateFamily: 'Solvent Based' }, 'ink', peCtx)).toBe(
       true
     );
+  });
+});
+
+describe('resolveTemplateStoreClassification', () => {
+  const mats = [
+    { id: 'pe1', substrateFamily: 'PE' },
+    { id: 'pet1', substrateFamily: 'PET' },
+  ];
+
+  it('uses stored PE/Mono when valid', () => {
+    expect(
+      resolveTemplateStoreClassification(
+        { materialClass: 'PE', structureType: 'Mono' },
+        [{ layer_type: 'substrate', materialId: 'pe1' }],
+        mats
+      )
+    ).toEqual({ materialClass: 'PE', structureType: 'Mono' });
+  });
+
+  it('infers Multilayer + Non PE from mixed substrate stack', () => {
+    expect(
+      resolveTemplateStoreClassification(
+        { materialClass: 'Custom', structureType: 'Custom' },
+        [
+          { layer_type: 'substrate', materialId: 'pet1' },
+          { layer_type: 'ink', materialId: null },
+          { layer_type: 'substrate', materialId: 'pe1' },
+        ],
+        mats
+      )
+    ).toEqual({ materialClass: 'Non PE', structureType: 'Multilayer' });
+  });
+
+  it('infers PE Mono from single PE substrate', () => {
+    expect(
+      resolveTemplateStoreClassification(
+        null,
+        [{ layer_type: 'substrate', materialId: 'pe1' }],
+        mats
+      )
+    ).toEqual({ materialClass: 'PE', structureType: 'Mono' });
   });
 });

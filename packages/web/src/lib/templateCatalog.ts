@@ -90,6 +90,14 @@ export interface TemplateClassification {
   structure: TemplateStructureTier;
 }
 
+/** Structure tier from substrate count only — layers are the source of truth. */
+export function deriveStructureTierFromSubstrates(substrateCount: number): TemplateStructureTier {
+  if (substrateCount >= 4) return 'quadriplex';
+  if (substrateCount === 3) return 'triplex';
+  if (substrateCount >= 2) return 'duplex';
+  return 'mono';
+}
+
 /** Derive the 3-axis classification used by the picker grid. */
 export function getTemplateClassification(t: TemplateCatalogInput): TemplateClassification {
   const mc = t.materialClass?.trim();
@@ -97,16 +105,13 @@ export function getTemplateClassification(t: TemplateCatalogInput): TemplateClas
     mc === 'PE' ? 'PE' : mc === 'Non PE' ? 'Non PE' : null;
 
   const isPrinted = isPrintedTemplate(t);
-
-  const substrates = substrateCount(t.defaultLayers);
-  let structure: TemplateStructureTier = 'mono';
-  if (t.structureType === 'Multilayer') {
-    if (substrates >= 4) structure = 'quadriplex';
-    else if (substrates === 3) structure = 'triplex';
-    else structure = 'duplex';
-  }
+  const structure = deriveStructureTierFromSubstrates(substrateCount(t.defaultLayers));
 
   return { materialClass, isPrinted, structure };
+}
+
+export function structureTierLabel(tier: TemplateStructureTier): string {
+  return tier.charAt(0).toUpperCase() + tier.slice(1);
 }
 
 export interface ClassFilter {
@@ -118,6 +123,64 @@ export interface ClassFilter {
 /** Returns true when a template matches every non-null axis in the filter. */
 export function matchesClassFilter(t: TemplateCatalogInput, f: ClassFilter): boolean {
   const cls = getTemplateClassification(t);
+  if (f.materialClass !== null && cls.materialClass !== f.materialClass) return false;
+  if (f.isPrinted !== null && cls.isPrinted !== f.isPrinted) return false;
+  if (f.structure !== null && cls.structure !== f.structure) return false;
+  return true;
+}
+
+export interface EstimateClassificationSnapshot {
+  materialClass: 'PE' | 'Non PE' | null;
+  isPrinted: boolean;
+  structure: TemplateStructureTier;
+  productType: string;
+}
+
+/** Read persisted classification from estimate dimensions (with legacy fallback). */
+export function getEstimateClassification(
+  estimate: {
+    productType?: string | null;
+    jobName?: string | null;
+    dimensions?: Record<string, unknown> | null;
+  }
+): EstimateClassificationSnapshot {
+  const dims = estimate.dimensions;
+  const stored = dims?.estimateClassification as EstimateClassificationSnapshot | undefined;
+  if (stored?.structure) {
+    return {
+      materialClass: stored.materialClass ?? null,
+      isPrinted: Boolean(stored.isPrinted),
+      structure: stored.structure,
+      productType: stored.productType || estimate.productType || 'roll',
+    };
+  }
+
+  const tc = dims?.templateClassification as
+    | { materialClass?: string; structureType?: string }
+    | undefined;
+  const materialClass: EstimateClassificationSnapshot['materialClass'] =
+    tc?.materialClass === 'PE'
+      ? 'PE'
+      : tc?.materialClass === 'Non PE'
+        ? 'Non PE'
+        : null;
+
+  let structure: TemplateStructureTier = 'mono';
+  if (tc?.structureType === 'Multilayer') structure = 'duplex';
+
+  return {
+    materialClass,
+    isPrinted: /printed/i.test(estimate.jobName || ''),
+    structure,
+    productType: estimate.productType || 'roll',
+  };
+}
+
+export function matchesEstimateClassFilter(
+  estimate: Parameters<typeof getEstimateClassification>[0],
+  f: ClassFilter
+): boolean {
+  const cls = getEstimateClassification(estimate);
   if (f.materialClass !== null && cls.materialClass !== f.materialClass) return false;
   if (f.isPrinted !== null && cls.isPrinted !== f.isPrinted) return false;
   if (f.structure !== null && cls.structure !== f.structure) return false;

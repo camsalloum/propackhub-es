@@ -70,7 +70,7 @@ export default function CustomersList() {
             <p className="text-sm text-mist">{customers.length} customers</p>
           </div>
         </div>
-        <Link to="/estimate/choose" className="btn-primary inline-flex items-center space-x-2">
+        <Link to="/templates?new=1" className="btn-primary inline-flex items-center space-x-2">
           <Plus className="w-4 h-4" />
           <span>New Estimate</span>
         </Link>

@@ -40,6 +40,8 @@ export type PlatformMasterMaterialInput = {
   hoover?: string | null;
   marketPriceUsd?: number | null;
   sortOrder?: number;
+  externalId?: string | null;
+  externalSource?: string | null;
 };
 
 export type PlatformMasterMaterialRow = PlatformMasterMaterialInput & {
@@ -131,6 +133,10 @@ export class ApiClient {
       email,
       password,
     });
+  }
+
+  refreshToken() {
+    return this.request<{ token: string }>('POST', '/api/v1/auth/refresh');
   }
 
   getMe() {
@@ -476,7 +482,12 @@ export class ApiClient {
     );
   }
 
-  instantiateTemplate(id: string, data: { customerId?: string; jobName?: string }) {
+  instantiateTemplate(id: string, data: {
+    customerId?: string;
+    jobName?: string;
+    orderQuantityKg?: number;
+    orderQuantityUnit?: string;
+  }) {
     return this.request<any>('POST', `/api/v1/templates/${id}/instantiate`, data);
   }
 }

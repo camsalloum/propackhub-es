@@ -5,6 +5,7 @@
 ## Core Reference Documents
 
 ### Current State
+- **[ES_DEEP_AUDIT_AND_ENHANCEMENT_PLAN_2026-06-21.md](ES_DEEP_AUDIT_AND_ENHANCEMENT_PLAN_2026-06-21.md)** — ⭐ **Roadmap of record.** Verified audit (build/tests reproduced), bugs, PRD gaps, mobile + PEBI plan, and phased agent-ready tasks.
 - **[LIVE_STATE.md](LIVE_STATE.md)** — Current implementation status, phase checklist, known issues
 - **[SESSION_LOG.md](SESSION_LOG.md)** — Chronological session notes and decisions
 

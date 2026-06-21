@@ -63,6 +63,8 @@ function newMaterialRow(tab: MaterialTab): PlatformMasterMaterialRow {
     substrateGrade: '',
     hoover: '',
     marketPriceUsd: null as number | null,
+    externalId: null as string | null,
+    externalSource: null as string | null,
   };
   if (tab === 'packaging') {
     return { ...base, type: 'substrate', name: 'New packaging item' };
@@ -346,17 +348,22 @@ const MasterData = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-sm table-fixed">
               <colgroup>
-                <col className="w-[24%]" />
-                <col className="w-[9%]" />
-                <col className="w-[26%]" />
+                <col className="w-[14%]" />
+                <col className="w-[18%]" />
                 <col className="w-[8%]" />
+                <col className="w-[16%]" />
                 <col className="w-[7%]" />
-                <col className="w-[9%]" />
-                <col className="w-[9%]" />
+                <col className="w-[6%]" />
+                <col className="w-[6%]" />
+                <col className="w-[7%]" />
+                <col className="w-[7%]" />
+                <col className="w-[10%]" />
                 <col className="w-[8%]" />
+                <col className="w-[5%]" />
               </colgroup>
               <thead>
                 <tr className="border-b border-border bg-slate/50 text-xs uppercase tracking-wide text-mist">
+                  <th className="text-left py-2 px-2 font-medium">Key</th>
                   <th className="text-left py-2 px-2 font-medium">Name</th>
                   <th className="text-left py-2 px-2 font-medium">Family</th>
                   <th className="text-left py-2 px-2 font-medium">Grade</th>
@@ -364,12 +371,22 @@ const MasterData = () => {
                   <th className="text-right py-2 px-2 font-medium">Solid %</th>
                   <th className="text-right py-2 px-2 font-medium">Cost/kg</th>
                   <th className="text-right py-2 px-2 font-medium">Market</th>
+                  <th className="text-left py-2 px-2 font-medium">External ID</th>
+                  <th className="text-left py-2 px-2 font-medium">Source</th>
                   <th className="py-2 px-1" />
                 </tr>
               </thead>
               <tbody>
                 {visibleMaterials.map((row) => (
                   <tr key={row.id} className="border-b border-border last:border-0 hover:bg-slate/20">
+                    <td className="py-1 px-2">
+                      <span
+                        className="font-mono text-[11px] text-mist truncate block"
+                        title={row.key || slugKey(row.name)}
+                      >
+                        {row.key || slugKey(row.name)}
+                      </span>
+                    </td>
                     <td className="py-1 px-2">
                       <input
                         className="input w-full !min-h-[34px] !py-1 !px-2 text-sm"
@@ -432,6 +449,26 @@ const MasterData = () => {
                         value={row.marketPriceUsd ?? row.costPerKgUsd}
                         onChange={(e) =>
                           updateMaterialRow(row.id, { marketPriceUsd: Number(e.target.value) })
+                        }
+                      />
+                    </td>
+                    <td className="py-1 px-2">
+                      <input
+                        className="input w-full !min-h-[34px] !py-1 !px-2 text-sm font-mono"
+                        placeholder="PEBI / Oracle ID"
+                        value={row.externalId ?? ''}
+                        onChange={(e) =>
+                          updateMaterialRow(row.id, { externalId: e.target.value || null })
+                        }
+                      />
+                    </td>
+                    <td className="py-1 px-2">
+                      <input
+                        className="input w-full !min-h-[34px] !py-1 !px-2 text-sm"
+                        placeholder="e.g. pebi"
+                        value={row.externalSource ?? ''}
+                        onChange={(e) =>
+                          updateMaterialRow(row.id, { externalSource: e.target.value || null })
                         }
                       />
                     </td>

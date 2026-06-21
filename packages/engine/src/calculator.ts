@@ -375,7 +375,9 @@ function calculateProcessCosts(
         break;
     }
 
-    const totalCost = Math.round(process.costPerHour * runHours);
+    const setupCost = process.costPerHour * process.setupHours;
+    const runCost = process.costPerHour * runHours;
+    const totalCost = Math.round(setupCost + runCost);
     totalProcessCost += totalCost;
 
     return {

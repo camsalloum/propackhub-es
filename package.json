@@ -6,12 +6,14 @@
     "packages/*"
   ],
   "scripts": {
+    "postinstall": "npm run build --workspace=packages/engine",
     "dev": "concurrently \"npm:dev:*\"",
     "dev:server": "npm run dev --workspace=packages/server",
     "dev:web": "npm run dev --workspace=packages/web",
     "dev:web-delayed": "ping -n 4 127.0.0.1 >nul && npm run dev --workspace=packages/web",
     "start": "npm run dev",
-    "start:servers": "concurrently -k -n api,web -c blue,green \"npm run dev:server\" \"npm run dev:web-delayed\"",
+    "start:servers": "npm run build --workspace=packages/engine && concurrently -k -n api,web -c blue,green \"npm run dev:server\" \"npm run dev:web\"",
+    "start:servers:dev": "concurrently -k -n api,web -c blue,green \"npm run dev:server\" \"npm run dev:web\"",
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
     "lint": "npm run lint --workspaces",

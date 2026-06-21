@@ -1,8 +1,11 @@
 import { eq } from 'drizzle-orm';
 import { getDatabase, schema } from './index';
 import { PACKAGING_FAMILY } from './master-materials-io';
+import { listPlatformReferenceItems } from './platform-master-data';
 
-const TAXONOMY = [
+const STANDARD_RM_CODES = new Set(['substrate', 'ink', 'adhesive', 'packaging']);
+
+const BASE_TAXONOMY = [
   {
     name: 'Substrates',
     subcategories: ['PE Films', 'PET Films', 'BOPP / PP', 'Paper & Foil', 'Other Substrates'],
@@ -25,11 +28,45 @@ const TAXONOMY = [
   },
 ];
 
+type TaxonomyCategory = {
+  name: string;
+  subcategories: string[];
+  materialTypes: readonly ('substrate' | 'ink' | 'adhesive')[];
+  rmTypeCode?: string;
+};
+
+async function buildTaxonomy(): Promise<TaxonomyCategory[]> {
+  const taxonomy: TaxonomyCategory[] = BASE_TAXONOMY.map((c) => ({ ...c, subcategories: [...c.subcategories] }));
+
+  try {
+    const rmTypes = await listPlatformReferenceItems('rm_type');
+    for (const row of rmTypes) {
+      const code = (row.code?.trim() || row.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')).toLowerCase();
+      if (STANDARD_RM_CODES.has(code)) continue;
+      taxonomy.push({
+        name: row.label,
+        subcategories: [row.label],
+        materialTypes: ['substrate'],
+        rmTypeCode: code,
+      });
+    }
+  } catch {
+    // Platform tables may not exist yet on first boot
+  }
+
+  return taxonomy;
+}
+
 function subcategoryForMaterial(
   name: string,
   type: string,
-  substrateFamily?: string | null
+  substrateFamily?: string | null,
+  itemClass?: string | null
 ): string {
+  if (itemClass && !STANDARD_RM_CODES.has(itemClass)) {
+    return name;
+  }
+
   const n = name.toLowerCase();
   if (type === 'ink') {
     const fam = (substrateFamily || '').toLowerCase();
@@ -62,7 +99,7 @@ export async function backfillMaterialSubcategories(tenantId: string): Promise<v
     .select()
     .from(schema.subcategories)
     .where(eq(schema.subcategories.tenantId, tenantId));
-  const subcatIdByName = new Map(subcategories.map((s) => [s.name, s.id]));
+  const subcatIdByName = new Map(subcategories.map((s: (typeof subcategories)[number]) => [s.name, s.id]));
 
   const materials = await db
     .select()
@@ -71,7 +108,7 @@ export async function backfillMaterialSubcategories(tenantId: string): Promise<v
 
   for (const mat of materials) {
     if (mat.subcategoryId) continue;
-    const subName = subcategoryForMaterial(mat.name, mat.type, mat.substrateFamily);
+    const subName = subcategoryForMaterial(mat.name, mat.type, mat.substrateFamily, mat.itemClass);
     const subId = subcatIdByName.get(subName);
     if (subId) {
       await db
@@ -84,10 +121,10 @@ export async function backfillMaterialSubcategories(tenantId: string): Promise<v
 
 export async function seedCategoriesForTenant(tenantId: string): Promise<void> {
   const db = getDatabase();
-
+  const taxonomy = await buildTaxonomy();
   const subcatIdByName = new Map<string, string>();
 
-  for (const cat of TAXONOMY) {
+  for (const cat of taxonomy) {
     const [category] = await db
       .insert(schema.categories)
       .values({ tenantId, name: cat.name })
@@ -108,7 +145,7 @@ export async function seedCategoriesForTenant(tenantId: string): Promise<void> {
     .where(eq(schema.materials.tenantId, tenantId));
 
   for (const mat of materials) {
-    const subName = subcategoryForMaterial(mat.name, mat.type, mat.substrateFamily);
+    const subName = subcategoryForMaterial(mat.name, mat.type, mat.substrateFamily, mat.itemClass);
     const subId = subcatIdByName.get(subName);
     if (subId) {
       await db
@@ -117,6 +154,38 @@ export async function seedCategoriesForTenant(tenantId: string): Promise<void> {
         .where(eq(schema.materials.id, mat.id));
     }
   }
+}
+
+/** Add categories for custom RM types added after initial seed. */
+export async function syncCustomRmTypeCategories(tenantId: string): Promise<void> {
+  const db = getDatabase();
+  const taxonomy = await buildTaxonomy();
+  const customCats = taxonomy.filter((c) => c.rmTypeCode);
+
+  if (customCats.length === 0) return;
+
+  const existingCats = await db
+    .select()
+    .from(schema.categories)
+    .where(eq(schema.categories.tenantId, tenantId));
+  const catByName = new Map(existingCats.map((c: (typeof existingCats)[number]) => [c.name, c]));
+
+  for (const cat of customCats) {
+    if (catByName.has(cat.name)) continue;
+    const [category] = await db
+      .insert(schema.categories)
+      .values({ tenantId, name: cat.name })
+      .returning();
+    for (const subName of cat.subcategories) {
+      await db.insert(schema.subcategories).values({
+        tenantId,
+        categoryId: category.id,
+        name: subName,
+      });
+    }
+  }
+
+  await backfillMaterialSubcategories(tenantId);
 }
 
 export async function ensureCategoriesForTenant(tenantId: string): Promise<void> {
@@ -132,5 +201,5 @@ export async function ensureCategoriesForTenant(tenantId: string): Promise<void>
     return;
   }
 
-  await backfillMaterialSubcategories(tenantId);
+  await syncCustomRmTypeCategories(tenantId);
 }

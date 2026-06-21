@@ -393,10 +393,6 @@ function familyIsSolventBased(family: string): boolean {
   return f.includes('solvent based') || f.includes('solvent base') || f === 'sb';
 }
 
-function familyIsUv(family: string): boolean {
-  return family.toLowerCase().includes('uv');
-}
-
 function inkMaterialsFromRows(rows: Record<string, unknown>[]): MasterMaterial[] {
   const parsed = rows.map(parseStructuredRow).filter((r): r is StructuredRow => r != null);
   const gradeCounts = new Map<string, number>();

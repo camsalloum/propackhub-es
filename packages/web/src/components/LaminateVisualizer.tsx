@@ -10,61 +10,169 @@ type Props = {
   layers: Layer[];
   width?: number;
   height?: number;
+  /** @deprecated use labelMode */
   showLabels?: boolean;
+  labelMode?: 'material' | 'number' | 'none';
+  orientation?: 'vertical' | 'horizontal';
+  className?: string;
 };
 
-const colorForType = (type?: string) => {
+export function layerTypeColor(type?: string): string {
   if (type === 'substrate') return '#1D5FA3';
   if (type === 'ink') return '#9B4CA0';
   if (type === 'adhesive') return '#2E8B6E';
   return '#6B7280';
-};
+}
 
-export default function LaminateVisualizer({ layers, width = 220, height = 180, showLabels = true }: Props) {
-  // Compute a thickness metric for each layer. Prefer micron; fallback to gsm.
-  const thicknesses = layers.map((l) => {
-    const micron = Number(l.micron || 0);
-    if (micron > 0) return micron;
-    const gsm = Number(l.gsm || 0);
-    // approximate micron from gsm using density ~1 (safe fallback)
-    return gsm > 0 ? gsm : 1;
-  });
+function layerThickness(l: Layer): number {
+  const micron = Number(l.micron || 0);
+  if (micron > 0) return micron;
+  const gsm = Number(l.gsm || 0);
+  return gsm > 0 ? gsm : 1;
+}
 
+export default function LaminateVisualizer({
+  layers,
+  width = 220,
+  height = 180,
+  showLabels,
+  labelMode,
+  orientation = 'vertical',
+  className,
+}: Props) {
+  const resolvedLabelMode =
+    labelMode ?? (showLabels === false ? 'none' : showLabels === true ? 'material' : 'material');
+
+  const thicknesses = layers.map(layerThickness);
   const total = Math.max(1, thicknesses.reduce((s, t) => s + t, 0));
-
-  // Vertical stacking: compute heights
   const gap = 2;
-  const available = height - gap * (layers.length - 1);
-  const rects = layers.map((l, i) => {
-    const h = Math.max(6, Math.round((thicknesses[i] / total) * available));
-    return { layer: l, h };
+  const pad = 8;
+
+  if (orientation === 'horizontal') {
+    const available = width - pad * 2 - gap * Math.max(0, layers.length - 1);
+    let x = pad;
+    const barHeight = height - pad * 2;
+    const segments = layers.map((layer, i) => {
+      const w = Math.max(1, Math.round((thicknesses[i] / total) * available));
+      const seg = { layer, x, w, i };
+      x += w + gap;
+      return seg;
+    });
+
+    const fontSize = Math.max(10, Math.min(14, Math.round(height / 3)));
+
+    return (
+      <svg
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        className={className}
+        role="img"
+        aria-label="Layer stack"
+      >
+        <rect x={0} y={0} width={width} height={height} rx={6} fill="#F8FAFC" stroke="#E6E9EE" />
+        {segments.map(({ layer, x, w, i }) => (
+          <g key={String(layer.id)}>
+            <rect
+              x={x}
+              y={pad}
+              width={w}
+              height={barHeight}
+              rx={3}
+              fill={layerTypeColor(layer.type)}
+              opacity={layer.type === 'ink' ? 0.9 : 1}
+            />
+            {resolvedLabelMode === 'number' && (
+              <text
+                x={x + w / 2}
+                y={pad + barHeight / 2}
+                fill="#ffffff"
+                fontSize={fontSize}
+                fontWeight={600}
+                fontFamily="Inter, Arial, sans-serif"
+                textAnchor="middle"
+                dominantBaseline="middle"
+              >
+                {i + 1}
+              </text>
+            )}
+            {resolvedLabelMode === 'material' && w >= 28 && (
+              <text
+                x={x + w / 2}
+                y={pad + barHeight / 2}
+                fill="#ffffff"
+                fontSize={Math.max(8, fontSize - 2)}
+                fontFamily="Inter, Arial, sans-serif"
+                textAnchor="middle"
+                dominantBaseline="middle"
+              >
+                {(layer.material || layer.type || `Layer ${i + 1}`).slice(0, Math.max(4, Math.floor(w / 8)))}
+              </text>
+            )}
+          </g>
+        ))}
+      </svg>
+    );
+  }
+
+  const available = height - pad * 2 - gap * Math.max(0, layers.length - 1);
+  let y = pad;
+  const barWidth = width - pad * 2;
+  const segments = layers.map((layer, i) => {
+    const h = Math.max(1, Math.round((thicknesses[i] / total) * available));
+    const seg = { layer, y, h, i };
+    y += h + gap;
+    return seg;
   });
 
-  // Compute y positions (top to bottom)
-  let y = 0;
-  const positioned = rects.map((r) => {
-    const pos = { ...r, y };
-    y += r.h + gap;
-    return pos;
-  });
+  const fontSize = Math.max(10, Math.min(14, Math.round(width / 5)));
 
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Laminate stack visualizer">
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      className={className}
+      role="img"
+      aria-label="Layer stack"
+    >
       <rect x={0} y={0} width={width} height={height} rx={6} fill="#F8FAFC" stroke="#E6E9EE" />
-      {positioned.map((p, idx) => (
-        <g key={String(p.layer.id)}>
+      {segments.map(({ layer, y, h, i }) => (
+        <g key={String(layer.id)}>
           <rect
-            x={8}
-            y={p.y + 8}
-            width={width - 16}
-            height={p.h}
-            rx={4}
-            fill={colorForType(p.layer.type)}
-            opacity={p.layer.type === 'ink' ? 0.85 : 1}
+            x={pad}
+            y={y}
+            width={barWidth}
+            height={h}
+            rx={3}
+            fill={layerTypeColor(layer.type)}
+            opacity={layer.type === 'ink' ? 0.9 : 1}
           />
-          {showLabels && (
-            <text x={12} y={p.y + 8 + Math.max(12, Math.round(p.h / 2))} fill="#ffffff" fontSize={11} fontFamily="Inter, Arial, sans-serif">
-              {p.layer.material || p.layer.type || `Layer ${idx + 1}`} • {p.layer.micron ? `${p.layer.micron}µ` : `${p.layer.gsm || '-'} GSM`}
+          {resolvedLabelMode === 'number' && (
+            <text
+              x={pad + barWidth / 2}
+              y={y + h / 2}
+              fill="#ffffff"
+              fontSize={fontSize}
+              fontWeight={600}
+              fontFamily="Inter, Arial, sans-serif"
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              {i + 1}
+            </text>
+          )}
+          {resolvedLabelMode === 'material' && h >= 14 && (
+            <text
+              x={pad + 4}
+              y={y + h / 2}
+              fill="#ffffff"
+              fontSize={Math.max(8, fontSize - 1)}
+              fontFamily="Inter, Arial, sans-serif"
+              dominantBaseline="middle"
+            >
+              {(layer.material || layer.type || `Layer ${i + 1}`).slice(0, Math.max(6, Math.floor(barWidth / 10)))}
+              {layer.micron ? ` · ${layer.micron}µ` : ''}
             </text>
           )}
         </g>

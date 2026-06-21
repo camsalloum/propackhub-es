@@ -35,6 +35,11 @@ const Layout = () => {
   const isEstimateEditor =
     location.pathname.startsWith('/estimate/') && !location.pathname.startsWith('/estimate/choose');
 
+  const isNewQuotePicker =
+    location.pathname === '/templates' && new URLSearchParams(location.search).get('new') === '1';
+
+  const hideMobileBottomNav = isEstimateEditor || isNewQuotePicker;
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -43,7 +48,7 @@ const Layout = () => {
   const bottomNav = [
     { name: 'Home', href: '/dashboard', icon: Home },
     { name: 'Quotes', href: '/estimates', icon: FileText },
-    { name: 'New', href: '/estimate/choose', icon: PlusCircle, accent: true },
+    { name: 'New', href: '/templates?new=1', icon: PlusCircle, accent: true },
     { name: 'Customers', href: '/customers', icon: Users },
     { name: 'More', href: '#menu', icon: Menu },
   ];
@@ -198,11 +203,11 @@ const Layout = () => {
             </div>
           </header>
 
-          <main className={`flex-1 p-4 lg:p-8 ${isEstimateEditor ? '' : 'pb-20 lg:pb-8'}`}>
+          <main className={`flex-1 p-4 lg:p-8 ${hideMobileBottomNav ? '' : 'pb-20 lg:pb-8'}`}>
             <Outlet />
           </main>
 
-          {!isEstimateEditor && (
+          {!hideMobileBottomNav && (
             <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-border safe-area-pb">
               <div className="flex items-stretch justify-around">
                 {bottomNav.map((item) => {

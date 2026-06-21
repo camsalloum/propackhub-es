@@ -4,12 +4,14 @@ import masterMaterialsFallback from './master-materials-seed.json';
 import type { MasterMaterial } from './master-materials-io';
 import { PACKAGING_FAMILY, materialSyncKey, costingKeyForMasterKey } from './master-materials-io';
 import { roundUsd } from '../utils/usd';
+import { itemClassForMasterMaterial, isPlatformPriceSource } from '../utils/item-class';
 import { backfillMaterialSubcategories } from './seed-categories';
 import { listPlatformMasterMaterials } from './platform-master-data';
 
 type DbMaterial = typeof schema.materials.$inferSelect;
 
 function mapMasterToDbRow(tenantId: string, material: MasterMaterial) {
+  const now = new Date();
   return {
     tenantId,
     name: material.name,
@@ -24,7 +26,10 @@ function mapMasterToDbRow(tenantId: string, material: MasterMaterial) {
     hoover: material.hoover || null,
     marketPriceUsd: roundUsd(material.marketPriceUsd ?? material.costPerKgUsd).toFixed(2),
     costingKey: costingKeyForMasterKey(material.key),
-    priceSource: 'excel' as const,
+    platformMasterKey: material.key,
+    platformSyncedAt: now,
+    itemClass: itemClassForMasterMaterial(material),
+    priceSource: 'platform' as const,
     isTenantOnly: false,
   };
 }
@@ -78,7 +83,21 @@ export function findOrphanSubstrateRows(
   });
 }
 
-function findExistingMatch(existing: DbMaterial[], material: MasterMaterial): DbMaterial | undefined {
+export function findExistingMatch(existing: DbMaterial[], material: MasterMaterial): DbMaterial | undefined {
+  const byPlatformKey = existing.find(
+    (row) => !row.isTenantOnly && row.platformMasterKey === material.key
+  );
+  if (byPlatformKey) return byPlatformKey;
+
+  const expectedCostingKey = costingKeyForMasterKey(material.key);
+  const byCostingKey = existing.find(
+    (row) =>
+      !row.isTenantOnly &&
+      !row.platformMasterKey &&
+      row.costingKey === expectedCostingKey
+  );
+  if (byCostingKey) return byCostingKey;
+
   if (material.type === 'substrate' && material.substrateFamily === PACKAGING_FAMILY) {
     return existing.find(
       (row) =>
@@ -211,10 +230,13 @@ export async function syncMaterialsForTenant(
         substrateGrade: row.substrateGrade,
         hoover: row.hoover,
         costingKey: row.costingKey,
+        itemClass: row.itemClass,
+        platformMasterKey: material.key,
+        platformSyncedAt: new Date(),
         updatedAt: new Date(),
       };
 
-      if (match.priceSource !== 'manual') {
+      if (!isPlatformPriceSource(match.priceSource)) {
         patch.costPerKgUsd = row.costPerKgUsd;
         patch.marketPriceUsd = row.marketPriceUsd;
       }
@@ -226,7 +248,7 @@ export async function syncMaterialsForTenant(
         .returning();
 
       syncedIds.add(match.id);
-      const idx = existing.findIndex((e) => e.id === match.id);
+      const idx = existing.findIndex((e: DbMaterial) => e.id === match.id);
       if (idx >= 0 && updatedRow) existing[idx] = updatedRow;
       updated++;
     } else {
@@ -238,7 +260,7 @@ export async function syncMaterialsForTenant(
   }
 
   const orphans = existing.filter(
-    (row) =>
+    (row: DbMaterial) =>
       !row.isTenantOnly &&
       (row.type === 'substrate' || row.type === 'ink' || row.type === 'adhesive') &&
       !syncedIds.has(row.id)

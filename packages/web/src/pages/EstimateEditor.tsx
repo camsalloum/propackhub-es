@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Save, Download, ArrowLeft, Layers, Calculator, Ruler, DollarSign, Loader2 } from 'lucide-react';
+import { Save, Download, ArrowLeft, Layers, Calculator, Ruler, DollarSign, Loader2, X } from 'lucide-react';
 import LayerCard from '../components/LayerCard';
 import BottomSheet from '../components/BottomSheet';
 import LaminateVisualizer from '../components/LaminateVisualizer';
@@ -9,12 +9,16 @@ import { useAuth } from '../hooks/useAuth';
 import { usdToDisplay } from '../lib/currency';
 import { runClientCalculation, effectiveMarginPercent } from '../lib/estimateCalc';
 import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
-import CustomerAutocomplete from '../components/CustomerAutocomplete';
+import { JobHeaderFields } from '../components/JobHeaderFields';
+import { dimensionsForSave, validateConfiguredEstimate } from '../lib/estimateConfigure';
 import { groupMaterialsForPicker, type CategoryNode } from '../lib/materialTaxonomy';
 import { derivePrintingWebClass, stackNeedsSolventMix, materialAllowedForTemplateLayer } from '@es/engine';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
 import {
   DEFAULT_MASTER_REFERENCE,
+  defaultUnitValue,
+  normalizeProductType,
+  normalizeUnitValue,
   type ProductTypeValue,
 } from '../lib/masterDataReference';
 
@@ -28,6 +32,8 @@ interface LayerItem {
   id: string; materialId: string; materialName: string; materialType: string;
   micron: number; gsm: number; costPerKgUsd: number; isSolventBased: boolean; position: number;
   hoover?: string | null;
+  platformMasterKeySnapshot?: string | null;
+  costingKeySnapshot?: string | null;
 }
 
 interface DimensionState {
@@ -48,6 +54,7 @@ const EstimateEditor = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { can, isPreviewing } = useVisibilityProfile(user?.role);
+  const isAdmin = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -66,7 +73,7 @@ const EstimateEditor = () => {
   const [priceChanges, setPriceChanges] = useState<any[]>([]);
   const [requoteWarnings, setRequoteWarnings] = useState<string[]>([]);
   const [orderQuantity, setOrderQuantity] = useState<number>(1000);
-  const [orderQuantityUnit, setOrderQuantityUnit] = useState('kgs');
+  const [orderQuantityUnit, setOrderQuantityUnit] = useState(() => defaultUnitValue());
   const [rollSpecOpen, setRollSpecOpen] = useState(false);
   const [processesState, setProcessesState] = useState<any[]>([]);
   const { reference: masterReference, version: masterDataVersion } = useMasterDataReference();
@@ -91,10 +98,15 @@ const EstimateEditor = () => {
   const [dragFromIndex, setDragFromIndex] = useState<number | null>(null);
   const [dragHoverIndex, setDragHoverIndex] = useState<number | null>(null);
   const [mobileStackOpen, setMobileStackOpen] = useState(false);
+  const [needsConfiguration, setNeedsConfiguration] = useState(false);
 
   const location = useLocation();
+  const locationState = location.state as {
+    returnTo?: string;
+    configureFromTemplate?: boolean;
+  } | null;
   const returnTo =
-    (location.state as { returnTo?: string } | null)?.returnTo === '/templates'
+    locationState?.returnTo === '/templates'
       ? '/templates'
       : '/estimates';
 
@@ -230,6 +242,11 @@ const EstimateEditor = () => {
   const productTypeOptions = masterReference.productTypeOptions ?? DEFAULT_PRODUCT_TYPE_OPTIONS;
   const unitOptions = masterReference.unitOptions ?? DEFAULT_UNIT_OPTIONS;
 
+  useEffect(() => {
+    setProductType((prev) => normalizeProductType(prev, productTypeOptions));
+    setOrderQuantityUnit((prev) => normalizeUnitValue(prev, unitOptions));
+  }, [productTypeOptions, unitOptions]);
+
   // Load materials + customers on mount
   const loadBaseData = useCallback(async () => {
     let mats: MaterialItem[] = [];
@@ -271,11 +288,20 @@ const EstimateEditor = () => {
           const templateId = searchParams.get('template') ? Number(searchParams.get('template')) : null;
           const paramCustomer = searchParams.get('customer') || '';
           const paramJobName = searchParams.get('jobName') || 'New estimate';
-          const paramProductType = (searchParams.get('productType') || searchParams.get('type') || 'roll') as 'roll' | 'sleeve' | 'pouch';
+          const paramProductType = normalizeProductType(
+            searchParams.get('productType') || searchParams.get('type'),
+            productTypeOptions
+          );
+          const paramOrderQty = searchParams.get('orderQuantity');
+          const paramOrderUnit = searchParams.get('orderQuantityUnit');
           const defaultLayers = getTemplateLayers(templateId, mats || []);
           setJobName(paramJobName);
           setCustomerId(paramCustomer);
           setProductType(paramProductType);
+          if (paramOrderQty && !Number.isNaN(Number(paramOrderQty))) {
+            setOrderQuantity(Number(paramOrderQty));
+          }
+          if (paramOrderUnit) setOrderQuantityUnit(normalizeUnitValue(paramOrderUnit, unitOptions));
           setLayers(defaultLayers);
           setSlabsState([
             { quantityKg: 1000, pricePerKg: 0, total: 0 },
@@ -331,6 +357,8 @@ const EstimateEditor = () => {
         gsm: parseFloat(l.gsm) || 0, costPerKgUsd: parseFloat(l.materialCostPerKgUsd) || 0,
         isSolventBased: l.materialIsSolventBased || false, position: l.position || 0,
         hoover: l.materialHoover || null,
+        platformMasterKeySnapshot: l.platformMasterKeySnapshot ?? l.platform_master_key_snapshot ?? null,
+        costingKeySnapshot: l.costingKeySnapshot ?? l.costing_key_snapshot ?? null,
       }));
       setEstimate(data);
       try {
@@ -344,7 +372,7 @@ const EstimateEditor = () => {
         ...s, quantityKg: parseFloat(s.quantityKg) || 0, pricePerKg: parseFloat(s.pricePerKg) || 0,
         total: (parseFloat(s.quantityKg) || 0) * (parseFloat(s.pricePerKg) || 0),
       })));
-      setProductType(data.productType || 'roll');
+      setProductType(normalizeProductType(data.productType, productTypeOptions));
       setJobName(data.jobName || '');
       setCustomerId(data.customerId || '');
       setMarkupPercent(parseFloat(data.markupPercent) || 15);
@@ -353,16 +381,38 @@ const EstimateEditor = () => {
       if (data.solventCostPerKgUsd) setSolventCostPerKgUsd(parseFloat(data.solventCostPerKgUsd));
       if (data.solventRatio) setSolventRatio(parseFloat(data.solventRatio));
       if (data.orderQuantityKg) setOrderQuantity(parseFloat(data.orderQuantityKg));
-      if (data.orderQuantityUnit) setOrderQuantityUnit(data.orderQuantityUnit);
+      if (data.orderQuantityUnit) {
+        setOrderQuantityUnit(normalizeUnitValue(data.orderQuantityUnit, unitOptions));
+      }
       if (data.processes) setProcessesState(data.processes);
-      if (data.dimensions) setDimensions({
-        reelWidthMm: data.dimensions.reelWidthMm || 800, cutoffMm: data.dimensions.cutoffMm || 600,
-        numberOfUps: data.dimensions.numberOfUps || 1, extraPrintingTrimMm: data.dimensions.extraPrintingTrimMm || 0,
-        piecesPerCut: data.dimensions.piecesPerCut || 1, openWidthMm: data.dimensions.openWidthMm || 200,
-        openHeightMm: data.dimensions.openHeightMm || 250,
-      });
-      // Auto-calculate if no price yet (e.g. from template instantiate)
-      if (!data.salePricePerKg || parseFloat(data.salePricePerKg) === 0) {
+      const fromTemplate =
+        Boolean(data.dimensions?.configureFromTemplate) || Boolean(locationState?.configureFromTemplate);
+      if (fromTemplate) {
+        setNeedsConfiguration(true);
+        setActiveSection('structure');
+        setDimensions({
+          reelWidthMm: 0,
+          cutoffMm: 0,
+          numberOfUps: data.dimensions?.numberOfUps || 1,
+          extraPrintingTrimMm: 0,
+          piecesPerCut: 1,
+          openWidthMm: 0,
+          openHeightMm: 0,
+          templateClassification: data.dimensions?.templateClassification,
+          configureFromTemplate: true,
+        } as DimensionState & { templateClassification?: unknown; configureFromTemplate?: boolean });
+      } else if (data.dimensions) {
+        setDimensions({
+          reelWidthMm: data.dimensions.reelWidthMm || 800,
+          cutoffMm: data.dimensions.cutoffMm || 600,
+          numberOfUps: data.dimensions.numberOfUps || 1,
+          extraPrintingTrimMm: data.dimensions.extraPrintingTrimMm || 0,
+          piecesPerCut: data.dimensions.piecesPerCut || 1,
+          openWidthMm: data.dimensions.openWidthMm || 200,
+          openHeightMm: data.dimensions.openHeightMm || 250,
+        });
+      }
+      if (!fromTemplate && (!data.salePricePerKg || parseFloat(data.salePricePerKg) === 0)) {
         try {
           const result = await apiClient.calculateEstimate(estimateId);
           applyCalculationResult(data, result);
@@ -403,7 +453,7 @@ const EstimateEditor = () => {
   const buildSavePayload = useCallback(() => ({
     jobName, customerId: customerId || undefined, productType,
     printingWebClass: derivedPrintingWebClass,
-    dimensions,
+    dimensions: dimensionsForSave(dimensions as Record<string, unknown>),
     markupPercent, platesPerKg, deliveryPerKg,
     solventCostPerKgUsd: needsSolventMix ? solventCostPerKgUsd : undefined,
     solventRatio: needsSolventMix ? solventRatio : undefined,
@@ -418,7 +468,7 @@ const EstimateEditor = () => {
   const layerInputsKey = layers.map((l) => `${l.materialId}:${l.micron}`).join('|');
 
   const clientCalcResult = useMemo(() => {
-    if (loading || materials.length === 0 || layers.length === 0) return null;
+    if (loading || needsConfiguration || materials.length === 0 || layers.length === 0) return null;
     if (layers.some((l) => !l.materialId)) return null;
     try {
       return runClientCalculation({
@@ -441,7 +491,7 @@ const EstimateEditor = () => {
       return null;
     }
   }, [
-    loading, materials, layerInputsKey, productType, dimensions,
+    loading, needsConfiguration, materials, layerInputsKey, productType, dimensions,
     markupPercent, platesPerKg, deliveryPerKg, slabQuantitiesKey,
     estimate?.displayCurrency, estimate?.exchangeRateUsdToDisplay,
     solventCostPerKgUsd, solventRatio, layers.length,
@@ -483,6 +533,19 @@ const EstimateEditor = () => {
 
   const persistEstimate = async (andCalculate: boolean) => {
     if (saving) return;
+    if (andCalculate) {
+      const validationError = validateConfiguredEstimate({
+        layers,
+        productType,
+        dimensions: dimensions as Record<string, unknown>,
+      });
+      if (validationError) {
+        alert(validationError);
+        if (validationError.includes('Structure')) setActiveSection('structure');
+        else if (validationError.includes('Dimensions')) setActiveSection('dimensions');
+        return;
+      }
+    }
     setSaving(true);
     try {
       const payload = buildSavePayload();
@@ -499,6 +562,8 @@ const EstimateEditor = () => {
         navigate(`/estimate/${saved.id}`, { replace: true });
       }
       setEstimate((prev: any) => ({ ...prev, ...saved }));
+      setDimensions((prev) => dimensionsForSave(prev as Record<string, unknown>) as DimensionState);
+      setNeedsConfiguration(false);
       if (andCalculate && saved.id) {
         setCalculating(true);
         try {
@@ -514,6 +579,17 @@ const EstimateEditor = () => {
       console.error('Save failed:', err);
       alert(`Save failed: ${err.message || 'Unknown error'}`);
     } finally { setSaving(false); }
+  };
+
+  const handleCancel = () => {
+    const leaving =
+      needsConfiguration ||
+      jobName.trim() !== (estimate?.jobName || '').trim() ||
+      customerId !== (estimate?.customerId || '');
+    if (leaving && !window.confirm('Leave this estimate? Your draft stays in the estimates list.')) {
+      return;
+    }
+    navigate(returnTo);
   };
 
   const handleSaveDraft = () => persistEstimate(false);
@@ -614,7 +690,7 @@ const EstimateEditor = () => {
   const displaySalePrice = estimate?.salePriceDisplay ?? usdToDisplay(Number(estimate?.salePricePerKg) || 0, fxRate);
 
   return (
-    <div className="max-w-7xl mx-auto pb-24 md:pb-0">
+    <div className="w-full pb-24 md:pb-0">
       {loadError && (
         <div className="mb-4 card bg-amber-50 border border-amber-200 text-sm text-amber-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <span>{loadError}</span>
@@ -623,19 +699,61 @@ const EstimateEditor = () => {
           </button>
         </div>
       )}
+      {needsConfiguration && (
+        <div className="mb-4 card bg-gold/10 border border-gold/30 text-sm text-navy">
+          <p className="font-medium">Template loaded — configure this estimate</p>
+          <p className="text-mist mt-1">
+            Set layer thickness (µ) in <strong>Structure</strong>, then width and other dimensions in{' '}
+            <strong>Dimensions</strong>. Save when ready to calculate price.
+          </p>
+        </div>
+      )}
+      <div className="card mb-4 py-3 px-4 sm:px-5">
+        <JobHeaderFields
+          customerId={customerId}
+          onCustomerChange={setCustomerId}
+          jobName={jobName}
+          onJobNameChange={setJobName}
+          productType={productType}
+          onProductTypeChange={setProductType}
+          productTypeOptions={productTypeOptions}
+          orderQuantity={orderQuantity}
+          onOrderQuantityChange={setOrderQuantity}
+          orderQuantityUnit={orderQuantityUnit}
+          onOrderQuantityUnitChange={setOrderQuantityUnit}
+          unitOptions={unitOptions}
+        />
+      </div>
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
-            <Link to={returnTo} className="text-mist hover:text-ink" title="Back">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="btn-secondary inline-flex items-center gap-2 shrink-0"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
             <div>
-              <input type="text" value={jobName} onChange={(e) => setJobName(e.target.value)}
-                className="text-2xl lg:text-3xl font-display font-bold text-navy bg-transparent border-b border-transparent hover:border-border focus:border-gold focus:outline-none w-full" placeholder="Estimate name" />
+              <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">
+                {estimate?.refNumber || 'Draft estimate'}
+              </h1>
+              <p className="text-sm text-mist mt-1">{jobName}</p>
               {estimate?.sourceEstimationId && (
                 <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
                   📋 Re-quote from <Link to={`/estimate/${estimate.sourceEstimationId}`} className="font-medium underline">{estimate.sourceEstimationId}</Link>
+                </div>
+              )}
+              {isAdmin && (estimate.masterDataVersion != null || estimate.sourceTemplateKey) && (
+                <div className="mt-2 p-2 bg-slate/60 border border-border rounded-lg text-xs font-mono text-mist">
+                  {estimate.masterDataVersion != null && (
+                    <span>Master catalog v{estimate.masterDataVersion}</span>
+                  )}
+                  {estimate.sourceTemplateKey && (
+                    <span>{estimate.masterDataVersion != null ? ' · ' : ''}template {estimate.sourceTemplateKey}</span>
+                  )}
                 </div>
               )}
               {priceChanges.length > 0 && (
@@ -674,7 +792,15 @@ const EstimateEditor = () => {
               </div>
             </div>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="btn-secondary inline-flex items-center space-x-2"
+            >
+              <X className="w-4 h-4" />
+              <span>Cancel</span>
+            </button>
             <button onClick={handleSaveDraft} disabled={saving} className="btn-secondary inline-flex items-center space-x-2">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               <span>{saving ? 'Saving...' : 'Save'}</span>
@@ -689,31 +815,6 @@ const EstimateEditor = () => {
           </div>
         </div>
       </div>
-
-            <div className="card mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-navy mb-2">Customer</label>
-                <CustomerAutocomplete value={customerId} onChange={setCustomerId} />
-              </div>
-              {can('orderQtyUnitBreakdown') && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-navy mb-2">Order quantity</label>
-                    <input type="number" value={orderQuantity} onChange={(e) => setOrderQuantity(Number(e.target.value))} className="input w-full" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-navy mb-2">Unit</label>
-                    <select value={orderQuantityUnit} onChange={(e) => setOrderQuantityUnit(e.target.value)} className="input w-full">
-                      {unitOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
-            </div>
       <div className="lg:flex lg:space-x-8">
         {/* Left panel */}
         <div className="lg:flex-1 lg:max-w-3xl">
@@ -822,6 +923,17 @@ const EstimateEditor = () => {
                               <option value="">Select material</option>
                               {renderMaterialOptions(layer.materialType)}
                             </select>
+                            {isAdmin && (layer.platformMasterKeySnapshot || layer.costingKeySnapshot) && (
+                              <div className="mt-1 text-[10px] font-mono text-mist leading-tight">
+                                {layer.platformMasterKeySnapshot && (
+                                  <div title="platform_master_key at save">{layer.platformMasterKeySnapshot}</div>
+                                )}
+                                {layer.costingKeySnapshot &&
+                                  layer.costingKeySnapshot !== layer.platformMasterKeySnapshot && (
+                                    <div title="costing_key at save">{layer.costingKeySnapshot}</div>
+                                  )}
+                              </div>
+                            )}
                           </td>
                           <td className="py-4 px-4">
                             <input type="number" value={layer.micron} onChange={(e) => {
@@ -888,20 +1000,13 @@ const EstimateEditor = () => {
           {activeSection === 'dimensions' && (
             <div className="card space-y-6">
               <h3 className="text-lg font-display font-semibold text-navy">Dimensions</h3>
-              <div className="p-4 bg-slate rounded-lg">
-                <label className="block text-sm font-medium text-navy mb-2">Product Type</label>
-                <div className="flex flex-wrap gap-2">
-                  {productTypeOptions.map((pt) => (
-                    <button
-                      key={pt.value}
-                      onClick={() => setProductType(pt.value)}
-                      className={`px-4 py-2 rounded-lg ${productType === pt.value ? 'bg-gold text-white' : 'bg-white border border-border'}`}
-                    >
-                      {pt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <p className="text-sm text-mist">
+                Product type:{' '}
+                <span className="font-medium text-navy">
+                  {productTypeOptions.find((pt) => pt.value === productType)?.label ?? productType}
+                </span>
+                {' '}— change in the job header above.
+              </p>
               {productType === 'roll' && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

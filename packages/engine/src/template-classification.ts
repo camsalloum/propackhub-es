@@ -69,3 +69,54 @@ export function filterMaterialsForTemplateLayer<
 >(materials: T[], layerType: LayerType, ctx: TemplateClassification): T[] {
   return materials.filter((m) => materialAllowedForTemplateLayer(m, layerType, ctx));
 }
+
+/** Infer PE vs Non PE from substrate families on a saved template stack. */
+export function inferMaterialClassFromSubstrateFamilies(
+  families: Array<string | null | undefined>
+): MaterialClass | null {
+  const normalized = families
+    .map((f) => normFamily(f))
+    .filter((f) => f && f !== PACKAGING_SUBSTRATE_FAMILY);
+  if (normalized.length === 0) return null;
+  if (normalized.every((f) => f === 'PE')) return 'PE';
+  return 'Non PE';
+}
+
+/** Mono = one substrate; Multilayer = laminate stacks (duplex+). */
+export function inferStructureTypeFromSubstrateCount(substrateCount: number): StructureType {
+  return substrateCount >= 2 ? 'Multilayer' : 'Mono';
+}
+
+export interface TemplateLayerRef {
+  layer_type: 'substrate' | 'ink' | 'adhesive';
+  materialId?: string | null;
+}
+
+export interface TemplateMaterialRef {
+  id: string;
+  substrateFamily?: string | null;
+}
+
+/** Resolve stored materialClass + structureType when saving or syncing templates. */
+export function resolveTemplateStoreClassification(
+  stored: TemplateClassification | null | undefined,
+  layers: TemplateLayerRef[],
+  materials: TemplateMaterialRef[]
+): { materialClass: MaterialClass; structureType: StructureType } {
+  const byId = new Map(materials.map((m) => [m.id, m]));
+  const substrates = layers.filter((l) => l.layer_type === 'substrate');
+  const families = substrates.map((l) => byId.get(l.materialId || '')?.substrateFamily);
+
+  const inferredMaterial = inferMaterialClassFromSubstrateFamilies(families);
+  const inferredStructure = inferStructureTypeFromSubstrateCount(substrates.length);
+
+  const mc = stored?.materialClass?.trim();
+  const materialClass: MaterialClass =
+    mc === 'PE' || mc === 'Non PE' ? mc : inferredMaterial ?? 'Non PE';
+
+  const st = stored?.structureType?.trim();
+  const structureType: StructureType =
+    st === 'Mono' || st === 'Multilayer' ? st : inferredStructure;
+
+  return { materialClass, structureType };
+}

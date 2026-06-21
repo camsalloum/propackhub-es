@@ -5,12 +5,16 @@ import { and, asc, eq } from 'drizzle-orm';
 import { calculateEstimate, type Estimate as EngineEstimate } from '@es/engine';
 import { schema } from '../db';
 import { buildEngineMaterialMap } from '../utils/material-map';
-import { usdToDisplay } from '../utils/currency';
+import { usdToDisplay, slabsUsdToDisplay } from '../utils/currency';
 import { getEffectiveProfile } from '../utils/visibility';
 import type { VisibilityProfile } from '@es/engine';
 import { renderBrandedPdfKitProposal } from '../utils/pdf-proposal-kit';
 
 type Db = ReturnType<typeof import('../db').getDatabase>;
+
+type ProposalLayerRow = { materialId: string; micron: string };
+type ProposalProcessRow = typeof schema.processes.$inferSelect;
+type ProposalSlabRow = typeof schema.slabs.$inferSelect;
 
 async function getUserVisibilityProfile(db: Db, userId: string): Promise<VisibilityProfile> {
   const [userRecord] = await db
@@ -102,7 +106,7 @@ export async function buildProposalPdfBuffer(
     customerId: estimate.customerId || undefined,
     jobName: estimate.jobName,
     status: 'draft',
-    layers: layers.map((l, i) => ({
+    layers: layers.map((l: ProposalLayerRow, i: number) => ({
       id: `layer-${i}`,
       materialId: l.materialId,
       micron: parseFloat(l.micron),
@@ -116,7 +120,7 @@ export async function buildProposalPdfBuffer(
     markupPercent: parseFloat(estimate.markupPercent),
     platesPerKg: parseFloat(estimate.platesPerKg),
     deliveryPerKg: parseFloat(estimate.deliveryPerKg),
-    processes: processes.map((p) => ({
+    processes: processes.map((p: ProposalProcessRow) => ({
       id: p.id,
       name: p.name,
       costPerHour: parseFloat(p.costPerHour),
@@ -125,7 +129,7 @@ export async function buildProposalPdfBuffer(
       setupHours: parseFloat(p.setupHours),
       enabled: p.enabled,
     })),
-    slabs: slabs.map((s) => ({
+    slabs: slabs.map((s: ProposalSlabRow) => ({
       quantityKg: parseFloat(s.quantityKg),
       pricePerKg: parseFloat(s.pricePerKg),
     })),
@@ -150,6 +154,7 @@ export async function buildProposalPdfBuffer(
     result.estimate.salePricePerKg || parseFloat(estimate.salePricePerKg || '0'),
     fxRate
   );
+  const slabDisplay = slabsUsdToDisplay(result.slabs, fxRate);
 
   const [tenant] = await db
     .select()
@@ -180,10 +185,7 @@ export async function buildProposalPdfBuffer(
     markupPercent: profile.markupPercent ? parseFloat(estimate.markupPercent) : undefined,
     showMaterialCost: !!profile.materialCostPerKg,
     showMarkup: !!profile.markupPercent,
-    slabs: slabs.map((s) => ({
-      quantityKg: parseFloat(s.quantityKg),
-      pricePerKg: saleDisplay,
-    })),
+    slabs: slabDisplay,
     laminateSvg: laminateSvgFromLayers(layers),
     termsAndConditions: tenant?.termsAndConditions || undefined,
     footerText: tenant?.footerText || undefined,

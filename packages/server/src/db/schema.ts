@@ -4,6 +4,7 @@ import {
   varchar,
   text,
   integer,
+  smallint,
   decimal,
   timestamp,
   uuid,
@@ -20,7 +21,7 @@ export const layerTypeEnum = pgEnum('layer_type', ['substrate', 'ink', 'adhesive
 export const productTypeEnum = pgEnum('product_type', ['roll', 'sleeve', 'pouch']);
 export const tenantTypeEnum = pgEnum('tenant_type', ['individual', 'company']);
 export const printingWebClassEnum = pgEnum('printing_web_class', ['wide_web', 'narrow_web']);
-export const materialPriceSourceEnum = pgEnum('material_price_source', ['excel', 'manual']);
+export const materialPriceSourceEnum = pgEnum('material_price_source', ['excel', 'manual', 'platform']);
 export const platformReferenceCategoryEnum = pgEnum('platform_reference_category', [
   'product_type',
   'unit',
@@ -51,6 +52,9 @@ export const platformMasterMaterials = pgTable(
     costingKey: varchar('costing_key', { length: 64 }),
     sortOrder: integer('sort_order').notNull().default(0),
     active: boolean('active').notNull().default(true),
+    /** Optional PEBI/MES/Oracle item ID — admin-editable; never overwritten by sync (MES Phase E) */
+    externalId: varchar('external_id', { length: 128 }),
+    externalSource: varchar('external_source', { length: 64 }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
@@ -79,6 +83,52 @@ export const platformReferenceItems = pgTable(
       table.category,
       table.code
     ),
+  })
+);
+
+/** Singleton row — monotonic master_data_version bumped on platform catalog mutations (MES Phase B). */
+export const platformMasterState = pgTable('platform_master_state', {
+  id: smallint('id').primaryKey().default(1),
+  masterDataVersion: integer('master_data_version').notNull().default(1),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+/** Append-only log of platform master mutations (MES Phase E). */
+export const platformMasterAuditLog = pgTable(
+  'platform_master_audit_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    masterDataVersion: integer('master_data_version').notNull(),
+    entityType: varchar('entity_type', { length: 64 }).notNull(),
+    entityKey: varchar('entity_key', { length: 256 }).notNull(),
+    action: varchar('action', { length: 32 }).notNull(),
+    beforeJson: jsonb('before_json'),
+    afterJson: jsonb('after_json'),
+    actorType: varchar('actor_type', { length: 32 }),
+    actorId: varchar('actor_id', { length: 128 }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  },
+  (table) => ({
+    versionIdx: index('platform_master_audit_log_version_idx').on(table.masterDataVersion),
+    createdAtIdx: index('platform_master_audit_log_created_at_idx').on(table.createdAt),
+  })
+);
+
+/** Machine credentials for MES change-feed consumers (MES Phase E). */
+export const platformServiceKeys = pgTable(
+  'platform_service_keys',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    keyHash: varchar('key_hash', { length: 128 }).notNull().unique(),
+    label: varchar('label', { length: 255 }).notNull(),
+    scopes: jsonb('scopes').notNull().default(['master_data:read']),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  },
+  (table) => ({
+    labelIdx: index('platform_service_keys_label_idx').on(table.label),
   })
 );
 
@@ -175,16 +225,24 @@ export const materials = pgTable('materials', {
   subcategoryId: uuid('subcategory_id').references(() => subcategories.id, { onDelete: 'set null' }),
   /** Template ref_material_key alias for standard stack resolution (e.g. ink-sb, ldpe-shrink) */
   costingKey: varchar('costing_key', { length: 64 }),
-  /** excel = from Master Data sync; manual = tenant edited price — skip overwrite on refresh */
-  priceSource: materialPriceSourceEnum('price_source').notNull().default('excel'),
+  /** RM type code from Master Data (substrate, ink, plate, …) — MES Phase C */
+  itemClass: varchar('item_class', { length: 64 }),
+  /** platform = synced from catalog; excel = legacy alias; manual = tenant override */
+  priceSource: materialPriceSourceEnum('price_source').notNull().default('platform'),
   /** Tenant-created row — never pruned on Excel refresh */
   isTenantOnly: boolean('is_tenant_only').notNull().default(false),
+  /** Platform master catalog key — null for tenant-only custom rows (MES Phase A) */
+  platformMasterKey: varchar('platform_master_key', { length: 128 }),
+  platformSyncedAt: timestamp('platform_synced_at', { withTimezone: true }),
+  externalId: varchar('external_id', { length: 128 }),
+  externalSource: varchar('external_source', { length: 64 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
   tenantIdIdx: index('materials_tenant_id_idx').on(table.tenantId),
   typeIdx: index('materials_type_idx').on(table.type),
   familyIdx: index('materials_substrate_family_idx').on(table.substrateFamily),
+  platformMasterKeyIdx: index('materials_platform_master_key_idx').on(table.tenantId, table.platformMasterKey),
 }));
 
 // Customers (tenant-owned)
@@ -232,6 +290,7 @@ export const estimates = pgTable('estimates', {
   solventCostPerKgUsd: decimal('solvent_cost_per_kg_usd', { precision: 12, scale: 4 }),
   solventRatio: decimal('solvent_ratio', { precision: 5, scale: 4 }),
   orderQuantityKg: decimal('order_quantity_kg', { precision: 12, scale: 2 }),
+  orderQuantityUnit: varchar('order_quantity_unit', { length: 32 }).default('kgs'),
 
   // Calculated
   totalGsm: decimal('total_gsm', { precision: 12, scale: 2 }),
@@ -252,6 +311,11 @@ export const estimates = pgTable('estimates', {
 
   // Soft delete support
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
+
+  /** Platform master catalog revision at estimate create (MES Phase B) */
+  masterDataVersion: integer('master_data_version'),
+  /** Structure template key when created from template (MES Phase B / D) */
+  sourceTemplateKey: varchar('source_template_key', { length: 128 }),
 
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
@@ -279,6 +343,8 @@ export const layers = pgTable('layers', {
   // Snapshot fields for re‑quote "was" pricing (B5)
   material_name_snapshot: varchar('material_name_snapshot', { length: 255 }),
   unit_cost_snapshot_usd: decimal('unit_cost_snapshot_usd', { precision: 12, scale: 4 }),
+  platform_master_key_snapshot: varchar('platform_master_key_snapshot', { length: 128 }),
+  costing_key_snapshot: varchar('costing_key_snapshot', { length: 64 }),
 
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
@@ -355,16 +421,6 @@ export const proposals = pgTable('proposals', {
   estimateIdx: index('proposals_estimate_idx').on(table.estimateId),
 }));
 
-// Estimation cost snapshots (B4) – separate from live estimation_costs table
-export const estimationCostSnapshots = pgTable('estimation_cost_snapshots', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  estimateId: uuid('estimate_id').notNull().references(() => estimates.id, { onDelete: 'cascade' }),
-  computedAt: timestamp('computed_at', { withTimezone: true }).defaultNow(),
-  breakdownJson: jsonb('breakdown_json').notNull(),
-}, (table) => ({
-  estimateIdx: index('estimation_cost_snapshots_estimate_idx').on(table.estimateId),
-}));
-
 // Activity logs for audit
 export const activityLogs = pgTable('activity_logs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -398,6 +454,10 @@ export const priceHistory = pgTable('price_history', {
 export const structureTemplates = pgTable('structure_templates', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  /** Immutable stable key for MES / API lookup (MES Phase D) */
+  templateKey: varchar('template_key', { length: 128 }),
+  externalId: varchar('external_id', { length: 128 }),
+  externalSource: varchar('external_source', { length: 64 }),
   name: varchar('name', { length: 255 }).notNull(), // e.g. "Commercial Items Plain"
   pebiParentPg: varchar('pebi_parent_pg', { length: 255 }).notNull(), // PEBI parent product group name
   productType: productTypeEnum('product_type').notNull(), // roll, sleeve, pouch
@@ -420,6 +480,7 @@ export const structureTemplates = pgTable('structure_templates', {
 }, (table) => ({
   tenantIdIdx: index('structure_templates_tenant_id_idx').on(table.tenantId),
   displayOrderIdx: index('structure_templates_display_order_idx').on(table.displayOrder),
+  templateKeyIdx: index('structure_templates_tenant_key_idx').on(table.tenantId, table.templateKey),
 }));
 
 export const structureTemplatesRelations = relations(structureTemplates, ({ one }) => ({

@@ -116,7 +116,7 @@ const Dashboard = () => {
           <p className="text-mist mt-2">Welcome back to ProPackHub Estimation Studio</p>
         </div>
         <Link
-          to="/estimate/choose"
+          to="/templates?new=1"
           className="mt-4 lg:mt-0 btn-primary inline-flex items-center space-x-2"
         >
           <PlusCircle className="w-5 h-5" />

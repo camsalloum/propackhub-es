@@ -78,13 +78,8 @@ CREATE TABLE IF NOT EXISTS estimation_costs (
   breakdown_json JSONB NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS estimation_cost_snapshots (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  estimate_id UUID NOT NULL REFERENCES estimates(id) ON DELETE CASCADE,
-  computed_at TIMESTAMPTZ DEFAULT NOW(),
-  breakdown_json JSONB NOT NULL
-);
-CREATE INDEX IF NOT EXISTS estimation_cost_snapshots_estimate_idx ON estimation_cost_snapshots(estimate_id);
+-- Dead duplicate removed (MES_READY §3.6) — canonical table is estimation_costs
+DROP TABLE IF EXISTS estimation_cost_snapshots;
 
 -- ---------------------------------------------------------------------------
 -- Materials — substrate fields + taxonomy + template linking
@@ -103,8 +98,98 @@ EXCEPTION
   WHEN duplicate_column THEN NULL;
 END $$;
 
+DO $$ BEGIN
+  ALTER TYPE material_price_source ADD VALUE IF NOT EXISTS 'platform';
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Note: UPDATE materials SET price_source = 'platform' WHERE price_source = 'excel'
+-- runs in apply-schema-patches.ts after this file (PG requires enum commit first).
+
 CREATE INDEX IF NOT EXISTS materials_substrate_family_idx ON materials(substrate_family);
 CREATE INDEX IF NOT EXISTS materials_costing_key_idx ON materials(tenant_id, costing_key);
+
+-- MES Phase A — platform ↔ tenant hard lineage
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS platform_master_key VARCHAR(128);
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS platform_synced_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS materials_platform_master_key_idx
+  ON materials(tenant_id, platform_master_key)
+  WHERE platform_master_key IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS materials_tenant_platform_key_uq
+  ON materials(tenant_id, platform_master_key)
+  WHERE platform_master_key IS NOT NULL AND is_tenant_only = FALSE;
+
+-- MES Phase B — master catalog version + estimate/layer lineage
+CREATE TABLE IF NOT EXISTS platform_master_state (
+  id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  master_data_version INTEGER NOT NULL DEFAULT 1,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+INSERT INTO platform_master_state (id, master_data_version)
+VALUES (1, 1)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS master_data_version INTEGER;
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS source_template_key VARCHAR(128);
+
+ALTER TABLE layers ADD COLUMN IF NOT EXISTS platform_master_key_snapshot VARCHAR(128);
+ALTER TABLE layers ADD COLUMN IF NOT EXISTS costing_key_snapshot VARCHAR(64);
+
+-- MES Phase C — item_class + price_source platform
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS item_class VARCHAR(64);
+CREATE INDEX IF NOT EXISTS materials_item_class_idx ON materials(tenant_id, item_class);
+
+-- MES Phase D — structure template stable keys
+ALTER TABLE structure_templates ADD COLUMN IF NOT EXISTS template_key VARCHAR(128);
+CREATE INDEX IF NOT EXISTS structure_templates_tenant_key_idx
+  ON structure_templates(tenant_id, template_key)
+  WHERE template_key IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS structure_templates_tenant_key_uq
+  ON structure_templates(tenant_id, template_key)
+  WHERE template_key IS NOT NULL;
+
+-- MES Phase E — audit log, service keys, external identity
+CREATE TABLE IF NOT EXISTS platform_master_audit_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  master_data_version INTEGER NOT NULL,
+  entity_type VARCHAR(64) NOT NULL,
+  entity_key VARCHAR(256) NOT NULL,
+  action VARCHAR(32) NOT NULL,
+  before_json JSONB,
+  after_json JSONB,
+  actor_type VARCHAR(32),
+  actor_id VARCHAR(128),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS platform_master_audit_log_version_idx
+  ON platform_master_audit_log(master_data_version);
+CREATE INDEX IF NOT EXISTS platform_master_audit_log_created_at_idx
+  ON platform_master_audit_log(created_at);
+
+CREATE TABLE IF NOT EXISTS platform_service_keys (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key_hash VARCHAR(128) NOT NULL UNIQUE,
+  label VARCHAR(255) NOT NULL,
+  scopes JSONB NOT NULL DEFAULT '["master_data:read"]'::jsonb,
+  expires_at TIMESTAMPTZ,
+  revoked_at TIMESTAMPTZ,
+  last_used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS platform_service_keys_label_idx ON platform_service_keys(label);
+
+ALTER TABLE platform_master_materials ADD COLUMN IF NOT EXISTS external_id VARCHAR(128);
+ALTER TABLE platform_master_materials ADD COLUMN IF NOT EXISTS external_source VARCHAR(64);
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS external_id VARCHAR(128);
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS external_source VARCHAR(64);
+ALTER TABLE structure_templates ADD COLUMN IF NOT EXISTS external_id VARCHAR(128);
+ALTER TABLE structure_templates ADD COLUMN IF NOT EXISTS external_source VARCHAR(64);
+
+-- MES Phase C — unique reference codes per category (active rows)
+CREATE UNIQUE INDEX IF NOT EXISTS platform_reference_items_category_code_uq
+  ON platform_reference_items(category, code)
+  WHERE code IS NOT NULL AND active = TRUE;
 
 -- ---------------------------------------------------------------------------
 -- Estimates
@@ -114,6 +199,7 @@ ALTER TABLE estimates ADD COLUMN IF NOT EXISTS valid_until TIMESTAMPTZ;
 ALTER TABLE estimates ADD COLUMN IF NOT EXISTS source_estimation_id UUID REFERENCES estimates(id) ON DELETE SET NULL;
 ALTER TABLE estimates ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 ALTER TABLE estimates ADD COLUMN IF NOT EXISTS order_quantity_kg DECIMAL(12, 2);
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS order_quantity_unit VARCHAR(32) DEFAULT 'kgs';
 ALTER TABLE estimates ADD COLUMN IF NOT EXISTS solvent_cost_per_kg_usd DECIMAL(12, 4);
 ALTER TABLE estimates ADD COLUMN IF NOT EXISTS solvent_ratio DECIMAL(5, 4);
 CREATE INDEX IF NOT EXISTS estimates_deleted_at_idx ON estimates(deleted_at);

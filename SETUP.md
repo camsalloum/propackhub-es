@@ -74,6 +74,7 @@ cp .env.example .env
 npm install
 
 # This installs dependencies for all packages (engine, server, web)
+# postinstall automatically builds @es/engine (required before starting the API)
 ```
 
 ## Step 4: Initialize Database Schema
@@ -81,17 +82,30 @@ npm install
 ```bash
 cd packages/server
 
-# Generate migrations from schema
+# Apply idempotent SQL patches (platform master, MES Phase A columns, etc.)
+npm run db:patch
+
+# Or full drizzle push on fresh DB:
 npm run db:generate
-
-# Push schema to database
 npm run db:push
-
-# Or using Drizzle CLI directly:
-npx drizzle-kit push:pg
 ```
 
-**Expected output:**
+**After upgrading an existing DB**, run `npm run db:backfill-platform-keys` once to stamp `platform_master_key` on tenant materials.
+
+### Materials / Excel scripts (legacy)
+
+| Script | When to use |
+|--------|-------------|
+| `db:patch` | **Routine** — every install / before dev |
+| `db:sync-materials` | Push platform master JSON/DB to all tenants |
+| `db:backfill-platform-keys` | **One-time** after Phase A schema — sets lineage keys |
+| `db:prune-orphan-substrates` | Remove tenant rows not in platform catalog |
+| `update-materials` | Legacy Excel → platform import |
+| `fix-master-data-excel` / `repair-master-data-excel` | **Historical one-off** Excel Table/Name repair only |
+
+Primary path for master data is the **Master Data admin page** (`/platform/master-data`), not Excel.
+
+**Expected output (db:push on greenfield):**
 ```
 ✓ 0 migration(s) already applied
 ✓ Database schema is up to date

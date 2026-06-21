@@ -251,8 +251,8 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       totalMicron: 52.6,
       filmDensity: 1.0259,
       materialCostPerKg: 2.94, // layer cost/m2 + solvent/m2, converted to /kg
-      salePricePerKg: 3.7257, // 2.94 + 15% markup + plates + delivery + operation
-      operationCostPerKg: 0.115,
+      salePricePerKg: 3.786, // 2.94 + 15% markup + plates + delivery + operation (incl. setup)
+      operationCostPerKg: 0.175,
       linearMPerKgWeb: 11.51,
     },
   },

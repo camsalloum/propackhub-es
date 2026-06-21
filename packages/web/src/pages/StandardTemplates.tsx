@@ -1,19 +1,30 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Pencil, Trash2, Plus, Loader2, ArrowLeft, X } from 'lucide-react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { Search, Plus, Loader2, ArrowLeft, X, Layers } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import LaminateVisualizer from '../components/LaminateVisualizer';
 import { SkeletonCard } from '../components/Skeleton';
+import { ClassFilterPanel, EMPTY_CLASS_FILTER } from '../components/ClassFilterPanel';
+import { JobHeaderFields } from '../components/JobHeaderFields';
+import { TemplateStructureCard } from '../components/TemplateStructureCard';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
-import { derivePrintingWebClass, filterMaterialsForTemplateLayer, materialAllowedForTemplateLayer } from '@es/engine';
+import { derivePrintingWebClass, filterMaterialsForTemplateLayer, materialAllowedForTemplateLayer, inferStructureTypeFromSubstrateCount } from '@es/engine';
 import type { LayerType, ProductTypeCode } from '@es/engine';
 import {
-  TEMPLATE_CATALOG_FILTERS,
-  deriveTemplateCatalogKey,
-  matchesCatalogFilter,
-  type TemplateCatalogFilter,
+  getTemplateClassification,
+  matchesClassFilter,
+  structureTierLabel,
+  type ClassFilter,
+  type TemplateStructureTier,
 } from '../lib/templateCatalog';
+import {
+  defaultProductTypeValue,
+  defaultUnitValue,
+  normalizeProductType,
+  normalizeUnitValue,
+  type ProductTypeValue,
+} from '../lib/masterDataReference';
 
 interface TemplateLayer {
   layer_order: number;
@@ -26,6 +37,7 @@ interface TemplateLayer {
 interface StructureTemplate {
   id: string;
   name: string;
+  templateKey?: string | null;
   pebiParentPg?: string;
   productType: 'roll' | 'sleeve' | 'pouch';
   materialClass?: string;
@@ -46,15 +58,7 @@ interface MaterialOption {
   isSolventBased?: boolean;
 }
 
-const MONO_CATALOG_FILTERS = TEMPLATE_CATALOG_FILTERS.filter((f) =>
-  ['all', 'pe_plain', 'pe_printed', 'non_pe_plain', 'non_pe_printed', 'labels', 'sleeves', 'other'].includes(f.id)
-);
-const LAMINATE_CATALOG_FILTERS = TEMPLATE_CATALOG_FILTERS.filter((f) =>
-  ['duplex', 'triplex', 'quadriplex'].includes(f.id)
-);
-
 const MATERIAL_CLASS_OPTIONS = ['PE', 'Non PE'] as const;
-const STRUCTURE_TYPE_OPTIONS = ['Mono', 'Multilayer'] as const;
 
 const PROCESS_KEYS = [
   'extrusion',
@@ -85,6 +89,11 @@ function productTypeLabel(
   return options.find((o) => o.value === productType)?.label ?? productType;
 }
 
+function syncStructureTypeFromLayers(layers: TemplateLayer[]): StructureTemplate['structureType'] {
+  const substrateCount = layers.filter((l) => l.layer_type === 'substrate').length;
+  return inferStructureTypeFromSubstrateCount(substrateCount);
+}
+
 function classificationContext(template: StructureTemplate) {
   return {
     materialClass: template.materialClass,
@@ -109,9 +118,25 @@ function pruneInvalidLayerMaterials(
   });
 }
 
-function classificationLabel(template: StructureTemplate): string {
-  const parts = [template.materialClass, template.structureType].filter(Boolean);
-  return parts.join(' · ');
+function catalogInput(template: StructureTemplate) {
+  return {
+    name: template.name,
+    productType: template.productType,
+    pebiParentPg: template.pebiParentPg,
+    materialClass: template.materialClass,
+    structureType: template.structureType,
+    defaultLayers: template.defaultLayers,
+    isStandard: template.isStandard,
+  };
+}
+
+function classificationTag(template: StructureTemplate): string {
+  const cls = getTemplateClassification(catalogInput(template));
+  const structure = cls.structure.charAt(0).toUpperCase() + cls.structure.slice(1);
+  if (cls.materialClass) {
+    return `${cls.materialClass} · ${cls.isPrinted ? 'Printed' : 'Plain'} · ${structure}`;
+  }
+  return structure;
 }
 
 function cardMetaLine(
@@ -119,16 +144,7 @@ function cardMetaLine(
   productTypeOptions: Array<{ label: string; value: string }>
 ): string {
   const pt = productTypeLabel(template.productType, productTypeOptions);
-  const tier = deriveTemplateCatalogKey(template);
-  const tierLabel = TEMPLATE_CATALOG_FILTERS.find((f) => f.id === tier)?.label;
-  if (tier === 'duplex' || tier === 'triplex' || tier === 'quadriplex') {
-    return `${pt} · ${tierLabel}`;
-  }
-  if (tier === 'labels' || tier === 'sleeves') {
-    return `${pt} · ${tierLabel}`;
-  }
-  const classLabel = classificationLabel(template);
-  return classLabel ? `${pt} · ${classLabel}` : pt;
+  return `${pt} · ${classificationTag(template)}`;
 }
 
 function visualizerLayers(template: StructureTemplate, materials: MaterialOption[]) {
@@ -138,7 +154,7 @@ function visualizerLayers(template: StructureTemplate, materials: MaterialOption
       id: String(i),
       type: l.layer_type || 'substrate',
       material: mat?.name || l.ref_material_key || 'Layer',
-      micron: l.default_micron || 10,
+      micron: 1,
     };
   });
 }
@@ -146,12 +162,22 @@ function visualizerLayers(template: StructureTemplate, materials: MaterialOption
 const StandardTemplates = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isNewQuoteFlow = searchParams.get('new') === '1';
   const { reference: masterRef } = useMasterDataReference();
+  const productTypeOptions = masterRef.productTypeOptions;
+  const unitOptions = masterRef.unitOptions;
   const isAdmin = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
 
-  const [catalogFilter, setCatalogFilter] = useState<TemplateCatalogFilter>('all');
+  const [classFilter, setClassFilter] = useState<ClassFilter>(EMPTY_CLASS_FILTER);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState('');
+  const [jobName, setJobName] = useState('');
+  const [productType, setProductType] = useState<ProductTypeValue>(() => defaultProductTypeValue());
+  const [orderQuantity, setOrderQuantity] = useState(10000);
+  const [orderQuantityUnit, setOrderQuantityUnit] = useState(() => defaultUnitValue());
   const [standardTemplates, setStandardTemplates] = useState<StructureTemplate[]>([]);
+  const [myTemplates, setMyTemplates] = useState<StructureTemplate[]>([]);
   const [materials, setMaterials] = useState<MaterialOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -164,11 +190,13 @@ const StandardTemplates = () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const [standard, mats] = await Promise.all([
+      const [standard, my, mats] = await Promise.all([
         apiClient.getTemplates(true),
+        apiClient.getMyTemplates(),
         apiClient.getMaterials(),
       ]);
       setStandardTemplates(standard || []);
+      setMyTemplates((my || []).filter((t: StructureTemplate) => !t.isStandard));
       setMaterials(
         (mats || []).map((m: any) => ({
           id: m.id,
@@ -191,6 +219,24 @@ const StandardTemplates = () => {
   }, [loadData]);
 
   useEffect(() => {
+    setProductType((prev) => normalizeProductType(prev, productTypeOptions));
+    setOrderQuantityUnit((prev) => normalizeUnitValue(prev, unitOptions));
+  }, [productTypeOptions, unitOptions]);
+
+  useEffect(() => {
+    const customer = searchParams.get('customer');
+    if (customer) setSelectedCustomer(customer);
+    const job = searchParams.get('jobName');
+    if (job) setJobName(job);
+    const pt = searchParams.get('productType') || searchParams.get('type');
+    if (pt) setProductType(normalizeProductType(pt, productTypeOptions));
+    const qty = searchParams.get('orderQuantity');
+    if (qty && !Number.isNaN(Number(qty))) setOrderQuantity(Number(qty));
+    const unit = searchParams.get('orderQuantityUnit');
+    if (unit) setOrderQuantityUnit(normalizeUnitValue(unit, unitOptions));
+  }, [searchParams, productTypeOptions, unitOptions]);
+
+  useEffect(() => {
     if (!editing) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setEditing(null);
@@ -202,9 +248,12 @@ const StandardTemplates = () => {
   const applyTemplatePatch = (patch: Partial<StructureTemplate>) => {
     if (!editing) return;
     const next = { ...editing, ...patch };
+    const layers = next.defaultLayers || [];
+    const structureType = syncStructureTypeFromLayers(layers);
+    const synced = { ...next, structureType };
     setEditing({
-      ...next,
-      defaultLayers: pruneInvalidLayerMaterials(next.defaultLayers || [], materials, next),
+      ...synced,
+      defaultLayers: pruneInvalidLayerMaterials(layers, materials, synced),
     });
   };
 
@@ -215,95 +264,114 @@ const StandardTemplates = () => {
 
   const uniqueStandard = useMemo(() => {
     const seen = new Set<string>();
-    return standardTemplates.filter((t) => {
+    const deduped = standardTemplates.filter((t) => {
       const key = t.name.trim().toLowerCase();
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
+    return deduped.sort((a, b) => (a.displayOrder ?? 99) - (b.displayOrder ?? 99));
   }, [standardTemplates]);
 
-  const filteredStandard = uniqueStandard.filter((t) => {
-    const q = searchTerm.toLowerCase();
-    const matchesSearch =
-      t.name.toLowerCase().includes(q) ||
-      (t.pebiParentPg || '').toLowerCase().includes(q);
-    return matchesSearch && matchesCatalogFilter(t, catalogFilter);
-  });
-
-  const renderTemplateCard = (template: StructureTemplate, opts: { allowEdit: boolean }) => (
-    <div
-      key={template.id}
-      className="relative rounded-lg border border-border bg-white hover:border-gold/40 hover:shadow-sm transition-all"
-      onDoubleClick={() => {
-        if (opts.allowEdit) openEdit(template);
-      }}
-    >
-      {opts.allowEdit && (
-        <div className="absolute top-1 right-1 z-10 flex gap-0.5">
-          <button
-            type="button"
-            className="p-1 rounded-md text-mist hover:text-navy hover:bg-slate/80"
-            onClick={(e) => {
-              e.stopPropagation();
-              openEdit(template);
-            }}
-            aria-label="Edit template"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            className="p-1 rounded-md text-mist hover:text-red-600 hover:bg-red-50"
-            disabled={deleting === template.id}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(template);
-            }}
-            aria-label="Delete template"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-      <button
-        type="button"
-        className="w-full p-2.5 pr-8 text-left"
-        disabled={instantiating === template.id}
-        onClick={() => handleUseTemplate(template)}
-      >
-        <div className="flex items-center gap-2">
-          <LaminateVisualizer
-            layers={visualizerLayers(template, materials)}
-            width={28}
-            height={36}
-          />
-          <div className="flex-1 min-w-0">
-            <h4 className="text-xs font-semibold text-navy leading-snug line-clamp-2 pr-1">
-              {template.name}
-            </h4>
-            <p className="text-[10px] text-mist mt-0.5 truncate">
-              {cardMetaLine(template, masterRef.productTypeOptions)}
-            </p>
-            {instantiating === template.id && (
-              <p className="text-[10px] text-gold mt-0.5 flex items-center gap-1">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Creating…
-              </p>
-            )}
-          </div>
-        </div>
-      </button>
-    </div>
+  const allCatalogTemplates = useMemo(
+    () => [...uniqueStandard, ...myTemplates],
+    [uniqueStandard, myTemplates]
   );
+
+  const isAllFiltersActive =
+    classFilter.materialClass === null &&
+    classFilter.isPrinted === null &&
+    classFilter.structure === null;
+
+  const countWithFilter = useCallback(
+    (partial: Partial<ClassFilter>) => {
+      const test = { ...classFilter, ...partial };
+      return allCatalogTemplates.filter((t) => matchesClassFilter(catalogInput(t), test)).length;
+    },
+    [allCatalogTemplates, classFilter]
+  );
+
+  const filteredStandard = useMemo(() => {
+    return uniqueStandard.filter((t) => {
+      const q = searchTerm.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        t.name.toLowerCase().includes(q) ||
+        (t.pebiParentPg || '').toLowerCase().includes(q) ||
+        (t.templateKey || '').toLowerCase().includes(q);
+      const matchesClass =
+        isAllFiltersActive || matchesClassFilter(catalogInput(t), classFilter);
+      const matchesProductType = !isNewQuoteFlow || t.productType === productType;
+      return matchesSearch && matchesClass && matchesProductType;
+    });
+  }, [uniqueStandard, searchTerm, classFilter, isAllFiltersActive, isNewQuoteFlow, productType]);
+
+  const toggleMaterialClass = (value: 'PE' | 'Non PE') =>
+    setClassFilter((f) => ({ ...f, materialClass: f.materialClass === value ? null : value }));
+  const togglePrinted = (value: boolean) =>
+    setClassFilter((f) => ({ ...f, isPrinted: f.isPrinted === value ? null : value }));
+  const toggleStructure = (value: TemplateStructureTier) =>
+    setClassFilter((f) => ({ ...f, structure: f.structure === value ? null : value }));
+
+  const filteredMy = useMemo(() => {
+    return myTemplates.filter((t) => {
+      const q = searchTerm.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        t.name.toLowerCase().includes(q) ||
+        (t.templateKey || '').toLowerCase().includes(q);
+      const matchesClass =
+        isAllFiltersActive || matchesClassFilter(catalogInput(t), classFilter);
+      const matchesProductType = !isNewQuoteFlow || t.productType === productType;
+      return matchesSearch && matchesClass && matchesProductType;
+    });
+  }, [myTemplates, searchTerm, classFilter, isAllFiltersActive, isNewQuoteFlow, productType]);
+
+  const editingClassification = editing ? getTemplateClassification(catalogInput(editing)) : null;
+
+  const renderTemplateCard = (template: StructureTemplate, opts: { allowEdit: boolean; badge?: string }) => {
+    const layers = visualizerLayers(template, materials);
+    const layerCount = layers.length;
+
+    return (
+      <TemplateStructureCard
+        key={template.id}
+        name={template.name}
+        metaLine={cardMetaLine(template, masterRef.productTypeOptions)}
+        templateKey={template.templateKey}
+        templateKeyTitle={
+          template.isStandard
+            ? 'Stable template_key for API / MES lookup'
+            : 'Tenant-local key — not in PEBI catalog'
+        }
+        badge={opts.badge}
+        layers={layers}
+        layerCount={layerCount}
+        instantiating={instantiating === template.id}
+        allowEdit={opts.allowEdit}
+        onUse={() => handleUseTemplate(template)}
+        onEdit={() => openEdit(template)}
+        onDelete={() => handleDelete(template)}
+        deleting={deleting === template.id}
+      />
+    );
+  };
 
   const handleUseTemplate = async (template: StructureTemplate) => {
     setInstantiating(template.id);
     try {
       const created = await apiClient.instantiateTemplate(template.id, {
-        jobName: template.name,
+        customerId: selectedCustomer || undefined,
+        jobName: jobName.trim() || template.name,
+        orderQuantityKg: orderQuantity,
+        orderQuantityUnit,
       });
-      navigate(`/estimate/${created.id}`, { state: { returnTo: '/templates' } });
+      navigate(`/estimate/${created.id}`, {
+        state: {
+          returnTo: isNewQuoteFlow ? '/estimates' : '/templates',
+          configureFromTemplate: true,
+        },
+      });
     } catch (err) {
       const e = err as Error & { status?: number };
       if (e.status === 409) {
@@ -334,11 +402,12 @@ const StandardTemplates = () => {
 
   const openEdit = (template: StructureTemplate) => {
     if (template.isStandard && !isAdmin) return;
+    const defaultLayers = (template.defaultLayers || []).map((l) => ({ ...l }));
     setEditing({
       ...template,
-      defaultLayers: (template.defaultLayers || []).map((l) => ({ ...l })),
+      defaultLayers,
+      structureType: syncStructureTypeFromLayers(defaultLayers),
       defaultProcesses: (template.defaultProcesses || []).map((p) => ({ ...p })),
-      defaultDimensions: { ...(template.defaultDimensions || {}) },
     });
   };
 
@@ -346,7 +415,11 @@ const StandardTemplates = () => {
     if (!editing) return;
     const layers = [...(editing.defaultLayers || [])];
     layers[index] = { ...layers[index], ...patch };
-    setEditing({ ...editing, defaultLayers: layers });
+    setEditing({
+      ...editing,
+      defaultLayers: layers,
+      structureType: syncStructureTypeFromLayers(layers),
+    });
   };
 
   const addLayer = () => {
@@ -355,17 +428,19 @@ const StandardTemplates = () => {
     const ctx = classificationContext(editing);
     const defaultMat =
       filterMaterialsForTemplateLayer(materials, 'substrate', ctx)[0] || null;
+    const nextLayers = [
+      ...layers,
+      {
+        layer_order: layers.length + 1,
+        layer_type: 'substrate' as const,
+        materialId: defaultMat?.id || null,
+        default_micron: 0,
+      },
+    ];
     setEditing({
       ...editing,
-      defaultLayers: [
-        ...layers,
-        {
-          layer_order: layers.length + 1,
-          layer_type: 'substrate',
-          materialId: defaultMat?.id || null,
-          default_micron: 20,
-        },
-      ],
+      defaultLayers: nextLayers,
+      structureType: syncStructureTypeFromLayers(nextLayers),
     });
   };
 
@@ -374,7 +449,11 @@ const StandardTemplates = () => {
     const layers = (editing.defaultLayers || [])
       .filter((_, i) => i !== index)
       .map((l, i) => ({ ...l, layer_order: i + 1 }));
-    setEditing({ ...editing, defaultLayers: layers });
+    setEditing({
+      ...editing,
+      defaultLayers: layers,
+      structureType: syncStructureTypeFromLayers(layers),
+    });
   };
 
   const toggleProcess = (key: string) => {
@@ -403,15 +482,24 @@ const StandardTemplates = () => {
         layerRefs,
         materialLookupForPrintingWeb(materials)
       );
+      const substrateCount = (editing.defaultLayers || []).filter(
+        (l) => l.layer_type === 'substrate'
+      ).length;
+      const structureType = inferStructureTypeFromSubstrateCount(substrateCount);
 
       await apiClient.updateTemplate(editing.id, {
         name: editing.name,
         productType: editing.productType,
         materialClass: editing.materialClass,
-        structureType: editing.structureType,
+        structureType,
         displayOrder: editing.displayOrder,
-        defaultDimensions: editing.defaultDimensions,
-        defaultLayers: editing.defaultLayers,
+        defaultLayers: (editing.defaultLayers || []).map((l, i) => ({
+          layer_order: i + 1,
+          layer_type: l.layer_type,
+          materialId: l.materialId,
+          ref_material_key: l.ref_material_key,
+          default_micron: 0,
+        })),
         defaultProcesses: editing.defaultProcesses,
         defaultPrintingWebClass: derivedPrintingWeb,
       });
@@ -425,25 +513,57 @@ const StandardTemplates = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto pb-28 lg:pb-0">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Standard Templates</h1>
-          <p className="text-mist mt-1 text-sm">
-            {isAdmin
-              ? 'Platform standard stacks — pick a card to start a quote'
-              : 'Pick a standard stack to start your quote'}
-          </p>
+    <div className={`w-full ${isNewQuoteFlow ? 'pb-24 md:pb-0' : 'pb-24 lg:pb-8'}`}>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+        <div className="flex items-start gap-3 min-w-0">
+          {isNewQuoteFlow && (
+            <Link
+              to="/estimates"
+              className="btn-secondary inline-flex items-center gap-2 shrink-0 mt-0.5"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Cancel
+            </Link>
+          )}
+          <div className="min-w-0">
+            <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">
+              {isNewQuoteFlow ? 'New estimate' : 'Standard Templates'}
+            </h1>
+            <p className="text-mist mt-1 text-sm">
+              {isNewQuoteFlow
+                ? 'Fill in the job header, then pick a structure below.'
+                : isAdmin
+                  ? 'Platform standard stacks — pick a card to start a quote'
+                  : 'Pick a standard stack to start your quote'}
+            </p>
+          </div>
         </div>
-        <button
-          type="button"
-          className="btn-primary inline-flex items-center gap-2"
-          onClick={() => navigate('/estimate/choose')}
-        >
-          <Plus className="w-4 h-4" />
-          New estimate
-        </button>
+        {!isNewQuoteFlow && (
+          <Link to="/templates?new=1" className="btn-primary inline-flex items-center gap-2 shrink-0">
+            <Plus className="w-4 h-4" />
+            New estimate
+          </Link>
+        )}
       </div>
+
+      {isNewQuoteFlow && (
+        <div className="card mb-4 py-3 px-4 sm:px-5">
+          <JobHeaderFields
+            customerId={selectedCustomer}
+            onCustomerChange={setSelectedCustomer}
+            jobName={jobName}
+            onJobNameChange={setJobName}
+            productType={productType}
+            onProductTypeChange={setProductType}
+            productTypeOptions={productTypeOptions}
+            orderQuantity={orderQuantity}
+            onOrderQuantityChange={setOrderQuantity}
+            orderQuantityUnit={orderQuantityUnit}
+            onOrderQuantityUnitChange={setOrderQuantityUnit}
+            unitOptions={unitOptions}
+          />
+        </div>
+      )}
 
       <div className="mb-6">
         <div className="relative">
@@ -458,52 +578,23 @@ const StandardTemplates = () => {
         </div>
       </div>
 
-      <div className="mb-5 space-y-3">
-        <div>
-          <p className="text-xs font-medium text-mist uppercase tracking-wide mb-1.5">Mono & specialty</p>
-          <div className="flex flex-wrap gap-1.5">
-            {MONO_CATALOG_FILTERS.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setCatalogFilter(f.id)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                  catalogFilter === f.id
-                    ? 'bg-gold text-white shadow-sm'
-                    : 'bg-white border border-border text-ink hover:border-gold/40'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-mist uppercase tracking-wide mb-1.5">Laminates</p>
-          <div className="flex flex-wrap gap-1.5">
-            {LAMINATE_CATALOG_FILTERS.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setCatalogFilter(f.id)}
-                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                  catalogFilter === f.id
-                    ? 'bg-gold text-white shadow-sm'
-                    : 'bg-white border border-border text-ink hover:border-gold/40'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      <ClassFilterPanel
+        filter={classFilter}
+        isAllActive={isAllFiltersActive}
+        countLabel={
+          isAllFiltersActive
+            ? `${filteredStandard.length + filteredMy.length} structure${filteredStandard.length + filteredMy.length === 1 ? '' : 's'}`
+            : `${filteredStandard.length + filteredMy.length} matching`
+        }
+        onReset={() => setClassFilter(EMPTY_CLASS_FILTER)}
+        onToggleMaterial={toggleMaterialClass}
+        onTogglePrinted={togglePrinted}
+        onToggleStructure={toggleStructure}
+        countWithFilter={countWithFilter}
+      />
 
       {loading ? (
-        <div
-          className="grid gap-2"
-          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))' }}
-        >
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
@@ -521,13 +612,25 @@ const StandardTemplates = () => {
           <p className="text-mist text-sm">Try another filter or clear the search.</p>
         </div>
       ) : (
-        <div
-          className="grid gap-2"
-          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))' }}
-        >
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {filteredStandard.map((template) =>
             renderTemplateCard(template, { allowEdit: isAdmin })
           )}
+        </div>
+      )}
+
+      {filteredMy.length > 0 && (
+        <div className="mt-10 pt-8 border-t border-border">
+          <h2 className="text-lg font-display font-semibold text-navy mb-1">My Templates</h2>
+          <p className="text-sm text-mist mb-4">
+            Saved from your estimates — tenant-local only, not in the PEBI standard catalog. Each gets an
+            auto-generated <span className="font-mono text-xs">template_key</span> for API use.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+            {filteredMy.map((template) =>
+              renderTemplateCard(template, { allowEdit: true, badge: 'My template' })
+            )}
+          </div>
         </div>
       )}
 
@@ -570,7 +673,7 @@ const StandardTemplates = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-navy mb-1">Product type</label>
                   <select
@@ -608,25 +711,6 @@ const StandardTemplates = () => {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-navy mb-1">Structure</label>
-                  <select
-                    className="input w-full"
-                    value={editing.structureType || ''}
-                    onChange={(e) =>
-                      applyTemplatePatch({
-                        structureType: e.target.value || undefined,
-                      })
-                    }
-                  >
-                    <option value="">—</option>
-                    {STRUCTURE_TYPE_OPTIONS.map((st) => (
-                      <option key={st} value={st}>
-                        {st}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
               <div>
@@ -636,9 +720,54 @@ const StandardTemplates = () => {
                     + Add layer
                   </button>
                 </div>
+
+                {(editing.defaultLayers || []).length > 0 && (
+                  <div className="rounded-lg border border-border bg-slate/30 px-3 py-3 mb-3">
+                    <LaminateVisualizer
+                      layers={visualizerLayers(editing, materials)}
+                      width={360}
+                      height={40}
+                      orientation="horizontal"
+                      labelMode="number"
+                      className="w-full h-10"
+                    />
+                    <p className="text-sm font-medium text-navy mt-2">
+                      {editingClassification && editing.materialClass
+                        ? `${editing.materialClass} · ${editingClassification.isPrinted ? 'Printed' : 'Plain'} · ${structureTierLabel(editingClassification.structure)}`
+                        : editingClassification
+                          ? `${editingClassification.isPrinted ? 'Printed' : 'Plain'} · ${structureTierLabel(editingClassification.structure)}`
+                          : 'Mono'}
+                      <span className="font-normal text-mist">
+                        {' '}
+                        · {(editing.defaultLayers || []).length} layer
+                        {(editing.defaultLayers || []).length === 1 ? '' : 's'}
+                        {' · '}
+                        {(editing.defaultLayers || []).filter((l) => l.layer_type === 'substrate').length}{' '}
+                        substrate
+                        {(editing.defaultLayers || []).filter((l) => l.layer_type === 'substrate').length === 1
+                          ? ''
+                          : 's'}
+                      </span>
+                    </p>
+                    <p className="text-xs text-mist mt-1">
+                      Add an <strong>ink</strong> layer → Printed. Add a second <strong>substrate</strong> →
+                      Duplex (3 substrates → Triplex, 4+ → Quadriplex). Adhesive alone stays Plain.
+                    </p>
+                    <p className="text-xs text-mist mt-1">
+                      Thickness (µ), width, and other job dimensions are entered when you create an estimate.
+                    </p>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   {(editing.defaultLayers || []).map((layer, i) => (
                     <div key={i} className="flex gap-2 items-center flex-wrap">
+                      <span
+                        className="w-7 h-7 shrink-0 rounded-md bg-navy text-white text-sm font-semibold flex items-center justify-center"
+                        aria-label={`Layer ${i + 1}`}
+                      >
+                        {i + 1}
+                      </span>
                       <select
                         className="input w-36 text-sm"
                         value={layer.layer_type}
@@ -670,18 +799,6 @@ const StandardTemplates = () => {
                           </option>
                         ))}
                       </select>
-                      <input
-                        type="number"
-                        className="input w-20 text-sm"
-                        value={layer.default_micron}
-                        min={0}
-                        step={0.5}
-                        onChange={(e) =>
-                          updateEditingLayer(i, { default_micron: parseFloat(e.target.value) || 0 })
-                        }
-                        aria-label="Micron"
-                      />
-                      <span className="text-xs text-mist shrink-0">µ</span>
                       <button
                         type="button"
                         className="text-red-500 p-2"

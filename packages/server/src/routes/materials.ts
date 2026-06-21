@@ -35,6 +35,7 @@ const MaterialSchema = z.object({
   substrateGrade: z.string().nullable().optional(),
   hoover: z.string().nullable().optional(),
   marketPriceUsd: z.number().nonnegative().nullable().optional(),
+  itemClass: z.string().max(64).nullable().optional(),
 });
 
 export async function getMaterialsRoute(

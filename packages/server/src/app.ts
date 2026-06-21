@@ -37,6 +37,9 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
 
   await fastify.register(fastifyJwt, {
     secret: jwtSecret,
+    sign: {
+      expiresIn: '7d',
+    },
   });
 
   fastify.get('/health', async () => {

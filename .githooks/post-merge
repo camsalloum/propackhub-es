@@ -1,0 +1,12 @@
+#!/bin/sh
+# graphify knowledge-graph auto-refresh (IDE-agnostic: fires on every commit).
+# Runs in the background so it never blocks the commit. Code-only, no API key.
+APP="es"
+REPO="$(git rev-parse --show-toplevel)"
+SYNC="$REPO/../../scripts/sync-graphs.ps1"
+[ -f "$SYNC" ] || exit 0
+WSYNC="$(cygpath -w "$SYNC" 2>/dev/null || echo "$SYNC")"
+if command -v powershell.exe >/dev/null 2>&1; then
+  cmd.exe //c start "" /B powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "$WSYNC" -App "$APP" >/dev/null 2>&1 &
+fi
+exit 0

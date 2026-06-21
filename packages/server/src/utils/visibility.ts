@@ -152,6 +152,9 @@ export function stripEstimateRow(row: any, profile: VisibilityProfile): any {
     salePricePerKg: row.salePricePerKg,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    masterDataVersion: row.masterDataVersion,
+    sourceTemplateKey: row.sourceTemplateKey,
+    sourceEstimationId: row.sourceEstimationId,
   };
 
   if (profile.markupPercent) {

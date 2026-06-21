@@ -19,6 +19,17 @@ async function main() {
   const client = new pg.Client({ connectionString: url });
   await client.connect();
   try {
+    // PG: new enum values must commit before use in UPDATE (55P04)
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TYPE material_price_source ADD VALUE IF NOT EXISTS 'platform';
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END $$;
+    `);
+    await client.query(`
+      UPDATE materials SET price_source = 'platform' WHERE price_source = 'excel';
+    `);
     await client.query(sql);
     console.log('Schema patches applied');
   } finally {

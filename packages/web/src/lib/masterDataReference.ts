@@ -76,3 +76,27 @@ export const DEFAULT_MASTER_REFERENCE: MasterDataReferenceState = {
   ],
   rmTypeOptions: DEFAULT_RM_TYPE_OPTIONS,
 };
+
+export function defaultProductTypeValue(options: ProductTypeOption[] = DEFAULT_MASTER_REFERENCE.productTypeOptions): ProductTypeValue {
+  return options[0]?.value ?? 'roll';
+}
+
+export function defaultUnitValue(options: UnitOption[] = DEFAULT_MASTER_REFERENCE.unitOptions): string {
+  return options[0]?.value ?? 'kgs';
+}
+
+export function normalizeProductType(
+  value: string | null | undefined,
+  options: ProductTypeOption[] = DEFAULT_MASTER_REFERENCE.productTypeOptions
+): ProductTypeValue {
+  if (value && options.some((o) => o.value === value)) return value as ProductTypeValue;
+  return defaultProductTypeValue(options);
+}
+
+export function normalizeUnitValue(
+  value: string | null | undefined,
+  options: UnitOption[] = DEFAULT_MASTER_REFERENCE.unitOptions
+): string {
+  if (value && options.some((o) => o.value === value)) return value;
+  return defaultUnitValue(options);
+}

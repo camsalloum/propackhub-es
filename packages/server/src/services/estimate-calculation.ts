@@ -3,6 +3,8 @@ import { calculateEstimate, type Estimate as EngineEstimate, type CalculationRes
 import { schema } from '../db';
 import { usdToDisplay } from '../utils/currency';
 import { buildEngineMaterialMap, type MaterialRow } from '../utils/material-map';
+import { snapshotsFromMaterial, toMaterialLineageSource } from '../utils/layer-lineage';
+import { getMasterDataVersion } from '../db/platform-master-data';
 
 type Db = ReturnType<typeof import('../db').getDatabase>;
 
@@ -110,19 +112,18 @@ export async function calculateAndPersistEstimate(
     };
   });
 
-  // Persist layer snapshots (B5) — material name + cost at calculation time
+  // Persist layer snapshots — material name, cost, stable keys at calculation time
   for (const layer of layers) {
     const mat = materials.find((m: MaterialRow) => m.id === layer.materialId);
     if (mat) {
       await db
         .update(schema.layers)
-        .set({
-          material_name_snapshot: mat.name,
-          unit_cost_snapshot_usd: mat.costPerKgUsd,
-        })
+        .set(snapshotsFromMaterial(toMaterialLineageSource(mat)))
         .where(eq(schema.layers.id, layer.id));
     }
   }
+
+  const masterDataVersion = await getMasterDataVersion();
 
   // Persist estimate aggregates (B4)
   await db
@@ -132,6 +133,7 @@ export async function calculateAndPersistEstimate(
       totalMicron: result.estimate.totalMicron?.toString(),
       materialCostPerKg: result.estimate.materialCostPerKg?.toString(),
       salePricePerKg: result.estimate.salePricePerKg?.toString(),
+      masterDataVersion,
       updatedAt: new Date(),
     })
     .where(eq(schema.estimates.id, estimateId));

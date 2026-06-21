@@ -887,7 +887,9 @@ npm run update-materials
 
 **`TemplatePicker.tsx` — full rebuild:** 4-tier classification grid (All → PE/Non PE → Printed/Plain → Mono/Duplex/Triplex/Quadriplex), cumulative AND filter, client-side, no API round-trip. Template cards shown inline with LaminateVisualizer; clicking a card calls `instantiateTemplate`. Disabled cells (grey) when count=0 for that combination. Blank canvas buttons remain at bottom.
 
-### 2026-06-21 — RM Types closed-loop wiring (Library ↔ Master Data) Adding "Plate" to Master Data → RM Types did nothing — the Library page had hardcoded filter tabs and the Add Material modal had hardcoded type options. The `rm_type` reference was orphaned.
+### 2026-06-21 — RM Types closed-loop wiring (Library ↔ Master Data)
+
+**Problem:** Adding "Plate" to Master Data → RM Types did nothing — the Library page had hardcoded filter tabs and the Add Material modal had hardcoded type options. The `rm_type` reference was orphaned.
 
 **Fix — backend:** `buildMasterDataReferenceFromDb()` now returns `rmTypeRows: [{label, code}]` alongside `rmTypes: string[]`. Added `deriveRmTypeCode()` helper that maps standard labels to their DB type codes (`substrate`/`ink`/`adhesive`/`packaging`) and custom labels to kebab slugs. `enrichMasterDataReference()` now produces `rmTypeOptions: [{label, code}]` in the API response.
 
@@ -896,3 +898,139 @@ npm run update-materials
 **Library page fully dynamic:** Filter tabs are now rendered from `rmTypeOptions` — "Plate" added in Master Data instantly appears as a filter tab. Filter logic: `ink`→`type='ink'`; `adhesive`→`type='adhesive'`; `packaging`→`type='substrate'&&family='Packaging'`; `substrate`→all substrates not claimed by custom types; custom code→`type='substrate'&&family=label`. Add Material modal type dropdown also driven by `rmTypeOptions`; selecting a custom type stores as `type='substrate', substrateFamily=label`.
 
 **Master Data RM Types tab:** Added Code column (monospace, auto-lowercased). Help text explains the code semantics. Delete button shows a contextual warning: stronger warning for standard types (substrate/ink/adhesive/packaging), informational warning for custom types — materials are NOT auto-deleted, only hidden from filters.
+
+### 2026-06-21 — MES-ready master data plan (doc only)
+
+**Deliverable:** [docs/MES_READY.md](./MES_READY.md) — phased plan (A–F) for platform↔tenant lineage, versioning, taxonomy, audit, external IDs. **Revised 2026-06-21** after live review: V1 prerequisites (§3) before MES phases; template_key compound rule; My Templates policy; service API key auth for change feed.
+
+### 2026-06-21 — V1 prerequisites §3.1–§3.4 (implemented)
+
+**P0 slab pricing:** Root cause was `calculateProcessCosts` ignoring `setupHours` — only run hours counted, so speed-based $/kg was constant across quantities. Fix: `totalCost = setupCost + runCost`. Per-slab loop in calculator already correct; server persist path unchanged. New engine test: 500 kg > 2,000 kg > 10,000 kg $/kg when setupHours > 0.
+
+**P0 engine build:** Root `postinstall` + `start:servers` pre-step + `RUN-ES.bat` step [3/5] build `@es/engine` before API start.
+
+**P1 JWT:** `@fastify/jwt` `sign.expiresIn: '7d'`.
+
+**P1 PDF:** `slabsUsdToDisplay()` helper; proposal PDF + on-demand generate use `result.slabs` per-tier prices, not header `salePricePerKg` repeated.
+
+### 2026-06-21 — V1 P2/P3 cleanup + MES Phase A
+
+**P2 TS:** `tsc --noEmit` clean on server (typed callbacks in platform-master-data, seed-*, proposal-pdf, routes).
+
+**P2 dead table:** Dropped `estimation_cost_snapshots` (schema + SQL patch); canonical audit table remains `estimation_costs`.
+
+**P3 Excel:** `git rm --cached` on tracked xlsx/lock/backups; `.gitignore` already excludes going forward.
+
+**P3 scripts:** `SETUP.md` script legend; `db:backfill-platform-keys` added; routine vs legacy marked.
+
+**MES Phase A:** `materials.platform_master_key` + `platform_synced_at`; key-first sync in `seed-materials.ts`; SQL unique index per tenant; backfill script; 3 unit tests on `findExistingMatch`.
+
+### 2026-06-21 — MES Phase B (versioning + estimate lineage)
+
+**Schema:** `platform_master_state` singleton; `estimates.master_data_version`, `source_template_key`; `layers.platform_master_key_snapshot`, `costing_key_snapshot`.
+
+**Versioning:** `getMasterDataVersion()` / `incrementMasterDataVersion()` on platform material + reference mutations; exposed on `GET /platform/master-data/reference`.
+
+**Write paths:** Estimate create/update/requote/copy + template instantiate stamp version; layer inserts use `buildLayerInsertValues()`; calculate refreshes snapshots + version.
+
+### 2026-06-21 — MES Phase C + D
+
+**Phase C:** `materials.item_class`; `price_source` enum value `platform` (excel legacy alias); taxonomy from platform RM types via `seed-categories.ts`; UNIQUE(category,code) on reference items; RM type delete guard (`ReferenceItemInUseError` 409).
+
+**Phase D:** `structure_templates.template_key`; compound keys on seed; `syncTemplateKeysForTenant`; `GET /templates?template_key=`; `POST /templates/instantiate` by key; tenant template auto-key.
+
+### 2026-06-21 — Fix GET /templates 500 (template_key collision)
+
+**Root cause:** Legacy duplicate standard rows (e.g. two `Laminates · Triplex`) both assigned `laminates-non-pe-triplex`; `syncTemplateKeysForTenant` updated rows one-by-one and hit `structure_templates_tenant_key_uq`. `ensureTemplatesForTenant` also ran key sync before duplicate prune.
+
+**Fix:** `resolveTemplateKeyAssignments()` — active row keeps canonical key, inactive duplicate gets `null`; two-phase null-then-assign updates. Removed key sync from `ensureTemplatesForTenant`. Route uses `prepareTemplatesForTenant()` (seed missing → prune → sync keys → relink).
+
+### 2026-06-21 — MES Phase E + F (audit, change feed, API docs)
+
+**Phase E schema:** `platform_master_audit_log`, `platform_service_keys`; `external_id` / `external_source` on platform materials, tenant materials, structure templates.
+
+**Audit:** Platform material + reference mutations append versioned entries via `appendMasterAuditEntries()`; actor stamped from admin JWT.
+
+**Change feed:** `GET /api/v1/platform/master-data/changes?since_version=` — auth via platform admin JWT or `X-ES-Service-Key` (`master_data:read`). Optional `include_snapshot=true`.
+
+**Service keys:** Admin CRUD at `/api/v1/platform/service-keys`; plain key returned once on create; SHA-256 hash stored.
+
+**Phase F:** [docs/API_MASTER_DATA.md](./API_MASTER_DATA.md) — integration contract for MES agents.
+
+**UI:** Library shows `platform_master_key` badge; Standard Templates shows `template_key` on cards.
+
+### 2026-06-21 — MES plan completion (remaining §14 UI + V1 nice-to-haves)
+
+**UI §14:** Master Data — read-only `key` + editable `external_id` / `external_source`; Estimate Editor admin lineage (master version, template key, layer key snapshots); My Templates section with tenant-key help text.
+
+**V1:** `POST /api/v1/auth/refresh`; PDF on-demand route consolidated to `buildProposalPdfBuffer` (removed duplicate HTML/puppeteer path).
+
+**Phase E polish:** Service-key rate limit 120/min on change feed; estimate API returns lineage fields; MES_READY checklist marked complete.
+
+### 2026-06-21 — RUN-ES.bat startup reliability
+
+**Problem:** Fixed 4s browser timer opened before API ready; duplicate `@es/engine` build (~18s); stale `node.exe` on :5001 caused `EADDRINUSE`.
+
+**Fix:** `kill-es-ports.bat` double-pass with exact port match (`findstr /C:":PORT "`); second kill before server start; `wait-and-open-browser.bat` polls `/health` then opens browser (avoids `start /b` quoting bug); `start:servers:dev` skips engine rebuild (bat step [3/5] only); `npm run start:servers` still builds engine for CLI use.
+
+### 2026-06-21 — Standard Templates UI: axis classification + readable cards
+
+**Classification:** Replaced single-bucket chips (PE·Plain, Labels, …) with the same 3-axis filter as TemplatePicker — **PE / Non PE**, **Plain / Printed**, **Mono / Duplex / Triplex / Quadriplex**. Selecting **Plain** shows all plain templates across material classes; filters combine with AND logic.
+
+**Cards:** Grid `1→2→3` columns (was `minmax(148px)` micro-cards); larger visualizer + `text-sm` titles; removed `truncate` / `line-clamp`; edit/delete moved beside content so names and `template_key` wrap fully.
+
+### 2026-06-21 — Template cards + classification flow (round 2)
+
+**Cards:** Full-width color stack bar (no tiny SVG labels) + readable layer list (`LDPE Natural · 45µ`) with type-colored dots; `text-base` titles.
+
+### 2026-06-21 — Template cards: numbered proportional stack bar
+
+**Cards:** Horizontal bar per template — segments **1, 2, 3…** numbered left-to-right; equal segment width (structure slots only, no stored µ). Color = layer type.
+
+### 2026-06-21 — Template = structure only; dimensions at estimate time
+
+**Edit template:** Layers = type + material only (no µ, no width). Save stores `default_micron: 0`, no job dimensions.
+
+**Instantiate:** Estimate created with layer materials, micron 0, dimension fields 0, `configureFromTemplate: true`. Editor shows configure banner; Structure tab for µ, Dimensions tab for width — no auto-calculate until user fills values.
+
+**Classification from layers (live in edit):** Ink layer → **Printed**. +1 substrate → **Duplex** (+2 → Triplex, +3 → Quadriplex). Adhesive alone stays Plain.
+
+### 2026-06-21 — Unified flows: templates picker + estimates filters
+
+**New estimate** (`/estimate/choose` → `/templates?new=1`): same catalog UI as Standard Templates + customer/job header + blank canvas. Single card grid, numbered stack bars.
+
+**Estimates list:** structure filters (PE/Plain/Duplex…), customer + status + search, **Re-quote** action (new prices).
+
+**DB:** `dimensions.estimateClassification` snapshot on template instantiate and on estimate layer save (server). Enables estimate list filtering.
+
+**Save as template:** Copies structure + classification only, not estimate dimensions or layer µ.
+
+**Structure model clarified:** DB stores **Mono / Multilayer** (auto from substrate count). Filter chips **Mono / Duplex / Triplex / Quadriplex** are **derived from substrate count in the layer stack** — not a separate edit field. Edit modal shows numbered stack preview + auto tier; no Mono/Multilayer dropdown.
+
+### 2026-06-21 — Integration complete: shared components + configure sync
+
+**Shared UI (mobile-ready):** `JobHeaderFields`, `TemplateStructureCard`, `ClassFilterPanel` — 44–48px touch targets; same card grid on `/templates` and `/templates?new=1`.
+
+**Configure flow:** `dimensionsForSave` strips `configureFromTemplate` on save; server `stripConfigureFromTemplateFlag` on PATCH; validate µ + dimensions before Save & Calculate; banner dismisses after first save; no client preview calc while configuring.
+
+**Schema:** `estimates.order_quantity_unit` column + patch (unit persists with order qty).
+
+**Layout:** Mobile bottom nav hidden on estimate editor and new-quote picker (`/templates?new=1`).
+
+### 2026-06-21 — Excel-style job header (2×2)
+
+**New estimate picker + editor:** Customer name | Job name · Product type | Order qty + unit — matches legacy Excel header. Dropdown options from `GET /master-data/reference` (`productTypeOptions`, `unitOptions`) via `useMasterDataReference`, not hardcoded.
+
+**Job header UI:** Full-width layout; compact fields (`input-compact`). Customer picker loads tenant customers from DB on focus.
+
+**Navigation:** Cancel on `/templates?new=1` (→ estimates list) and estimate editor (Back + Cancel). Blank canvas entry removed — all quotes start from a standard/my template.
+
+### 2026-06-21 — Job header UX polish (session close)
+
+**Layout:** Full-width pages (removed `max-w-7xl`); equal 2×2 grid for job header; `input-compact` sizing; product type / qty columns no longer use broken `max-w` caps.
+
+**Customer field:** `CustomerAutocomplete` — `w-full`, loads tenant customers from DB on focus (no 2-char minimum to see list); type to filter.
+
+**Data model reminder:** One estimate = one structure + dimensions + qty slabs. Same customer, different structure → separate estimates (customer reused from DB).
+
+**Not built (P2):** Side-by-side compare; estimate file attachments.

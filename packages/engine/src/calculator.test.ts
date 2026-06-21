@@ -588,10 +588,76 @@ describe('Engine calculator — golden tests', () => {
     };
 
     const result = calculateEstimate(estimate, materials);
-    // Slabs should have totals calculated based on sale price
     result.slabs.forEach((slab) => {
-      expect(slab.total).toBe(slab.quantityKg * result.estimate.salePricePerKg);
+      expect(slab.pricePerKg).toBeCloseTo(result.estimate.salePricePerKg!, 4);
+      expect(slab.total).toBeCloseTo(slab.quantityKg * slab.pricePerKg, 4);
     });
+  });
+
+  it('should vary slab $/kg when setup hours amortize across run sizes', () => {
+    const estimate: Estimate = {
+      id: 'test-slab-setup',
+      tenantId: 'tenant-1',
+      jobName: 'Setup amortization',
+      status: 'draft',
+      layers: [
+        {
+          id: 'layer-1',
+          materialId: 'pe-plain',
+          micron: 25,
+          position: 0,
+          gsm: 0,
+          costPerM2: 0,
+          material: undefined,
+        },
+      ],
+      slabs: [
+        { quantityKg: 500, pricePerKg: 0, total: 0 },
+        { quantityKg: 2000, pricePerKg: 0, total: 0 },
+        { quantityKg: 10000, pricePerKg: 0, total: 0 },
+      ],
+      markupPercent: 15,
+      platesPerKg: 0,
+      deliveryPerKg: 0,
+      orderQuantityKg: 500,
+      displayCurrencyCode: 'USD',
+      exchangeRateUsdToDisplay: 1,
+      salePricePerKg: 0,
+      materialCostPerKg: 0,
+      totalGsm: 0,
+      totalMicron: 0,
+      filmDensity: 0,
+      sqmPerKg: 0,
+      dimensions: {
+        productType: 'roll',
+        reelWidthMm: 800,
+        cutoffMm: 600,
+        piecesPerCut: 1,
+        numberOfUps: 2,
+        extraPrintingTrimMm: 10,
+        printingWebClass: 'wide_web',
+      },
+      processes: [
+        {
+          id: 'proc-1',
+          name: 'Printing',
+          costPerHour: 80,
+          speedBasis: 'kg_per_hour',
+          speedValue: 200,
+          setupHours: 2,
+          enabled: true,
+        },
+      ],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const result = calculateEstimate(estimate, materials);
+    const [small, medium, large] = result.slabs;
+
+    expect(small.pricePerKg).toBeGreaterThan(medium.pricePerKg);
+    expect(medium.pricePerKg).toBeGreaterThan(large.pricePerKg);
+    expect(new Set(result.slabs.map((s) => s.pricePerKg)).size).toBe(3);
   });
 
   it('should handle pouch dimensions (width × height, not reel)', () => {

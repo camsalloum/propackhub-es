@@ -7,6 +7,11 @@ import {
   resolveTemplateLayers,
   type TemplateLayerRef,
 } from '../utils/template-material-lookup';
+import {
+  deriveStandardTemplateKey,
+  resolveTemplateKeyAssignments,
+  type TemplateKeyRow,
+} from '../utils/template-key';
 
 interface TemplateLayerSeed {
   layer_order: number;
@@ -33,6 +38,41 @@ interface TemplateSeedEntry {
   substrate_options?: string[];
 }
 
+function templateKeyFromSeed(t: TemplateSeedEntry): string {
+  return deriveStandardTemplateKey({
+    pebiParentPg: t.pebi_parent_pg,
+    name: t.name,
+    materialClass: t.material_class,
+    structureType: t.structure_type,
+  });
+}
+
+function templateInsertRow(
+  tenantId: string,
+  t: TemplateSeedEntry,
+  resolvedLayers: ReturnType<typeof resolveTemplateLayers>
+) {
+  return {
+    tenantId,
+    templateKey: templateKeyFromSeed(t),
+    name: t.name,
+    pebiParentPg: t.pebi_parent_pg,
+    productType: t.product_type,
+    materialClass: t.material_class,
+    structureType: t.structure_type,
+    substrateOrigin: t.substrate_origin,
+    displayOrder: t.display_order,
+    defaultDimensions: t.default_dimensions || {},
+    defaultLayers: resolvedLayers,
+    defaultProcesses: t.default_processes || [],
+    defaultPrintingWebClass: (t.default_printing_web_class || 'wide_web') as 'wide_web' | 'narrow_web',
+    solventMixEnabled: t.solvent_mix_enabled || false,
+    inkSystemOptions: t.ink_system_options || ['SB'],
+    substrateOptions: t.substrate_options || null,
+    isStandard: true,
+  };
+}
+
 async function loadTenantMaterials(tenantId: string) {
   const db = getDatabase();
   return db
@@ -56,25 +96,7 @@ export async function seedTemplatesForTenant(tenantId: string): Promise<number> 
         materialLookup,
         validIds
       );
-
-      return {
-        tenantId,
-        name: t.name,
-        pebiParentPg: t.pebi_parent_pg,
-        productType: t.product_type,
-        materialClass: t.material_class,
-        structureType: t.structure_type,
-        substrateOrigin: t.substrate_origin,
-        displayOrder: t.display_order,
-        defaultDimensions: t.default_dimensions || {},
-        defaultLayers: resolvedLayers,
-        defaultProcesses: t.default_processes || [],
-        defaultPrintingWebClass: (t.default_printing_web_class || 'wide_web') as 'wide_web' | 'narrow_web',
-        solventMixEnabled: t.solvent_mix_enabled || false,
-        inkSystemOptions: t.ink_system_options || ['SB'],
-        substrateOptions: t.substrate_options || null,
-        isStandard: true,
-      };
+      return templateInsertRow(tenantId, t, resolvedLayers);
     });
 
     const inserted = await db
@@ -102,9 +124,9 @@ export async function syncMissingStandardTemplates(tenantId: string): Promise<nu
     .select({ id: schema.structureTemplates.id, name: schema.structureTemplates.name })
     .from(schema.structureTemplates)
     .where(eq(schema.structureTemplates.tenantId, tenantId));
-  const existingNames = new Set(existing.map((r) => r.name));
+  const existingNames = new Set(existing.map((r: (typeof existing)[number]) => r.name));
 
-  const legacyLaminates = existing.find((r) => r.name === 'Laminates');
+  const legacyLaminates = existing.find((r: (typeof existing)[number]) => r.name === 'Laminates');
   if (legacyLaminates && !existingNames.has('Laminates · Duplex')) {
     await db
       .update(schema.structureTemplates)
@@ -123,24 +145,7 @@ export async function syncMissingStandardTemplates(tenantId: string): Promise<nu
       materialLookup,
       validIds
     );
-    return {
-      tenantId,
-      name: t.name,
-      pebiParentPg: t.pebi_parent_pg,
-      productType: t.product_type,
-      materialClass: t.material_class,
-      structureType: t.structure_type,
-      substrateOrigin: t.substrate_origin,
-      displayOrder: t.display_order,
-      defaultDimensions: t.default_dimensions || {},
-      defaultLayers: resolvedLayers,
-      defaultProcesses: t.default_processes || [],
-      defaultPrintingWebClass: (t.default_printing_web_class || 'wide_web') as 'wide_web' | 'narrow_web',
-      solventMixEnabled: t.solvent_mix_enabled || false,
-      inkSystemOptions: t.ink_system_options || ['SB'],
-      substrateOptions: t.substrate_options || null,
-      isStandard: true,
-    };
+    return templateInsertRow(tenantId, t, resolvedLayers);
   });
 
   await db.insert(schema.structureTemplates).values(rows);
@@ -189,6 +194,53 @@ export async function pruneDuplicateStandardTemplates(tenantId: string): Promise
   }
 
   return toDeactivate.length;
+}
+
+/** Backfill template_key on existing rows (MES Phase D). Collision-safe for duplicate legacy rows. */
+export async function syncTemplateKeysForTenant(tenantId: string): Promise<number> {
+  const db = getDatabase();
+  const templates = await db
+    .select()
+    .from(schema.structureTemplates)
+    .where(eq(schema.structureTemplates.tenantId, tenantId));
+
+  const rows: TemplateKeyRow[] = templates.map((t: (typeof templates)[number]) => ({
+    id: t.id,
+    name: t.name,
+    pebiParentPg: t.pebiParentPg,
+    materialClass: t.materialClass,
+    structureType: t.structureType,
+    isStandard: t.isStandard,
+    isActive: t.isActive,
+    templateKey: t.templateKey,
+    displayOrder: t.displayOrder,
+    createdAt: t.createdAt,
+  }));
+
+  const assignments = resolveTemplateKeyAssignments(rows);
+  const toUpdate: { id: string; key: string | null }[] = [];
+  for (const t of templates) {
+    const key = assignments.get(t.id) ?? null;
+    if (t.templateKey !== key) {
+      toUpdate.push({ id: t.id, key });
+    }
+  }
+  if (toUpdate.length === 0) return 0;
+
+  // Clear keys first so reassignment cannot hit structure_templates_tenant_key_uq.
+  for (const { id } of toUpdate) {
+    await db
+      .update(schema.structureTemplates)
+      .set({ templateKey: null, updatedAt: new Date() })
+      .where(eq(schema.structureTemplates.id, id));
+  }
+  for (const { id, key } of toUpdate) {
+    await db
+      .update(schema.structureTemplates)
+      .set({ templateKey: key, updatedAt: new Date() })
+      .where(eq(schema.structureTemplates.id, id));
+  }
+  return toUpdate.length;
 }
 
 /** Idempotent — seeds 13 parent PG templates only when tenant has none (e.g. pre-Phase C accounts). */

@@ -10,7 +10,19 @@ import {
   buildMasterDataReferenceFromDb,
   replacePlatformReferenceCategory,
   syncPlatformMasterToAllTenants,
+  getMasterDataVersion,
+  listPlatformMasterMaterials,
+  ReferenceItemInUseError,
+  type AuditActor,
 } from '../db/platform-master-data';
+import { listMasterDataChangesSince, appendMasterAuditEntry } from '../db/platform-master-audit';
+import {
+  createPlatformServiceKey,
+  listPlatformServiceKeys,
+  revokePlatformServiceKey,
+} from '../db/platform-service-keys';
+import { authenticateMasterDataReader } from '../utils/service-key-auth';
+import { checkRateLimit } from '../utils/rate-limit';
 import { enrichMasterDataReference } from '../utils/master-data-normalize';
 import type { MasterMaterial } from '../db/master-materials-io';
 
@@ -21,6 +33,11 @@ function requireMasterDataAdmin(request: FastifyRequest, reply: FastifyReply): b
     return false;
   }
   return true;
+}
+
+function auditActorFromRequest(request: FastifyRequest): AuditActor {
+  const user = extractUserFromRequest(request);
+  return { type: 'user', id: user.userId };
 }
 
 const MaterialBodySchema = z.object({
@@ -37,6 +54,8 @@ const MaterialBodySchema = z.object({
   hoover: z.string().nullable().optional(),
   marketPriceUsd: z.number().nullable().optional(),
   sortOrder: z.number().int().optional(),
+  externalId: z.string().max(128).nullable().optional(),
+  externalSource: z.string().max(64).nullable().optional(),
 });
 
 const ReferenceCategorySchema = z.enum([
@@ -66,7 +85,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
       if (!requireMasterDataAdmin(request, reply)) return;
       const rows = await listPlatformMasterMaterialsWithIds();
       return reply.send(
-        rows.map((r) => ({
+        rows.map((r: Awaited<ReturnType<typeof listPlatformMasterMaterialsWithIds>>[number]) => ({
           id: r.id,
           key: r.key,
           name: r.name,
@@ -82,6 +101,8 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
           marketPriceUsd: r.marketPriceUsd != null ? Number(r.marketPriceUsd) : null,
           costingKey: r.costingKey,
           sortOrder: r.sortOrder,
+          externalId: r.externalId,
+          externalSource: r.externalSource,
         }))
       );
     } catch (error) {
@@ -97,7 +118,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
         await request.jwtVerify();
         if (!requireMasterDataAdmin(request, reply)) return;
         const body = MaterialBodySchema.parse(request.body);
-        const created = await createPlatformMasterMaterial(body as MasterMaterial);
+        const created = await createPlatformMasterMaterial(body as MasterMaterial, auditActorFromRequest(request));
         const sync = await afterPlatformMutation();
         return reply.status(201).send({ material: created, sync });
       } catch (error) {
@@ -114,7 +135,11 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
         await request.jwtVerify();
         if (!requireMasterDataAdmin(request, reply)) return;
         const body = MaterialBodySchema.partial().parse(request.body);
-        const updated = await updatePlatformMasterMaterial(request.params.id, body as Partial<MasterMaterial>);
+        const updated = await updatePlatformMasterMaterial(
+          request.params.id,
+          body as Partial<MasterMaterial>,
+          auditActorFromRequest(request)
+        );
         if (!updated) return reply.status(404).send({ error: 'Material not found' });
         const sync = await afterPlatformMutation();
         return reply.send({ material: updated, sync });
@@ -131,7 +156,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
       try {
         await request.jwtVerify();
         if (!requireMasterDataAdmin(request, reply)) return;
-        const ok = await deletePlatformMasterMaterial(request.params.id);
+        const ok = await deletePlatformMasterMaterial(request.params.id, auditActorFromRequest(request));
         if (!ok) return reply.status(404).send({ error: 'Material not found' });
         const sync = await afterPlatformMutation();
         return reply.send({ ok: true, sync });
@@ -149,7 +174,10 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
         await request.jwtVerify();
         if (!requireMasterDataAdmin(request, reply)) return;
         const body = z.array(MaterialBodySchema).parse(request.body);
-        const materials = await replacePlatformMasterMaterials(body as MasterMaterial[]);
+        const materials = await replacePlatformMasterMaterials(
+          body as MasterMaterial[],
+          auditActorFromRequest(request)
+        );
         const sync = await afterPlatformMutation();
         return reply.send({ materials, count: materials.length, sync });
       } catch (error) {
@@ -164,7 +192,8 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
       await request.jwtVerify();
       if (!requireMasterDataAdmin(request, reply)) return;
       const ref = await buildMasterDataReferenceFromDb();
-      return reply.send(enrichMasterDataReference(ref));
+      const masterDataVersion = await getMasterDataVersion();
+      return reply.send({ ...enrichMasterDataReference(ref), masterDataVersion });
     } catch (error) {
       console.error('Get platform master reference error:', error);
       return reply.status(500).send({ error: 'Failed to load reference data' });
@@ -180,13 +209,27 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
       if (!requireMasterDataAdmin(request, reply)) return;
       const category = ReferenceCategorySchema.parse(request.params.category);
       const items = z.array(ReferenceItemSchema).parse(request.body);
-      const saved = await replacePlatformReferenceCategory(category, items);
+      const saved = await replacePlatformReferenceCategory(
+        category,
+        items,
+        auditActorFromRequest(request)
+      );
       const sync =
-        category === 'product_type' || category === 'printing_web'
+        category === 'product_type' || category === 'printing_web' || category === 'rm_type'
           ? await afterPlatformMutation()
           : { tenantsSynced: 0, inserted: 0, updated: 0, orphans: 0, pruned: 0, templatesRelinked: 0 };
       return reply.send({ items: saved, sync });
     } catch (error) {
+      if (error instanceof ReferenceItemInUseError) {
+        return reply.status(409).send({
+          error: error.message,
+          code: error.code,
+          materialCount: error.materialCount,
+        });
+      }
+      if (error instanceof Error && error.message.includes('Duplicate reference codes')) {
+        return reply.status(400).send({ error: error.message });
+      }
       console.error('Save platform reference category error:', error);
       return reply.status(500).send({ error: 'Failed to save reference list' });
     }
@@ -203,4 +246,109 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
       return reply.status(500).send({ error: 'Failed to sync tenants' });
     }
   });
+
+  fastify.get<{ Querystring: { since_version?: string; include_snapshot?: string } }>(
+    '/api/v1/platform/master-data/changes',
+    async (request, reply) => {
+      try {
+        const auth = await authenticateMasterDataReader(request, reply);
+        if (!auth) return;
+
+        if (auth.kind === 'service_key') {
+          const limit = checkRateLimit(`svc:${auth.keyId}`, 120, 60_000);
+          if (!limit.allowed) {
+            reply.header('Retry-After', String(Math.ceil((limit.retryAfterMs ?? 60_000) / 1000)));
+            return reply.status(429).send({ error: 'Rate limit exceeded for service key' });
+          }
+        }
+
+        const sinceVersion = Math.max(0, Number(request.query.since_version ?? 0) || 0);
+        const includeSnapshot = request.query.include_snapshot === 'true';
+        const currentVersion = await getMasterDataVersion();
+        const changes = await listMasterDataChangesSince(sinceVersion);
+
+        if (auth.kind === 'service_key') {
+          await appendMasterAuditEntry({
+            masterDataVersion: currentVersion,
+            entityType: 'reference_item',
+            entityKey: 'change_feed',
+            action: 'update',
+            afterJson: { sinceVersion, changeCount: changes.length, includeSnapshot },
+            actor: { type: 'service_key', id: auth.keyId },
+          });
+        }
+
+        const payload: Record<string, unknown> = {
+          currentVersion,
+          sinceVersion,
+          changes,
+        };
+        if (includeSnapshot) {
+          payload.snapshot = {
+            materials: await listPlatformMasterMaterials(),
+            reference: await buildMasterDataReferenceFromDb(),
+          };
+        }
+        return reply.send(payload);
+      } catch (error) {
+        console.error('Master data change feed error:', error);
+        return reply.status(500).send({ error: 'Failed to load master data changes' });
+      }
+    }
+  );
+
+  fastify.get('/api/v1/platform/service-keys', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+      if (!requireMasterDataAdmin(request, reply)) return;
+      const keys = await listPlatformServiceKeys();
+      return reply.send(keys);
+    } catch (error) {
+      console.error('List service keys error:', error);
+      return reply.status(500).send({ error: 'Failed to list service keys' });
+    }
+  });
+
+  fastify.post<{ Body: { label: string; scopes?: string[]; expiresAt?: string | null } }>(
+    '/api/v1/platform/service-keys',
+    async (request, reply) => {
+      try {
+        await request.jwtVerify();
+        if (!requireMasterDataAdmin(request, reply)) return;
+        const { label, scopes, expiresAt } = request.body ?? {};
+        if (!label?.trim()) {
+          return reply.status(400).send({ error: 'label is required' });
+        }
+        const created = await createPlatformServiceKey({
+          label: label.trim(),
+          scopes,
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+        });
+        return reply.status(201).send({
+          ...created.key,
+          plainKey: created.plainKey,
+          warning: 'Store plainKey now — it cannot be retrieved again.',
+        });
+      } catch (error) {
+        console.error('Create service key error:', error);
+        return reply.status(500).send({ error: 'Failed to create service key' });
+      }
+    }
+  );
+
+  fastify.delete<{ Params: { id: string } }>(
+    '/api/v1/platform/service-keys/:id',
+    async (request, reply) => {
+      try {
+        await request.jwtVerify();
+        if (!requireMasterDataAdmin(request, reply)) return;
+        const ok = await revokePlatformServiceKey(request.params.id);
+        if (!ok) return reply.status(404).send({ error: 'Service key not found' });
+        return reply.send({ ok: true });
+      } catch (error) {
+        console.error('Revoke service key error:', error);
+        return reply.status(500).send({ error: 'Failed to revoke service key' });
+      }
+    }
+  );
 }

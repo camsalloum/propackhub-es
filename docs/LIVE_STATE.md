@@ -1,14 +1,16 @@
 # LIVE STATE — Estimation Studio
 
-
-
-**Last updated:** 2026-06-20  
-
-**Session:** Master Data cleanup + TemplatePicker 4-tier classification grid
+> ⚠️ **2026-06-21 reconciliation:** A deep re-audit ([ES_DEEP_AUDIT_AND_ENHANCEMENT_PLAN_2026-06-21.md](./ES_DEEP_AUDIT_AND_ENHANCEMENT_PLAN_2026-06-21.md)) reproduced the build. **Engine 34/34 ✅**, but **web + server `tsc --noEmit` currently FAIL** (4 type errors + a real missing-import crash `Trash2` in StandardTemplates; 1 implicit-any in server). The "TypeScript clean ✅ / 36/36" claims below are **not reproducible from a clean tree** until Phase 0 of the deep-audit roadmap lands. Treat that document as the roadmap of record.
 
 
 
-## Status: ✅ Master Data in-app + TemplatePicker classification grid
+**Last updated:** 2026-06-21  
+
+**Session:** Template/estimate UX polish — Excel job header, Cancel nav, blank canvas removed (ready for user smoke test)
+
+
+
+## Status: ✅ MES plan complete (Phases A–F + §14 UI + V1 nice-to-haves)
 
 
 
@@ -20,7 +22,13 @@
 
 - **Sync:** Save on Master Data page → all tenants updated automatically
 
-- **Tests:** server 14/14 ✅
+- **Tests:** server 36/36 ✅
+
+- **GET /templates:** ✅ fixed (template_key collision on legacy duplicate rows)
+
+- **Change feed:** `GET /api/v1/platform/master-data/changes` (JWT or service key)
+
+- **API contract:** [docs/API_MASTER_DATA.md](./API_MASTER_DATA.md)
 
 - **All changes uncommitted** — user to commit when ready
 
@@ -76,11 +84,13 @@
 
 ```bash
 
-npm install
+npm install   # postinstall builds @es/engine
 
 cd packages/server && npm run db:patch
 
-cd ../.. && npm run start:servers
+cd ../.. && npm run start:servers   # also builds engine before start
+
+# Or double-click RUN-ES.bat (kill ports → engine build → db:patch → servers; browser after /health)
 
 # http://localhost:5000 (web)
 
@@ -106,10 +116,10 @@ cd packages/engine && npm run test
 
 ## Next session
 
-1. Smoke-test RM Types loop: add "Plate" code in Master Data → RM Types, save, open Raw Materials → verify Plate tab appears; add a plate material → verify it's filterable
-2. Smoke-test TemplatePicker classification grid
-3. Smoke-test Master Data: Printing Web / Ink Families / Adhesive Families tabs are gone
-4. Optional: remove `Master Data.xlsx` from repo root (keep in archive) once satisfied
+1. **User smoke test:** `/templates?new=1` → job header → pick template → configure µ/dimensions → Save & Calculate → Cancel back to list
+2. **User smoke test:** Same customer, two estimates (different templates / job names)
+3. Run `npm run db:patch` in `packages/server` if `order_quantity_unit` column missing locally
+4. **P2 backlog:** side-by-side estimate compare; file attachments per estimate
 5. Commit when ready
 
 

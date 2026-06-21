@@ -19,6 +19,9 @@ interface Material {
   substrateGrade?: string | null;
   hoover?: string | null;
   marketPriceUsd?: number | null;
+  platformMasterKey?: string | null;
+  platformSyncedAt?: string | null;
+  isTenantOnly?: boolean;
 }
 
 type PriceDraft = { costPerKgUsd: string; marketPriceUsd: string };
@@ -118,6 +121,9 @@ function parseMaterialRow(m: Record<string, unknown>): Material {
     substrateGrade: (m.substrateGrade as string | null) ?? null,
     hoover: (m.hoover as string | null) ?? null,
     marketPriceUsd: market != null && Number.isFinite(market) ? roundUsd(market) : null,
+    platformMasterKey: (m.platformMasterKey as string | null) ?? null,
+    platformSyncedAt: (m.platformSyncedAt as string | null) ?? null,
+    isTenantOnly: Boolean(m.isTenantOnly),
   };
 }
 
@@ -660,7 +666,23 @@ const Library = () => {
                         </span>
                       ) : <span className="text-xs text-mist">—</span>}
                     </td>
-                    <td className="py-1.5 px-3"><div className="font-medium text-sm leading-tight">{material.name}</div></td>
+                    <td className="py-1.5 px-3">
+                      <div className="font-medium text-sm leading-tight">{material.name}</div>
+                      {material.platformMasterKey && !material.isTenantOnly && (
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                          <span
+                            className="text-[10px] font-mono px-1 py-0.5 rounded bg-slate text-mist"
+                            title={
+                              material.platformSyncedAt
+                                ? `Platform synced ${new Date(material.platformSyncedAt).toLocaleString()}`
+                                : 'Linked to platform master catalog'
+                            }
+                          >
+                            {material.platformMasterKey}
+                          </span>
+                        </div>
+                      )}
+                    </td>
                     <td className="py-1.5 px-3 font-mono text-sm">{material.density.toFixed(2)}</td>
                     <td className="py-1.5 px-3 font-mono text-sm">{material.solidPercent}</td>
                     <td className="py-1.5 px-3 text-sm text-mist max-w-[200px] truncate" title={material.hoover || ''}>

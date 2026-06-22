@@ -121,7 +121,7 @@ const Layout = () => {
 
       <div className="lg:flex">
         <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:border-r lg:border-border lg:bg-white">
-          <div className="flex items-center h-16 px-6 border-b border-border">
+          <div className="flex items-center min-h-16 px-6 py-4 border-b border-border">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-navy rounded-lg" />
               <div>

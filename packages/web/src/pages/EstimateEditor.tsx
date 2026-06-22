@@ -19,8 +19,15 @@ import {
   defaultUnitValue,
   normalizeProductType,
   normalizeUnitValue,
-  type ProductTypeValue,
 } from '../lib/masterDataReference';
+import {
+  dimensionFieldsFor,
+  subtypesForFamily,
+  defaultSubtypeForFamily,
+  engineTypeForFamily,
+  PRODUCT_FAMILY_LABELS,
+  type ProductFamily,
+} from '../lib/productCatalog';
 
 interface MaterialItem {
   id: string; name: string; type: string; solidPercent: number;
@@ -39,6 +46,9 @@ interface LayerItem {
 interface DimensionState {
   reelWidthMm: number; cutoffMm: number; numberOfUps: number;
   extraPrintingTrimMm: number; piecesPerCut: number; openWidthMm: number; openHeightMm: number;
+  // Index signature: dimensions are a flat numeric map; lets us round-trip through
+  // Record<string, unknown> for save/load without unsafe casts (Deep Audit §5.1 / task 0.2).
+  [key: string]: number;
 }
 
 const DEFAULT_PRODUCT_TYPE_OPTIONS = DEFAULT_MASTER_REFERENCE.productTypeOptions;
@@ -74,13 +84,12 @@ const EstimateEditor = () => {
   const [requoteWarnings, setRequoteWarnings] = useState<string[]>([]);
   const [orderQuantity, setOrderQuantity] = useState<number>(1000);
   const [orderQuantityUnit, setOrderQuantityUnit] = useState(() => defaultUnitValue());
-  const [rollSpecOpen, setRollSpecOpen] = useState(false);
   const [processesState, setProcessesState] = useState<any[]>([]);
   const { reference: masterReference, version: masterDataVersion } = useMasterDataReference();
 
   // UI state
   const [activeSection, setActiveSection] = useState<'structure' | 'dimensions' | 'slabs' | 'markup'>('structure');
-  const [productType, setProductType] = useState<ProductTypeValue>('roll');
+  const [productType, setProductType] = useState<string>('roll');
   const [jobName, setJobName] = useState('New estimate');
   const [customerId, setCustomerId] = useState<string>('');
   const [markupPercent, setMarkupPercent] = useState(15);
@@ -88,6 +97,7 @@ const EstimateEditor = () => {
   const [deliveryPerKg, setDeliveryPerKg] = useState(0);
   const [solventCostPerKgUsd, setSolventCostPerKgUsd] = useState(2.0);
   const [solventRatio, setSolventRatio] = useState(0.5);
+  const [productSubtype, setProductSubtype] = useState<string | null>(null);
   const [dimensions, setDimensions] = useState<DimensionState>({
     reelWidthMm: 800, cutoffMm: 600, numberOfUps: 1,
     extraPrintingTrimMm: 0, piecesPerCut: 1, openWidthMm: 200, openHeightMm: 250,
@@ -119,7 +129,7 @@ const EstimateEditor = () => {
     return {
       materialClass: tc.materialClass,
       structureType: tc.structureType,
-      productType,
+      productType: engineTypeForFamily(productType),
     };
   }, [dimensions, productType]);
 
@@ -241,6 +251,32 @@ const EstimateEditor = () => {
 
   const productTypeOptions = masterReference.productTypeOptions ?? DEFAULT_PRODUCT_TYPE_OPTIONS;
   const unitOptions = masterReference.unitOptions ?? DEFAULT_UNIT_OPTIONS;
+
+  // `productType` state holds the Master-Data product-type CODE (family): roll/sleeve/pouch/bag/custom.
+  // The engine costing type is derived (bag → pouch). Subtypes link to a family by `parent`.
+  const productFamily: ProductFamily = productType;
+  const subtypeDimensionFields = dimensionFieldsFor(productFamily, productSubtype);
+
+  const subtypeParentByCode = new Map(
+    (masterReference.productSubtypeOptions ?? []).map((s) => [s.code, s.parent])
+  );
+  const subtypesForParent = (parent: string) =>
+    (masterReference.productSubtypeOptions ?? []).filter((s) => s.parent === parent);
+
+  // Subtype dropdown list: Master Data first, else the built-in catalog (fallback).
+  const subtypeOptionList: Array<{ code: string; label: string; group?: string | null }> =
+    subtypesForParent(productFamily).length > 0
+      ? subtypesForParent(productFamily).map((s) => ({ code: s.code, label: s.label, group: s.group }))
+      : subtypesForFamily(productFamily).map((s) => ({ code: s.key, label: s.label, group: s.group }));
+
+  const familyLabel = (fam: string) =>
+    productTypeOptions.find((o) => o.value === fam)?.label ?? PRODUCT_FAMILY_LABELS[fam] ?? fam;
+
+  const handleFamilyChange = (fam: string) => {
+    setProductType(fam);
+    const subs = subtypesForParent(fam);
+    setProductSubtype(subs.length > 0 ? subs[0].code : (subtypesForFamily(fam)[0]?.key ?? null));
+  };
 
   useEffect(() => {
     setProductType((prev) => normalizeProductType(prev, productTypeOptions));
@@ -372,7 +408,11 @@ const EstimateEditor = () => {
         ...s, quantityKg: parseFloat(s.quantityKg) || 0, pricePerKg: parseFloat(s.pricePerKg) || 0,
         total: (parseFloat(s.quantityKg) || 0) * (parseFloat(s.pricePerKg) || 0),
       })));
-      setProductType(normalizeProductType(data.productType, productTypeOptions));
+      setProductType(
+        (data.productSubtype && subtypeParentByCode.get(data.productSubtype)) ||
+          normalizeProductType(data.productType, productTypeOptions)
+      );
+      setProductSubtype(data.productSubtype ?? null);
       setJobName(data.jobName || '');
       setCustomerId(data.customerId || '');
       setMarkupPercent(parseFloat(data.markupPercent) || 15);
@@ -451,7 +491,8 @@ const EstimateEditor = () => {
   };
 
   const buildSavePayload = useCallback(() => ({
-    jobName, customerId: customerId || undefined, productType,
+    jobName, customerId: customerId || undefined, productType: engineTypeForFamily(productType),
+    productSubtype: productSubtype ?? undefined,
     printingWebClass: derivedPrintingWebClass,
     dimensions: dimensionsForSave(dimensions as Record<string, unknown>),
     markupPercent, platesPerKg, deliveryPerKg,
@@ -462,7 +503,7 @@ const EstimateEditor = () => {
     layers: layers.map((l, i) => ({ materialId: l.materialId, micron: l.micron, position: i })),
     slabs: slabsState.map(s => ({ quantityKg: s.quantityKg, pricePerKg: s.pricePerKg })),
     processes: processesState,
-  }), [jobName, customerId, productType, derivedPrintingWebClass, needsSolventMix, dimensions, markupPercent, platesPerKg, deliveryPerKg, solventCostPerKgUsd, solventRatio, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
+  }), [jobName, customerId, productType, productSubtype, derivedPrintingWebClass, needsSolventMix, dimensions, markupPercent, platesPerKg, deliveryPerKg, solventCostPerKgUsd, solventRatio, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   const slabQuantitiesKey = slabsState.map((s) => s.quantityKg).join(',');
   const layerInputsKey = layers.map((l) => `${l.materialId}:${l.micron}`).join('|');
@@ -474,7 +515,7 @@ const EstimateEditor = () => {
       return runClientCalculation({
         layers: layers.map((l, i) => ({ id: l.id, materialId: l.materialId, micron: l.micron, position: i })),
         materials,
-        productType,
+        productType: engineTypeForFamily(productType),
         dimensions: { ...dimensions },
         markupPercent,
         platesPerKg,
@@ -542,7 +583,6 @@ const EstimateEditor = () => {
       if (validationError) {
         alert(validationError);
         if (validationError.includes('Structure')) setActiveSection('structure');
-        else if (validationError.includes('Dimensions')) setActiveSection('dimensions');
         return;
       }
     }
@@ -708,21 +748,95 @@ const EstimateEditor = () => {
           </p>
         </div>
       )}
-      <div className="card mb-4 py-3 px-4 sm:px-5">
+      <div className="card mb-4 py-3 px-4 sm:px-5 space-y-4">
         <JobHeaderFields
           customerId={customerId}
           onCustomerChange={setCustomerId}
           jobName={jobName}
           onJobNameChange={setJobName}
-          productType={productType}
-          onProductTypeChange={setProductType}
-          productTypeOptions={productTypeOptions}
           orderQuantity={orderQuantity}
           onOrderQuantityChange={setOrderQuantity}
           orderQuantityUnit={orderQuantityUnit}
           onOrderQuantityUnitChange={setOrderQuantityUnit}
           unitOptions={unitOptions}
         />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+          <div className="min-w-0">
+            <label className="block text-xs font-medium text-navy mb-1">Product type</label>
+            <select
+              className="input input-compact w-full"
+              value={productFamily}
+              onChange={(e) => handleFamilyChange(e.target.value)}
+            >
+              {productTypeOptions.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+          {subtypeOptionList.length > 0 && (
+            <div className="min-w-0">
+              <label className="block text-xs font-medium text-navy mb-1">
+                {familyLabel(productFamily)} type
+              </label>
+              <select
+                className="input input-compact w-full"
+                value={productSubtype ?? ''}
+                onChange={(e) => setProductSubtype(e.target.value || null)}
+              >
+                <option value="">Select type…</option>
+                {subtypeOptionList.map((s) => (
+                  <option key={s.code} value={s.code}>
+                    {s.group ? `${s.group} — ${s.label}` : s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Dimensions — inline, change with product type / subtype */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Ruler className="w-4 h-4 text-mist" />
+            <h4 className="text-sm font-display font-semibold text-navy">Dimensions</h4>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3">
+            {subtypeDimensionFields.map((f) =>
+              f.type === 'boolean' ? (
+                <label key={f.key} className="flex items-center gap-2 md:mt-5">
+                  <input
+                    type="checkbox"
+                    checked={Number(dimensions[f.key]) === 1}
+                    onChange={(e) =>
+                      setDimensions((prev) => ({ ...prev, [f.key]: e.target.checked ? 1 : 0 }))
+                    }
+                  />
+                  <span className="text-sm font-medium text-navy">{f.label}</span>
+                </label>
+              ) : (
+                <div key={f.key} className="min-w-0">
+                  <label className="block text-xs font-medium text-navy mb-1">
+                    {f.label}{f.unit ? ` (${f.unit})` : ''}{f.required ? ' *' : ''}
+                  </label>
+                  <input
+                    type="number"
+                    className="input input-compact w-full"
+                    value={dimensions[f.key] ?? 0}
+                    onChange={(e) =>
+                      setDimensions((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))
+                    }
+                  />
+                </div>
+              )
+            )}
+          </div>
+          {can('printingWebWidth') && (productFamily === 'roll' || productFamily === 'sleeve') && (
+            <p className="text-xs text-mist mt-2" title="Press/lamination width before slitting — not your finished reel width.">
+              Printing web width: <span className="font-mono text-gold">{printWebWidth} mm</span>
+            </p>
+          )}
+        </div>
       </div>
       {/* Header */}
       <div className="mb-8">
@@ -822,9 +936,6 @@ const EstimateEditor = () => {
           <div className="flex space-x-2 mb-6 overflow-x-auto">
             <button onClick={() => setActiveSection('structure')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap ${activeSection === 'structure' ? 'bg-gold/10 text-gold' : 'hover:bg-slate text-ink'}`}>
               <Layers className="w-4 h-4" /><span>Structure</span>
-            </button>
-            <button onClick={() => setActiveSection('dimensions')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap ${activeSection === 'dimensions' ? 'bg-gold/10 text-gold' : 'hover:bg-slate text-ink'}`}>
-              <Ruler className="w-4 h-4" /><span>Dimensions</span>
             </button>
             <button onClick={() => setActiveSection('slabs')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap ${activeSection === 'slabs' ? 'bg-gold/10 text-gold' : 'hover:bg-slate text-ink'}`}>
               <Calculator className="w-4 h-4" /><span>Quantity Slabs</span>
@@ -996,8 +1107,9 @@ const EstimateEditor = () => {
             </div>
           )}
 
-          {/* Dimensions */}
-          {activeSection === 'dimensions' && (
+          {/* Dimensions — now rendered in the top panel (product type → subtype → dimensions).
+              This legacy section is disabled; safe to delete in a follow-up cleanup. */}
+          {false && (
             <div className="card space-y-6">
               <h3 className="text-lg font-display font-semibold text-navy">Dimensions</h3>
               <p className="text-sm text-mist">
@@ -1030,9 +1142,69 @@ const EstimateEditor = () => {
                 </div>
               )}
               {productType === 'pouch' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label className="block text-sm font-medium text-navy mb-2">Open width (mm)</label><input type="number" value={dimensions.openWidthMm} onChange={(e) => setDimensions(prev => ({ ...prev, openWidthMm: Number(e.target.value) }))} className="input w-full" /></div>
-                  <div><label className="block text-sm font-medium text-navy mb-2">Open height (mm)</label><input type="number" value={dimensions.openHeightMm} onChange={(e) => setDimensions(prev => ({ ...prev, openHeightMm: Number(e.target.value) }))} className="input w-full" /></div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-navy mb-2">Kind</label>
+                      <select
+                        className="input w-full"
+                        value={productFamily === 'bag' ? 'bag' : 'pouch'}
+                        onChange={(e) => setProductSubtype(defaultSubtypeForFamily(e.target.value as ProductFamily))}
+                      >
+                        <option value="pouch">Pouch</option>
+                        <option value="bag">Bag</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-navy mb-2">
+                        {PRODUCT_FAMILY_LABELS[productFamily]} type
+                      </label>
+                      <select
+                        className="input w-full"
+                        value={productSubtype ?? ''}
+                        onChange={(e) => setProductSubtype(e.target.value || null)}
+                      >
+                        <option value="">Select type…</option>
+                        {subtypesForFamily(productFamily).map((s) => (
+                          <option key={s.key} value={s.key}>
+                            {s.group ? `${s.group} — ${s.label}` : s.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {subtypeDimensionFields.map((f) =>
+                      f.type === 'boolean' ? (
+                        <label key={f.key} className="flex items-center gap-2 md:mt-7">
+                          <input
+                            type="checkbox"
+                            checked={Number(dimensions[f.key]) === 1}
+                            onChange={(e) =>
+                              setDimensions((prev) => ({ ...prev, [f.key]: e.target.checked ? 1 : 0 }))
+                            }
+                          />
+                          <span className="text-sm font-medium text-navy">{f.label}</span>
+                          {f.hint && <span className="text-xs text-mist">— {f.hint}</span>}
+                        </label>
+                      ) : (
+                        <div key={f.key}>
+                          <label className="block text-sm font-medium text-navy mb-2">
+                            {f.label}{f.unit ? ` (${f.unit})` : ''}{f.required ? ' *' : ''}
+                          </label>
+                          <input
+                            type="number"
+                            className="input w-full"
+                            value={dimensions[f.key] ?? 0}
+                            onChange={(e) =>
+                              setDimensions((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))
+                            }
+                          />
+                          {f.hint && <p className="text-xs text-mist mt-1">{f.hint}</p>}
+                        </div>
+                      )
+                    )}
+                  </div>
                 </div>
               )}
               <div className="pt-4 border-t border-border">
@@ -1050,7 +1222,7 @@ const EstimateEditor = () => {
                 </div>
               </div>
               {can('rollAfterSlitting') && productType === 'roll' && (
-                <details className="p-4 border border-border rounded-lg" open={rollSpecOpen} onToggle={(e) => setRollSpecOpen((e.target as HTMLDetailsElement).open)}>
+                <details className="p-4 border border-border rounded-lg">
                   <summary className="font-medium cursor-pointer">Roll spec (after slitting)</summary>
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div><label className="block text-sm text-mist mb-1">Core diameter (mm)</label><input type="number" className="input w-full" defaultValue={(dimensions as any).coreDiameterMm || 76} /></div>

@@ -274,3 +274,19 @@ CREATE TABLE IF NOT EXISTS platform_reference_items (
 );
 CREATE INDEX IF NOT EXISTS platform_reference_items_category_idx ON platform_reference_items(category);
 CREATE INDEX IF NOT EXISTS platform_reference_items_category_code_idx ON platform_reference_items(category, code);
+
+-- ---------------------------------------------------------------------------
+-- Bag vs Pouch product kinds + subtypes (2026-06-21)
+-- product_type stays the engine costing code (roll/sleeve/pouch); product_subtype
+-- stores the UI kind + subtype, e.g. 'pouch_stand_up', 'bag_wicket'. Bag costs via
+-- the pouch path (see packages/web/src/lib/productCatalog.ts).
+-- ---------------------------------------------------------------------------
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS product_subtype VARCHAR(64);
+ALTER TABLE structure_templates ADD COLUMN IF NOT EXISTS product_subtype VARCHAR(64);
+
+-- Allow the platform reference list to manage product subtypes from Master Data.
+DO $$ BEGIN
+  ALTER TYPE platform_reference_category ADD VALUE IF NOT EXISTS 'product_subtype';
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;

@@ -575,6 +575,14 @@ packages/web/capacitor.config.json           — webDir dist (M2)
 
 ### 18.1 Product-type taxonomy expansion (the foundation)
 
+> **STATUS — implemented 2026-06-21 (Master-Data-driven):** Bag and Pouch are **separate product kinds** with their own subtypes and **inline, subtype-driven dimension fields** in the **top panel** (product type → subtype → dimensions → quantity); the separate "Dimensions" tab is removed. **Subtypes are now sourced from Master Data** (`platform_reference_items` category `product_subtype`): a new **Master Data → Product Subtypes** tab manages the list (code convention `pouch_*` / `bag_*` sets family); the server exposes `productSubtypeOptions` via the reference API; the editor reads them (built-in `productCatalog.ts` is the fallback when none saved + the source of each subtype's dimension-field schema). Engine + golden tests **untouched** — Bag uses the `pouch` costing path. Persisted on `estimates.product_subtype` + `structure_templates.product_subtype`.
+>
+> **To activate on an environment:** `npm run db:patch` (adds `product_subtype` column + reference enum value), then Master Data → **Product Subtypes** → **Save tab** (persists the default catalog to the DB so it becomes the live source and syncs to tenants).
+>
+> **Follow-ups still open:** (a) editor's **Product type** kind selector is still the 4 structural kinds (roll/sleeve/pouch/bag) in code — fine since engine-bound, but could read labels from Master Data; (b) per-subtype **dimension-field schema** is code-driven in `productCatalog.ts` (admins manage the list, not the field set) — a future richer Master-Data editor could own fields too; (c) carry `productSubtype` through templates + TemplatePicker; (d) delete the disabled legacy dimensions block; (e) parametric `ProductVisual` per subtype (§18.2); (f) gusset/zipper add-on **costing** (display-only today).
+
+
+
 Today the engine knows only three `productType`s: `roll | sleeve | pouch`. That's correct for **costing math**, but the **UI and quoting experience** should expose the real catalog the rep thinks in. Introduce a **`productSubtype`** layer that maps down to one of the three engine types for calculation, while driving visuals, dimension fields, and add-on options.
 
 **Proposed taxonomy (data, not code — seed as `platform_reference_items` category `product_subtype`):**
@@ -731,3 +739,246 @@ platform_reference_items categories: product_subtype, add_on, application      (
 ---
 
 *Section 18 added 2026-06-21 in response to the "did you cover the packaging-specific visual/domain richness?" review. It is the Phase 7 backlog; sequence after Phase 0–2 unblock the build and harden the API.*
+
+---
+
+## 19. Second-pass verification & cross-agent reconciliation (2026-06-21, pass 2)
+
+A second agent reviewed this plan against the repo and raised contradicting claims. I re-ran **everything from a clean rebuild** (`npm run build` engine, fresh `tsc`, fresh `vitest`, plus a live engine probe) on the tree at `D:\ProPackHub\apps\estimation-studio`. Findings below are reproductions, not assertions.
+
+### 19.1 Disputed claims — adjudicated on the live tree
+
+| Claim (other agent) | My re-test (this tree, pass 2) | Verdict |
+|---|---|---|
+| `Trash2` is correctly imported; web `tsc` is **clean (0 errors)** | `tsc --noEmit` (web) **exits 1**; `StandardTemplates.tsx:3` import is `Search, Plus, Loader2, ArrowLeft, X, Layers` — **no `Trash2`**; `:808` reports `TS2304: Cannot find name 'Trash2'`, plus 4 `TS2352` casts + 3 `TS6133` | **Other agent wrong on this tree.** My original finding stands. |
+| Server has **30 errors**, almost all in `platform-master-data.ts`; `templates.ts:524` is a catch block | `tsc --noEmit` (server) **exits 1 with exactly 1 error**: `templates.ts:524 TS7006` implicit-any param `l` | **Other agent wrong on this tree.** |
+| **No `expiresIn`**, **no `/auth/refresh`**, tokens never expire | `app.ts` JWT register has `sign: { expiresIn: '7d' }`; `auth.ts` defines `refreshRoute` + registers `POST /api/v1/auth/refresh` | **Other agent wrong on this tree.** (Their description matches the **pre-fix 2026-06-20** state.) |
+| Engine **30/30** | `vitest run`: **34/34** (template-classification 9, layer-stack 4, calculator 15, golden 6) | **Other agent wrong on this tree.** |
+| Engine bug: `process.setupHours` is **never read**; per-slab loop "feeds a formula that can never produce a different answer" | Source (line ~378): `const setupCost = process.costPerHour * process.setupHours;` then `totalCost = round(setupCost + runCost)`. **`setupHours` is read.** | **Diagnosis wrong** — but the symptom is real; see §19.2. |
+
+**Most likely explanation:** the other agent is working against a **different / older checkout** (their five "wrong" claims all match the pre-fix state documented in `ES_AUDIT_REPORT_2026-06-20.md`). This is itself a **real coordination risk** — two contributors editing divergent trees. **Action:** reconcile working copies / branch before any further build work, and make Phase 0.6 (CI `tsc` gate) the shared source of truth.
+
+> The other agent's closing caution is fair and applies to *both* documents: don't plan off either without a fresh `tsc`/test run. That is exactly what §19 is. The numbers here were reproduced minutes before writing.
+
+### 19.2 The slab-pricing symptom is real — but it's a model limitation, not the claimed code bug
+
+I empirically probed the engine (built `dist`, two scenarios, quantities 500 / 2000 / 10000 kg):
+
+| Scenario | 500 kg | 2000 kg | 10000 kg |
+|---|---|---|---|
+| **One enabled process, `setupHours: 1.5`** | 3.126642 | 2.856642 | 2.784642 |
+| **No processes configured** | 2.366642 | 2.366642 | 2.366642 |
+
+**What this proves:**
+- Per-slab recompute **works** and `setupHours` **is** applied — prices differ across quantities when a process with setup time exists (setup-cost amortization: `operationCostPerKg = costPerHour·setupHours/qty + costPerHour/speedValue`).
+- When **no process is configured**, every slab is identical — because process-setup amortization is the **only** quantity-sensitive term in the additive model. Confirmed against `COSTING_NOTES.md` §6–§7: the Laravel-derived model has **no volume-discount or material price-break** mechanism by design.
+
+**So the other agent reproduced "flat slabs" almost certainly because their test estimate had no enabled processes** — a real and important symptom, wrongly attributed to a missing `setupHours` term.
+
+### 19.3 New finding — **F-SLAB: quantity slab pricing is flat out-of-the-box** (P1, product)
+
+"Quantity slab pricing" is a headline value prop (LOCKED #15), yet a quote with no configured processes shows the **same price/kg at every quantity** — which looks broken to a user even though it's mathematically consistent.
+
+**This is a decision + enhancement, not a bug fix:**
+
+| Option | What | Effort | Note |
+|---|---|---|---|
+| **A. Seed processes with setup hours** in standard templates | Makes amortization visible by default | Low | Stays within locked math; cheapest; recommended first step |
+| **B. Always amortize a setup/plate fixed cost** even without processes | Guarantees a quantity curve | Low–Med | Needs owner sign-off; `platesPerKg` is currently per-kg flat — could add a one-off `plates_total` amortized over qty |
+| **C. Explicit volume-discount / price-break curve** | True quantity discounting | Med | **Out of current spec** — requires a LOCKED decision; do not add silently |
+
+**Recommended:** A now (seed setup hours), and raise B/C with the owner as a pricing-philosophy decision. **Do not** change `calculateEstimate`'s additive formula or `golden-fixtures.ts` without an explicit locked decision — the golden tests are correct for the current model.
+
+**Correction (pass 3, code-read):** the engine suite **already covers both behaviors** — `calculator.test.ts` test-11 ("should calculate slab pricing correctly") asserts **equal** slab prices when no processes are configured, and "should vary slab $/kg when setup hours amortize across run sizes" asserts **small > medium > large** with a setup-bearing process. Both pass (part of the 34/34). So F-SLAB is **fully characterized by tests** and is a **product/UX decision** (flat-by-default looks broken to users), not an untested or buggy code path. My earlier "test gap" claim here was wrong — caught on re-read of `calculator.test.ts`.
+
+### 19.4 Corrected evidence log (supersedes Appendix A where they differ)
+
+| Check | Pass-2 result (2026-06-21) |
+|---|---|
+| engine `vitest run` | **34/34** (4 files) |
+| web `tsc --noEmit` | **FAIL (exit 1)** — `Trash2` `TS2304` @ StandardTemplates:808; `TS2352`×4 @ EstimateEditor 456/540/565; `TS6133`×3 |
+| server `tsc --noEmit` | **FAIL (exit 1)** — **exactly 1**: `templates.ts:524 TS7006` |
+| `app.ts` JWT | `expiresIn: '7d'` **present** |
+| `auth.ts` | `POST /auth/refresh` **present** (register/login/refresh/me + disabled sso/pebi) |
+| engine `setupHours` | **read** in `calculateProcessCosts` (`setupCost = costPerHour × setupHours`) |
+| slab variance probe | varies with a setup-bearing process; **flat with no processes** (model limitation → §19.3) |
+| server `vitest` (36/36 claim) | **VERIFIED 36/36** (9 files; live-Postgres integration test connected + seeded 66 materials / 13 templates). Note: passes under vitest despite the 1 `tsc` error, because vitest transpiles without full typecheck — so "tests green" and "`tsc` has 1 error" are both true. |
+
+**Net effect on the plan:** §5.1 (build broken) and §5.4 (JWT) stand **as I wrote them** (the other agent's contradictions don't reproduce on this tree). Add **§19.3 F-SLAB** as a new P1 product item, scheduled **before** Phase 5/6 since it touches the core value prop, and add the two-quantity engine test to Phase 0/1.
+
+*Pass-2 added 2026-06-21 after cross-agent reconciliation. When trees disagree, the CI `tsc`/test gate (Phase 0.6) is the tie-breaker — install it first.*
+
+---
+
+## 20. Pass-3 corrections & additional findings (2026-06-21)
+
+Acting on the "verify before concluding" discipline, I re-read the files I had only seen second-hand. Two of my own earlier statements were wrong; one new real finding surfaced.
+
+### 20.1 Self-corrections
+
+| Earlier claim | Correction |
+|---|---|
+| "`proposal-pdf.ts` is empty/nonexistent; PDF handled inline" | **Wrong — tool glitch.** The file is real (7,539 bytes, 187 lines) and exports `buildProposalPdfBuffer` / `saveProposalPdf` / `readStoredProposalPdf`. `estimates.ts:270` imports it correctly. **PDF generation is intact.** The sub-agent summary was right; my `read_files` returned a false empty and I should have re-checked before stating it. |
+| §19.3 "no test compares two quantities" | **Wrong.** `calculator.test.ts` already has both the flat-slab (no-process) and the varies-with-setup-hours tests; both pass. Corrected in §19.3. |
+
+These are logged openly because the whole point of this exercise is that **single reads and second-hand summaries are unreliable** — including my own.
+
+### 20.2 New finding — REF-RACE: ref-number generation can collide (P2)
+
+`estimates.ts → generateRefNumber()` computes the next quote number as `COUNT(*) WHERE year=… + 1`. Two estimates created concurrently (or in fast succession) can read the same count and both produce e.g. `QT-2026-00042`. There's no unique constraint enforcing it (there's an index on `ref_number` but not a unique one).
+
+**Fix options:** a Postgres sequence per tenant/year, or a unique index on `(tenant_id, ref_number)` + retry-on-conflict, or `SELECT … FOR UPDATE` on a counter row. Low frequency today, but a mobile client + multiple reps make collisions more likely. (File: `packages/server/src/routes/estimates.ts`; `schema.ts` for the constraint.)
+
+### 20.3 Confirmed-good in `estimates.ts` (first 320 lines read directly)
+
+- **Tenant isolation is consistent** — every query filters `tenantId`; single-estimate fetch checks `id AND tenantId`. Good multi-tenant hygiene.
+- **Validation** via Zod on create; `MissingMaterialsError` mapped to a useful `400 { error, materialIds }` (a rare example of a good error shape — generalise it per §12.1).
+- **Visibility** applied on list + calculate via `stripEstimateRow` / `stripCalculationResult`.
+- Confirms §5.5 (generic `{ error }` elsewhere) and §5.6 (no pagination on `getEstimates`).
+
+---
+
+## 21. Assumptions & open questions (need owner / domain sign-off)
+
+The plan rests on assumptions I could not verify from code alone. **These must be confirmed before building the dependent items** — flagged so nothing is built on a guess.
+
+### 21.1 Costing-model assumptions
+
+| # | Assumption | Risk if wrong | Needs |
+|---|---|---|---|
+| A1 | The "ink/adhesive cost uses **micron not gsm**" quirk (asserted by golden tests) is **intentionally correct**, matching the Laravel/Excel model. | Every printed/laminated quote mis-prices. | Owner confirms against `Costing_form ES.xlsx` and a known real quote. |
+| A2 | **F-SLAB:** flat slab prices without processes is acceptable, and the fix is "seed setup hours" (Option A) — **not** a volume-discount curve. | Core value prop feels broken, or we build the wrong pricing model. | Owner decision on §19.3 A/B/C. |
+| A3 | Solvent-mix denominator = `solventRatio` (ink-to-solvent), default 0.5, is the right model. | SB quotes mis-price. | Domain confirm. |
+| A4 | Engine stays **USD-only**; FX applied at boundary; rate frozen per estimate. | — (low; matches PRD §6.10). | Confirm FX provider choice. |
+
+### 21.2 Domain-content assumptions (Phase 7 §18)
+
+| # | Assumption | Needs |
+|---|---|---|
+| D1 | The pouch/bag/sleeve/label **subtype taxonomy** (§18.1) matches what your customers actually order. | Owner/sales review — add/remove subtypes. |
+| D2 | The **barrier-by-application** table (§18.5: coffee→PET/ALU/LDPE, etc.) is correct for your product mix. | **Treat as illustrative until a domain expert validates.** Wrong recommendations erode trust. |
+| D3 | The **add-on list** (§18.4: zipper/spout/valve/finishing) reflects your real converting capabilities and whether each is costed or descriptive. | Owner: which add-ons are quotable, which carry cost/setup. |
+| D4 | Sustainability tags (mono-material/PCR/compostable) are wanted on proposals. | Owner confirm. |
+
+### 21.3 Integration / platform assumptions
+
+| # | Assumption | Needs |
+|---|---|---|
+| I1 | PEBI exposes (or will expose) a **raw-cost lookup** by item key, and ES may call it server-to-server with a service credential. | PEBI team: real API shape, auth, item-key mapping (the `externalId`/`externalSource` columns assume this). |
+| I2 | PEBI's estimator will **embed `@es/engine`** rather than reimplement — so the engine contract (§10.3) is the integration surface. | PEBI team: confirm reuse approach + engine versioning. |
+| I3 | Mobile = **Capacitor wrap of the PWA** is acceptable (vs native). | Owner confirm (matches LOCKED #8). |
+| I4 | The API will be **deployed at a stable host** the mobile app can reach (not localhost-only). | Hosting decision for `VITE_API_BASE_URL` + CORS. |
+
+### 21.4 Process / environment assumptions
+
+| # | Assumption | Needs |
+|---|---|---|
+| P1 | The other contributor and I are meant to converge on **one tree/branch** (the §19 divergence). | Confirm branch strategy; install the Phase 0.6 CI `tsc`/test gate as the shared tie-breaker. |
+| P2 | A Postgres instance is available in CI (the integration test connected locally). | Confirm CI has the Postgres service + env (it appears to). |
+| P3 | `db:push` + `db:patch` is the accepted local setup until real migrations (Phase 1.1) land. | Owner/team confirm migration adoption. |
+
+**Rule for implementing agents:** if a task depends on an open question above, **stop and get the answer** rather than assume — especially A1/A2 (money) and D2 (domain credibility).
+
+---
+
+## 22. Progress log (this session, verified)
+
+| Item | Status |
+|---|---|
+| Phase 0.1 — `Trash2` import fix (StandardTemplates) | ✅ Done; `tsc` clean |
+| Phase 0.2 — `DimensionState` index signature (EstimateEditor casts) | ✅ Done |
+| Phase 0.3 — remove unused `CustomerAutocomplete` (EstimatesList) | ✅ Done |
+| Phase 0.1 — remove unused `Loader2`/`Layers` (StandardTemplates) | ✅ Done |
+| Phase 0.4 — type `defaultLayers.map` param (templates.ts:524) | ✅ Done |
+| **web `tsc --noEmit`** | ✅ **exit 0** (was failing) |
+| **server `tsc --noEmit`** | ✅ **exit 0** (was failing) |
+| engine `vitest` | ✅ 34/34 (unchanged) |
+| server `vitest` | ✅ 36/36 (verified, live Postgres) |
+| Still open in Phase 0 | 0.5 (type `db` handle), 0.6 (CI `tsc` gate) — recommended next |
+
+*Sections 20–22 added 2026-06-21 (pass 3). Phase 0 build blockers are resolved in code; remaining roadmap unchanged.*
+
+---
+
+## 23. Verified bug backlog (pass 4 — full-read of the remaining core files)
+
+A full read of `EstimateEditor.tsx`, `Settings.tsx`, `Library.tsx`, `Dashboard.tsx`, `api.ts`, `estimates.ts` (320–963), `materials.ts`, `customers.ts`. ✅ = I confirmed it directly this session; ◻ = reported by deep-read sub-agent, not yet re-confirmed line-by-line (verify before fixing). Severity: P0 crash/data-loss · P1 wrong result/silent loss · P2 risk · P3 hygiene.
+
+### 23.1 Data-loss / correctness (do early — Phase 1/2)
+
+| ID | Sev | File / area | Defect | Fix |
+|----|-----|-------------|--------|-----|
+| BUG-1 | P1 ✅ | `estimates.ts` `updateEstimateRoute` (~L480–565) | Layers/processes/slabs are **delete-then-reinsert with no transaction**. An insert failing mid-loop leaves the estimate with **partial/empty** layers. | Wrap the whole update in `db.transaction(async (tx) => { … })`; use `tx` for every delete/insert/update. |
+| BUG-2 | P1 ✅ | `EstimateEditor.tsx` `buildSavePayload` (~L453) + live-calc effect (~L518) | The effect rewrites `slabsState[].pricePerKg` into **display currency**, but `buildSavePayload` saves that value into the `pricePerKg` field the server treats as **USD** → on next calculate it's multiplied by FX **again** (double conversion) for non-USD tenants. | Don't persist display-converted slab prices; save the USD price (or recompute from engine), and keep display only in view state. Decide one canonical unit and document it. |
+| BUG-3 | P1 ✅ | `estimates.ts` `updateEstimateRoute` (~L474 vs L538) | Returns the **first** `update().returning()` row, but a **second** update then changes `printingWebClass`, `masterDataVersion`, merged `dimensions` → client gets **stale** data. | Return after the final update, or re-select the row at the end. |
+| BUG-4 | P2 ✅ | `estimates.ts` update statements (~L474, L538) | The `db.update(...).where(eq(id))` statements filter by **id only, not tenantId** (authorization relies on the earlier `existing` fetch). Defense-in-depth gap. | Add `and(eq(id), eq(tenantId))` to the update `where` clauses. |
+| BUG-5 | P2 ◻ | `estimates.ts` requote/duplicate/update source lookups | **Soft-delete (`deletedAt`) not honored** — a deleted estimate can still be updated/requoted/duplicated. | Add `isNull(deletedAt)` to those source lookups. |
+
+### 23.2 Silent-failure UX (Phase 0/5)
+
+| ID | Sev | File / area | Defect | Fix |
+|----|-----|-------------|--------|-----|
+| BUG-6 | P1 ◻ | `Settings.tsx` Currency tab (~L460) | "Save Changes" button has **no `onClick`** — currency / FX / auto-FX edits are **silently discarded**. | Wire to the currency-save handler (`PATCH /settings` + `refresh-fx`). |
+| BUG-7 | P2 ◻ | `Settings.tsx` General tab | `defaultMarkup` / `defaultSlabTemplate` are **never loaded** from the server, so saving General **overwrites** them with the hardcoded `15` / `'standard'`. | Load current values into state on mount before allowing save. |
+| BUG-8 | P2 ✅ | `EstimateEditor.tsx` requote banner | Requote navigates to `/estimate/:id`, but `location.state.priceChanges` is only read in the **new (no-id)** branch → price-change banner is **dropped** after requote. | Read `priceChanges` from nav state in the `:id` load path too. |
+| BUG-9 | P1 ✅ | `api.ts` `request()` | **FIXED THIS SESSION** — `response.json()` was called unconditionally; `204`/empty bodies (DELETE) threw. Now guarded for 204 + empty text. | Done. |
+
+### 23.3 Robustness / contract (Phase 2)
+
+| ID | Sev | File / area | Defect | Fix |
+|----|-----|-------------|--------|-----|
+| BUG-10 | P2 ◻ | `customers.ts` (whole file) | **No try/catch anywhere** — Zod errors surface as `500` (should be `400`); `deleteCustomer` has **no FK (23503) handling** (unlike `materials.ts`) → raw `500` when a customer is referenced. | Add per-route try/catch + the standard error envelope (§12.1); handle FK on delete. |
+| BUG-11 | P2 ✅ | `estimates.ts` `generateRefNumber` + requote ref (~L685) | `COUNT(*)+1` ref-number generation **races** (duplicate `QT-` numbers) and **counts soft-deleted** rows; requote and duplicate use **inconsistent** ref logic. | Sequence or unique `(tenant_id, ref_number)` + retry; exclude `deletedAt`; share one helper. (= REF-RACE §20.2.) |
+| BUG-12 | P2 ◻ | `api.ts` `request()` | No `catch` for **network failure** (offline) — rejects with a raw `TypeError`. Mobile needs a typed offline error. | Wrap `fetch` in try/catch; throw a typed `{ code: 'NETWORK' }`. Pairs with §12.1. |
+| BUG-13 | P3 ◻ | `customers.ts` `getCustomerEstimates` | **N+1** + unescaped `LIKE` wildcards in autocomplete search. | Single query/join; escape `%`/`_` in the search term. |
+
+### 23.4 Hygiene (Phase 0/6)
+
+- ◻ `EstimateEditor.tsx`: financial state typed `any` (`estimate`, `slabsState`, `processesState`); dead roll-spec inputs; activity log reads `body.note` while schema/UI use `notes`.
+- ◻ `Settings.tsx`: hardcoded FX "last updated" timestamp + color swatch.
+- ◻ `estimates.ts` requote: inserted slabs missing `sortOrder`.
+- ◻ `materials.ts`: seeds on a GET request (side-effect on read).
+- ✅ `Dashboard.tsx`: **no functional defects found** (explicitly clean).
+
+> **BUG-1, BUG-2, BUG-6** are the three that most affect real output (data loss, currency corruption, silently-lost settings). They are **higher priority than most of Phase 5/6** — pull them forward. I did **not** auto-fix BUG-1/2/6 because they touch the data layer / save-contract / unread Settings state and I could not fully exercise the flows without risking the now-green build; each has an exact fix above and should be done with a test.
+
+---
+
+## 24. Plan status & definition of done
+
+### 24.1 Done this session (verified)
+
+| Change | Verification |
+|---|---|
+| Phase 0 build blockers fixed (`Trash2`, dimension casts, unused imports, implicit-any) | `tsc --noEmit` web **0** + server **0** |
+| `api.ts` 204/empty-body crash (BUG-9) fixed | typecheck clean |
+| `typecheck` scripts added (web + server) | both run, exit 0 |
+| CI typecheck gate added (`ci.yml`) — fails build on type errors | step added before tests |
+| Engine tests | 34/34 |
+| Server tests (live Postgres) | 36/36 |
+| Self-corrections logged (proposal-pdf exists; slab test exists) | §20.1 |
+| Full bug backlog captured (BUG-1…13 + hygiene) | §23 |
+| Assumptions & open questions captured | §21 |
+
+### 24.2 The plan is now complete and execution-ready
+
+This document now contains, end-to-end:
+- **Verified current state** (§2) and **reconciled evidence** (§19, §20) — re-run, not asserted.
+- **Errors & gaps** (§5–§6) + a **verified bug backlog with fixes** (§23).
+- **Strategic seams**: mobile/Capacitor (§9, §15), PEBI raw-cost + engine-as-core (§10).
+- **Phased roadmap** (§11) with file-level tasks and acceptance.
+- **Backend / UI / new-feature specs** (§12–§14).
+- **Flexible-packaging domain & visual catalog** — dynamic product visuals, pouch/bag taxonomy, layers UX, finishing, modern UI (§18, Phase 7).
+- **Assumptions needing owner sign-off** (§21) — especially costing (A1/A2) and domain credibility (D2).
+
+### 24.3 Recommended immediate sequence for the next agent
+
+1. **Finish Phase 0:** type the `db` handle (§11 task 0.5 — may surface latent errors; fix them) so the CI gate is meaningful end-to-end.
+2. **BUG-1 / BUG-2 / BUG-6** (data loss, currency corruption, lost settings) — each with a test.
+3. **Phase 1** (real migrations + data integrity), then **Phase 2** (error envelope, pagination, short-token auth) to unblock mobile + PEBI.
+4. Then Phase 3 (PEBI seam) → Phase 4 (Capacitor) → Phase 5 (PRD completeness) → Phase 7 (visual/domain) → Phase 6 (value features).
+5. Before any costing or domain task, get sign-off on §21 A1/A2/D2.
+
+**Tie-breaker for the divergent-tree problem (§19):** the CI typecheck gate added this session is now the shared source of truth — both contributors must be green against it.
+
+*Sections 23–24 added 2026-06-21 (pass 4). Build is green; plan is complete and execution-ready.*

@@ -1,5 +1,5 @@
 import CustomerAutocomplete from './CustomerAutocomplete';
-import type { ProductTypeOption, ProductTypeValue, UnitOption } from '../lib/masterDataReference';
+import type { ProductTypeOption, UnitOption } from '../lib/masterDataReference';
 
 const fieldClass = 'input input-compact w-full min-w-0';
 
@@ -30,8 +30,8 @@ export function JobHeaderFields({
   onJobNameChange?: (name: string) => void;
   jobNamePlaceholder?: string;
   showJobName?: boolean;
-  productType?: ProductTypeValue;
-  onProductTypeChange?: (type: ProductTypeValue) => void;
+  productType?: string;
+  onProductTypeChange?: (type: string) => void;
   productTypeOptions?: ProductTypeOption[];
   orderQuantity?: number;
   onOrderQuantityChange?: (qty: number) => void;
@@ -77,7 +77,7 @@ export function JobHeaderFields({
           <label className="block text-xs font-medium text-navy mb-1">Product type</label>
           <select
             value={productType}
-            onChange={(e) => onProductTypeChange(e.target.value as ProductTypeValue)}
+            onChange={(e) => onProductTypeChange(e.target.value)}
             className={fieldClass}
           >
             {productTypeOptions.map((opt) => (

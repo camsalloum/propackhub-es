@@ -53,7 +53,7 @@ function rmMatchKey(m: {
   return `${m.substrateFamily || ''}|${m.substrateGrade || ''}|${m.hoover || ''}`;
 }
 
-function excelSourceKey(m: {
+function sourceKey(m: {
   type: string;
   name: string;
   substrateFamily?: string | null;
@@ -67,17 +67,17 @@ export function findOrphanSubstrateRows(
   existing: DbMaterial[],
   sourceMaterials: MasterMaterial[]
 ): DbMaterial[] {
-  const sourceKeys = new Set(sourceMaterials.map((m) => excelSourceKey(m)));
+  const sourceKeys = new Set(sourceMaterials.map((m) => sourceKey(m)));
   return existing.filter((row) => {
     if (row.isTenantOnly) return false;
     if (row.type === 'substrate' && row.substrateFamily === PACKAGING_FAMILY) {
-      return !sourceKeys.has(excelSourceKey(row));
+      return !sourceKeys.has(sourceKey(row));
     }
     if (row.type === 'substrate') {
-      return !sourceKeys.has(excelSourceKey(row));
+      return !sourceKeys.has(sourceKey(row));
     }
     if (row.type === 'ink' || row.type === 'adhesive') {
-      return !sourceKeys.has(excelSourceKey(row));
+      return !sourceKeys.has(sourceKey(row));
     }
     return false;
   });

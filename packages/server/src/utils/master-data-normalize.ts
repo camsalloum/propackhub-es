@@ -50,7 +50,8 @@ export function normalizeUnitLabel(label: string): string | null {
 
 export interface ProductTypeOption {
   label: string;
-  value: ProductTypeValue;
+  /** Family/product-type code as managed in Master Data (roll/sleeve/pouch/bag/custom). NOT the engine type. */
+  value: string;
 }
 
 export interface PrintingWebOption {
@@ -67,11 +68,21 @@ export interface RmTypeOption {
   code: string;
 }
 
+export interface ProductSubtypeOption {
+  label: string;
+  /** e.g. pouch_stand_up, bag_wicket */
+  code: string;
+  /** Parent product-type code this subtype belongs to (roll/sleeve/pouch/bag/custom). */
+  parent: string;
+  group?: string | null;
+}
+
 export interface MasterDataReferenceResponse extends MasterDataReference {
   productTypeOptions: ProductTypeOption[];
   unitOptions: Array<{ label: string; value: string }>;
   printingWebClassOptions: PrintingWebOption[];
   rmTypeOptions: RmTypeOption[];
+  productSubtypeOptions: ProductSubtypeOption[];
 }
 
 export const DEFAULT_PRODUCT_TYPE_ROWS: ProductTypeRow[] = [
@@ -88,7 +99,8 @@ export const DEFAULT_PRINTING_WEB_ROWS: PrintingWebRow[] = [
 const DEFAULT_PRODUCT_TYPES: ProductTypeOption[] = [
   { label: 'Roll', value: 'roll' },
   { label: 'Sleeve', value: 'sleeve' },
-  { label: 'Bag', value: 'pouch' },
+  { label: 'Pouch', value: 'pouch' },
+  { label: 'Bag', value: 'bag' },
 ];
 
 const DEFAULT_PRINTING_WEB: PrintingWebOption[] = [
@@ -125,15 +137,15 @@ const DEFAULT_UNITS: MasterDataReferenceResponse['unitOptions'] = [
 
 function productTypeOptionsFromRows(rows: ProductTypeRow[]): ProductTypeOption[] {
   const out: ProductTypeOption[] = [];
+  const seen = new Set<string>();
   for (const row of rows) {
-    const value =
-      (row.code ? normalizeProductTypeCode(row.code) : null) ??
-      normalizeProductTypeLabel(row.label);
-    if (!value) {
-      console.warn(`[master-data] Unknown product type "${row.label}" (code: ${row.code || '—'}) — skipped`);
-      continue;
-    }
-    out.push({ label: row.label, value });
+    const label = row.label?.trim();
+    if (!label) continue;
+    // Keep the admin's own code (distinct families like 'pouch' and 'bag' must NOT collapse).
+    const value = (row.code?.trim() || label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')).toLowerCase();
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    out.push({ label, value });
   }
   return out;
 }
@@ -193,6 +205,17 @@ export function enrichMasterDataReference(ref: MasterDataReference): MasterDataR
             ] ?? label.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         }));
 
+  const productSubtypeOptions: ProductSubtypeOption[] = (ref.productSubtypeRows ?? [])
+    .map((r) => {
+      const code = (r.code || '').trim().toLowerCase();
+      const parent =
+        (r.parent || '').trim().toLowerCase() ||
+        (code.startsWith('bag') ? 'bag' : code.startsWith('pouch') ? 'pouch' : '');
+      if (!code || !parent) return null;
+      return { label: r.label, code, parent };
+    })
+    .filter((x): x is ProductSubtypeOption => x != null);
+
   return {
     ...ref,
     productTypeRows: ptRows,
@@ -202,5 +225,6 @@ export function enrichMasterDataReference(ref: MasterDataReference): MasterDataR
       printingWebClassOptions.length > 0 ? printingWebClassOptions : DEFAULT_PRINTING_WEB,
     unitOptions: unitOptions.length > 0 ? unitOptions : DEFAULT_UNITS,
     rmTypeOptions: rmTypeOptions.length > 0 ? rmTypeOptions : DEFAULT_RM_TYPES,
+    productSubtypeOptions,
   };
 }

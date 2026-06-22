@@ -96,8 +96,9 @@ export default function CustomersList() {
           {search && <p className="text-sm text-mist mt-1">Try adjusting your search</p>}
         </div>
       ) : (
-        <div className="card overflow-hidden p-0">
-          <table className="w-full">
+        <div className="card p-0">
+          <div className="table-wrap">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr className="border-b border-border bg-slate/50">
                 <th className="text-left px-6 py-3 text-xs font-semibold text-mist uppercase tracking-wider">Company</th>
@@ -130,6 +131,7 @@ export default function CustomersList() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

@@ -18,7 +18,8 @@ export type PlatformReferenceCategory =
   | 'printing_web'
   | 'ink_coating'
   | 'adhesive'
-  | 'packaging';
+  | 'packaging'
+  | 'product_subtype';
 
 export type PlatformReferenceItemInput = {
   label: string;
@@ -105,7 +106,13 @@ export class ApiClient {
       throw err;
     }
 
-    return response.json();
+    // 204 No Content (e.g. DELETE) and empty bodies must not hit response.json()
+    // — that throws on empty input. Parse defensively. (Deep Audit pass-4 P1)
+    if (response.status === 204) {
+      return undefined as T;
+    }
+    const text = await response.text();
+    return (text ? JSON.parse(text) : undefined) as T;
   }
 
   // Auth

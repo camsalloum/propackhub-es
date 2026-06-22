@@ -12,6 +12,7 @@ import {
   DEFAULT_MASTER_REFERENCE,
   DEFAULT_RM_TYPE_OPTIONS,
   type MasterDataReferenceState,
+  type ProductSubtypeOption,
 } from '../lib/masterDataReference';
 
 type MasterDataContextValue = {
@@ -52,6 +53,10 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
             (ref.rmTypeOptions ?? []).length > 0
               ? (ref.rmTypeOptions as typeof DEFAULT_RM_TYPE_OPTIONS)
               : DEFAULT_RM_TYPE_OPTIONS,
+          productSubtypeOptions:
+            (((ref as { productSubtypeOptions?: ProductSubtypeOption[] }).productSubtypeOptions) ?? []).length > 0
+              ? (ref as { productSubtypeOptions?: ProductSubtypeOption[] }).productSubtypeOptions!
+              : DEFAULT_MASTER_REFERENCE.productSubtypeOptions,
         });
       } catch {
         if (!cancelled) setReference(DEFAULT_MASTER_REFERENCE);

@@ -275,69 +275,6 @@ export async function registerMaterialRoutes(fastify: FastifyInstance) {
     }
   );
 
-  /** @deprecated Use POST /api/v1/materials/sync-from-platform */
-  fastify.post<{ Body: { prune?: boolean } }>(
-    '/api/v1/materials/refresh-from-excel',
-    async (request, reply) => {
-      try {
-        await request.jwtVerify();
-        const user = extractUserFromRequest(request);
-        const tenantId = extractTenantFromRequest(request);
-        if (user.role !== 'tenant_admin' && user.role !== 'platform_admin') {
-          return reply.status(403).send({ error: 'Admin only' });
-        }
-        const prune = request.body?.prune === true;
-        const { syncPlatformMasterToAllTenants, listPlatformMasterMaterials } = await import(
-          '../db/platform-master-data'
-        );
-        const { syncMaterialsForTenant } = await import('../db/seed-materials');
-        const { relinkTemplatesForTenant } = await import('../db/seed-templates');
-
-        if (user.role === 'platform_admin') {
-          const sync = await syncPlatformMasterToAllTenants({ pruneOrphans: prune });
-          const materials = await listPlatformMasterMaterials();
-          return reply.send({
-            ...sync,
-            excelPath: '(deprecated — platform DB)',
-            seedPath: '(deprecated)',
-            referencePath: '(deprecated)',
-            substrateCount: materials.filter(
-              (m) => m.type === 'substrate' && m.substrateFamily !== 'Packaging'
-            ).length,
-            inkCount: materials.filter((m) => m.type === 'ink').length,
-            adhesiveCount: materials.filter((m) => m.type === 'adhesive').length,
-            packagingCount: materials.filter((m) => m.substrateFamily === 'Packaging').length,
-            totalMaterials: materials.length,
-            reference: { productTypes: 0, units: 0, rmTypes: 0 },
-          });
-        }
-
-        const materials = await listPlatformMasterMaterials();
-        const result = await syncMaterialsForTenant(tenantId, materials, { pruneOrphans: prune });
-        await relinkTemplatesForTenant(tenantId);
-        return reply.send({
-          excelPath: '(deprecated)',
-          seedPath: '(deprecated)',
-          referencePath: '(deprecated)',
-          substrateCount: materials.filter(
-            (m) => m.type === 'substrate' && m.substrateFamily !== 'Packaging'
-          ).length,
-          inkCount: materials.filter((m) => m.type === 'ink').length,
-          adhesiveCount: materials.filter((m) => m.type === 'adhesive').length,
-          packagingCount: materials.filter((m) => m.substrateFamily === 'Packaging').length,
-          totalMaterials: materials.length,
-          tenantsSynced: 1,
-          ...result,
-          templatesRelinked: 1,
-          reference: { productTypes: 0, units: 0, rmTypes: 0 },
-        });
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        return reply.status(500).send({ error: message });
-      }
-    }
-  );
-
   // Prune library rows not in platform master
   fastify.post('/api/v1/materials/prune-orphans', async (request, reply) => {
     try {

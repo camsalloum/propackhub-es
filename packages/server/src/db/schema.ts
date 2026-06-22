@@ -30,9 +30,10 @@ export const platformReferenceCategoryEnum = pgEnum('platform_reference_category
   'ink_coating',
   'adhesive',
   'packaging',
+  'product_subtype',
 ]);
 
-// Platform master (replaces Master Data.xlsx + JSON seed files)
+// Platform master (single source of truth — replaces the retired Excel + JSON seed pipeline)
 export const platformMasterMaterials = pgTable(
   'platform_master_materials',
   {
@@ -216,7 +217,7 @@ export const materials = pgTable('materials', {
   costPerKgUsd: decimal('cost_per_kg_usd', { precision: 12, scale: 4 }).notNull(),
   wastePercent: integer('waste_percent').notNull().default(0),
   isSolventBased: boolean('is_solvent_based').default(false), // True for SB ink/adhesive
-  // Substrate-specific fields (from Master Data.xlsx Substrate sheet)
+  // Substrate-specific fields
   substrateFamily: varchar('substrate_family', { length: 100 }), // BOPP, PET, PE, CPP, PA, ALU, PAPER, SLEEVE, SPECIALTY
   substrateGrade: varchar('substrate_grade', { length: 255 }), // e.g. BOPP Transparent, PET Metalized HB
   hoover: varchar('hoover', { length: 255 }), // Description / grade notes
@@ -272,6 +273,8 @@ export const estimates = pgTable('estimates', {
 
   // Structure
   productType: productTypeEnum('product_type').notNull(),
+  /** UI product kind + subtype (e.g. 'pouch_stand_up', 'bag_wicket'); productType stays the engine costing code. */
+  productSubtype: varchar('product_subtype', { length: 64 }),
   printingWebClass: printingWebClassEnum('printing_web_class').notNull().default('wide_web'),
 
   // Dimensions (stored as JSON for flexibility)
@@ -461,6 +464,8 @@ export const structureTemplates = pgTable('structure_templates', {
   name: varchar('name', { length: 255 }).notNull(), // e.g. "Commercial Items Plain"
   pebiParentPg: varchar('pebi_parent_pg', { length: 255 }).notNull(), // PEBI parent product group name
   productType: productTypeEnum('product_type').notNull(), // roll, sleeve, pouch
+  /** UI product kind + subtype (e.g. 'pouch_stand_up', 'bag_wicket'). */
+  productSubtype: varchar('product_subtype', { length: 64 }),
   materialClass: varchar('material_class', { length: 50 }), // PE, Non PE
   structureType: varchar('structure_type', { length: 50 }), // Mono, Multilayer
   substrateOrigin: varchar('substrate_origin', { length: 50 }), // PE or null

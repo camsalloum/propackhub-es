@@ -405,13 +405,34 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
   const byCategory = (cat: RefCategory) =>
     items.filter((i: PlatformReferenceItemRow) => i.category === cat).map((i: PlatformReferenceItemRow) => i.label);
 
-  const productTypeRows = items
+  let productTypeRows = items
     .filter((i: PlatformReferenceItemRow) => i.category === 'product_type')
-    .map((i: PlatformReferenceItemRow) => ({ label: i.label, code: i.code || '' }));
+    .map((i: PlatformReferenceItemRow) => ({ label: i.label, code: (i.code || '').toLowerCase() }));
+
+  // Heal legacy seed where "Bag" was given the engine code "pouch": split into a proper
+  // Pouch + a distinct Bag so BOTH appear in every dropdown (estimate editor + admin).
+  if (productTypeRows.some((r: { label: string; code: string }) => r.label.trim().toLowerCase() === 'bag' && r.code === 'pouch')) {
+    productTypeRows = productTypeRows.map((r: { label: string; code: string }) =>
+      r.label.trim().toLowerCase() === 'bag' && r.code === 'pouch'
+        ? { label: 'Pouch', code: 'pouch' }
+        : r
+    );
+    if (!productTypeRows.some((r: { label: string; code: string }) => r.code === 'bag')) {
+      productTypeRows.push({ label: 'Bag', code: 'bag' });
+    }
+  }
 
   const rmTypeRows = items
     .filter((i: PlatformReferenceItemRow) => i.category === 'rm_type')
     .map((i: PlatformReferenceItemRow) => ({ label: i.label, code: i.code?.trim() || deriveRmTypeCode(i.label) }));
+
+  const productSubtypeRows = items
+    .filter((i: PlatformReferenceItemRow) => i.category === 'product_subtype')
+    .map((i: PlatformReferenceItemRow) => ({
+      label: i.label,
+      code: i.code || '',
+      parent: ((i.metadata || {}) as { parent?: string }).parent || '',
+    }));
 
   const printingWebClasses = items
     .filter((i: PlatformReferenceItemRow) => i.category === 'printing_web')
@@ -435,6 +456,7 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
     inkCoating: byCategory('ink_coating'),
     adhesive: byCategory('adhesive'),
     printingWebClasses,
+    productSubtypeRows,
   };
 }
 

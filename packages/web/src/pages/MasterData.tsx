@@ -9,9 +9,10 @@ import {
   type PlatformReferenceItemInput,
   type PlatformMasterMaterialInput,
 } from '../lib/api';
+import { DEFAULT_PRODUCT_SUBTYPE_OPTIONS } from '../lib/masterDataReference';
 
 type MaterialTab = 'substrate' | 'ink' | 'adhesive' | 'packaging';
-type RefTab = 'product_type' | 'unit' | 'rm_type';
+type RefTab = 'product_type' | 'product_subtype' | 'unit' | 'rm_type';
 type Tab = MaterialTab | RefTab;
 
 const MATERIAL_TABS: { id: MaterialTab; label: string }[] = [
@@ -82,6 +83,8 @@ const MasterData = () => {
   const [tab, setTab] = useState<Tab>('substrate');
   const [materials, setMaterials] = useState<PlatformMasterMaterialRow[]>([]);
   const [refItems, setRefItems] = useState<PlatformReferenceItemInput[]>([]);
+  /** Subtypes (all parents) — edited nested under Product Types. */
+  const [subtypeRows, setSubtypeRows] = useState<Array<{ label: string; code: string; parent: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -98,7 +101,34 @@ const MasterData = () => {
   const loadReference = useCallback(async () => {
     const ref = await apiClient.getPlatformMasterDataReference();
     const map: Record<RefTab, PlatformReferenceItemInput[]> = {
-      product_type: (ref.productTypeRows ?? []).map((r) => ({ label: r.label, code: r.code })),
+      product_type: (() => {
+        const rows = (ref.productTypeRows ?? []).map((r) => ({
+          label: r.label,
+          code: (r.code || '').toLowerCase(),
+        }));
+        // Heal legacy seed where "Bag" was given the engine code "pouch": treat it as Pouch,
+        // then ensure a distinct Bag(bag) exists. Result: Roll, Sleeve, Pouch, Bag.
+        const healed = rows.map((r) =>
+          r.label.trim().toLowerCase() === 'bag' && r.code === 'pouch' ? { label: 'Pouch', code: 'pouch' } : r
+        );
+        for (const c of [
+          { label: 'Roll', code: 'roll' },
+          { label: 'Sleeve', code: 'sleeve' },
+          { label: 'Pouch', code: 'pouch' },
+          { label: 'Bag', code: 'bag' },
+        ]) {
+          if (!healed.some((r) => r.code === c.code)) healed.push(c);
+        }
+        return healed;
+      })(),
+      product_subtype: (() => {
+        const rows = ((ref as { productSubtypeRows?: Array<{ label: string; code: string }> })
+          .productSubtypeRows ?? []);
+        // Prefill the catalog defaults when none saved yet, so admin can Save to persist them.
+        return rows.length > 0
+          ? rows.map((r) => ({ label: r.label, code: r.code }))
+          : DEFAULT_PRODUCT_SUBTYPE_OPTIONS.map((s) => ({ label: s.label, code: s.code }));
+      })(),
       unit: (ref.units ?? []).map((l) => ({ label: l })),
       // Use rmTypeRows (with codes) when available; fall back to bare labels with derived codes
       rm_type: (ref.rmTypeRows ?? ref.rmTypes ?? []).map((r) =>
@@ -109,6 +139,15 @@ const MasterData = () => {
     };
     if (!isMaterialTab(tab)) {
       setRefItems(map[tab] ?? []);
+    }
+    if (tab === 'product_type') {
+      const subRows = ((ref as { productSubtypeRows?: Array<{ label: string; code: string; parent?: string }> })
+        .productSubtypeRows ?? []);
+      setSubtypeRows(
+        subRows.length > 0
+          ? subRows.map((r) => ({ label: r.label, code: r.code, parent: (r.parent || '').toLowerCase() }))
+          : DEFAULT_PRODUCT_SUBTYPE_OPTIONS.map((s) => ({ label: s.label, code: s.code, parent: s.parent }))
+      );
     }
   }, [tab]);
 
@@ -226,6 +265,22 @@ const MasterData = () => {
     setSaving(true);
     setError(null);
     try {
+      if (tab === 'product_type') {
+        // Save product types + their nested subtypes (linked by parent) together.
+        const ptResult = await apiClient.savePlatformReferenceCategory(
+          'product_type',
+          refItems.filter((i) => i.label.trim()).map((i) => ({ label: i.label.trim(), code: (i.code ?? '').trim() }))
+        );
+        await apiClient.savePlatformReferenceCategory(
+          'product_subtype',
+          subtypeRows
+            .filter((s) => s.label.trim() && s.code.trim() && s.parent.trim())
+            .map((s) => ({ label: s.label.trim(), code: s.code.trim(), metadata: { parent: s.parent.trim() } }))
+        );
+        syncToast(ptResult.sync);
+        invalidate();
+        return;
+      }
       const result = await apiClient.savePlatformReferenceCategory(
         tab as PlatformReferenceCategory,
         refItems.filter((i) => i.label.trim())
@@ -238,6 +293,42 @@ const MasterData = () => {
       setSaving(false);
     }
   };
+
+  // --- Product Types + nested Subtypes editors ---
+  const addProductType = () =>
+    setRefItems((prev) => [...prev, { label: 'New type', code: '' }]);
+
+  const updateProductType = (i: number, patch: Partial<PlatformReferenceItemInput>) => {
+    setRefItems((prev) => {
+      const next = [...prev];
+      const before = next[i];
+      next[i] = { ...before, ...patch };
+      // Keep child subtypes pointing at the renamed code.
+      if (patch.code !== undefined && before.code && patch.code !== before.code) {
+        setSubtypeRows((rows) =>
+          rows.map((s) => (s.parent === (before.code ?? '').toLowerCase() ? { ...s, parent: (patch.code ?? '').toLowerCase() } : s))
+        );
+      }
+      return next;
+    });
+  };
+
+  const removeProductType = (i: number) => {
+    const pt = refItems[i];
+    const code = (pt.code ?? '').toLowerCase();
+    if (!confirm(`Remove product type "${pt.label}" and its subtypes?`)) return;
+    setRefItems((prev) => prev.filter((_, j) => j !== i));
+    setSubtypeRows((rows) => rows.filter((s) => s.parent !== code));
+  };
+
+  const addSubtype = (parent: string) =>
+    setSubtypeRows((prev) => [...prev, { label: 'New subtype', code: '', parent: parent.toLowerCase() }]);
+
+  const updateSubtype = (idx: number, patch: Partial<{ label: string; code: string }>) =>
+    setSubtypeRows((prev) => prev.map((s, j) => (j === idx ? { ...s, ...patch } : s)));
+
+  const removeSubtype = (idx: number) =>
+    setSubtypeRows((prev) => prev.filter((_, j) => j !== idx));
 
   const updateMaterialRow = (id: string, patch: Partial<PlatformMasterMaterialRow>) => {
     setMaterials((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
@@ -345,134 +436,89 @@ const MasterData = () => {
               <Plus className="w-4 h-4" /> Add row
             </button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm table-fixed">
-              <colgroup>
-                <col className="w-[14%]" />
-                <col className="w-[18%]" />
-                <col className="w-[8%]" />
-                <col className="w-[16%]" />
-                <col className="w-[7%]" />
-                <col className="w-[6%]" />
-                <col className="w-[6%]" />
-                <col className="w-[7%]" />
-                <col className="w-[7%]" />
-                <col className="w-[10%]" />
-                <col className="w-[8%]" />
-                <col className="w-[5%]" />
-              </colgroup>
+          <div className="table-wrap">
+            <table className="data-table">
               <thead>
-                <tr className="border-b border-border bg-slate/50 text-xs uppercase tracking-wide text-mist">
-                  <th className="text-left py-2 px-2 font-medium">Key</th>
-                  <th className="text-left py-2 px-2 font-medium">Name</th>
-                  <th className="text-left py-2 px-2 font-medium">Family</th>
-                  <th className="text-left py-2 px-2 font-medium">Grade</th>
-                  <th className="text-right py-2 px-2 font-medium">Density</th>
-                  <th className="text-right py-2 px-2 font-medium">Solid %</th>
-                  <th className="text-right py-2 px-2 font-medium">Cost/kg</th>
-                  <th className="text-right py-2 px-2 font-medium">Market</th>
-                  <th className="text-left py-2 px-2 font-medium">External ID</th>
-                  <th className="text-left py-2 px-2 font-medium">Source</th>
-                  <th className="py-2 px-1" />
+                <tr>
+                  <th>Family</th>
+                  <th>Name</th>
+                  <th>Grade</th>
+                  <th className="text-right">Density</th>
+                  <th className="text-right">Solid %</th>
+                  <th className="text-right">Cost/kg</th>
+                  <th className="text-right">Market</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
                 {visibleMaterials.map((row) => (
-                  <tr key={row.id} className="border-b border-border last:border-0 hover:bg-slate/20">
-                    <td className="py-1 px-2">
-                      <span
-                        className="font-mono text-[11px] text-mist truncate block"
-                        title={row.key || slugKey(row.name)}
-                      >
-                        {row.key || slugKey(row.name)}
-                      </span>
-                    </td>
-                    <td className="py-1 px-2">
+                  <tr key={row.id}>
+                    <td>
                       <input
-                        className="input w-full !min-h-[34px] !py-1 !px-2 text-sm"
-                        value={row.name}
-                        title={row.name}
-                        onChange={(e) => updateMaterialRow(row.id, { name: e.target.value })}
-                      />
-                    </td>
-                    <td className="py-1 px-2">
-                      <input
-                        className="input w-full !min-h-[34px] !py-1 !px-2 text-sm"
+                        className="cell-input w-full min-w-0"
                         value={row.substrateFamily ?? ''}
                         title={row.substrateFamily ?? ''}
                         onChange={(e) => updateMaterialRow(row.id, { substrateFamily: e.target.value })}
                       />
                     </td>
-                    <td className="py-1 px-2">
+                    <td>
                       <input
-                        className="input w-full !min-h-[34px] !py-1 !px-2 text-sm"
+                        className="cell-input w-full min-w-0"
+                        value={row.name}
+                        title={row.name}
+                        onChange={(e) => updateMaterialRow(row.id, { name: e.target.value })}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        className="cell-input w-full min-w-0"
                         value={row.substrateGrade ?? ''}
                         title={row.substrateGrade ?? ''}
                         onChange={(e) => updateMaterialRow(row.id, { substrateGrade: e.target.value })}
                       />
                     </td>
-                    <td className="py-1 px-2">
+                    <td>
                       <input
                         type="number"
                         step="0.01"
-                        className="input w-full !min-h-[34px] !py-1 !px-2 text-sm text-right tabular-nums"
+                        className="cell-input cell-num w-[72px]"
                         value={row.density}
                         onChange={(e) => updateMaterialRow(row.id, { density: Number(e.target.value) })}
                       />
                     </td>
-                    <td className="py-1 px-2">
+                    <td>
                       <input
                         type="number"
-                        className="input w-full !min-h-[34px] !py-1 !px-2 text-sm text-right tabular-nums"
+                        className="cell-input cell-num w-[64px]"
                         value={row.solidPercent}
                         onChange={(e) =>
                           updateMaterialRow(row.id, { solidPercent: Number(e.target.value) })
                         }
                       />
                     </td>
-                    <td className="py-1 px-2">
+                    <td>
                       <input
                         type="number"
                         step="0.01"
-                        className="input w-full !min-h-[34px] !py-1 !px-2 text-sm text-right tabular-nums"
+                        className="cell-input cell-num w-[72px]"
                         value={row.costPerKgUsd}
                         onChange={(e) =>
                           updateMaterialRow(row.id, { costPerKgUsd: Number(e.target.value) })
                         }
                       />
                     </td>
-                    <td className="py-1 px-2">
+                    <td>
                       <input
                         type="number"
                         step="0.01"
-                        className="input w-full !min-h-[34px] !py-1 !px-2 text-sm text-right tabular-nums"
+                        className="cell-input cell-num w-[72px]"
                         value={row.marketPriceUsd ?? row.costPerKgUsd}
                         onChange={(e) =>
                           updateMaterialRow(row.id, { marketPriceUsd: Number(e.target.value) })
                         }
                       />
                     </td>
-                    <td className="py-1 px-2">
-                      <input
-                        className="input w-full !min-h-[34px] !py-1 !px-2 text-sm font-mono"
-                        placeholder="PEBI / Oracle ID"
-                        value={row.externalId ?? ''}
-                        onChange={(e) =>
-                          updateMaterialRow(row.id, { externalId: e.target.value || null })
-                        }
-                      />
-                    </td>
-                    <td className="py-1 px-2">
-                      <input
-                        className="input w-full !min-h-[34px] !py-1 !px-2 text-sm"
-                        placeholder="e.g. pebi"
-                        value={row.externalSource ?? ''}
-                        onChange={(e) =>
-                          updateMaterialRow(row.id, { externalSource: e.target.value || null })
-                        }
-                      />
-                    </td>
-                    <td className="py-1 px-1 text-center">
+                    <td className="text-center">
                       <button
                         type="button"
                         className="p-1.5 text-red-600 hover:bg-red-50 rounded"
@@ -487,6 +533,77 @@ const MasterData = () => {
               </tbody>
             </table>
           </div>
+        </div>
+      ) : tab === 'product_type' ? (
+        <div className="card p-3 space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-mist">{refItems.length} product type(s)</span>
+            <button type="button" className="btn-secondary text-sm flex items-center gap-1 py-1.5" onClick={addProductType}>
+              <Plus className="w-4 h-4" /> Add product type
+            </button>
+          </div>
+          <p className="text-xs text-mist">
+            Each product type has its own code (e.g. <code className="bg-slate rounded px-1">pouch</code>,{' '}
+            <code className="bg-slate rounded px-1">bag</code>). Subtypes nest under a type with a{' '}
+            <code className="bg-slate rounded px-1">parentcode_subtype</code> code (e.g.{' '}
+            <code className="bg-slate rounded px-1">bag_wicket</code>) — they drive the estimate dropdowns.
+          </p>
+          {refItems.map((pt, i) => {
+            const ptCode = (pt.code ?? '').toLowerCase();
+            return (
+              <div key={i} className="border border-border rounded-lg p-3 bg-slate/10">
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    className="input !min-h-[34px] !py-1 !px-2 text-sm flex-1 min-w-[8rem]"
+                    placeholder="Product type label"
+                    value={pt.label}
+                    onChange={(e) => updateProductType(i, { label: e.target.value })}
+                  />
+                  <input
+                    className="input !min-h-[34px] !py-1 !px-2 text-sm font-mono w-32"
+                    placeholder="code"
+                    value={pt.code ?? ''}
+                    onChange={(e) => updateProductType(i, { code: e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '') })}
+                  />
+                  <button type="button" className="p-1.5 text-red-600 hover:bg-red-50 rounded" onClick={() => removeProductType(i)} aria-label="Delete product type">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="mt-2 ml-3 pl-3 border-l-2 border-border space-y-1">
+                  {subtypeRows.map((s, idx) =>
+                    s.parent === ptCode ? (
+                      <div key={idx} className="flex flex-wrap items-center gap-2">
+                        <input
+                          className="input !min-h-[30px] !py-0.5 !px-2 text-sm flex-1 min-w-[8rem]"
+                          placeholder="Subtype label"
+                          value={s.label}
+                          onChange={(e) => updateSubtype(idx, { label: e.target.value })}
+                        />
+                        <input
+                          className="input !min-h-[30px] !py-0.5 !px-2 text-sm font-mono w-40"
+                          placeholder={`${ptCode || 'type'}_subtype`}
+                          value={s.code}
+                          onChange={(e) => updateSubtype(idx, { code: e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '') })}
+                        />
+                        <button type="button" className="p-1 text-red-600 hover:bg-red-50 rounded" onClick={() => removeSubtype(idx)} aria-label="Delete subtype">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : null
+                  )}
+                  <button
+                    type="button"
+                    className="text-xs text-gold hover:underline flex items-center gap-1 mt-1 disabled:opacity-40"
+                    onClick={() => addSubtype(ptCode)}
+                    disabled={!ptCode}
+                    title={ptCode ? '' : 'Set a code on the product type first'}
+                  >
+                    <Plus className="w-3 h-3" /> Add subtype
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="card p-3">
@@ -511,18 +628,23 @@ const MasterData = () => {
               filter tabs in Raw Materials.
             </p>
           )}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm table-fixed">
-              <colgroup>
-                <col className={tab === 'unit' ? 'w-[92%]' : 'w-[62%]'} />
-                {(tab === 'product_type' || tab === 'rm_type') && <col className="w-[30%]" />}
-                <col className="w-[8%]" />
-              </colgroup>
+          {tab === 'product_subtype' && (
+            <p className="text-xs text-mist mb-2">
+              <strong>Code</strong> sets the family + dimension fields: prefix{' '}
+              <code className="bg-slate rounded px-1">pouch_</code> for pouches,{' '}
+              <code className="bg-slate rounded px-1">bag_</code> for bags (e.g.{' '}
+              <code className="bg-slate rounded px-1">pouch_stand_up</code>,{' '}
+              <code className="bg-slate rounded px-1">bag_wicket</code>). Known codes map to specific
+              dimension fields; custom codes get the base width/height/ups/trim set.
+            </p>
+          )}
+          <div className="table-wrap">
+            <table className="data-table min-w-[420px]">
               <thead>
-                <tr className="border-b border-border bg-slate/50 text-xs uppercase tracking-wide text-mist">
-                  <th className="text-left py-2 px-2 font-medium">Label</th>
-                  {(tab === 'product_type' || tab === 'rm_type') && (
-                    <th className="text-left py-2 px-2 font-medium">
+                <tr>
+                  <th>Label</th>
+                  {(tab === 'rm_type' || tab === 'product_subtype') && (
+                    <th>
                       Code{tab === 'rm_type' && <span className="normal-case tracking-normal text-mist/70 ml-1">(DB type)</span>}
                     </th>
                   )}
@@ -531,10 +653,10 @@ const MasterData = () => {
               </thead>
               <tbody>
                 {refItems.map((item, i) => (
-                  <tr key={i} className="border-b border-border last:border-0">
-                    <td className="py-1 px-2">
+                  <tr key={i}>
+                    <td>
                       <input
-                        className="input w-full !min-h-[34px] !py-1 !px-2 text-sm"
+                        className="cell-input w-full min-w-[160px]"
                         placeholder="Label"
                         value={item.label}
                         onChange={(e) => {
@@ -544,10 +666,10 @@ const MasterData = () => {
                         }}
                       />
                     </td>
-                    {(tab === 'product_type' || tab === 'rm_type') && (
-                      <td className="py-1 px-2">
+                    {(tab === 'rm_type' || tab === 'product_subtype') && (
+                      <td>
                         <input
-                          className="input w-full !min-h-[34px] !py-1 !px-2 text-sm font-mono"
+                          className="cell-input w-full min-w-[120px] font-mono"
                           placeholder={tab === 'rm_type' ? 'e.g. substrate, ink, plate' : 'code'}
                           value={item.code ?? ''}
                           onChange={(e) => {
@@ -558,7 +680,7 @@ const MasterData = () => {
                         />
                       </td>
                     )}
-                    <td className="py-1 px-1 text-center">
+                    <td className="text-center">
                       <button
                         type="button"
                         className="p-1.5 text-red-600 hover:bg-red-50 rounded"

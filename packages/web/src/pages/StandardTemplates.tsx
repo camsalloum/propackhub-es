@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Search, Plus, Loader2, ArrowLeft, X, Layers } from 'lucide-react';
+import { Search, Plus, ArrowLeft, X, Trash2 } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import LaminateVisualizer from '../components/LaminateVisualizer';
@@ -23,7 +23,6 @@ import {
   defaultUnitValue,
   normalizeProductType,
   normalizeUnitValue,
-  type ProductTypeValue,
 } from '../lib/masterDataReference';
 
 interface TemplateLayer {
@@ -173,7 +172,7 @@ const StandardTemplates = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [jobName, setJobName] = useState('');
-  const [productType, setProductType] = useState<ProductTypeValue>(() => defaultProductTypeValue());
+  const [productType, setProductType] = useState<string>(() => defaultProductTypeValue());
   const [orderQuantity, setOrderQuantity] = useState(10000);
   const [orderQuantityUnit, setOrderQuantityUnit] = useState(() => defaultUnitValue());
   const [standardTemplates, setStandardTemplates] = useState<StructureTemplate[]>([]);

@@ -27,6 +27,7 @@ const EstimateCreateSchema = z.object({
   customerId: z.string().uuid().optional(),
   jobName: z.string().min(1),
   productType: z.enum(['roll', 'sleeve', 'pouch']),
+  productSubtype: z.string().max(64).optional(),
   printingWebClass: z.enum(['wide_web', 'narrow_web']).default('wide_web'),
   dimensions: z.record(z.any()),
   markupPercent: z.number().default(15),
@@ -162,6 +163,7 @@ export async function createEstimateRoute(
         refNumber,
         jobName: data.jobName,
         productType: data.productType,
+        productSubtype: data.productSubtype,
         printingWebClass,
         dimensions: data.dimensions,
         markupPercent: data.markupPercent.toString(),
@@ -449,6 +451,7 @@ async function updateEstimateRoute(
       }
     }
     if (request.body.productType !== undefined) updates.productType = request.body.productType;
+    if ((request.body as any).productSubtype !== undefined) updates.productSubtype = (request.body as any).productSubtype;
     if (request.body.markupPercent !== undefined) updates.markupPercent = request.body.markupPercent.toString();
     if (request.body.platesPerKg !== undefined) updates.platesPerKg = request.body.platesPerKg.toString();
     if (request.body.deliveryPerKg !== undefined) updates.deliveryPerKg = request.body.deliveryPerKg.toString();

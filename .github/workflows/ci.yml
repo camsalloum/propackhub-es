@@ -43,6 +43,12 @@ jobs:
             libxrandr2 libxrender1 libxss1 libxtst6 libappindicator3-1 xdg-utils wget
       - name: Install repository dependencies
         run: npm ci
+      - name: Build engine (required for web/server typecheck)
+        run: npm run build --workspace packages/engine
+      - name: Typecheck server (fails build on type errors)
+        run: npm run typecheck --workspace packages/server
+      - name: Typecheck web (fails build on type errors)
+        run: npm run typecheck --workspace packages/web
       - name: Push database schema
         run: |
           npm run db:push --workspace packages/server

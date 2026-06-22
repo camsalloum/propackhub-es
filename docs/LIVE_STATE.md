@@ -1,6 +1,6 @@
 # LIVE STATE — Estimation Studio
 
-> ⚠️ **2026-06-21 reconciliation:** A deep re-audit ([ES_DEEP_AUDIT_AND_ENHANCEMENT_PLAN_2026-06-21.md](./ES_DEEP_AUDIT_AND_ENHANCEMENT_PLAN_2026-06-21.md)) reproduced the build. **Engine 34/34 ✅**, but **web + server `tsc --noEmit` currently FAIL** (4 type errors + a real missing-import crash `Trash2` in StandardTemplates; 1 implicit-any in server). The "TypeScript clean ✅ / 36/36" claims below are **not reproducible from a clean tree** until Phase 0 of the deep-audit roadmap lands. Treat that document as the roadmap of record.
+> ✅ **2026-06-21 update:** Deep re-audit + fixes ([ES_DEEP_AUDIT_AND_ENHANCEMENT_PLAN_2026-06-21.md](./ES_DEEP_AUDIT_AND_ENHANCEMENT_PLAN_2026-06-21.md)). Build blockers are now **fixed**: web `tsc` **0 errors**, server `tsc` **0 errors**, engine **34/34**, server **36/36** (verified, live Postgres). A CI typecheck gate now fails the build on type errors. Remaining work (verified bug backlog BUG-1…13, migrations, mobile, PEBI seam, visual/domain Phase 7) is tracked in the deep-audit doc — treat it as the roadmap of record. Note: the prior "TypeScript clean" claim only became true with this session's fixes.
 
 
 

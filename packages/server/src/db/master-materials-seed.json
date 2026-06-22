@@ -659,7 +659,7 @@
   },
   {
     "key": "ink-sb",
-    "name": "Common Colors",
+    "name": "Common Colors (Solvent Based)",
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
@@ -673,7 +673,7 @@
   },
   {
     "key": "ink-solvent-based-special-colors",
-    "name": "Special Colors",
+    "name": "Special Colors (Solvent Based)",
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
@@ -687,7 +687,7 @@
   },
   {
     "key": "ink-solvent-based-primer",
-    "name": "Primer",
+    "name": "Primer (Solvent Based)",
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
@@ -701,7 +701,7 @@
   },
   {
     "key": "ink-solvent-based-glossy-varnish",
-    "name": "Glossy Varnish",
+    "name": "Glossy Varnish (Solvent Based)",
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
@@ -715,7 +715,7 @@
   },
   {
     "key": "ink-solvent-based-matt-varnish",
-    "name": "Matt Varnish",
+    "name": "Matt Varnish (Solvent Based)",
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
@@ -771,7 +771,7 @@
   },
   {
     "key": "ink-uv",
-    "name": "Common Colors",
+    "name": "Common Colors (UV-LED)",
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
@@ -785,7 +785,7 @@
   },
   {
     "key": "ink-uv-led-special-colors",
-    "name": "Special Colors",
+    "name": "Special Colors (UV-LED)",
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
@@ -799,7 +799,7 @@
   },
   {
     "key": "ink-uv-led-primer",
-    "name": "Primer",
+    "name": "Primer (UV-LED)",
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
@@ -813,7 +813,7 @@
   },
   {
     "key": "ink-uv-led-glossy-varnish",
-    "name": "Glossy Varnish",
+    "name": "Glossy Varnish (UV-LED)",
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
@@ -827,7 +827,7 @@
   },
   {
     "key": "ink-uv-led-matt-varnish",
-    "name": "Matt Varnish",
+    "name": "Matt Varnish (UV-LED)",
     "type": "ink",
     "solidPercent": 100,
     "density": 1,

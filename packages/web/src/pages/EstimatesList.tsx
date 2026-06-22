@@ -2,7 +2,6 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, RefreshCw, Loader2 } from 'lucide-react';
 import { apiClient } from '../lib/api';
-import CustomerAutocomplete from '../components/CustomerAutocomplete';
 import {
   ClassFilterPanel,
   EMPTY_CLASS_FILTER,

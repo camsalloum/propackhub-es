@@ -6,6 +6,10 @@
   html {
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
+    /* Denser base scale — makes 100% look like the ~90% browser-zoom view the
+       team prefers. All rem-based fonts + spacing scale down together; fixed-px
+       touch targets (min-h-[48px]) stay tappable. Tune here to adjust app density. */
+    font-size: 90%;
   }
 
   body {
@@ -33,6 +37,36 @@
 
   .input-compact {
     @apply min-h-[36px] py-1.5 px-3 text-sm;
+  }
+
+  /* ---- Responsive data tables (web + zoom + small screens) ----
+     Wrap any table in .table-wrap so it scrolls horizontally instead of crushing
+     columns. Tables use natural (auto) layout + a min-width so content never
+     truncates; the wrapper scrolls when the viewport/zoom is too narrow. */
+  .table-wrap {
+    @apply w-full overflow-x-auto;
+  }
+  .data-table {
+    @apply w-full text-sm border-collapse;
+  }
+  .data-table th {
+    @apply text-left py-2 px-3 text-xs font-medium uppercase tracking-wide text-mist whitespace-nowrap border-b border-border bg-slate/40;
+  }
+  .data-table td {
+    @apply py-1.5 px-3 border-b border-border align-middle;
+  }
+  .data-table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .data-table tbody tr:hover {
+    @apply bg-slate/20;
+  }
+  /* Compact input for table cells — width is set per-column at the call site. */
+  .cell-input {
+    @apply border border-border rounded-md px-2 py-1 min-h-[34px] text-sm min-w-0 focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent;
+  }
+  .cell-num {
+    @apply text-right tabular-nums;
   }
   
   .badge {

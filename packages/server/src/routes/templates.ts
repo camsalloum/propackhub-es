@@ -521,7 +521,7 @@ export async function createTemplateRoute(
         displayOrder: 900,
         isStandard: false,
         defaultDimensions: storedClassification ? { templateClassification: storedClassification } : {},
-        defaultLayers: defaultLayers.map((l) => ({ ...l, default_micron: 0 })),
+        defaultLayers: defaultLayers.map((l: (typeof defaultLayers)[number]) => ({ ...l, default_micron: 0 })),
         defaultProcesses,
         defaultPrintingWebClass: estimate.printingWebClass,
         solventMixEnabled: needsSolvent,

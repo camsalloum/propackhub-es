@@ -5,6 +5,7 @@ import {
   DEFAULT_MASTER_REFERENCE,
   DEFAULT_RM_TYPE_OPTIONS,
   type MasterDataReferenceState,
+  type ProductSubtypeOption,
 } from '../lib/masterDataReference';
 
 export function useMasterDataReference() {
@@ -41,6 +42,10 @@ export function useMasterDataReference() {
             (ref.rmTypeOptions ?? []).length > 0
               ? (ref.rmTypeOptions as typeof DEFAULT_RM_TYPE_OPTIONS)
               : DEFAULT_RM_TYPE_OPTIONS,
+          productSubtypeOptions:
+            (((ref as { productSubtypeOptions?: ProductSubtypeOption[] }).productSubtypeOptions) ?? []).length > 0
+              ? (ref as { productSubtypeOptions?: ProductSubtypeOption[] }).productSubtypeOptions!
+              : DEFAULT_MASTER_REFERENCE.productSubtypeOptions,
         });
       } catch {
         if (!cancelled) setLocalReference(DEFAULT_MASTER_REFERENCE);

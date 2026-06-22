@@ -66,6 +66,7 @@ const ReferenceCategorySchema = z.enum([
   'ink_coating',
   'adhesive',
   'packaging',
+  'product_subtype',
 ]);
 
 const ReferenceItemSchema = z.object({

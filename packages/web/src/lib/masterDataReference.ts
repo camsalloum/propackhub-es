@@ -3,7 +3,8 @@ export type PrintingWebValue = 'wide_web' | 'narrow_web';
 
 export interface ProductTypeOption {
   label: string;
-  value: ProductTypeValue;
+  /** Family/product-type code from Master Data (roll/sleeve/pouch/bag/custom). NOT the engine type. */
+  value: string;
 }
 
 export interface PrintingWebOption {
@@ -30,12 +31,23 @@ export interface RmTypeOption {
   code: string;
 }
 
+export interface ProductSubtypeOption {
+  label: string;
+  /** e.g. pouch_stand_up, bag_wicket */
+  code: string;
+  /** Parent product-type code (roll/sleeve/pouch/bag/custom). */
+  parent: string;
+  group?: string | null;
+}
+
 export interface MasterDataReferenceState {
   productTypeOptions: ProductTypeOption[];
   printingWebClassOptions: PrintingWebOption[];
   unitOptions: UnitOption[];
   /** Driven by the rm_type reference in Master Data — replaces hardcoded Library filter tabs */
   rmTypeOptions: RmTypeOption[];
+  /** Bag/Pouch subtypes — driven by the product_subtype reference in Master Data. */
+  productSubtypeOptions: ProductSubtypeOption[];
 }
 
 export const DEFAULT_RM_TYPE_OPTIONS: RmTypeOption[] = [
@@ -45,11 +57,34 @@ export const DEFAULT_RM_TYPE_OPTIONS: RmTypeOption[] = [
   { label: 'Packaging', code: 'packaging' },
 ];
 
+/** Fallback subtype list when Master Data has none yet. Field schemas live in productCatalog. */
+export const DEFAULT_PRODUCT_SUBTYPE_OPTIONS: ProductSubtypeOption[] = [
+  { label: '3-Side Seal', code: 'pouch_3_side_seal', parent: 'pouch' },
+  { label: '3-Side Seal + Zipper', code: 'pouch_3_side_seal_zip', parent: 'pouch' },
+  { label: 'Stand-up Pouch', code: 'pouch_stand_up', parent: 'pouch' },
+  { label: 'Stand-up Pouch + Zipper', code: 'pouch_stand_up_zip', parent: 'pouch' },
+  { label: 'K-Seal Stand-up Pouch', code: 'pouch_kseal_stand_up', parent: 'pouch' },
+  { label: 'K-Seal Stand-up Pouch + Zipper', code: 'pouch_kseal_stand_up_zip', parent: 'pouch' },
+  { label: 'Center-Seal Pouch', code: 'pouch_center_seal', parent: 'pouch' },
+  { label: 'Gusset Pouch', code: 'pouch_gusset', parent: 'pouch' },
+  { label: '4-Side Seal Pouch', code: 'pouch_4_side_seal', parent: 'pouch' },
+  { label: 'Punch Handle', code: 'bag_punch_handle', parent: 'bag', group: 'Commercial Bags' },
+  { label: 'Loop Handle', code: 'bag_loop_handle', parent: 'bag', group: 'Commercial Bags' },
+  { label: 'Patch Handle', code: 'bag_patch_handle', parent: 'bag', group: 'Commercial Bags' },
+  { label: 'Side-Gusset Shopping Bag', code: 'bag_side_gusset_shopping', parent: 'bag', group: 'Commercial Bags' },
+  { label: 'Bottom-Gusset Shopping Bag', code: 'bag_bottom_gusset_shopping', parent: 'bag', group: 'Commercial Bags' },
+  { label: 'Industrial Bag', code: 'bag_industrial', parent: 'bag', group: 'Industrial' },
+  { label: 'Courier Bag', code: 'bag_courier', parent: 'bag', group: 'Other' },
+  { label: 'Diaper Bag', code: 'bag_diaper', parent: 'bag', group: 'Other' },
+  { label: 'Wicket Bag', code: 'bag_wicket', parent: 'bag', group: 'Other' },
+];
+
 export const DEFAULT_MASTER_REFERENCE: MasterDataReferenceState = {
   productTypeOptions: [
     { label: 'Roll', value: 'roll' },
     { label: 'Sleeve', value: 'sleeve' },
-    { label: 'Bag', value: 'pouch' },
+    { label: 'Pouch', value: 'pouch' },
+    { label: 'Bag', value: 'bag' },
   ],
   printingWebClassOptions: [
     {
@@ -75,9 +110,10 @@ export const DEFAULT_MASTER_REFERENCE: MasterDataReferenceState = {
     { label: 'Roll 500 LM', value: 'roll_500_lm' },
   ],
   rmTypeOptions: DEFAULT_RM_TYPE_OPTIONS,
+  productSubtypeOptions: DEFAULT_PRODUCT_SUBTYPE_OPTIONS,
 };
 
-export function defaultProductTypeValue(options: ProductTypeOption[] = DEFAULT_MASTER_REFERENCE.productTypeOptions): ProductTypeValue {
+export function defaultProductTypeValue(options: ProductTypeOption[] = DEFAULT_MASTER_REFERENCE.productTypeOptions): string {
   return options[0]?.value ?? 'roll';
 }
 
@@ -88,8 +124,8 @@ export function defaultUnitValue(options: UnitOption[] = DEFAULT_MASTER_REFERENC
 export function normalizeProductType(
   value: string | null | undefined,
   options: ProductTypeOption[] = DEFAULT_MASTER_REFERENCE.productTypeOptions
-): ProductTypeValue {
-  if (value && options.some((o) => o.value === value)) return value as ProductTypeValue;
+): string {
+  if (value && options.some((o) => o.value === value)) return value;
   return defaultProductTypeValue(options);
 }
 

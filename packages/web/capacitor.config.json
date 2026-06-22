@@ -1,6 +1,14 @@
 {
   "appId": "com.propackhub.estimation",
   "appName": "ProPackHub Estimation Studio",
-  "webDir": "public",
-  "bundledWebRuntime": false
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "App": {
+      "launchShowDuration": 0
+    }
+  }
 }

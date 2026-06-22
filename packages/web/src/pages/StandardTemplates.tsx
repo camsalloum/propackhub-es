@@ -181,6 +181,7 @@ const StandardTemplates = () => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [instantiating, setInstantiating] = useState<string | null>(null);
+  const [instantiateError, setInstantiateError] = useState<{ message: string; unresolvedCount: number } | null>(null);
   const [editing, setEditing] = useState<StructureTemplate | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -358,6 +359,7 @@ const StandardTemplates = () => {
 
   const handleUseTemplate = async (template: StructureTemplate) => {
     setInstantiating(template.id);
+    setInstantiateError(null);
     try {
       const created = await apiClient.instantiateTemplate(template.id, {
         customerId: selectedCustomer || undefined,
@@ -372,13 +374,16 @@ const StandardTemplates = () => {
         },
       });
     } catch (err) {
-      const e = err as Error & { status?: number };
+      const e = err as Error & { status?: number; details?: unknown };
       if (e.status === 409) {
-        alert(
-          'This template has unresolved materials. Relink layers in Standard Templates (admin).'
-        );
+        // Phase 5.4: visible unresolved-layer banner instead of alert
+        const unresolvedLayers = Array.isArray(e.details) ? e.details : [];
+        setInstantiateError({
+          message: `${unresolvedLayers.length || 'Some'} layer${unresolvedLayers.length !== 1 ? 's' : ''} in this template could not be resolved to materials in your library.`,
+          unresolvedCount: unresolvedLayers.length,
+        });
       } else {
-        alert(e.message || 'Failed to create estimate from template');
+        setInstantiateError({ message: e.message || 'Failed to create estimate from template', unresolvedCount: 0 });
       }
     } finally {
       setInstantiating(null);
@@ -592,6 +597,19 @@ const StandardTemplates = () => {
         countWithFilter={countWithFilter}
       />
 
+      {/* Phase 5.4: unresolved-layer banner shown when instantiate returns 409 */}
+      {instantiateError && (
+        <div className="card bg-amber-50 border border-amber-200 text-sm text-amber-900 flex items-start justify-between gap-3 mb-4">
+          <div>
+            <p className="font-semibold mb-1">⚠ Template has unresolved materials</p>
+            <p>{instantiateError.message}</p>
+            {isAdmin && (
+              <p className="mt-1 text-xs">Re-link the template layers in the template editor (admin only) then try again.</p>
+            )}
+          </div>
+          <button type="button" className="text-amber-700 hover:text-amber-900 shrink-0" onClick={() => setInstantiateError(null)}>✕</button>
+        </div>
+      )}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           <SkeletonCard />

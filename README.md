@@ -1,93 +1,109 @@
 # ProPackHub Estimation Studio
 
-Flexible Packaging Cost Estimator - Standalone SaaS application.
+**Flexible Packaging Cost Estimator** — Standalone SaaS under the ProPackHub umbrella.
 
-## 🚀 Quick Start
+---
+
+## Quick Start
 
 ### First Time Setup
-1. **Setup Database** (one time only)
-   - Double-click: `SETUP-DATABASE.bat`
-   - Enter PostgreSQL password when asked
-
-2. **Start Application**
-   - Double-click: `RUN-ES.bat`
-   - Opens http://localhost:5000 automatically
+1. **Database** (one time): `npm run db:migrate --workspace packages/server`
+2. **Start**: Double-click `RUN-ES.bat` → opens http://localhost:5000
 
 ### Daily Use
-- **Start:** Double-click `RUN-ES.bat`
-- **Save to GitHub:** Double-click `GIT-SAVE.bat`
+- **Start:** `RUN-ES.bat`
+- **Save to GitHub:** `GIT-SAVE.bat`
 
 ---
 
-## 📦 What's Inside
+## Tech Stack
 
-### Backend (Complete ✅)
-- PostgreSQL database (12 tables)
-- Fastify API server
-- JWT authentication with tenant isolation
-- Materials library (USD pricing)
-- Estimates with calculation engine
-- Port: 5001
+| Layer | Technology |
+|---|---|
+| **Frontend** | React 18 + Vite 5 + **Tailwind CSS** + **lucide-react** |
+| **Backend** | Fastify 4 + Drizzle ORM + PostgreSQL |
+| **Costing engine** | `@es/engine` — pure TypeScript, USD-only, 34 tests |
+| **Auth** | `@fastify/jwt` (30min access + refresh token rotation) |
+| **Mobile** | Capacitor (iOS + Android wrap of the same React app) |
 
-### Frontend (Auth Complete ✅)
-- React SPA with Tailwind CSS
-- Login/Register pages
-- Protected routes
-- Dashboard, Library, Settings pages
-- Port: 5000
-
-### Next Steps
-- Wire UI pages to real API data
-- Add PDF generation
-- Implement re-quote feature
+> **Not** Ant Design. The UI is Tailwind + lucide-react throughout.
 
 ---
 
-## 📚 Documentation
+## Monorepo Structure
 
-- **SETUP.md** - Detailed setup guide
-- **IMPLEMENTATION_COMPLETE.md** - Technical overview
-- **DATABASE_READY.md** - Database status
-- **docs/ES_MEMORY.md** - Project decisions
-- **docs/LIVE_STATE.md** - Current status
-
----
-
-## 🔗 Links
-
-- **Repository:** https://github.com/camsalloum/propackhub-es.git
-- **Web:** http://localhost:5000
-- **API:** http://localhost:5001/api/v1
-
----
-
-## 🛠️ Manual Commands
-
-```bash
-# Install dependencies
-npm install
-
-# Start servers
-npm run start:servers
-
-# Database
-cd packages/server
-npm run db:push
-
-# Git
-git add .
-git commit -m "message"
-git push origin main
+```
+packages/
+  engine/   — pure TS costing engine (no framework) — see engine/README.md
+  server/   — Fastify API + Drizzle + PostgreSQL
+  web/      — React + Vite + Tailwind (+ Capacitor for native)
 ```
 
 ---
 
-## 📋 Requirements
+## Build Health
 
-- Node.js 22+
-- PostgreSQL 17 or 18
-- Windows (batch files)
+```bash
+npm run typecheck --workspace packages/server   # must exit 0
+npm run typecheck --workspace packages/web       # must exit 0
+npm test --workspace packages/engine             # 34/34
+cd packages/server && npx vitest run             # 37/37 (needs Postgres)
+```
 
 ---
 
-**Status:** Backend operational, frontend auth complete, ready for data integration.
+## Key Architecture Rules
+
+- **Engine is USD-only.** FX is applied at the server/UI boundary, never inside the engine.
+- **No Excel import.** Platform DB + committed JSON seed (`master-materials-seed.json`) is the only source of truth.
+- **Product types are Master-Data-driven.** Never hardcode them — read from `platform_reference_items`.
+- **ES is standalone.** No runtime dependency on PEBI or FS in V1.
+- **Migrations on boot.** `runMigrations()` in `db/index.ts` runs pending SQL migrations automatically in non-dev environments.
+
+---
+
+## Database Migrations
+
+```bash
+# Apply pending migrations (non-dev / CI)
+npm run db:migrate --workspace packages/server
+
+# Local schema iteration (dev only)
+npm run db:push --workspace packages/server
+```
+
+Migrations live in `packages/server/drizzle/`. The initial migration (`0000_initial_schema.sql`) creates the full schema from scratch.
+
+---
+
+## API
+
+- **Base:** `http://localhost:5001`
+- **Docs (OpenAPI):** `http://localhost:5001/docs`
+- **Health:** `GET /health` (liveness) · `GET /health/ready` (DB readiness)
+
+---
+
+## Mobile (Capacitor)
+
+```bash
+# Build + sync to native platforms
+cd packages/web && npm run cap:sync
+
+# Open in Xcode / Android Studio
+npm run cap:ios
+npm run cap:android
+```
+
+Set `VITE_API_BASE_URL=https://your-api-host` in `.env.production` before building for device.
+
+---
+
+## Docs
+
+| File | Purpose |
+|---|---|
+| `docs/ES_DEEP_AUDIT_AND_ENHANCEMENT_PLAN_2026-06-21.md` | Roadmap of record — §25/§26 have current done/pending status |
+| `docs/LOCKED_DECISIONS.md` | All strategic decisions (#1–#23) — read before changing anything |
+| `packages/engine/README.md` | Engine public contract (for PEBI reuse) |
+| `docs/SESSION_LOG.md` | Dated log of all changes |

@@ -4,7 +4,7 @@ import masterMaterialsFallback from './master-materials-seed.json';
 import type { MasterMaterial } from './master-materials-io';
 import { PACKAGING_FAMILY, materialSyncKey, costingKeyForMasterKey } from './master-materials-io';
 import { roundUsd } from '../utils/usd';
-import { itemClassForMasterMaterial, isPlatformPriceSource } from '../utils/item-class';
+import { itemClassForMasterMaterial } from '../utils/item-class';
 import { backfillMaterialSubcategories } from './seed-categories';
 import { listPlatformMasterMaterials } from './platform-master-data';
 
@@ -236,9 +236,13 @@ export async function syncMaterialsForTenant(
         updatedAt: new Date(),
       };
 
-      if (!isPlatformPriceSource(match.priceSource)) {
+      // Phase 1.4: protect tenant manual price overrides and tenant-only rows.
+      // isTenantOnly rows are never matched (findExistingMatch excludes them).
+      // For platform-synced rows, update prices from master UNLESS admin set a manual override.
+      if (match.priceSource !== 'manual') {
         patch.costPerKgUsd = row.costPerKgUsd;
         patch.marketPriceUsd = row.marketPriceUsd;
+        patch.priceSource = 'platform';
       }
 
       const [updatedRow] = await db

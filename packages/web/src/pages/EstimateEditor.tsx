@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Save, Download, ArrowLeft, Layers, Calculator, Ruler, DollarSign, Loader2, X } from 'lucide-react';
+import { Save, Download, ArrowLeft, Layers, Calculator, DollarSign, Loader2, X } from 'lucide-react';
 import LayerCard from '../components/LayerCard';
 import BottomSheet from '../components/BottomSheet';
 import LaminateVisualizer from '../components/LaminateVisualizer';
@@ -9,7 +9,6 @@ import { useAuth } from '../hooks/useAuth';
 import { usdToDisplay, displayToUsd } from '../lib/currency';
 import { runClientCalculation, effectiveMarginPercent } from '../lib/estimateCalc';
 import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
-import { JobHeaderFields } from '../components/JobHeaderFields';
 import { dimensionsForSave, validateConfiguredEstimate } from '../lib/estimateConfigure';
 import { groupMaterialsForPicker, type CategoryNode } from '../lib/materialTaxonomy';
 import { derivePrintingWebClass, stackNeedsSolventMix, materialAllowedForTemplateLayer } from '@es/engine';
@@ -63,7 +62,7 @@ const LAYER_TYPE_LABELS: Record<string, string> = {
 const EstimateEditor = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { can, isPreviewing } = useVisibilityProfile(user?.role);
+  const { can } = useVisibilityProfile(user?.role);
   const isAdmin = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -79,7 +78,6 @@ const EstimateEditor = () => {
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [categories, setCategories] = useState<CategoryNode[]>([]);
   const [proposals, setProposals] = useState<any[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
   const [priceChanges, setPriceChanges] = useState<any[]>([]);
   const [requoteWarnings, setRequoteWarnings] = useState<string[]>([]);
   const [orderQuantity, setOrderQuantity] = useState<number>(1000);
@@ -260,23 +258,6 @@ const EstimateEditor = () => {
   const subtypeParentByCode = new Map(
     (masterReference.productSubtypeOptions ?? []).map((s) => [s.code, s.parent])
   );
-  const subtypesForParent = (parent: string) =>
-    (masterReference.productSubtypeOptions ?? []).filter((s) => s.parent === parent);
-
-  // Subtype dropdown list: Master Data first, else the built-in catalog (fallback).
-  const subtypeOptionList: Array<{ code: string; label: string; group?: string | null }> =
-    subtypesForParent(productFamily).length > 0
-      ? subtypesForParent(productFamily).map((s) => ({ code: s.code, label: s.label, group: s.group }))
-      : subtypesForFamily(productFamily).map((s) => ({ code: s.key, label: s.label, group: s.group }));
-
-  const familyLabel = (fam: string) =>
-    productTypeOptions.find((o) => o.value === fam)?.label ?? PRODUCT_FAMILY_LABELS[fam] ?? fam;
-
-  const handleFamilyChange = (fam: string) => {
-    setProductType(fam);
-    const subs = subtypesForParent(fam);
-    setProductSubtype(subs.length > 0 ? subs[0].code : (subtypesForFamily(fam)[0]?.key ?? null));
-  };
 
   useEffect(() => {
     setProductType((prev) => normalizeProductType(prev, productTypeOptions));
@@ -299,13 +280,6 @@ const EstimateEditor = () => {
     } catch (err) {
       console.error('Failed to load materials:', err);
       setLoadError('Could not load materials. Layer defaults may be incomplete.');
-    }
-
-    try {
-      custs = (await apiClient.getCustomers()) || [];
-      setCustomers(custs);
-    } catch (err) {
-      console.error('Failed to load customers:', err);
     }
 
     return { mats, custs };
@@ -760,6 +734,30 @@ const EstimateEditor = () => {
           <button type="button" className="btn-secondary text-sm" onClick={loadBaseData}>
             Retry materials
           </button>
+        </div>
+      )}
+      {/* BUG-8: requote price-change banner — shown after navigating from a requote */}
+      {priceChanges.length > 0 && (
+        <div className="mb-4 card bg-amber-50 border border-amber-200 text-sm text-amber-900">
+          <div className="flex items-center justify-between mb-2">
+            <p className="font-semibold">Price changes vs original quote</p>
+            <button type="button" className="text-amber-600 hover:text-amber-900" onClick={() => setPriceChanges([])}>✕</button>
+          </div>
+          <div className="space-y-1">
+            {priceChanges.map((pc: { materialId: string; materialName: string; deltaPct: number; materialStale?: boolean }) => (
+              <div key={pc.materialId} className="flex justify-between text-xs gap-2">
+                <span className="text-ink">{pc.materialName}</span>
+                <span className={pc.materialStale ? 'text-danger' : pc.deltaPct > 0 ? 'text-red-600' : 'text-green-700'}>
+                  {pc.materialStale ? '⚠ Removed from library' : `${pc.deltaPct > 0 ? '+' : ''}${pc.deltaPct.toFixed(1)}%`}
+                </span>
+              </div>
+            ))}
+          </div>
+          {requoteWarnings.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-amber-200 space-y-1">
+              {requoteWarnings.map((w, i) => <p key={i} className="text-xs text-amber-800">{w}</p>)}
+            </div>
+          )}
         </div>
       )}
       {/* Compact estimate header */}

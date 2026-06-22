@@ -2,10 +2,11 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql, count as drizzleCount } from 'drizzle-orm';
 import { getEffectiveProfile, stripMaterialRow } from '../utils/visibility';
 import { ensureMaterialsForTenant } from '../db/seed-materials';
 import { roundUsd } from '../utils/usd';
+import { parsePagination, paginate } from '../utils/pagination';
 
 function isMaterialAdmin(role: string): boolean {
   return role === 'tenant_admin' || role === 'platform_admin';
@@ -40,7 +41,7 @@ const MaterialSchema = z.object({
 
 export async function getMaterialsRoute(
   _fastify: FastifyInstance,
-  request: FastifyRequest,
+  request: FastifyRequest<{ Querystring: { limit?: string; offset?: string } }>,
   reply: FastifyReply
 ) {
   try {
@@ -48,6 +49,7 @@ export async function getMaterialsRoute(
     const tenantId = extractTenantFromRequest(request);
     const user = extractUserFromRequest(request);
     const db = getDatabase();
+    const { limit, offset } = parsePagination(request.query);
 
     const [userRecord] = await db
       .select({ visibilityProfile: schema.users.visibilityProfile })
@@ -61,17 +63,25 @@ export async function getMaterialsRoute(
     const { ensureCategoriesForTenant } = await import('../db/seed-categories');
     await ensureCategoriesForTenant(tenantId);
 
+    const whereClause = eq(schema.materials.tenantId, tenantId);
+    const [{ total }] = await db
+      .select({ total: drizzleCount() })
+      .from(schema.materials)
+      .where(whereClause);
+
     const materials = await db
       .select()
       .from(schema.materials)
-      .where(eq(schema.materials.tenantId, tenantId));
+      .where(whereClause)
+      .limit(limit)
+      .offset(offset);
 
     const visibleMaterials = isRmManager
       ? materials
       : materials.map((mat: (typeof materials)[number]) => stripMaterialRow(mat, profile));
 
-    return reply.send(visibleMaterials);
-  } catch (error: any) {
+    return reply.send(paginate(visibleMaterials, Number(total), limit, offset));
+  } catch (error: unknown) {
     console.error('Get materials error:', error);
     return reply.status(500).send({ error: 'Failed to fetch materials' });
   }
@@ -97,8 +107,18 @@ export async function createMaterialRoute(
       .insert(schema.materials)
       .values({
         tenantId,
-        ...data,
-        marketPriceUsd: roundUsd(data.marketPriceUsd ?? data.costPerKgUsd),
+        name: data.name,
+        type: data.type,
+        solidPercent: data.solidPercent,
+        density: String(data.density),
+        costPerKgUsd: String(roundUsd(data.costPerKgUsd)),
+        wastePercent: data.wastePercent ?? 0,
+        isSolventBased: false,
+        substrateFamily: data.substrateFamily ?? null,
+        substrateGrade: data.substrateGrade ?? null,
+        hoover: data.hoover ?? null,
+        marketPriceUsd: String(roundUsd(data.marketPriceUsd ?? data.costPerKgUsd)),
+        itemClass: data.itemClass ?? null,
         priceSource: 'manual',
         isTenantOnly: true,
       })
@@ -187,9 +207,19 @@ export async function deleteMaterialRoute(
       .limit(1);
 
     if (layerUsage.length > 0) {
+      // Count total usages for a helpful message
+      const usageCount = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(schema.layers)
+        .innerJoin(schema.estimates, eq(schema.layers.estimateId, schema.estimates.id))
+        .where(and(eq(schema.layers.materialId, id), eq(schema.estimates.tenantId, tenantId)));
+
       return reply.status(409).send({
-        error: 'Material is used in one or more estimates',
-        usedInEstimates: true,
+        error: {
+          code: 'FK_IN_USE',
+          message: 'Material is used in one or more estimates and cannot be deleted',
+          details: { count: Number(usageCount[0]?.count ?? 1) },
+        },
       });
     }
 
@@ -201,8 +231,11 @@ export async function deleteMaterialRoute(
   } catch (error: any) {
     if (error?.code === '23503') {
       return reply.status(409).send({
-        error: 'Material is referenced by estimates or templates',
-        usedInEstimates: true,
+        error: {
+          code: 'FK_IN_USE',
+          message: 'Material is referenced by estimates or templates',
+          details: { count: 0 },
+        },
       });
     }
     console.error('Delete material error:', error);
@@ -211,8 +244,9 @@ export async function deleteMaterialRoute(
 }
 
 export async function registerMaterialRoutes(fastify: FastifyInstance) {
-  fastify.get('/api/v1/materials', async (request, reply) =>
-    getMaterialsRoute(fastify, request, reply)
+  fastify.get<{ Querystring: { limit?: string; offset?: string } }>(
+    '/api/v1/materials',
+    async (request, reply) => getMaterialsRoute(fastify, request, reply)
   );
 
   fastify.post<{ Body: z.infer<typeof MaterialSchema> }>(

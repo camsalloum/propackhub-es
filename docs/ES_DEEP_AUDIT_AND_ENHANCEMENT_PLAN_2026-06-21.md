@@ -68,7 +68,7 @@ apps/estimation-studio/
 - `app.ts` builds the Fastify instance (testable factory), registers 12 route modules, JWT with `expiresIn: '7d'`, CORS, central error handler.
 - **Routes:** `auth` (register/login/refresh/me + disabled PEBI-SSO stub), `estimates` (CRUD + calculate + requote + duplicate + proposal-pdf + proposals), `templates`, `materials`, `customers`, `settings`, `users` (visibility), `dashboard`, `categories`, `master-data`, `platform-master-data` (DB master + change-feed + service keys), `platform`.
 - **DB schema (`db/schema.ts`):** ~20 tables incl. tenants, users (jsonb `visibilityProfile`), categories/subcategories, materials, customers, estimates (soft-delete + self-ref re-quote), layers (with re-quote snapshot columns), processes, slabs, slabTemplates, proposals, estimationCosts (audit snapshots), activityLogs, priceHistory, structureTemplates, and platform/MES tables (platformMasterMaterials, platformReferenceItems, platformMasterState, platformMasterAuditLog, platformServiceKeys).
-- **Services:** `estimate-calculation.ts` (load → engine map → derive web class → calculate → USD→display → persist layer snapshots + aggregates + per-slab + `estimationCosts` snapshot), `materials-excel-refresh.ts`, `price-scraper.ts`, `proposal-pdf.ts`.
+- **Services:** `estimate-calculation.ts` (load → engine map → derive web class → calculate → USD→display → persist layer snapshots + aggregates + per-slab + `estimationCosts` snapshot), `price-scraper.ts`, `proposal-pdf.ts`. *(2026-06-22: `materials-excel-refresh.ts` removed — Excel fully retired, see §25.3.2.)*
 - **Auth/tenancy:** JWT carries `{userId, tenantId, email, role}`; row-level multi-tenancy via `tenantId` filter on every query (not Postgres RLS). Three roles. MES machine auth via hashed service keys with scopes.
 
 ### 2.4 Web (`packages/web/src`) — functional shell, live-calc wired
@@ -184,6 +184,9 @@ Standard templates resolve layers via a portable `ref_material_key`; user "My Te
 **Recommendation:** make My Templates use the same key-based resolution, and surface a visible "N layers could not be resolved" banner on instantiate. See §11.7.
 
 ### 5.8 P2 — Excel→DB price gaps (legacy import path)
+
+> ⚠️ **OBSOLETE (2026-06-22): Excel has been fully retired (see §25.3.2).** There is no longer an Excel import path. The remaining valid action is Phase 1.4 — audit the committed `master-materials-seed.json` for `costPerKgUsd: 0`.
+
 
 The platform master is now DB-first (good), but the legacy Excel import (`materials-excel-refresh.ts` / seed) historically produced **$0 cost** for any row with a blank "User Price" (ink/adhesive/packaging sheets were 100% blank in the source workbook). If the Excel import path is ever used to (re)seed, confirm the fallback-to-market-price and a loud warning on $0. Verify the committed `master-materials-seed.json` has no `costPerKgUsd: 0` rows. See §11.8.
 
@@ -345,7 +348,7 @@ Each task block: **ID · Goal · Files · Change · Acceptance.** Do phases in o
 |----|------|-------|--------|------------|
 | 1.1 | Real migrations | `server/drizzle.config.ts`, new `server/drizzle/` | Run `drizzle-kit generate` to create the initial migration from current schema; commit it. Add `db:migrate` to boot in non-dev (`if NODE_ENV!=='development'`). Keep `db:push` for local only. | Fresh DB via `npm run db:migrate` creates all tables; no manual SQL needed. |
 | 1.2 | Fold patches into migrations | `server/scripts/apply-schema-patches.ts`, `scripts/schema-patches.sql` | Verify every column the patch adds exists in the generated migration; deprecate `db:patch` once parity confirmed (keep as no-op or remove from RUN-ES.bat). | A DB built from migrations alone passes server integration tests. |
-| 1.3 | No silent $0 cost | `server/src/db/master-materials-io.ts` (or excel-refresh) | When `User Price` blank, fall back to `Market Price`; if both blank, **skip with a loud warning** (don't write 0). | Importing a workbook with blank prices logs warnings and writes no `costPerKgUsd: 0`. |
+| 1.3 | No silent $0 cost | `server/src/db/master-materials-io.ts` (or excel-refresh) | When `User Price` blank, fall back to `Market Price`; if both blank, **skip with a loud warning** (don't write 0). | Importing a workbook with blank prices logs warnings and writes no `costPerKgUsd: 0`. **⚠️ 2026-06-22: Excel retired (§25.3.2) — reframe to "seed JSON has no $0 costs"; `placeholderCost()` already covers seed-time blanks.** |
 | 1.4 | Verify seed | `server/src/db/master-materials-seed.json` | Audit for any `costPerKgUsd: 0`; backfill real or market values. | `grep` for `"costPerKgUsd": 0` returns nothing meaningful. |
 | 1.5 | Protect tenant prices on sync | `server/src/db/platform-master-data.ts` (sync fn) | On tenant sync, **do not overwrite** `costPerKgUsd`/`marketPriceUsd` for rows where `priceSource='manual'` or `isTenantOnly=true`. | Test: tenant edits a price → platform sync → tenant price unchanged. |
 | 1.6 | FK-in-use error | `server/src/routes/materials.ts` | Catch Postgres FK violation on material delete; return `409 { error:{ code:'FK_IN_USE', message, details:{ estimateCount } } }`. | Deleting a referenced material returns a clear 409 with count. |
@@ -787,6 +790,8 @@ I empirically probed the engine (built `dist`, two scenarios, quantities 500 / 2
 | **B. Always amortize a setup/plate fixed cost** even without processes | Guarantees a quantity curve | Low–Med | Needs owner sign-off; `platesPerKg` is currently per-kg flat — could add a one-off `plates_total` amortized over qty |
 | **C. Explicit volume-discount / price-break curve** | True quantity discounting | Med | **Out of current spec** — requires a LOCKED decision; do not add silently |
 
+**DECISION (2026-06-22, owner-approved):** Go with **Option A** — seed standard templates with a process that carries **setup hours** so slab prices vary by quantity out of the box (setup-cost amortization). This stays entirely within the locked additive model and golden tests. Options B (amortize a fixed setup/plate cost without a process) and C (explicit volume-discount curve) are **deferred** — revisit only if A proves insufficient, and only via a new LOCKED decision. Implementing agents: do **A** (seed setup hours in `ES_STANDARD_TEMPLATES_SEED.json` / template seed), do **not** touch `calculateEstimate` or `golden-fixtures.ts`.
+
 **Recommended:** A now (seed setup hours), and raise B/C with the owner as a pricing-philosophy decision. **Do not** change `calculateEstimate`'s additive formula or `golden-fixtures.ts` without an explicit locked decision — the golden tests are correct for the current model.
 
 **Correction (pass 3, code-read):** the engine suite **already covers both behaviors** — `calculator.test.ts` test-11 ("should calculate slab pricing correctly") asserts **equal** slab prices when no processes are configured, and "should vary slab $/kg when setup hours amortize across run sizes" asserts **small > medium > large** with a setup-bearing process. Both pass (part of the 34/34). So F-SLAB is **fully characterized by tests** and is a **product/UX decision** (flat-by-default looks broken to users), not an untested or buggy code path. My earlier "test gap" claim here was wrong — caught on re-read of `calculator.test.ts`.
@@ -982,3 +987,342 @@ This document now contains, end-to-end:
 **Tie-breaker for the divergent-tree problem (§19):** the CI typecheck gate added this session is now the shared source of truth — both contributors must be green against it.
 
 *Sections 23–24 added 2026-06-21 (pass 4). Build is green; plan is complete and execution-ready.*
+
+---
+
+## 25. RECONCILIATION — plan vs. work done 2026-06-21/22 (read this FIRST)
+
+> For implementing agents: this section is the current ground truth. It maps what has been **implemented from the plan**, what **new work** was done that the plan didn't anticipate, and the **contradictions/constraints** you must respect so you don't undo recent decisions. Where this section disagrees with §1–§24, **this section wins** (it's later).
+
+### 25.1 Implemented from the plan
+
+| Plan item | Status now | Notes |
+|---|---|---|
+| Phase 0.1 — `Trash2` + unused imports | ✅ Done | StandardTemplates fixed. |
+| Phase 0.2 — DimensionState casts | ✅ Done | Index signature added (no separate `lib/dimensions.ts`). |
+| Phase 0.3 — unused `CustomerAutocomplete` | ✅ Done | |
+| Phase 0.4 — templates.ts implicit-any | ✅ Done | |
+| Phase 0.6 — CI typecheck gate | ✅ Done | `typecheck` scripts (web+server) + CI step. |
+| BUG-9 — `api.ts` 204/empty body | ✅ Done | Guarded. |
+| §18.1 — Bag/Pouch + subtypes | ✅ **Done (pulled forward from Phase 7)** | Implemented Master-Data-driven; see 25.3.3. |
+| F-SLAB (§19.3) | ⚠️ Characterized + **tested**, decision pending | Engine behaves as designed; needs owner pick of A/B/C. Not "fixed." |
+
+**Build health now (verified 2026-06-22):** web `tsc` 0 · web build OK · server `tsc` 0 · server `vitest` 36/36 · engine 34/34.
+
+### 25.2 New work done that the plan did NOT contain (additive, all verified green)
+
+1. **Excel fully retired.** Deleted `materials-excel-refresh.ts`, `update-materials-from-excel.ts`, `fix-master-data-excel.ts`, `inspect-master-data.ts`, `prune-orphan-substrates.ts`, the two Python scripts + `requirements.txt`; stripped `master-materials-io.ts` to types + seed/sync helpers; removed `/materials/refresh-from-excel` route; removed the `xlsx` dependency and all Excel npm scripts. Platform DB + committed JSON seed is the **only** source of truth.
+2. **Product catalog + Master-Data-driven product types/subtypes** — new `web/src/lib/productCatalog.ts`; `product_subtype` reference category; `estimates.product_subtype` + `structure_templates.product_subtype` columns; nested **Master Data → Product Types** editor (types + subtypes in one tab); `db:seed-product-catalog` script. DB repaired to **Roll / Sleeve / Pouch / Bag + 18 subtypes**.
+3. **Ink SB/UV naming** — cross-family ink grades disambiguated (`Primer (Solvent Based)` / `Primer (UV-LED)`) in DB + seed, synced to tenants.
+4. **External ID / Source removed from the Master Data UI** (schema columns kept). See 25.3.1.
+5. **Responsive table system** — `.table-wrap` / `.data-table` / `.cell-input` / `.cell-num` utilities in `index.css`; Master Data tables + CustomersList converted (no `table-fixed`, fit-to-container, no forced horizontal scroll).
+6. **Global density** — `html { font-size: 90% }` (the team's preferred view). See 25.3.4.
+
+### 25.3 Contradictions & constraints agents MUST respect
+
+1. **External ID / Source are backend-only — do NOT re-add to any UI.** The earlier MES Phase E work (and §2.3) exposed `external_id`/`external_source` in the admin Master Data screen. The owner reversed that: the **columns remain in the schema** (PEBI seam stays ready), but they are **not user-facing**. When implementing **Phase 3 (PEBI raw-cost)**, populate `external_id`/`external_source` via the **sync adapter / change-feed**, never via an admin input.
+2. **Excel is gone — do not resurrect it.** These plan items are now **obsolete/reframed:** §5.8 (Excel $0 gaps) → N/A; Phase **1.3** ("when Excel User Price blank…") → reframe to "the committed `master-materials-seed.json` must contain no `costPerKgUsd: 0`" (seed-time `placeholderCost()` already covers blanks); Phase **1.4** still valid (audit the seed JSON). §2.3's `materials-excel-refresh.ts` no longer exists.
+3. **Product-type / subtype model is decoupled and Master-Data-driven — refines §18.1.** Rules for agents:
+   - The UI **product type code (family)** — `roll | sleeve | pouch | bag | <custom>` — is **separate** from the engine costing type. The engine enum stays `roll | sleeve | pouch`; `engineTypeForFamily()` maps **bag → pouch** (and any custom → pouch). Bag and Pouch are distinct everywhere the user sees them.
+   - **Lists come from Master Data** (`product_type` + `product_subtype` reference categories; subtypes link to a parent via `metadata.parent`). **Do NOT hardcode** product types or subtypes anywhere.
+   - `productCatalog.ts` is the **dimension-field schema** source (keyed by subtype code) + a fallback list only. Known subtype codes get tailored dimension fields; unknown/custom codes get the family base fields.
+   - Engine + `golden-fixtures.ts` are **untouched** and must stay so (Bag uses the pouch costing path).
+4. **Global density is 90%** (`html { font-size: 90% }`). The **Phase 5.6 accessibility pass** and the §6 WCAG gold-price item must be validated **at this scale** (rem fonts shrink ~10%; fixed-px touch targets unaffected). If a11y requires it, raise the base (single line in `index.css`) rather than per-component overrides.
+5. **Use the responsive table utilities** (`.table-wrap`/`.data-table`/`.cell-input`) for any new/updated table (Phase 5/§13 UI work). Master Data + CustomersList done; **EstimatesList / Library / CustomerDetail still use bespoke markup** — a consistency pass is pending (not a bug; they function + scroll).
+6. **Key column is backend-only** in Master Data (auto-generated from name on save) — do not surface it.
+
+### 25.4 Status as of 2026-06-22 (end of session)
+
+**All phases and bugs completed this session:**
+
+| Item | Status |
+|---|---|
+| Phase 0 — Build stabilization (all items 0.1–0.6) | ✅ Done |
+| Phase 0.5 — Type db handle | ✅ Done — `NodePgDatabase<typeof schema>`; 11 latent errors fixed |
+| BUG-1 — Atomic PATCH transaction (ONE tx) | ✅ Done |
+| BUG-2 — Slab double-FX / pricePerKgUsd canonical | ✅ Done |
+| BUG-3 — Return final updated row | ✅ Done |
+| BUG-4 — tenantId in update where-clauses | ✅ Done |
+| BUG-5 — Soft-delete honored in lookups | ✅ Done |
+| BUG-6 — Settings currency Save wired | ✅ Done |
+| BUG-7 — defaultMarkup/SlabTemplate loaded on mount | ✅ Done |
+| BUG-8 — Requote price-change banner (fetchEstimate path) | ✅ Done |
+| BUG-9 — api.ts 204/empty-body crash | ✅ Done |
+| BUG-10 — customers.ts try/catch + FK 409 | ✅ Done |
+| BUG-11 — Race-safe ref number + UNIQUE index | ✅ Done |
+| BUG-12 — api.ts typed network error | ✅ Done |
+| BUG-13 — N+1 fix + escapeLike() in customers | ✅ Done |
+| Phase 1.1 — Real Drizzle migrations | ✅ Done — `drizzle/0000_initial_schema.sql` + `0001_sessions.sql`; boot runner |
+| Phase 1.2 — Fold patches + BUG-11 index | ✅ Done |
+| Phase 1.3 — Seed JSON zero-cost audit | ✅ Done — 14 rows fixed |
+| Phase 1.4 — Protect tenant prices on sync | ✅ Done — `priceSource !== 'manual'` guard |
+| Phase 1.5 — Material delete FK 409 envelope | ✅ Done |
+| Phase 2.1 — Error envelope | ✅ Done — `utils/errors.ts`; central handler in `app.ts` |
+| Phase 2.2 — Pagination on list endpoints | ✅ Done — `{ items, total, limit, offset }` on `/estimates`, `/materials`, `/customers` |
+| Phase 2.3 — Short tokens + refresh rotation + sessions | ✅ Done — 30min JWT; sessions table; `auth.ts` rewritten; `/auth/logout` |
+| Phase 2.4 — Auth rate limiting | ✅ Done — `@fastify/rate-limit`; 10/15min register, 20/15min login |
+| Phase 2.5 — OpenAPI at `/docs` | ✅ Done — `@fastify/swagger` + `@fastify/swagger-ui` |
+| Phase 2.6 — CORS for Capacitor origins | ✅ Done — `capacitor://localhost`, `https://localhost` |
+| Phase 2 §12.6 — `/health/ready` | ✅ Done |
+| Phase 3 — PEBI raw-cost seam | ✅ Done — `services/raw-cost/index.ts`; `RawCostProvider` interface; `PlatformMasterProvider`; `PebiRawCostProvider` stub |
+| Phase 3.4 — Engine contract doc | ✅ Done — `packages/engine/README.md` |
+| Phase 4 M1 — Capacitor deps installed | ✅ Done — `@capacitor/core`, `preferences`, `network`, `app` |
+| Phase 4 M2 — Fix capacitor.config.json | ✅ Done — `webDir:"dist"`, `androidScheme:"https"` |
+| Phase 4 M3 — cap:sync / cap:ios / cap:android scripts | ✅ Done |
+| Phase 4 M4 — Token storage abstraction (tokenStore.ts) | ✅ Done — localStorage on web; Keychain/EncryptedSharedPreferences on native |
+| Phase 4 M5 — API base URL resolver | ✅ Done — `resolveApiBase()` with native platform warning |
+| Phase 4 M7 — Safe-area CSS | ✅ Done — already present in `index.css` |
+| Phase 5.1 — Roll-after-slitting panel | ✅ Done — enhanced with slit width, OD, derived LM/kg + m²/kg |
+| Phase 5.2 — Order qty unit selector | ✅ Done — already fully implemented |
+| Phase 5.4 — My Templates unresolved-layer banner | ✅ Done — dismissible in-page banner; replaced alert() |
+| Phase 5.5 — FX stale-rate banner + real last-updated | ✅ Done — 24h threshold; amber banner; real timestamp |
+| Phase 5.6 — WCAG AA contrast for gold price text | ✅ Done — `gold-accessible:#7A5800` (~6:1) in tailwind; selling price text updated |
+
+**Build health (2026-06-22):** web `tsc` 0 · web build OK · server `tsc` 0 · server vitest **37/37** · engine 34/34 · sessions migration applied.
+
+### 25.5 PENDING — deferred to future sessions
+
+The following are deliberately deferred. Do not implement until explicitly requested:
+
+**Phase 5 remaining:**
+- Phase 5.3 — Mini laminate stack on CustomerDetail estimate rows
+
+**Phase 6 — Value features (all pending, prioritise per owner):**
+- PDF proposal themes + tokenized share link (`/p/:token`)
+- Bulk re-quote on RM price move
+- Margin guardrails (soft, non-blocking badge)
+- Material price-history charts (sparkline in Library)
+- CSV/Excel export of estimates list / slab tables / library
+- Customer activity timeline (render `activity_logs`)
+- Multi-currency proposal toggle (secondary currency column in PDF)
+
+**Phase 7 — Flexible-packaging visual/domain layer (all pending):**
+- Parametric SVG product visuals (`RollVisual`, `PouchVisual`, `BagVisual`, `SleeveVisual`, `LabelVisual`)
+- Layers UI upgrade (foil/ALU gradients, per-layer chips, hover tooltip, structure string)
+- Finishing / add-on options (zipper, spout, valve, tear notch, varnish, etc.)
+- Application-driven structure picker ("What are you packing?")
+- Sustainability tags (recyclability badge, PCR %, compostable)
+- Full UI modernization (dashboard KPI cards, illustrated template picker, etc.)
+
+**Phase 4 remaining:**
+- Phase 4 M6 — CORS for Capacitor already done (Phase 2.6); `npx cap add ios/android` — must be run manually (requires Xcode / Android Studio)
+
+**Doc hygiene (§16 — deferred):**
+- README still says "Ant Design 5" → fix to "Tailwind + lucide-react"
+- Status docs consolidation (archive LIVE_STATE, IMPLEMENTATION_COMPLETE, DATABASE_READY, CRITICAL_BUGS_FIXED)
+- `MasterLibrary.tsx` is an orphan page — route or delete
+
+**F-SLAB (§19.3):**
+- Owner decision pending on Option A/B/C for slab-with-setup-hours seed. Engine already behaves correctly; just needs the seed data.
+
+### 25.6 Locked ground rules (unchanged)
+
+Engine stays USD-only and untouched (golden tests green); ES remains standalone (no PEBI runtime dependency); costing formulas not drifted; External ID/Source backend-only; Excel retired.
+
+*Section 25 updated 2026-06-22 — authoritative reconciliation.*
+
+---
+
+## 26. Phase 1 completion + BUG-1/BUG-11 full fixes (2026-06-22)
+
+### 26.1 BUG-1 — fully atomic update (completed)
+
+Previous implementation had THREE separate `db.transaction()` calls (layers, processes, slabs). Now **ONE transaction** wraps:
+1. Base-field update (jobName, status, markupPercent, etc.)
+2. Layer delete + reinsert + second estimate update (printingWebClass, dimensions, masterDataVersion)
+3. Process delete + reinsert
+4. Slab delete + reinsert
+
+If any step fails, the entire PATCH rolls back. No partial state possible.
+
+### 26.2 BUG-11 — race-safe ref number (completed)
+
+`generateRefNumber` now:
+1. Counts non-deleted estimates for the year (soft-delete excluded ✅)
+2. Checks whether `QT-{year}-{count+1}` already exists in the DB
+3. If clash found, tries `count+2`, `count+3` up to 5 times
+4. Falls back to timestamp-based ref if all 5 slots are taken (should never happen)
+
+The `UNIQUE INDEX estimates_tenant_ref_uq ON estimates(tenant_id, ref_number)` was added to the schema and the initial migration (with a deduplication step for existing DBs that had racing duplicates).
+
+### 26.3 Phase 1 items (completed)
+
+| Item | Status | Notes |
+|---|---|---|
+| 1.1 Real migrations | ✅ Done | `drizzle/0000_initial_schema.sql` — full schema from scratch; `_journal.json` + `0000_snapshot.json`; `runMigrations()` in `db/index.ts` runs on boot (non-dev); `db:migrate` → `scripts/run-migrations.ts` |
+| 1.2 Fold patches + BUG-11 index | ✅ Done | Migration covers all schema-patches.sql content + dedup + UNIQUE index |
+| 1.3 Seed JSON audit | ✅ Done | 14 zero-cost rows fixed with market estimates; 0 rows with `costPerKgUsd: 0` |
+| 1.4 Protect tenant prices on sync | ✅ Done | `syncMaterialsForTenant` now guards `priceSource === 'manual'` rows; isTenantOnly already excluded by `findExistingMatch` |
+| 1.5 FK-in-use 409 | ✅ Done | `deleteMaterial` returns `409 { error:{ code:'FK_IN_USE', message, details:{ count } } }` |
+
+**Build health (2026-06-22):** web `tsc` 0 · server `tsc` 0 · engine 34/34 · server vitest **37/37** · migration applied to live DB.
+
+### 26.4 Still open after Phase 1
+
+- **BUG-8** — requote price-change banner dropped after nav
+- **BUG-10** — customers.ts no try/catch + no FK 409
+- **BUG-12** — api.ts network error gives raw TypeError
+- **BUG-13** — N+1 + unescaped LIKE in customer autocomplete
+- **Phase 2** — error envelope `{ error:{ code, message, details? } }` across all routes, pagination, short-lived tokens + refresh rotation + sessions table, auth rate limiting, OpenAPI at `/docs`, CORS for Capacitor origins
+
+*Section 26 added 2026-06-22.*
+
+---
+
+## 26. COMPLETE WORK LOG — everything done today (2026-06-21/22) for Sonnet
+
+> Copy-paste reference for any new agent starting work. Read this before touching a single file.
+> All items below are **already in the repo** (uncommitted changes on the working tree).
+> Build state: web tsc 0 · web build OK · server tsc 0 · server 36/36 · engine 34/34.
+
+### 26.1 Build stabilization (Phase 0 — partial)
+
+| Done | Detail |
+|---|---|
+| ✅ `Trash2` import fix | `StandardTemplates.tsx` — was crashing the admin template-layer editor at runtime |
+| ✅ DimensionState index signature | `EstimateEditor.tsx` — removed 4 unsafe casts |
+| ✅ Unused imports removed | `EstimatesList.tsx`, `StandardTemplates.tsx` |
+| ✅ `templates.ts:524` implicit-any typed | server route callback |
+| ✅ `typecheck` npm scripts | added to both `web/package.json` + `server/package.json` |
+| ✅ CI typecheck gate | `.github/workflows/ci.yml` — now fails build on type errors |
+| ✅ `api.ts` 204/empty-body crash (BUG-9) | DELETE routes no longer throw on empty response body |
+| ❌ Phase 0.5 still open | `db/index.ts` still typed as `any` — **SONNET: do this first** |
+
+### 26.2 Bag vs Pouch + Product catalog (major feature)
+
+**What was done:**
+- Created `packages/web/src/lib/productCatalog.ts` — family definitions (roll/sleeve/pouch/bag), per-subtype dimension-field schemas, `engineTypeForFamily()` (bag→pouch for costing), fallback lists.
+- Added `product_subtype` varchar column to `estimates` + `structure_templates` in `db/schema.ts`.
+- Added idempotent SQL patch to `schema-patches.sql`.
+- Added `product_subtype` to the `platformReferenceCategoryEnum`.
+- `create`/`update` estimate routes now persist `productSubtype`.
+- `EstimateEditor.tsx` restructured: **one top panel** holds Product type → subtype → inline catalog-driven dimensions → order quantity. The separate "Dimensions" tab is removed. The dead legacy dimensions block remains as `{false && …}` (safe to delete in cleanup).
+- `JobHeaderFields.tsx` widened from `ProductTypeValue` to `string`.
+- `StandardTemplates.tsx` widened state type.
+
+**Architecture rule for Sonnet:** `productType` state in the editor is the **family code** (roll/sleeve/pouch/bag). Engine costing type is derived via `engineTypeForFamily()` at save/calc time. Never conflate the two.
+
+### 26.3 Master-Data-driven product types/subtypes
+
+**What was done:**
+- `buildMasterDataReferenceFromDb()` now reads and returns `productSubtypeRows` (with `parent` from `metadata.parent`).
+- `enrichMasterDataReference()` exposes `productSubtypeOptions: ProductSubtypeOption[]` (parent link, not family prefix).
+- `masterDataReference.ts` (web): `ProductTypeOption.value` is now `string` (not `ProductTypeValue`); added `ProductSubtypeOption` interface + `DEFAULT_PRODUCT_SUBTYPE_OPTIONS` fallback; 4 product type defaults (Roll/Sleeve/Pouch/Bag).
+- `MasterDataContext.tsx` + `useMasterDataReference.ts` carry `productSubtypeOptions`.
+- `MasterData.tsx` — **Product Types tab rebuilt as a nested editor**: each product type shows its subtypes indented below; + Add subtype per type; one Save persists both `product_type` + `product_subtype` categories and syncs to tenants. The standalone "Product Subtypes" tab is gone.
+- `db:seed-product-catalog` script — one-time DB repair: relabels legacy "Bag (code pouch)" → "Pouch", adds "Bag (code bag)", seeds 18 subtypes with parent metadata. **Already run against the live DB** (Roll/Sleeve/Pouch/Bag + 18 subtypes verified).
+- Smart heal in `buildMasterDataReferenceFromDb` — if DB still has legacy Bag→pouch row at runtime, it auto-heals to Pouch + Bag without needing the repair script.
+
+**Sonnet must not:** hardcode product types or subtypes anywhere. Always read from `masterReference.productTypeOptions` / `masterReference.productSubtypeOptions`.
+
+### 26.4 Excel fully retired
+
+**Deleted files (gone from repo):**
+- `src/services/materials-excel-refresh.ts`
+- `src/scripts/update-materials-from-excel.ts`
+- `src/scripts/fix-master-data-excel.ts`
+- `src/scripts/inspect-master-data.ts`
+- `scripts/prune-orphan-substrates.ts`
+- `scripts/repair-master-data-excel.py`
+- `scripts/inspect-xlsx-tables.py`
+- `scripts/requirements.txt`
+
+**Modified:**
+- `master-materials-io.ts` — rewritten to types + seed/sync helpers only (no `xlsx` import).
+- `routes/materials.ts` — `/materials/refresh-from-excel` route removed.
+- `server/package.json` — `xlsx` dep removed; Excel npm scripts removed.
+- `root/package.json` — `update-materials` script removed.
+- `seed-materials.ts` — `excelSourceKey` renamed to `sourceKey`.
+- `schema.ts` — doc comments cleaned.
+
+**Sonnet must not:** reintroduce xlsx, any Excel file path, or any Excel-based import/refresh. If you see a reference to Excel in code, treat it as dead code to remove.
+
+### 26.5 Ink SB/UV naming
+
+- Cross-family ink collisions renamed with suffix: `Primer (Solvent Based)` / `Primer (UV-LED)`, same for Glossy/Matt Varnish, Common/Special Colors.
+- Applied in `platform_master_materials` DB + `master-materials-seed.json`, synced to all 56 tenants.
+- Zero remaining duplicate ink names (verified live DB).
+
+### 26.6 Master Data UI cleanup
+
+- **External ID + Source columns removed from the material table UI** — the DB columns `external_id`/`external_source` still exist (PEBI seam), but are backend-only; never surface them in any UI.
+- **Key column removed** — auto-generated from name on save; backend only.
+- **Column order**: Family → Name → Grade → Density → Solid% → Cost/kg → Market.
+- `table-fixed` + hardcoded `%` colgroup removed from Master Data tables.
+
+### 26.7 Responsive table system + global density
+
+- Added `.table-wrap` / `.data-table` / `.cell-input` / `.cell-num` utilities to `index.css`.
+- Master Data tables + `CustomersList` converted to auto-layout (fit-to-container, no forced horizontal scroll).
+- `html { font-size: 90% }` set in `index.css` — this is the **team's preferred density**; do not remove or override per-component.
+
+### 26.8 What Sonnet still needs to do (nothing below was touched today)
+
+**Immediate (before anything else):**
+- **Phase 0.5** — type `db: any` handle in `server/src/db/index.ts`.
+- **BUG-1** — `estimates.ts` `updateEstimateRoute` must use `db.transaction`.
+- **BUG-2** — slab prices must be persisted in USD, not display currency.
+- **BUG-6** — Settings Currency "Save Changes" has no `onClick`.
+
+**Then in order:** BUG-3/4/5/7/8/10/11/12/13 → Phase 1 (real Drizzle migrations) → Phase 2 (error envelope/pagination/auth) → Phase 3 (PEBI seam) → Phase 4 (Capacitor) → Phase 5 (PRD completeness) → Phase 7 (visuals §18.2+) → Phase 6 (value features).
+
+**F-SLAB decided (§19.3 Option A):** seed standard templates with a process that has setup hours. Do NOT change `calculateEstimate` or `golden-fixtures.ts`.
+
+**Owner sign-off still needed before starting:** §21 costing assumption A1 (micron-not-gsm quirk) — doesn't block until someone wants to change the formula, which is not allowed anyway.
+
+**Pending cleanup (low priority, non-blocking):**
+- Remove the disabled legacy dimensions block (`{false && …}`) in `EstimateEditor.tsx`.
+- Delete the physical `Master Data.xlsx` / `Costing_form ES.xlsx` workbook files from repo root.
+- Drop the `'excel'` enum value from `material_price_source` via a migration (Postgres requires a migration for this; it's currently harmless/unused).
+- Carry `productSubtype` through StandardTemplates + TemplatePicker.
+- Restyle EstimatesList/Library/CustomerDetail with the unified `.data-table` look.
+- Fix `MasterLibrary.tsx` orphan page (not routed — either route it or delete).
+- Fix README claims ("Ant Design 5" → Tailwind + lucide-react).
+
+*Section 26 added 2026-06-22 — complete work log for handoff to Sonnet 4.6 implementation session.*
+
+### 26.4b Phase 2 + remaining bugs (completed 2026-06-22)
+
+| Item | Status | Notes |
+|---|---|---|
+| Phase 2.1 — error envelope | ✅ Done | `utils/errors.ts`; central handler in `app.ts` |
+| Phase 2.2 — pagination | ✅ Done | `{ items, total, limit, offset }` on `/estimates`, `/materials`, `/customers` |
+| Phase 2.3 — short tokens + refresh rotation | ✅ Done | 30min JWT; sessions table; `auth.ts` full rewrite; `/auth/logout`; useAuth auto-refresh on 401 |
+| Phase 2.4 — auth rate limit | ✅ Done | `@fastify/rate-limit`; 10/15min register, 20/15min login |
+| Phase 2.5 — OpenAPI `/docs` | ✅ Done | `@fastify/swagger` + `@fastify/swagger-ui` |
+| Phase 2.6 — CORS Capacitor | ✅ Done | `capacitor://localhost`, `https://localhost` |
+| `/health/ready` (§12.6) | ✅ Done | DB ping readiness probe |
+| BUG-8 — requote banner | ✅ Done | `fetchEstimate` reads `location.state.priceChanges` |
+| BUG-10 — customers.ts | ✅ Done | All routes try/catch; 409/FK_IN_USE envelope; N+1→single query; escapeLike() |
+| BUG-12 — api.ts network | ✅ Done | `fetch` wrapped; typed `{ code:'NETWORK', status:0 }` |
+| BUG-13 — N+1 + LIKE | ✅ Done | Single batch query; `escapeLike()` |
+
+**Build health (2026-06-22):** web `tsc` 0 · server `tsc` 0 · engine 34/34 · server 37/37.
+
+### 26.4c Phases 3–5 (completed 2026-06-22)
+
+| Item | Status | Notes |
+|---|---|---|
+| Phase 3 — PEBI raw-cost seam | ✅ Done | `services/raw-cost/index.ts`; `RawCostProvider` interface + `PlatformMasterProvider` + `PebiRawCostProvider` stub + `resolveCosts()` |
+| Phase 3.4 — Engine contract doc | ✅ Done | `packages/engine/README.md` |
+| Phase 4 M1 — Capacitor deps | ✅ Done | `@capacitor/core@6.1.2`, `preferences`, `network`, `app` |
+| Phase 4 M2 — capacitor.config.json | ✅ Done | `webDir:"dist"`, `androidScheme:"https"` |
+| Phase 4 M3 — cap:sync scripts | ✅ Done | `cap:sync`, `cap:ios`, `cap:android` in `web/package.json` |
+| Phase 4 M4 — tokenStore.ts | ✅ Done | localStorage on web; Keychain/EncryptedSharedPreferences on native |
+| Phase 4 M5 — API base URL resolver | ✅ Done | `resolveApiBase()` with native platform warning |
+| Phase 5.1 — Roll-after-slitting panel | ✅ Done | Enhanced with slit width, OD, derived LM/kg + m²/kg |
+| Phase 5.2 — Order qty unit selector | ✅ Done (was already implemented) | |
+| Phase 5.4 — Unresolved-layer banner | ✅ Done | Dismissible in-page banner replaces alert() |
+| Phase 5.5 — FX stale-rate banner | ✅ Done | 24h threshold; amber banner; real last-updated timestamp |
+| Phase 5.6 — WCAG AA gold text | ✅ Done | `gold-accessible:#7A5800` in tailwind; selling price text updated |
+
+### 26.5 Pending (deferred to future sessions)
+
+See §25.5 for the full pending list. Summary:
+- **Phase 5.3** — Mini laminate stack on CustomerDetail
+- **Phase 6** — All 7 value features (proposal share link, bulk re-quote, margin guardrails, price history charts, CSV export, customer timeline, multi-currency PDF)
+- **Phase 7** — All visual/domain features (parametric SVGs, layers UI upgrade, add-on options, application picker, sustainability tags, UI modernization)
+- **Doc hygiene** — README stack claim, status doc consolidation, MasterLibrary orphan page
+- **F-SLAB** — Owner decision on Option A/B/C still pending
+
+*Section 26 updated 2026-06-22.*

@@ -677,13 +677,13 @@
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
-    "costPerKgUsd": 0,
+    "costPerKgUsd": 14.0,
     "wastePercent": 0,
     "isSolventBased": true,
     "substrateFamily": "Solvent Based",
     "substrateGrade": "Special Colors",
     "hoover": "Special Colors",
-    "marketPriceUsd": 0
+    "marketPriceUsd": 14.0
   },
   {
     "key": "ink-solvent-based-primer",
@@ -691,13 +691,13 @@
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
-    "costPerKgUsd": 0,
+    "costPerKgUsd": 10.0,
     "wastePercent": 0,
     "isSolventBased": true,
     "substrateFamily": "Solvent Based",
     "substrateGrade": "Primer",
     "hoover": "Primer",
-    "marketPriceUsd": 0
+    "marketPriceUsd": 10.0
   },
   {
     "key": "ink-solvent-based-glossy-varnish",
@@ -705,13 +705,13 @@
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
-    "costPerKgUsd": 0,
+    "costPerKgUsd": 8.0,
     "wastePercent": 0,
     "isSolventBased": true,
     "substrateFamily": "Solvent Based",
     "substrateGrade": "Glossy Varnish",
     "hoover": "Glossy Varnish",
-    "marketPriceUsd": 0
+    "marketPriceUsd": 8.0
   },
   {
     "key": "ink-solvent-based-matt-varnish",
@@ -719,13 +719,13 @@
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
-    "costPerKgUsd": 0,
+    "costPerKgUsd": 8.0,
     "wastePercent": 0,
     "isSolventBased": true,
     "substrateFamily": "Solvent Based",
     "substrateGrade": "Matt Varnish",
     "hoover": "Matt Varnish",
-    "marketPriceUsd": 0
+    "marketPriceUsd": 8.0
   },
   {
     "key": "ink-solvent-based-heat-seal",
@@ -733,13 +733,13 @@
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
-    "costPerKgUsd": 0,
+    "costPerKgUsd": 7.0,
     "wastePercent": 0,
     "isSolventBased": true,
     "substrateFamily": "Solvent Based",
     "substrateGrade": "Heat Seal",
     "hoover": "Heat Seal",
-    "marketPriceUsd": 0
+    "marketPriceUsd": 7.0
   },
   {
     "key": "ink-solvent-based-wax",
@@ -747,13 +747,13 @@
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
-    "costPerKgUsd": 0,
+    "costPerKgUsd": 5.0,
     "wastePercent": 0,
     "isSolventBased": true,
     "substrateFamily": "Solvent Based",
     "substrateGrade": "Wax",
     "hoover": "Wax",
-    "marketPriceUsd": 0
+    "marketPriceUsd": 5.0
   },
   {
     "key": "ink-solvent-based-cold-seal",
@@ -761,13 +761,13 @@
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
-    "costPerKgUsd": 0,
+    "costPerKgUsd": 9.0,
     "wastePercent": 0,
     "isSolventBased": true,
     "substrateFamily": "Solvent Based",
     "substrateGrade": "Cold Seal",
     "hoover": "Cold Seal",
-    "marketPriceUsd": 0
+    "marketPriceUsd": 9.0
   },
   {
     "key": "ink-uv",
@@ -789,13 +789,13 @@
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
-    "costPerKgUsd": 0,
+    "costPerKgUsd": 18.0,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "UV-LED",
     "substrateGrade": "Special Colors",
     "hoover": "Special Colors",
-    "marketPriceUsd": 0
+    "marketPriceUsd": 18.0
   },
   {
     "key": "ink-uv-led-primer",
@@ -803,13 +803,13 @@
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
-    "costPerKgUsd": 0,
+    "costPerKgUsd": 12.0,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "UV-LED",
     "substrateGrade": "Primer",
     "hoover": "Primer",
-    "marketPriceUsd": 0
+    "marketPriceUsd": 12.0
   },
   {
     "key": "ink-uv-led-glossy-varnish",
@@ -817,13 +817,13 @@
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
-    "costPerKgUsd": 0,
+    "costPerKgUsd": 10.0,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "UV-LED",
     "substrateGrade": "Glossy Varnish",
     "hoover": "Glossy Varnish",
-    "marketPriceUsd": 0
+    "marketPriceUsd": 10.0
   },
   {
     "key": "ink-uv-led-matt-varnish",
@@ -831,13 +831,13 @@
     "type": "ink",
     "solidPercent": 100,
     "density": 1,
-    "costPerKgUsd": 0,
+    "costPerKgUsd": 10.0,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "UV-LED",
     "substrateGrade": "Matt Varnish",
     "hoover": "Matt Varnish",
-    "marketPriceUsd": 0
+    "marketPriceUsd": 10.0
   },
   {
     "key": "adhesive-sb",
@@ -887,13 +887,13 @@
     "type": "substrate",
     "solidPercent": 100,
     "density": 1,
-    "costPerKgUsd": 0,
+    "costPerKgUsd": 2.5,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "Packaging",
     "substrateGrade": "Wraping Film",
     "hoover": "Wraping Film",
-    "marketPriceUsd": 0
+    "marketPriceUsd": 2.5
   },
   {
     "key": "packaging-pallet",
@@ -901,13 +901,13 @@
     "type": "substrate",
     "solidPercent": 100,
     "density": 1,
-    "costPerKgUsd": 0,
+    "costPerKgUsd": 1.5,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "Packaging",
     "substrateGrade": "Pallet",
     "hoover": "Pallet",
-    "marketPriceUsd": 0
+    "marketPriceUsd": 1.5
   },
   {
     "key": "packaging-paper-sheet",
@@ -915,12 +915,12 @@
     "type": "substrate",
     "solidPercent": 100,
     "density": 1,
-    "costPerKgUsd": 0,
+    "costPerKgUsd": 1.0,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "Packaging",
     "substrateGrade": "Paper Sheet",
     "hoover": "Paper Sheet",
-    "marketPriceUsd": 0
+    "marketPriceUsd": 1.0
   }
 ]

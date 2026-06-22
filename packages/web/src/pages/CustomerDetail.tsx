@@ -194,7 +194,7 @@ export default function CustomerDetail() {
                       </div>
                       <div>
                         <p className="text-mist">Sale Price</p>
-                        <p className="font-display font-semibold text-gold">{est.displayCurrency} {Number(est.salePricePerKg || 0).toFixed(2)}/kg</p>
+                        <p className="font-display font-semibold text-gold-accessible">{est.displayCurrency} {Number(est.salePricePerKg || 0).toFixed(2)}/kg</p>
                       </div>
                       <div>
                         <p className="text-mist">Total µ</p>
@@ -230,3 +230,4 @@ export default function CustomerDetail() {
     </div>
   );
 }
+

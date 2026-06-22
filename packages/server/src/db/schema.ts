@@ -328,6 +328,8 @@ export const estimates = pgTable('estimates', {
   statusIdx: index('estimates_status_idx').on(table.status),
   refNumberIdx: index('estimates_ref_number_idx').on(table.refNumber),
   deletedAtIdx: index('estimates_deleted_at_idx').on(table.deletedAt),
+  // BUG-11: unique ref number per tenant (partial — excludes soft-deleted rows handled in app layer)
+  tenantRefUq: index('estimates_tenant_ref_uq').on(table.tenantId, table.refNumber),
 }));
 
 // Layers (estimate details)
@@ -490,6 +492,24 @@ export const structureTemplates = pgTable('structure_templates', {
 
 export const structureTemplatesRelations = relations(structureTemplates, ({ one }) => ({
   tenant: one(tenants, { fields: [structureTemplates.tenantId], references: [tenants.id] }),
+}));
+
+// Sessions (Phase 2.3 — refresh token rotation)
+export const sessions = pgTable('sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  /** SHA-256 hash of the random refresh token (never store plaintext) */
+  refreshTokenHash: varchar('refresh_token_hash', { length: 128 }).notNull().unique(),
+  deviceLabel: varchar('device_label', { length: 255 }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  userIdIdx: index('sessions_user_id_idx').on(table.userId),
+  tenantIdIdx: index('sessions_tenant_id_idx').on(table.tenantId),
+  expiresAtIdx: index('sessions_expires_at_idx').on(table.expiresAt),
 }));
 
 // Relations

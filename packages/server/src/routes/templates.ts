@@ -8,6 +8,8 @@ import { quantitiesForSlabTemplateKey } from '../db/seed-slab-templates';
 import { derivePrintingWebClass, stackNeedsSolventMix, resolveTemplateStoreClassification } from '@es/engine';
 import { buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
 import { getMasterDataVersion } from '../db/platform-master-data';
+
+type EstimateRow = typeof schema.estimates.$inferSelect;
 import { buildLayerInsertValues, toMaterialLineageSource } from '../utils/layer-lineage';
 import { deriveSourceTemplateKey, deriveTenantTemplateKey } from '../utils/template-key';
 import {
@@ -342,7 +344,7 @@ export async function instantiateTemplateRoute(
       materials.map((m: MaterialRow) => [m.id, m])
     );
 
-    const [estimate] = await db
+    const [estimate] = (await db
       .insert(schema.estimates)
       .values({
         tenantId,
@@ -363,7 +365,7 @@ export async function instantiateTemplateRoute(
         orderQuantityKg: orderQuantityKg != null ? String(orderQuantityKg) : undefined,
         orderQuantityUnit: orderQuantityUnit ?? 'kgs',
       })
-      .returning();
+      .returning()) as EstimateRow[];
 
     const defaultLayersResolved = (template.defaultLayers as TemplateLayerRef[]) || [];
     let layerPosition = 0;

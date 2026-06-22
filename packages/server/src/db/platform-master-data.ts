@@ -217,22 +217,23 @@ export async function updatePlatformMasterMaterial(
   const existing = await getPlatformMasterMaterialById(id);
   if (!existing) return null;
 
+  const existingMaterial = rowToMasterMaterial(existing);
   const merged: MasterMaterial = {
-    ...existing,
+    ...existingMaterial,
     ...input,
-    key: input.key ?? existing.key,
-    name: input.name ?? existing.name,
-    type: (input.type ?? existing.type) as MasterMaterial['type'],
-    solidPercent: input.solidPercent ?? existing.solidPercent,
-    density: input.density ?? existing.density,
-    costPerKgUsd: input.costPerKgUsd ?? existing.costPerKgUsd,
-    wastePercent: input.wastePercent ?? existing.wastePercent,
-    isSolventBased: input.isSolventBased ?? existing.isSolventBased,
-    substrateFamily: input.substrateFamily !== undefined ? input.substrateFamily : existing.substrateFamily,
-    substrateGrade: input.substrateGrade !== undefined ? input.substrateGrade : existing.substrateGrade,
-    hoover: input.hoover !== undefined ? input.hoover : existing.hoover,
+    key: input.key ?? existingMaterial.key,
+    name: input.name ?? existingMaterial.name,
+    type: (input.type ?? existingMaterial.type) as MasterMaterial['type'],
+    solidPercent: input.solidPercent ?? existingMaterial.solidPercent,
+    density: input.density ?? existingMaterial.density,
+    costPerKgUsd: input.costPerKgUsd ?? existingMaterial.costPerKgUsd,
+    wastePercent: input.wastePercent ?? existingMaterial.wastePercent,
+    isSolventBased: input.isSolventBased ?? existingMaterial.isSolventBased,
+    substrateFamily: input.substrateFamily !== undefined ? input.substrateFamily : existingMaterial.substrateFamily,
+    substrateGrade: input.substrateGrade !== undefined ? input.substrateGrade : existingMaterial.substrateGrade,
+    hoover: input.hoover !== undefined ? input.hoover : existingMaterial.hoover,
     marketPriceUsd:
-      input.marketPriceUsd !== undefined ? input.marketPriceUsd : existing.marketPriceUsd,
+      input.marketPriceUsd !== undefined ? input.marketPriceUsd : existingMaterial.marketPriceUsd,
   };
 
   const values = masterMaterialInputToDbValues({

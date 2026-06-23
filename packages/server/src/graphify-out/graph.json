@@ -17,17 +17,27 @@
       "label": "BuildAppOptions",
       "file_type": "code",
       "source_file": "app.ts",
-      "source_location": "L18",
+      "source_location": "L24",
       "_origin": "ast",
       "id": "app_buildappoptions",
       "community": 9,
       "norm_label": "buildappoptions"
     },
     {
+      "label": "CAPACITOR_ORIGINS",
+      "file_type": "code",
+      "source_file": "app.ts",
+      "source_location": "L31",
+      "_origin": "ast",
+      "id": "app_capacitor_origins",
+      "community": 9,
+      "norm_label": "capacitor_origins"
+    },
+    {
       "label": "buildApp()",
       "file_type": "code",
       "source_file": "app.ts",
-      "source_location": "L24",
+      "source_location": "L33",
       "_origin": "ast",
       "id": "app_buildapp",
       "community": 9,
@@ -44,10 +54,20 @@
       "norm_label": "index.ts"
     },
     {
+      "label": "runMigrations()",
+      "file_type": "code",
+      "source_file": "db/index.ts",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "db_index_runmigrations",
+      "community": 9,
+      "norm_label": "runmigrations()"
+    },
+    {
       "label": "initializeDatabase()",
       "file_type": "code",
       "source_file": "db/index.ts",
-      "source_location": "L8",
+      "source_location": "L70",
       "_origin": "ast",
       "id": "db_index_initializedatabase",
       "community": 9,
@@ -57,7 +77,7 @@
       "label": "getDatabase()",
       "file_type": "code",
       "source_file": "db/index.ts",
-      "source_location": "L36",
+      "source_location": "L103",
       "_origin": "ast",
       "id": "db_index_getdatabase",
       "community": 1,
@@ -67,7 +87,7 @@
       "label": "closeDatabase()",
       "file_type": "code",
       "source_file": "db/index.ts",
-      "source_location": "L43",
+      "source_location": "L110",
       "_origin": "ast",
       "id": "db_index_closedatabase",
       "community": 9,
@@ -77,7 +97,7 @@
       "label": "Database",
       "file_type": "code",
       "source_file": "db/index.ts",
-      "source_location": "L52",
+      "source_location": "L119",
       "_origin": "ast",
       "id": "db_index_database",
       "community": 9,
@@ -150,7 +170,7 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "db_master_materials_io_costingkeyformasterkey",
-      "community": 0,
+      "community": 7,
       "norm_label": "costingkeyformasterkey()"
     },
     {
@@ -270,7 +290,7 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "db_platform_master_audit_referenceentitykey",
-      "community": 11,
+      "community": 0,
       "norm_label": "referenceentitykey()"
     },
     {
@@ -527,7 +547,7 @@
       "label": "deletePlatformMasterMaterial()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L271",
+      "source_location": "L272",
       "_origin": "ast",
       "id": "db_platform_master_data_deleteplatformmastermaterial",
       "community": 0,
@@ -537,7 +557,7 @@
       "label": "replacePlatformMasterMaterials()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L298",
+      "source_location": "L299",
       "_origin": "ast",
       "id": "db_platform_master_data_replaceplatformmastermaterials",
       "community": 0,
@@ -547,7 +567,7 @@
       "label": "RefCategory",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L362",
+      "source_location": "L363",
       "_origin": "ast",
       "id": "db_platform_master_data_refcategory",
       "community": 0,
@@ -557,17 +577,17 @@
       "label": "listPlatformReferenceItems()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L364",
+      "source_location": "L365",
       "_origin": "ast",
       "id": "db_platform_master_data_listplatformreferenceitems",
-      "community": 3,
+      "community": 0,
       "norm_label": "listplatformreferenceitems()"
     },
     {
       "label": "deriveRmTypeCode()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L391",
+      "source_location": "L392",
       "_origin": "ast",
       "id": "db_platform_master_data_derivermtypecode",
       "community": 0,
@@ -577,7 +597,7 @@
       "label": "buildMasterDataReferenceFromDb()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L402",
+      "source_location": "L403",
       "_origin": "ast",
       "id": "db_platform_master_data_buildmasterdatareferencefromdb",
       "community": 0,
@@ -587,7 +607,7 @@
       "label": "replacePlatformReferenceCategory()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L463",
+      "source_location": "L464",
       "_origin": "ast",
       "id": "db_platform_master_data_replaceplatformreferencecategory",
       "community": 0,
@@ -597,7 +617,7 @@
       "label": "TenantSyncResult",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L561",
+      "source_location": "L562",
       "_origin": "ast",
       "id": "db_platform_master_data_tenantsyncresult",
       "community": 0,
@@ -607,7 +627,7 @@
       "label": "syncPlatformMasterToAllTenants()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L571",
+      "source_location": "L572",
       "_origin": "ast",
       "id": "db_platform_master_data_syncplatformmastertoalltenants",
       "community": 0,
@@ -617,7 +637,7 @@
       "label": "loadSeedMaterialsFromJson()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L607",
+      "source_location": "L608",
       "_origin": "ast",
       "id": "db_platform_master_data_loadseedmaterialsfromjson",
       "community": 0,
@@ -627,7 +647,7 @@
       "label": "loadReferenceFromJson()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L613",
+      "source_location": "L614",
       "_origin": "ast",
       "id": "db_platform_master_data_loadreferencefromjson",
       "community": 0,
@@ -637,7 +657,7 @@
       "label": "ensurePlatformMasterSeeded()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L631",
+      "source_location": "L632",
       "_origin": "ast",
       "id": "db_platform_master_data_ensureplatformmasterseeded",
       "community": 0,
@@ -957,7 +977,7 @@
       "label": "layers",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L334",
+      "source_location": "L336",
       "_origin": "ast",
       "id": "db_schema_layers",
       "community": 6,
@@ -967,7 +987,7 @@
       "label": "processes",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L360",
+      "source_location": "L362",
       "_origin": "ast",
       "id": "db_schema_processes",
       "community": 6,
@@ -977,7 +997,7 @@
       "label": "slabs",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L381",
+      "source_location": "L383",
       "_origin": "ast",
       "id": "db_schema_slabs",
       "community": 6,
@@ -987,7 +1007,7 @@
       "label": "slabTemplates",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L402",
+      "source_location": "L404",
       "_origin": "ast",
       "id": "db_schema_slabtemplates",
       "community": 6,
@@ -997,7 +1017,7 @@
       "label": "proposals",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L414",
+      "source_location": "L416",
       "_origin": "ast",
       "id": "db_schema_proposals",
       "community": 6,
@@ -1007,7 +1027,7 @@
       "label": "activityLogs",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L428",
+      "source_location": "L430",
       "_origin": "ast",
       "id": "db_schema_activitylogs",
       "community": 6,
@@ -1017,7 +1037,7 @@
       "label": "priceHistory",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L444",
+      "source_location": "L446",
       "_origin": "ast",
       "id": "db_schema_pricehistory",
       "community": 6,
@@ -1027,7 +1047,7 @@
       "label": "structureTemplates",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L457",
+      "source_location": "L459",
       "_origin": "ast",
       "id": "db_schema_structuretemplates",
       "community": 6,
@@ -1037,17 +1057,27 @@
       "label": "structureTemplatesRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L491",
+      "source_location": "L500",
       "_origin": "ast",
       "id": "db_schema_structuretemplatesrelations",
       "community": 6,
       "norm_label": "structuretemplatesrelations"
     },
     {
+      "label": "sessions",
+      "file_type": "code",
+      "source_file": "db/schema.ts",
+      "source_location": "L505",
+      "_origin": "ast",
+      "id": "db_schema_sessions",
+      "community": 6,
+      "norm_label": "sessions"
+    },
+    {
       "label": "usersRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L496",
+      "source_location": "L523",
       "_origin": "ast",
       "id": "db_schema_usersrelations",
       "community": 6,
@@ -1057,7 +1087,7 @@
       "label": "customersRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L500",
+      "source_location": "L527",
       "_origin": "ast",
       "id": "db_schema_customersrelations",
       "community": 6,
@@ -1067,7 +1097,7 @@
       "label": "estimatesRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L504",
+      "source_location": "L531",
       "_origin": "ast",
       "id": "db_schema_estimatesrelations",
       "community": 6,
@@ -1077,7 +1107,7 @@
       "label": "layersRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L513",
+      "source_location": "L540",
       "_origin": "ast",
       "id": "db_schema_layersrelations",
       "community": 6,
@@ -1087,7 +1117,7 @@
       "label": "processesRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L518",
+      "source_location": "L545",
       "_origin": "ast",
       "id": "db_schema_processesrelations",
       "community": 6,
@@ -1097,7 +1127,7 @@
       "label": "slabsRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L522",
+      "source_location": "L549",
       "_origin": "ast",
       "id": "db_schema_slabsrelations",
       "community": 6,
@@ -1110,7 +1140,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_seed_admin",
-      "community": 3,
+      "community": 1,
       "norm_label": "seed-admin.ts"
     },
     {
@@ -1120,7 +1150,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "db_seed_admin_seeddefaultadmin",
-      "community": 3,
+      "community": 1,
       "norm_label": "seeddefaultadmin()"
     },
     {
@@ -1130,7 +1160,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_seed_categories",
-      "community": 3,
+      "community": 1,
       "norm_label": "seed-categories.ts"
     },
     {
@@ -1140,7 +1170,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "db_seed_categories_standard_rm_codes",
-      "community": 3,
+      "community": 1,
       "norm_label": "standard_rm_codes"
     },
     {
@@ -1150,7 +1180,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "db_seed_categories_base_taxonomy",
-      "community": 3,
+      "community": 1,
       "norm_label": "base_taxonomy"
     },
     {
@@ -1160,7 +1190,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "db_seed_categories_taxonomycategory",
-      "community": 3,
+      "community": 1,
       "norm_label": "taxonomycategory"
     },
     {
@@ -1170,7 +1200,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "db_seed_categories_buildtaxonomy",
-      "community": 3,
+      "community": 0,
       "norm_label": "buildtaxonomy()"
     },
     {
@@ -1180,7 +1210,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "db_seed_categories_subcategoryformaterial",
-      "community": 3,
+      "community": 1,
       "norm_label": "subcategoryformaterial()"
     },
     {
@@ -1190,7 +1220,7 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "db_seed_categories_backfillmaterialsubcategories",
-      "community": 3,
+      "community": 1,
       "norm_label": "backfillmaterialsubcategories()"
     },
     {
@@ -1200,7 +1230,7 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "db_seed_categories_seedcategoriesfortenant",
-      "community": 3,
+      "community": 1,
       "norm_label": "seedcategoriesfortenant()"
     },
     {
@@ -1210,7 +1240,7 @@
       "source_location": "L160",
       "_origin": "ast",
       "id": "db_seed_categories_synccustomrmtypecategories",
-      "community": 3,
+      "community": 0,
       "norm_label": "synccustomrmtypecategories()"
     },
     {
@@ -1220,7 +1250,7 @@
       "source_location": "L191",
       "_origin": "ast",
       "id": "db_seed_categories_ensurecategoriesfortenant",
-      "community": 3,
+      "community": 1,
       "norm_label": "ensurecategoriesfortenant()"
     },
     {
@@ -1370,7 +1400,7 @@
       "source_location": "L161",
       "_origin": "ast",
       "id": "db_seed_materials_seedmaterialsfortenant",
-      "community": 3,
+      "community": 1,
       "norm_label": "seedmaterialsfortenant()"
     },
     {
@@ -1380,7 +1410,7 @@
       "source_location": "L181",
       "_origin": "ast",
       "id": "db_seed_materials_ensurematerialsfortenant",
-      "community": 3,
+      "community": 1,
       "norm_label": "ensurematerialsfortenant()"
     },
     {
@@ -1397,7 +1427,7 @@
       "label": "pruneOrphanSubstratesForTenant()",
       "file_type": "code",
       "source_file": "db/seed-materials.ts",
-      "source_location": "L284",
+      "source_location": "L288",
       "_origin": "ast",
       "id": "db_seed_materials_pruneorphansubstratesfortenant",
       "community": 7,
@@ -1407,7 +1437,7 @@
       "label": "getMasterMaterialsList()",
       "file_type": "code",
       "source_file": "db/seed-materials.ts",
-      "source_location": "L306",
+      "source_location": "L310",
       "_origin": "ast",
       "id": "db_seed_materials_getmastermaterialslist",
       "community": 7,
@@ -1520,7 +1550,7 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "db_seed_templates_loadtenantmaterials",
-      "community": 2,
+      "community": 1,
       "norm_label": "loadtenantmaterials()"
     },
     {
@@ -1530,7 +1560,7 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "db_seed_templates_seedtemplatesfortenant",
-      "community": 3,
+      "community": 1,
       "norm_label": "seedtemplatesfortenant()"
     },
     {
@@ -1570,7 +1600,7 @@
       "source_location": "L247",
       "_origin": "ast",
       "id": "db_seed_templates_ensuretemplatesfortenant",
-      "community": 3,
+      "community": 1,
       "norm_label": "ensuretemplatesfortenant()"
     },
     {
@@ -1620,74 +1650,124 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_auth",
-      "community": 3,
+      "community": 1,
       "norm_label": "auth.ts"
+    },
+    {
+      "label": "generateRefreshToken()",
+      "file_type": "code",
+      "source_file": "routes/auth.ts",
+      "source_location": "L23",
+      "_origin": "ast",
+      "id": "routes_auth_generaterefreshtoken",
+      "community": 1,
+      "norm_label": "generaterefreshtoken()"
+    },
+    {
+      "label": "issueTokens()",
+      "file_type": "code",
+      "source_file": "routes/auth.ts",
+      "source_location": "L30",
+      "_origin": "ast",
+      "id": "routes_auth_issuetokens",
+      "community": 1,
+      "norm_label": "issuetokens()"
     },
     {
       "label": "RegisterSchema",
       "file_type": "code",
       "source_file": "routes/auth.ts",
-      "source_location": "L13",
+      "source_location": "L55",
       "_origin": "ast",
       "id": "routes_auth_registerschema",
-      "community": 3,
+      "community": 1,
       "norm_label": "registerschema"
     },
     {
       "label": "LoginSchema",
       "file_type": "code",
       "source_file": "routes/auth.ts",
-      "source_location": "L22",
+      "source_location": "L65",
       "_origin": "ast",
       "id": "routes_auth_loginschema",
-      "community": 3,
+      "community": 1,
       "norm_label": "loginschema"
+    },
+    {
+      "label": "RefreshSchema",
+      "file_type": "code",
+      "source_file": "routes/auth.ts",
+      "source_location": "L71",
+      "_origin": "ast",
+      "id": "routes_auth_refreshschema",
+      "community": 1,
+      "norm_label": "refreshschema"
     },
     {
       "label": "registerRoute()",
       "file_type": "code",
       "source_file": "routes/auth.ts",
-      "source_location": "L27",
+      "source_location": "L79",
       "_origin": "ast",
       "id": "routes_auth_registerroute",
-      "community": 3,
+      "community": 1,
       "norm_label": "registerroute()"
     },
     {
       "label": "loginRoute()",
       "file_type": "code",
       "source_file": "routes/auth.ts",
-      "source_location": "L145",
+      "source_location": "L162",
       "_origin": "ast",
       "id": "routes_auth_loginroute",
-      "community": 3,
+      "community": 1,
       "norm_label": "loginroute()"
     },
     {
       "label": "refreshRoute()",
       "file_type": "code",
       "source_file": "routes/auth.ts",
-      "source_location": "L210",
+      "source_location": "L225",
       "_origin": "ast",
       "id": "routes_auth_refreshroute",
-      "community": 3,
+      "community": 1,
       "norm_label": "refreshroute()"
+    },
+    {
+      "label": "logoutRoute()",
+      "file_type": "code",
+      "source_file": "routes/auth.ts",
+      "source_location": "L301",
+      "_origin": "ast",
+      "id": "routes_auth_logoutroute",
+      "community": 1,
+      "norm_label": "logoutroute()"
     },
     {
       "label": "meRoute()",
       "file_type": "code",
       "source_file": "routes/auth.ts",
-      "source_location": "L243",
+      "source_location": "L325",
       "_origin": "ast",
       "id": "routes_auth_meroute",
-      "community": 3,
+      "community": 1,
       "norm_label": "meroute()"
+    },
+    {
+      "label": "purgeExpiredSessions()",
+      "file_type": "code",
+      "source_file": "routes/auth.ts",
+      "source_location": "L371",
+      "_origin": "ast",
+      "id": "routes_auth_purgeexpiredsessions",
+      "community": 1,
+      "norm_label": "purgeexpiredsessions()"
     },
     {
       "label": "registerAuthRoutes()",
       "file_type": "code",
       "source_file": "routes/auth.ts",
-      "source_location": "L287",
+      "source_location": "L383",
       "_origin": "ast",
       "id": "routes_auth_registerauthroutes",
       "community": 9,
@@ -1740,104 +1820,114 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_customers",
-      "community": 1,
+      "community": 3,
       "norm_label": "customers.ts"
     },
     {
       "label": "createCustomerSchema",
       "file_type": "code",
       "source_file": "routes/customers.ts",
-      "source_location": "L9",
+      "source_location": "L13",
       "_origin": "ast",
       "id": "routes_customers_createcustomerschema",
-      "community": 1,
+      "community": 3,
       "norm_label": "createcustomerschema"
     },
     {
       "label": "updateCustomerSchema",
       "file_type": "code",
       "source_file": "routes/customers.ts",
-      "source_location": "L17",
+      "source_location": "L21",
       "_origin": "ast",
       "id": "routes_customers_updatecustomerschema",
-      "community": 1,
+      "community": 3,
       "norm_label": "updatecustomerschema"
+    },
+    {
+      "label": "escapeLike()",
+      "file_type": "code",
+      "source_file": "routes/customers.ts",
+      "source_location": "L28",
+      "_origin": "ast",
+      "id": "routes_customers_escapelike",
+      "community": 3,
+      "norm_label": "escapelike()"
     },
     {
       "label": "getCustomersRoute()",
       "file_type": "code",
       "source_file": "routes/customers.ts",
-      "source_location": "L20",
+      "source_location": "L36",
       "_origin": "ast",
       "id": "routes_customers_getcustomersroute",
-      "community": 1,
+      "community": 3,
       "norm_label": "getcustomersroute()"
     },
     {
       "label": "autocompleteCustomersRoute()",
       "file_type": "code",
       "source_file": "routes/customers.ts",
-      "source_location": "L38",
+      "source_location": "L65",
       "_origin": "ast",
       "id": "routes_customers_autocompletecustomersroute",
-      "community": 1,
+      "community": 3,
       "norm_label": "autocompletecustomersroute()"
     },
     {
       "label": "createCustomerRoute()",
       "file_type": "code",
       "source_file": "routes/customers.ts",
-      "source_location": "L69",
+      "source_location": "L101",
       "_origin": "ast",
       "id": "routes_customers_createcustomerroute",
-      "community": 1,
+      "community": 3,
       "norm_label": "createcustomerroute()"
     },
     {
       "label": "getCustomerRoute()",
       "file_type": "code",
       "source_file": "routes/customers.ts",
-      "source_location": "L97",
+      "source_location": "L134",
       "_origin": "ast",
       "id": "routes_customers_getcustomerroute",
-      "community": 1,
+      "community": 3,
       "norm_label": "getcustomerroute()"
     },
     {
       "label": "updateCustomerRoute()",
       "file_type": "code",
       "source_file": "routes/customers.ts",
-      "source_location": "L126",
+      "source_location": "L160",
       "_origin": "ast",
       "id": "routes_customers_updatecustomerroute",
-      "community": 1,
+      "community": 3,
       "norm_label": "updatecustomerroute()"
     },
     {
       "label": "deleteCustomerRoute()",
       "file_type": "code",
       "source_file": "routes/customers.ts",
-      "source_location": "L162",
+      "source_location": "L192",
       "_origin": "ast",
       "id": "routes_customers_deletecustomerroute",
-      "community": 1,
+      "community": 3,
       "norm_label": "deletecustomerroute()"
     },
     {
       "label": "getCustomerEstimatesRoute()",
       "file_type": "code",
       "source_file": "routes/customers.ts",
-      "source_location": "L191",
+      "source_location": "L246",
       "_origin": "ast",
       "id": "routes_customers_getcustomerestimatesroute",
-      "community": 1,
+      "community": 3,
       "norm_label": "getcustomerestimatesroute()"
     },
     {
       "label": "registerCustomerRoutes()",
       "file_type": "code",
       "source_file": "routes/customers.ts",
-      "source_location": "L243",
+      "source_location": "L329",
       "_origin": "ast",
       "id": "routes_customers_registercustomerroutes",
       "community": 9,
@@ -1854,10 +1944,20 @@
       "norm_label": "dashboard.ts"
     },
     {
-      "label": "getUserVisibilityProfile()",
+      "label": "EstimateRow",
       "file_type": "code",
       "source_file": "routes/dashboard.ts",
       "source_location": "L8",
+      "_origin": "ast",
+      "id": "routes_dashboard_estimaterow",
+      "community": 4,
+      "norm_label": "estimaterow"
+    },
+    {
+      "label": "getUserVisibilityProfile()",
+      "file_type": "code",
+      "source_file": "routes/dashboard.ts",
+      "source_location": "L10",
       "_origin": "ast",
       "id": "routes_dashboard_getuservisibilityprofile",
       "community": 4,
@@ -1867,7 +1967,7 @@
       "label": "estimateTotalDisplay()",
       "file_type": "code",
       "source_file": "routes/dashboard.ts",
-      "source_location": "L16",
+      "source_location": "L18",
       "_origin": "ast",
       "id": "routes_dashboard_estimatetotaldisplay",
       "community": 4,
@@ -1877,17 +1977,17 @@
       "label": "getDashboardSummaryRoute()",
       "file_type": "code",
       "source_file": "routes/dashboard.ts",
-      "source_location": "L28",
+      "source_location": "L30",
       "_origin": "ast",
       "id": "routes_dashboard_getdashboardsummaryroute",
-      "community": 1,
+      "community": 4,
       "norm_label": "getdashboardsummaryroute()"
     },
     {
       "label": "registerDashboardRoutes()",
       "file_type": "code",
       "source_file": "routes/dashboard.ts",
-      "source_location": "L141",
+      "source_location": "L143",
       "_origin": "ast",
       "id": "routes_dashboard_registerdashboardroutes",
       "community": 9,
@@ -1904,10 +2004,30 @@
       "norm_label": "estimates.ts"
     },
     {
+      "label": "EstimateRow",
+      "file_type": "code",
+      "source_file": "routes/estimates.ts",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "routes_estimates_estimaterow",
+      "community": 5,
+      "norm_label": "estimaterow"
+    },
+    {
+      "label": "LayerRow",
+      "file_type": "code",
+      "source_file": "routes/estimates.ts",
+      "source_location": "L20",
+      "_origin": "ast",
+      "id": "routes_estimates_layerrow",
+      "community": 5,
+      "norm_label": "layerrow"
+    },
+    {
       "label": "getUserVisibilityProfile()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L17",
+      "source_location": "L22",
       "_origin": "ast",
       "id": "routes_estimates_getuservisibilityprofile",
       "community": 5,
@@ -1917,7 +2037,7 @@
       "label": "EstimateCreateSchema",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L26",
+      "source_location": "L31",
       "_origin": "ast",
       "id": "routes_estimates_estimatecreateschema",
       "community": 5,
@@ -1927,7 +2047,7 @@
       "label": "generateRefNumber()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L60",
+      "source_location": "L65",
       "_origin": "ast",
       "id": "routes_estimates_generaterefnumber",
       "community": 5,
@@ -1937,17 +2057,17 @@
       "label": "getEstimatesRoute()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L76",
+      "source_location": "L106",
       "_origin": "ast",
       "id": "routes_estimates_getestimatesroute",
-      "community": 1,
+      "community": 3,
       "norm_label": "getestimatesroute()"
     },
     {
       "label": "createEstimateRoute()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L117",
+      "source_location": "L159",
       "_origin": "ast",
       "id": "routes_estimates_createestimateroute",
       "community": 5,
@@ -1957,7 +2077,7 @@
       "label": "calculateEstimateRoute()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L236",
+      "source_location": "L278",
       "_origin": "ast",
       "id": "routes_estimates_calculateestimateroute",
       "community": 5,
@@ -1967,27 +2087,27 @@
       "label": "generateProposalPdfRoute()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L268",
+      "source_location": "L310",
       "_origin": "ast",
       "id": "routes_estimates_generateproposalpdfroute",
-      "community": 1,
+      "community": 4,
       "norm_label": "generateproposalpdfroute()"
     },
     {
       "label": "getEstimateRoute()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L290",
+      "source_location": "L332",
       "_origin": "ast",
       "id": "routes_estimates_getestimateroute",
-      "community": 1,
+      "community": 5,
       "norm_label": "getestimateroute()"
     },
     {
       "label": "updateEstimateRoute()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L382",
+      "source_location": "L425",
       "_origin": "ast",
       "id": "routes_estimates_updateestimateroute",
       "community": 5,
@@ -1997,17 +2117,17 @@
       "label": "deleteEstimateRoute()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L601",
+      "source_location": "L661",
       "_origin": "ast",
       "id": "routes_estimates_deleteestimateroute",
-      "community": 1,
+      "community": 3,
       "norm_label": "deleteestimateroute()"
     },
     {
       "label": "requoteEstimateRoute()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L637",
+      "source_location": "L697",
       "_origin": "ast",
       "id": "routes_estimates_requoteestimateroute",
       "community": 5,
@@ -2017,7 +2137,7 @@
       "label": "duplicateEstimateRoute()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L841",
+      "source_location": "L889",
       "_origin": "ast",
       "id": "routes_estimates_duplicateestimateroute",
       "community": 5,
@@ -2027,7 +2147,7 @@
       "label": "registerEstimateRoutes()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L971",
+      "source_location": "L1019",
       "_origin": "ast",
       "id": "routes_estimates_registerestimateroutes",
       "community": 9,
@@ -2060,84 +2180,84 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_materials",
-      "community": 1,
+      "community": 3,
       "norm_label": "materials.ts"
     },
     {
       "label": "isMaterialAdmin()",
       "file_type": "code",
       "source_file": "routes/materials.ts",
-      "source_location": "L10",
+      "source_location": "L11",
       "_origin": "ast",
       "id": "routes_materials_ismaterialadmin",
-      "community": 1,
+      "community": 3,
       "norm_label": "ismaterialadmin()"
     },
     {
       "label": "normalizeMaterialPrices()",
       "file_type": "code",
       "source_file": "routes/materials.ts",
-      "source_location": "L14",
+      "source_location": "L15",
       "_origin": "ast",
       "id": "routes_materials_normalizematerialprices",
-      "community": 1,
+      "community": 3,
       "norm_label": "normalizematerialprices()"
     },
     {
       "label": "MaterialSchema",
       "file_type": "code",
       "source_file": "routes/materials.ts",
-      "source_location": "L27",
+      "source_location": "L28",
       "_origin": "ast",
       "id": "routes_materials_materialschema",
-      "community": 1,
+      "community": 3,
       "norm_label": "materialschema"
     },
     {
       "label": "getMaterialsRoute()",
       "file_type": "code",
       "source_file": "routes/materials.ts",
-      "source_location": "L41",
+      "source_location": "L42",
       "_origin": "ast",
       "id": "routes_materials_getmaterialsroute",
-      "community": 1,
+      "community": 3,
       "norm_label": "getmaterialsroute()"
     },
     {
       "label": "createMaterialRoute()",
       "file_type": "code",
       "source_file": "routes/materials.ts",
-      "source_location": "L80",
+      "source_location": "L90",
       "_origin": "ast",
       "id": "routes_materials_creatematerialroute",
-      "community": 1,
+      "community": 3,
       "norm_label": "creatematerialroute()"
     },
     {
       "label": "updateMaterialRoute()",
       "file_type": "code",
       "source_file": "routes/materials.ts",
-      "source_location": "L117",
+      "source_location": "L137",
       "_origin": "ast",
       "id": "routes_materials_updatematerialroute",
-      "community": 1,
+      "community": 3,
       "norm_label": "updatematerialroute()"
     },
     {
       "label": "deleteMaterialRoute()",
       "file_type": "code",
       "source_file": "routes/materials.ts",
-      "source_location": "L166",
+      "source_location": "L186",
       "_origin": "ast",
       "id": "routes_materials_deletematerialroute",
-      "community": 1,
+      "community": 3,
       "norm_label": "deletematerialroute()"
     },
     {
       "label": "registerMaterialRoutes()",
       "file_type": "code",
       "source_file": "routes/materials.ts",
-      "source_location": "L213",
+      "source_location": "L246",
       "_origin": "ast",
       "id": "routes_materials_registermaterialroutes",
       "community": 9,
@@ -2230,7 +2350,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_platform",
-      "community": 7,
+      "community": 3,
       "norm_label": "platform.ts"
     },
     {
@@ -2240,7 +2360,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "routes_platform_requiremasterdataadmin",
-      "community": 7,
+      "community": 3,
       "norm_label": "requiremasterdataadmin()"
     },
     {
@@ -2334,10 +2454,20 @@
       "norm_label": "templates.ts"
     },
     {
+      "label": "EstimateRow",
+      "file_type": "code",
+      "source_file": "routes/templates.ts",
+      "source_location": "L12",
+      "_origin": "ast",
+      "id": "routes_templates_estimaterow",
+      "community": 2,
+      "norm_label": "estimaterow"
+    },
+    {
       "label": "prepareTemplatesForTenant()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L25",
+      "source_location": "L27",
       "_origin": "ast",
       "id": "routes_templates_preparetemplatesfortenant",
       "community": 2,
@@ -2347,7 +2477,7 @@
       "label": "TemplateLayerSchema",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L33",
+      "source_location": "L35",
       "_origin": "ast",
       "id": "routes_templates_templatelayerschema",
       "community": 2,
@@ -2357,7 +2487,7 @@
       "label": "UpdateTemplateSchema",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L42",
+      "source_location": "L44",
       "_origin": "ast",
       "id": "routes_templates_updatetemplateschema",
       "community": 2,
@@ -2367,7 +2497,7 @@
       "label": "getTemplatesRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L62",
+      "source_location": "L72",
       "_origin": "ast",
       "id": "routes_templates_gettemplatesroute",
       "community": 2,
@@ -2377,7 +2507,7 @@
       "label": "getTemplateByIdRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L103",
+      "source_location": "L128",
       "_origin": "ast",
       "id": "routes_templates_gettemplatebyidroute",
       "community": 2,
@@ -2387,7 +2517,7 @@
       "label": "instantiateByKeyRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L140",
+      "source_location": "L165",
       "_origin": "ast",
       "id": "routes_templates_instantiatebykeyroute",
       "community": 2,
@@ -2397,17 +2527,37 @@
       "label": "instantiateTemplateRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L211",
+      "source_location": "L236",
       "_origin": "ast",
       "id": "routes_templates_instantiatetemplateroute",
       "community": 2,
       "norm_label": "instantiatetemplateroute()"
     },
     {
+      "label": "CreateTemplateFromEstimateSchema",
+      "file_type": "code",
+      "source_file": "routes/templates.ts",
+      "source_location": "L456",
+      "_origin": "ast",
+      "id": "routes_templates_createtemplatefromestimateschema",
+      "community": 2,
+      "norm_label": "createtemplatefromestimateschema"
+    },
+    {
+      "label": "CreateTemplateFromDefinitionSchema",
+      "file_type": "code",
+      "source_file": "routes/templates.ts",
+      "source_location": "L462",
+      "_origin": "ast",
+      "id": "routes_templates_createtemplatefromdefinitionschema",
+      "community": 2,
+      "norm_label": "createtemplatefromdefinitionschema"
+    },
+    {
       "label": "CreateTemplateSchema",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L430",
+      "source_location": "L475",
       "_origin": "ast",
       "id": "routes_templates_createtemplateschema",
       "community": 2,
@@ -2417,37 +2567,67 @@
       "label": "createTemplateRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L438",
+      "source_location": "L486",
       "_origin": "ast",
       "id": "routes_templates_createtemplateroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "createtemplateroute()"
+    },
+    {
+      "label": "createTemplateFromEstimateHandler()",
+      "file_type": "code",
+      "source_file": "routes/templates.ts",
+      "source_location": "L514",
+      "_origin": "ast",
+      "id": "routes_templates_createtemplatefromestimatehandler",
+      "community": 2,
+      "norm_label": "createtemplatefromestimatehandler()"
+    },
+    {
+      "label": "createTemplateFromDefinition()",
+      "file_type": "code",
+      "source_file": "routes/templates.ts",
+      "source_location": "L622",
+      "_origin": "ast",
+      "id": "routes_templates_createtemplatefromdefinition",
+      "community": 2,
+      "norm_label": "createtemplatefromdefinition()"
+    },
+    {
+      "label": "resolveOwnership()",
+      "file_type": "code",
+      "source_file": "routes/templates.ts",
+      "source_location": "L759",
+      "_origin": "ast",
+      "id": "routes_templates_resolveownership",
+      "community": 2,
+      "norm_label": "resolveownership()"
     },
     {
       "label": "updateTemplateRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L552",
+      "source_location": "L775",
       "_origin": "ast",
       "id": "routes_templates_updatetemplateroute",
-      "community": 1,
+      "community": 3,
       "norm_label": "updatetemplateroute()"
     },
     {
       "label": "deleteTemplateRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L624",
+      "source_location": "L860",
       "_origin": "ast",
       "id": "routes_templates_deletetemplateroute",
-      "community": 1,
+      "community": 3,
       "norm_label": "deletetemplateroute()"
     },
     {
       "label": "registerTemplateRoutes()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L669",
+      "source_location": "L905",
       "_origin": "ast",
       "id": "routes_templates_registertemplateroutes",
       "community": 9,
@@ -2460,7 +2640,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_users",
-      "community": 1,
+      "community": 4,
       "norm_label": "users.ts"
     },
     {
@@ -2470,7 +2650,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "routes_users_visibilityprofileschema",
-      "community": 1,
+      "community": 4,
       "norm_label": "visibilityprofileschema"
     },
     {
@@ -2480,7 +2660,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "routes_users_patchuservisibilityschema",
-      "community": 1,
+      "community": 4,
       "norm_label": "patchuservisibilityschema"
     },
     {
@@ -2490,7 +2670,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "routes_users_normalizevisibilityprofile",
-      "community": 1,
+      "community": 4,
       "norm_label": "normalizevisibilityprofile()"
     },
     {
@@ -2500,7 +2680,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "routes_users_gettenantusersroute",
-      "community": 1,
+      "community": 4,
       "norm_label": "gettenantusersroute()"
     },
     {
@@ -2510,7 +2690,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "routes_users_updateuservisibilityroute",
-      "community": 1,
+      "community": 4,
       "norm_label": "updateuservisibilityroute()"
     },
     {
@@ -2550,7 +2730,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_verify_template_links",
-      "community": 2,
+      "community": 7,
       "norm_label": "verify-template-links.ts"
     },
     {
@@ -2560,7 +2740,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "scripts_verify_template_links_materials",
-      "community": 2,
+      "community": 7,
       "norm_label": "materials"
     },
     {
@@ -2570,7 +2750,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "scripts_verify_template_links_lookup",
-      "community": 2,
+      "community": 7,
       "norm_label": "lookup"
     },
     {
@@ -2580,7 +2760,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "scripts_verify_template_links_validids",
-      "community": 2,
+      "community": 7,
       "norm_label": "validids"
     },
     {
@@ -2894,6 +3074,156 @@
       "norm_label": "readstoredproposalpdf()"
     },
     {
+      "label": "index.ts",
+      "file_type": "code",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "raw_cost_index",
+      "community": 14,
+      "norm_label": "index.ts"
+    },
+    {
+      "label": "RawCostContext",
+      "file_type": "code",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L18",
+      "_origin": "ast",
+      "id": "raw_cost_index_rawcostcontext",
+      "community": 14,
+      "norm_label": "rawcostcontext"
+    },
+    {
+      "label": "RawCostResult",
+      "file_type": "code",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L22",
+      "_origin": "ast",
+      "id": "raw_cost_index_rawcostresult",
+      "community": 14,
+      "norm_label": "rawcostresult"
+    },
+    {
+      "label": "RawCostProvider",
+      "file_type": "code",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L35",
+      "_origin": "ast",
+      "id": "raw_cost_index_rawcostprovider",
+      "community": 14,
+      "norm_label": "rawcostprovider"
+    },
+    {
+      "label": "PlatformMasterProvider",
+      "file_type": "code",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L48",
+      "_origin": "ast",
+      "id": "raw_cost_index_platformmasterprovider",
+      "community": 14,
+      "norm_label": "platformmasterprovider"
+    },
+    {
+      "label": ".getCostsUsd()",
+      "file_type": "code",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L51",
+      "_origin": "ast",
+      "id": "raw_cost_index_platformmasterprovider_getcostsusd",
+      "community": 14,
+      "norm_label": ".getcostsusd()"
+    },
+    {
+      "label": ".getCostUsd()",
+      "file_type": "code",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L88",
+      "_origin": "ast",
+      "id": "raw_cost_index_platformmasterprovider_getcostusd",
+      "community": 14,
+      "norm_label": ".getcostusd()"
+    },
+    {
+      "label": "PebiRawCostProvider",
+      "file_type": "code",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L98",
+      "_origin": "ast",
+      "id": "raw_cost_index_pebirawcostprovider",
+      "community": 14,
+      "norm_label": "pebirawcostprovider"
+    },
+    {
+      "label": ".getCostsUsd()",
+      "file_type": "code",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L101",
+      "_origin": "ast",
+      "id": "raw_cost_index_pebirawcostprovider_getcostsusd",
+      "community": 14,
+      "norm_label": ".getcostsusd()"
+    },
+    {
+      "label": ".getCostUsd()",
+      "file_type": "code",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L114",
+      "_origin": "ast",
+      "id": "raw_cost_index_pebirawcostprovider_getcostusd",
+      "community": 14,
+      "norm_label": ".getcostusd()"
+    },
+    {
+      "label": "RawCostSource",
+      "file_type": "code",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L124",
+      "_origin": "ast",
+      "id": "raw_cost_index_rawcostsource",
+      "community": 14,
+      "norm_label": "rawcostsource"
+    },
+    {
+      "label": "_platformProvider",
+      "file_type": "code",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L126",
+      "_origin": "ast",
+      "id": "raw_cost_index_platformprovider",
+      "community": 14,
+      "norm_label": "_platformprovider"
+    },
+    {
+      "label": "_pebiProvider",
+      "file_type": "code",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L127",
+      "_origin": "ast",
+      "id": "raw_cost_index_pebiprovider",
+      "community": 14,
+      "norm_label": "_pebiprovider"
+    },
+    {
+      "label": "getRawCostProvider()",
+      "file_type": "code",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L134",
+      "_origin": "ast",
+      "id": "raw_cost_index_getrawcostprovider",
+      "community": 14,
+      "norm_label": "getrawcostprovider()"
+    },
+    {
+      "label": "resolveCosts()",
+      "file_type": "code",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L144",
+      "_origin": "ast",
+      "id": "raw_cost_index_resolvecosts",
+      "community": 14,
+      "norm_label": "resolvecosts()"
+    },
+    {
       "label": "auth-estimates.integration.test.ts",
       "file_type": "code",
       "source_file": "test/auth-estimates.integration.test.ts",
@@ -2910,6 +3240,26 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "test_auth_estimates_integration_test_hasdatabase",
+      "community": 9,
+      "norm_label": "hasdatabase"
+    },
+    {
+      "label": "smart-template-builder.integration.test.ts",
+      "file_type": "code",
+      "source_file": "test/smart-template-builder.integration.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "test_smart_template_builder_integration_test",
+      "community": 9,
+      "norm_label": "smart-template-builder.integration.test.ts"
+    },
+    {
+      "label": "hasDatabase",
+      "file_type": "code",
+      "source_file": "test/smart-template-builder.integration.test.ts",
+      "source_location": "L17",
+      "_origin": "ast",
+      "id": "test_smart_template_builder_integration_test_hasdatabase",
       "community": 9,
       "norm_label": "hasdatabase"
     },
@@ -2940,7 +3290,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "utils_auth_hashpassword",
-      "community": 3,
+      "community": 1,
       "norm_label": "hashpassword()"
     },
     {
@@ -2950,7 +3300,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "utils_auth_verifypassword",
-      "community": 3,
+      "community": 1,
       "norm_label": "verifypassword()"
     },
     {
@@ -2960,7 +3310,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "utils_auth_tokenpayload",
-      "community": 3,
+      "community": 1,
       "norm_label": "tokenpayload"
     },
     {
@@ -2970,7 +3320,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "utils_auth_extracttenantfromrequest",
-      "community": 1,
+      "community": 3,
       "norm_label": "extracttenantfromrequest()"
     },
     {
@@ -2980,7 +3330,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "utils_auth_extractuserfromrequest",
-      "community": 1,
+      "community": 3,
       "norm_label": "extractuserfromrequest()"
     },
     {
@@ -2990,7 +3340,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "utils_auth_istenantadmin",
-      "community": 1,
+      "community": 3,
       "norm_label": "istenantadmin()"
     },
     {
@@ -3042,6 +3392,86 @@
       "id": "utils_currency_slabsusdtodisplay",
       "community": 4,
       "norm_label": "slabsusdtodisplay()"
+    },
+    {
+      "label": "errors.ts",
+      "file_type": "code",
+      "source_file": "utils/errors.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "utils_errors",
+      "community": 3,
+      "norm_label": "errors.ts"
+    },
+    {
+      "label": "ErrorCode",
+      "file_type": "code",
+      "source_file": "utils/errors.ts",
+      "source_location": "L17",
+      "_origin": "ast",
+      "id": "utils_errors_errorcode",
+      "community": 3,
+      "norm_label": "errorcode"
+    },
+    {
+      "label": "ErrorEnvelope",
+      "file_type": "code",
+      "source_file": "utils/errors.ts",
+      "source_location": "L28",
+      "_origin": "ast",
+      "id": "utils_errors_errorenvelope",
+      "community": 3,
+      "norm_label": "errorenvelope"
+    },
+    {
+      "label": "AppError",
+      "file_type": "code",
+      "source_file": "utils/errors.ts",
+      "source_location": "L37",
+      "_origin": "ast",
+      "id": "utils_errors_apperror",
+      "community": 9,
+      "norm_label": "apperror"
+    },
+    {
+      "label": ".constructor()",
+      "file_type": "code",
+      "source_file": "utils/errors.ts",
+      "source_location": "L38",
+      "_origin": "ast",
+      "id": "utils_errors_apperror_constructor",
+      "community": 9,
+      "norm_label": ".constructor()"
+    },
+    {
+      "label": "errorBody()",
+      "file_type": "code",
+      "source_file": "utils/errors.ts",
+      "source_location": "L50",
+      "_origin": "ast",
+      "id": "utils_errors_errorbody",
+      "community": 3,
+      "norm_label": "errorbody()"
+    },
+    {
+      "label": "isFkViolation()",
+      "file_type": "code",
+      "source_file": "utils/errors.ts",
+      "source_location": "L59",
+      "_origin": "ast",
+      "id": "utils_errors_isfkviolation",
+      "community": 3,
+      "norm_label": "isfkviolation()"
+    },
+    {
+      "label": "isUniqueViolation()",
+      "file_type": "code",
+      "source_file": "utils/errors.ts",
+      "source_location": "L68",
+      "_origin": "ast",
+      "id": "utils_errors_isuniqueviolation",
+      "community": 3,
+      "norm_label": "isuniqueviolation()"
     },
     {
       "label": "estimate-classification.ts",
@@ -3150,7 +3580,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_fx_rates",
-      "community": 3,
+      "community": 1,
       "norm_label": "fx-rates.ts"
     },
     {
@@ -3160,7 +3590,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "utils_fx_rates_fxresponse",
-      "community": 3,
+      "community": 1,
       "norm_label": "fxresponse"
     },
     {
@@ -3170,7 +3600,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "utils_fx_rates_cachedrate",
-      "community": 3,
+      "community": 1,
       "norm_label": "cachedrate"
     },
     {
@@ -3180,7 +3610,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "utils_fx_rates_ratecache",
-      "community": 3,
+      "community": 1,
       "norm_label": "ratecache"
     },
     {
@@ -3190,7 +3620,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "utils_fx_rates_fetchexchangerate",
-      "community": 3,
+      "community": 1,
       "norm_label": "fetchexchangerate()"
     },
     {
@@ -3200,7 +3630,7 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "utils_fx_rates_fetchmultiplerates",
-      "community": 3,
+      "community": 1,
       "norm_label": "fetchmultiplerates()"
     },
     {
@@ -3210,7 +3640,7 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "utils_fx_rates_clearratecache",
-      "community": 3,
+      "community": 1,
       "norm_label": "clearratecache()"
     },
     {
@@ -3602,6 +4032,56 @@
       "id": "utils_material_map_buildenginematerialmap",
       "community": 5,
       "norm_label": "buildenginematerialmap()"
+    },
+    {
+      "label": "pagination.ts",
+      "file_type": "code",
+      "source_file": "utils/pagination.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "utils_pagination",
+      "community": 3,
+      "norm_label": "pagination.ts"
+    },
+    {
+      "label": "PaginationQuery",
+      "file_type": "code",
+      "source_file": "utils/pagination.ts",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "utils_pagination_paginationquery",
+      "community": 3,
+      "norm_label": "paginationquery"
+    },
+    {
+      "label": "PaginatedResult",
+      "file_type": "code",
+      "source_file": "utils/pagination.ts",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "utils_pagination_paginatedresult",
+      "community": 3,
+      "norm_label": "paginatedresult"
+    },
+    {
+      "label": "parsePagination()",
+      "file_type": "code",
+      "source_file": "utils/pagination.ts",
+      "source_location": "L24",
+      "_origin": "ast",
+      "id": "utils_pagination_parsepagination",
+      "community": 3,
+      "norm_label": "parsepagination()"
+    },
+    {
+      "label": "paginate()",
+      "file_type": "code",
+      "source_file": "utils/pagination.ts",
+      "source_location": "L31",
+      "_origin": "ast",
+      "id": "utils_pagination_paginate",
+      "community": 3,
+      "norm_label": "paginate()"
     },
     {
       "label": "pdf-proposal-kit.ts",
@@ -4010,7 +4490,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_usd",
-      "community": 7,
+      "community": 3,
       "norm_label": "usd.ts"
     },
     {
@@ -4020,7 +4500,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "utils_usd_roundusd",
-      "community": 7,
+      "community": 3,
       "norm_label": "roundusd()"
     },
     {
@@ -4120,7 +4600,7 @@
       "source_location": "L138",
       "_origin": "ast",
       "id": "utils_visibility_stripestimaterow",
-      "community": 4,
+      "community": 5,
       "norm_label": "stripestimaterow()"
     },
     {
@@ -4164,6 +4644,38 @@
       "confidence_score": 1.0,
       "source": "app",
       "target": "app_buildappoptions"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app.ts",
+      "source_location": "L28",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app",
+      "target": "app_capacitor_origins"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app.ts",
+      "source_location": "L19",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app",
+      "target": "db_index"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app.ts",
+      "source_location": "L19",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app",
+      "target": "db_index_getdatabase"
     },
     {
       "relation": "imports_from",
@@ -4433,6 +4945,50 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "app.ts",
+      "source_location": "L18",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app",
+      "target": "utils_errors"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app.ts",
+      "source_location": "L18",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app",
+      "target": "utils_errors_apperror"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app.ts",
+      "source_location": "L18",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app",
+      "target": "utils_errors_errorbody"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app.ts",
+      "source_location": "L18",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app",
+      "target": "utils_errors_isfkviolation"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "index.ts",
       "source_location": "L5",
       "weight": 1.0,
@@ -4450,6 +5006,17 @@
       "confidence_score": 1.0,
       "source": "test_auth_estimates_integration_test",
       "target": "app"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/smart-template-builder.integration.test.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "test_smart_template_builder_integration_test",
+      "target": "app",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -4606,6 +5173,17 @@
       "target": "app_buildapp"
     },
     {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/smart-template-builder.integration.test.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "test_smart_template_builder_integration_test",
+      "target": "app_buildapp",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "db/index.ts",
@@ -4644,6 +5222,16 @@
       "confidence_score": 1.0,
       "source": "db_index",
       "target": "db_index_initializedatabase"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/index.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_index",
+      "target": "db_index_runmigrations"
     },
     {
       "relation": "imports_from",
@@ -4775,6 +5363,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "index",
+      "target": "db_index"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L58",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index_platformmasterprovider_getcostsusd",
       "target": "db_index"
     },
     {
@@ -4921,6 +5520,28 @@
       "target": "db_index"
     },
     {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/smart-template-builder.integration.test.ts",
+      "source_location": "L15",
+      "weight": 1.0,
+      "source": "test_smart_template_builder_integration_test",
+      "target": "db_index",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/index.ts",
+      "source_location": "L97",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_index_initializedatabase",
+      "target": "db_index_runmigrations"
+    },
+    {
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -4952,6 +5573,17 @@
       "confidence_score": 1.0,
       "source": "test_auth_estimates_integration_test",
       "target": "db_index_initializedatabase"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/smart-template-builder.integration.test.ts",
+      "source_location": "L15",
+      "weight": 1.0,
+      "source": "test_smart_template_builder_integration_test",
+      "target": "db_index_initializedatabase",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports",
@@ -5471,6 +6103,17 @@
       "target": "db_index_getdatabase"
     },
     {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L61",
+      "weight": 1.0,
+      "source": "raw_cost_index_platformmasterprovider_getcostsusd",
+      "target": "db_index_getdatabase"
+    },
+    {
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -5479,6 +6122,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "routes_auth",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/auth.ts",
+      "source_location": "L35",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_auth_issuetokens",
       "target": "db_index_getdatabase"
     },
     {
@@ -5498,9 +6152,31 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/auth.ts",
+      "source_location": "L312",
+      "weight": 1.0,
+      "source": "routes_auth_logoutroute",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/auth.ts",
       "source_location": "L252",
       "weight": 1.0,
       "source": "routes_auth_meroute",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/auth.ts",
+      "source_location": "L373",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_auth_purgeexpiredsessions",
       "target": "db_index_getdatabase"
     },
     {
@@ -6065,6 +6741,28 @@
       "target": "db_index_closedatabase"
     },
     {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/smart-template-builder.integration.test.ts",
+      "source_location": "L15",
+      "weight": 1.0,
+      "source": "test_smart_template_builder_integration_test",
+      "target": "db_index_closedatabase",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/estimates.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_estimates",
+      "target": "db_index_database"
+    },
+    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "db/master-materials-io.ts",
@@ -6545,9 +7243,9 @@
       "source_file": "db/seed-materials.ts",
       "source_location": "L63",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_seed_materials_sourcekey",
-      "target": "db_master_materials_io_materialsynckey",
-      "confidence_score": 1.0
+      "target": "db_master_materials_io_materialsynckey"
     },
     {
       "relation": "contains",
@@ -8656,6 +9354,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "db/schema.ts",
+      "source_location": "L498",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_schema",
+      "target": "db_schema_sessions"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/schema.ts",
       "source_location": "L378",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -9447,9 +10155,9 @@
       "source_file": "db/seed-materials.ts",
       "source_location": "L56",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_seed_materials",
-      "target": "db_seed_materials_sourcekey",
-      "confidence_score": 1.0
+      "target": "db_seed_materials_sourcekey"
     },
     {
       "relation": "contains",
@@ -10438,6 +11146,26 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "routes/auth.ts",
+      "source_location": "L23",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_auth",
+      "target": "routes_auth_generaterefreshtoken"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/auth.ts",
+      "source_location": "L30",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_auth",
+      "target": "routes_auth_issuetokens"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/auth.ts",
       "source_location": "L145",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -10458,6 +11186,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "routes/auth.ts",
+      "source_location": "L301",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_auth",
+      "target": "routes_auth_logoutroute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/auth.ts",
       "source_location": "L243",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -10468,11 +11206,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "routes/auth.ts",
+      "source_location": "L371",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_auth",
+      "target": "routes_auth_purgeexpiredsessions"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/auth.ts",
       "source_location": "L210",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "routes_auth",
       "target": "routes_auth_refreshroute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/auth.ts",
+      "source_location": "L71",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_auth",
+      "target": "routes_auth_refreshschema"
     },
     {
       "relation": "contains",
@@ -10553,6 +11311,28 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "routes/auth.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_auth",
+      "target": "utils_errors"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/auth.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_auth",
+      "target": "utils_errors_errorbody"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/auth.ts",
       "source_location": "L10",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -10596,12 +11376,67 @@
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
+      "source_file": "routes/auth.ts",
+      "source_location": "L37",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_auth_issuetokens",
+      "target": "routes_auth_generaterefreshtoken"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/auth.ts",
+      "source_location": "L199",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_auth_loginroute",
+      "target": "routes_auth_issuetokens"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/auth.ts",
+      "source_location": "L284",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_auth_refreshroute",
+      "target": "routes_auth_issuetokens"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/auth.ts",
+      "source_location": "L145",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_auth_registerroute",
+      "target": "routes_auth_issuetokens"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/auth.ts",
       "source_location": "L75",
       "weight": 1.0,
       "source": "routes_auth_registerroute",
       "target": "utils_auth_hashpassword"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/auth.ts",
+      "source_location": "L97",
+      "weight": 1.0,
+      "source": "routes_auth_registerroute",
+      "target": "utils_errors_errorbody"
     },
     {
       "relation": "calls",
@@ -10624,6 +11459,39 @@
       "weight": 1.0,
       "source": "routes_auth_loginroute",
       "target": "utils_auth_verifypassword"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/auth.ts",
+      "source_location": "L183",
+      "weight": 1.0,
+      "source": "routes_auth_loginroute",
+      "target": "utils_errors_errorbody"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/auth.ts",
+      "source_location": "L257",
+      "weight": 1.0,
+      "source": "routes_auth_refreshroute",
+      "target": "utils_errors_errorbody"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/auth.ts",
+      "source_location": "L348",
+      "weight": 1.0,
+      "source": "routes_auth_meroute",
+      "target": "utils_errors_errorbody"
     },
     {
       "relation": "calls",
@@ -10754,6 +11622,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "routes/customers.ts",
+      "source_location": "L27",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers",
+      "target": "routes_customers_escapelike"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
       "source_location": "L191",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -10833,6 +11711,83 @@
       "target": "utils_auth_extracttenantfromrequest"
     },
     {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers",
+      "target": "utils_errors"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers",
+      "target": "utils_errors_errorbody"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers",
+      "target": "utils_errors_isfkviolation"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers",
+      "target": "utils_pagination"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers",
+      "target": "utils_pagination_paginate"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers",
+      "target": "utils_pagination_parsepagination"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
+      "source_location": "L66",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers_autocompletecustomersroute",
+      "target": "routes_customers_escapelike"
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -10842,6 +11797,39 @@
       "confidence_score": 1.0,
       "source": "routes_customers_getcustomersroute",
       "target": "utils_auth_extracttenantfromrequest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
+      "source_location": "L50",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers_getcustomersroute",
+      "target": "utils_errors_errorbody"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
+      "source_location": "L58",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers_getcustomersroute",
+      "target": "utils_pagination_paginate"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
+      "source_location": "L41",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers_getcustomersroute",
+      "target": "utils_pagination_parsepagination"
     },
     {
       "relation": "calls",
@@ -10859,11 +11847,33 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "routes/customers.ts",
+      "source_location": "L86",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers_autocompletecustomersroute",
+      "target": "utils_errors_errorbody"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
       "source_location": "L76",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "routes_customers_createcustomerroute",
       "target": "utils_auth_extracttenantfromrequest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
+      "source_location": "L116",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers_createcustomerroute",
+      "target": "utils_errors_errorbody"
     },
     {
       "relation": "calls",
@@ -10881,11 +11891,33 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "routes/customers.ts",
+      "source_location": "L139",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers_getcustomerroute",
+      "target": "utils_errors_errorbody"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
       "source_location": "L134",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "routes_customers_updatecustomerroute",
       "target": "utils_auth_extracttenantfromrequest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
+      "source_location": "L168",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers_updatecustomerroute",
+      "target": "utils_errors_errorbody"
     },
     {
       "relation": "calls",
@@ -10903,11 +11935,54 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "routes/customers.ts",
+      "source_location": "L206",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers_deletecustomerroute",
+      "target": "utils_errors_errorbody"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
+      "source_location": "L222",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers_deletecustomerroute",
+      "target": "utils_errors_isfkviolation"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
       "source_location": "L198",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "routes_customers_getcustomerestimatesroute",
       "target": "utils_auth_extracttenantfromrequest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/customers.ts",
+      "source_location": "L252",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_customers_getcustomerestimatesroute",
+      "target": "utils_errors_errorbody"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/dashboard.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_dashboard",
+      "target": "routes_dashboard_estimaterow"
     },
     {
       "relation": "contains",
@@ -11146,6 +12221,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "routes/estimates.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_estimates",
+      "target": "routes_estimates_estimaterow"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/estimates.ts",
       "source_location": "L266",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -11191,6 +12276,16 @@
       "confidence_score": 1.0,
       "source": "routes_estimates",
       "target": "routes_estimates_getuservisibilityprofile"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/estimates.ts",
+      "source_location": "L18",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_estimates",
+      "target": "routes_estimates_layerrow"
     },
     {
       "relation": "contains",
@@ -11381,6 +12476,39 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "routes/estimates.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_estimates",
+      "target": "utils_pagination"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/estimates.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_estimates",
+      "target": "utils_pagination_paginate"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/estimates.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_estimates",
+      "target": "utils_pagination_parsepagination"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/estimates.ts",
       "source_location": "L7",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -11490,6 +12618,17 @@
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
+      "source_file": "routes/estimates.ts",
+      "source_location": "L700",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_estimates_requoteestimateroute",
+      "target": "routes_estimates_generaterefnumber"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/estimates.ts",
       "source_location": "L82",
@@ -11507,6 +12646,28 @@
       "weight": 1.0,
       "source": "routes_estimates_getestimatesroute",
       "target": "utils_auth_extractuserfromrequest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/estimates.ts",
+      "source_location": "L148",
+      "weight": 1.0,
+      "source": "routes_estimates_getestimatesroute",
+      "target": "utils_pagination_paginate"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/estimates.ts",
+      "source_location": "L116",
+      "weight": 1.0,
+      "source": "routes_estimates_getestimatesroute",
+      "target": "utils_pagination_parsepagination"
     },
     {
       "relation": "calls",
@@ -12032,6 +13193,39 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "routes/materials.ts",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_materials",
+      "target": "utils_pagination"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/materials.ts",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_materials",
+      "target": "utils_pagination_paginate"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/materials.ts",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_materials",
+      "target": "utils_pagination_parsepagination"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/materials.ts",
       "source_location": "L8",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -12169,6 +13363,28 @@
       "weight": 1.0,
       "source": "routes_materials_getmaterialsroute",
       "target": "utils_auth_extractuserfromrequest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/materials.ts",
+      "source_location": "L83",
+      "weight": 1.0,
+      "source": "routes_materials_getmaterialsroute",
+      "target": "utils_pagination_paginate"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/materials.ts",
+      "source_location": "L52",
+      "weight": 1.0,
+      "source": "routes_materials_getmaterialsroute",
+      "target": "utils_pagination_parsepagination"
     },
     {
       "relation": "calls",
@@ -12687,6 +13903,46 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "routes/templates.ts",
+      "source_location": "L622",
+      "weight": 1.0,
+      "source": "routes_templates",
+      "target": "routes_templates_createtemplatefromdefinition",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
+      "source_location": "L462",
+      "weight": 1.0,
+      "source": "routes_templates",
+      "target": "routes_templates_createtemplatefromdefinitionschema",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
+      "source_location": "L514",
+      "weight": 1.0,
+      "source": "routes_templates",
+      "target": "routes_templates_createtemplatefromestimatehandler",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
+      "source_location": "L456",
+      "weight": 1.0,
+      "source": "routes_templates",
+      "target": "routes_templates_createtemplatefromestimateschema",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
       "source_location": "L438",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -12712,6 +13968,16 @@
       "confidence_score": 1.0,
       "source": "routes_templates",
       "target": "routes_templates_deletetemplateroute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_templates",
+      "target": "routes_templates_estimaterow"
     },
     {
       "relation": "contains",
@@ -12772,6 +14038,16 @@
       "confidence_score": 1.0,
       "source": "routes_templates",
       "target": "routes_templates_registertemplateroutes"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
+      "source_location": "L759",
+      "weight": 1.0,
+      "source": "routes_templates",
+      "target": "routes_templates_resolveownership",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13073,6 +14349,17 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/templates.ts",
+      "source_location": "L79",
+      "weight": 1.0,
+      "source": "routes_templates_gettemplatesroute",
+      "target": "utils_auth_extractuserfromrequest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/templates.ts",
       "source_location": "L110",
       "weight": 1.0,
       "source": "routes_templates_gettemplatebyidroute",
@@ -13214,12 +14501,45 @@
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
+      "source_location": "L500",
+      "weight": 1.0,
+      "source": "routes_templates_createtemplateroute",
+      "target": "routes_templates_createtemplatefromdefinition",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
+      "source_location": "L503",
+      "weight": 1.0,
+      "source": "routes_templates_createtemplateroute",
+      "target": "routes_templates_createtemplatefromestimatehandler",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "routes/templates.ts",
       "source_location": "L445",
       "weight": 1.0,
       "source": "routes_templates_createtemplateroute",
       "target": "utils_auth_extracttenantfromrequest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/templates.ts",
+      "source_location": "L493",
+      "weight": 1.0,
+      "source": "routes_templates_createtemplateroute",
+      "target": "utils_auth_extractuserfromrequest"
     },
     {
       "relation": "calls",
@@ -13242,6 +14562,72 @@
       "weight": 1.0,
       "source": "routes_templates_createtemplateroute",
       "target": "utils_template_key_derivetenanttemplatekey"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
+      "source_location": "L588",
+      "weight": 1.0,
+      "source": "routes_templates_createtemplatefromestimatehandler",
+      "target": "routes_templates_resolveownership",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
+      "source_location": "L568",
+      "weight": 1.0,
+      "source": "routes_templates_createtemplatefromestimatehandler",
+      "target": "utils_material_map_buildenginematerialmap",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
+      "source_location": "L611",
+      "weight": 1.0,
+      "source": "routes_templates_createtemplatefromestimatehandler",
+      "target": "utils_template_key_derivetenanttemplatekey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
+      "source_location": "L720",
+      "weight": 1.0,
+      "source": "routes_templates_createtemplatefromdefinition",
+      "target": "routes_templates_resolveownership",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
+      "source_location": "L695",
+      "weight": 1.0,
+      "source": "routes_templates_createtemplatefromdefinition",
+      "target": "utils_material_map_buildenginematerialmap",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
+      "source_location": "L743",
+      "weight": 1.0,
+      "source": "routes_templates_createtemplatefromdefinition",
+      "target": "utils_template_key_derivetenanttemplatekey",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -14220,12 +15606,228 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L134",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index",
+      "target": "raw_cost_index_getrawcostprovider"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L127",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index",
+      "target": "raw_cost_index_pebiprovider"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L98",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index",
+      "target": "raw_cost_index_pebirawcostprovider"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L48",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index",
+      "target": "raw_cost_index_platformmasterprovider"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L126",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index",
+      "target": "raw_cost_index_platformprovider"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L18",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index",
+      "target": "raw_cost_index_rawcostcontext"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L35",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index",
+      "target": "raw_cost_index_rawcostprovider"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L22",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index",
+      "target": "raw_cost_index_rawcostresult"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L124",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index",
+      "target": "raw_cost_index_rawcostsource"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L144",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index",
+      "target": "raw_cost_index_resolvecosts"
+    },
+    {
+      "relation": "implements",
+      "context": "type",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L98",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index_pebirawcostprovider",
+      "target": "raw_cost_index_rawcostprovider"
+    },
+    {
+      "relation": "implements",
+      "context": "type",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L48",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index_platformmasterprovider",
+      "target": "raw_cost_index_rawcostprovider"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L51",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index_platformmasterprovider",
+      "target": "raw_cost_index_platformmasterprovider_getcostsusd"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L88",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index_platformmasterprovider",
+      "target": "raw_cost_index_platformmasterprovider_getcostusd"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L89",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index_platformmasterprovider_getcostusd",
+      "target": "raw_cost_index_pebirawcostprovider_getcostsusd"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L101",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index_pebirawcostprovider",
+      "target": "raw_cost_index_pebirawcostprovider_getcostsusd"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L114",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index_pebirawcostprovider",
+      "target": "raw_cost_index_pebirawcostprovider_getcostusd"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L115",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index_pebirawcostprovider_getcostusd",
+      "target": "raw_cost_index_pebirawcostprovider_getcostsusd"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L152",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index_resolvecosts",
+      "target": "raw_cost_index_pebirawcostprovider_getcostsusd"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "services/raw-cost/index.ts",
+      "source_location": "L151",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "raw_cost_index_resolvecosts",
+      "target": "raw_cost_index_getrawcostprovider"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "test/auth-estimates.integration.test.ts",
       "source_location": "L7",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "test_auth_estimates_integration_test",
       "target": "test_auth_estimates_integration_test_hasdatabase"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "test/smart-template-builder.integration.test.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "source": "test_smart_template_builder_integration_test",
+      "target": "test_smart_template_builder_integration_test_hasdatabase",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -14371,6 +15973,76 @@
       "confidence_score": 1.0,
       "source": "utils_currency",
       "target": "utils_currency_usdtodisplay"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "utils/errors.ts",
+      "source_location": "L37",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "utils_errors",
+      "target": "utils_errors_apperror"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "utils/errors.ts",
+      "source_location": "L50",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "utils_errors",
+      "target": "utils_errors_errorbody"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "utils/errors.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "utils_errors",
+      "target": "utils_errors_errorcode"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "utils/errors.ts",
+      "source_location": "L28",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "utils_errors",
+      "target": "utils_errors_errorenvelope"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "utils/errors.ts",
+      "source_location": "L59",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "utils_errors",
+      "target": "utils_errors_isfkviolation"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "utils/errors.ts",
+      "source_location": "L68",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "utils_errors",
+      "target": "utils_errors_isuniqueviolation"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "utils/errors.ts",
+      "source_location": "L38",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "utils_errors_apperror",
+      "target": "utils_errors_apperror_constructor"
     },
     {
       "relation": "contains",
@@ -15116,6 +16788,46 @@
       "confidence_score": 1.0,
       "source": "utils_material_map",
       "target": "utils_material_map_toenginematerial"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "utils/pagination.ts",
+      "source_location": "L31",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "utils_pagination",
+      "target": "utils_pagination_paginate"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "utils/pagination.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "utils_pagination",
+      "target": "utils_pagination_paginatedresult"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "utils/pagination.ts",
+      "source_location": "L11",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "utils_pagination",
+      "target": "utils_pagination_paginationquery"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "utils/pagination.ts",
+      "source_location": "L24",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "utils_pagination",
+      "target": "utils_pagination_parsepagination"
     },
     {
       "relation": "contains",

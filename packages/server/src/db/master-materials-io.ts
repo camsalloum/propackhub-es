@@ -49,6 +49,19 @@ export interface MasterDataReference {
   printingWebClasses: PrintingWebRow[];
   /** Bag/Pouch subtypes managed in Master Data (code e.g. pouch_stand_up; parent = product-type code). */
   productSubtypeRows?: Array<{ label: string; code: string; parent?: string }>;
+  /**
+   * Process definitions managed in Master Data.
+   * metadata carries costPerHour, speedBasis, speedValue, setupHours for instantiation defaults.
+   */
+  processRows?: Array<{
+    label: string;
+    code: string;
+    description?: string;
+    costPerHour?: number;
+    speedBasis?: string;
+    speedValue?: number;
+    setupHours?: number;
+  }>;
 }
 
 export const PACKAGING_FAMILY = 'Packaging';
@@ -108,6 +121,7 @@ export function normalizeReferenceShape(ref: Partial<MasterDataReference>): Mast
     adhesive: ref.adhesive ?? [],
     printingWebClasses: ref.printingWebClasses ?? [],
     productSubtypeRows: ref.productSubtypeRows ?? [],
+    processRows: ref.processRows ?? [],
   };
 }
 

@@ -31,6 +31,7 @@ export const platformReferenceCategoryEnum = pgEnum('platform_reference_category
   'adhesive',
   'packaging',
   'product_subtype',
+  'process',
 ]);
 
 // Platform master (single source of truth — replaces the retired Excel + JSON seed pipeline)
@@ -474,7 +475,13 @@ export const structureTemplates = pgTable('structure_templates', {
   displayOrder: integer('display_order').notNull().default(0),
   // Flag to indicate standard (built‑in) templates vs. tenant‑created (B2)
   isStandard: boolean('is_standard').notNull().default(true),
-  defaultDimensions: jsonb('default_dimensions'), // Default dimension values
+  /**
+   * Ownership tier (Smart Template Builder — Task 2.1):
+   *   null         → platform standard (isStandard=true) or tenant add-on (isStandard=false)
+   *   <userId>     → user-private add-on, visible only to that user
+   */
+  createdByUserId: uuid('created_by_user_id'),
+  defaultDimensions: jsonb('default_dimensions'), // Default dimension values; also stores printMode key
   defaultLayers: jsonb('default_layers').notNull(), // Array of { layer_order, layer_type, ref_material_key, default_micron }
   defaultProcesses: jsonb('default_processes'), // Array of { process_key, enabled }
   defaultPrintingWebClass: printingWebClassEnum('default_printing_web_class').default('wide_web'),
@@ -488,6 +495,7 @@ export const structureTemplates = pgTable('structure_templates', {
   tenantIdIdx: index('structure_templates_tenant_id_idx').on(table.tenantId),
   displayOrderIdx: index('structure_templates_display_order_idx').on(table.displayOrder),
   templateKeyIdx: index('structure_templates_tenant_key_idx').on(table.tenantId, table.templateKey),
+  createdByUserIdx: index('structure_templates_created_by_user_idx').on(table.createdByUserId),
 }));
 
 export const structureTemplatesRelations = relations(structureTemplates, ({ one }) => ({

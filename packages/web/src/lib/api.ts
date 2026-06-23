@@ -505,6 +505,23 @@ export class ApiClient {
     return this.request<any>('POST', '/api/v1/templates', { name, estimateId });
   }
 
+  createTemplateFromDefinition(data: {
+    name: string;
+    productType: 'roll' | 'sleeve' | 'pouch';
+    materialClass: 'PE' | 'Non PE';
+    structureTier: 'Mono' | 'Duplex' | 'Triplex' | 'Quadriplex';
+    printMode: 'Plain' | 'Printed';
+    defaultLayers: Array<{
+      layer_order: number;
+      layer_type: 'substrate' | 'ink' | 'adhesive';
+      materialId?: string | null;
+      default_micron: number;
+    }>;
+    defaultProcesses?: Array<{ process_key: string; enabled: boolean }>;
+  }) {
+    return this.request<any>('POST', '/api/v1/templates', { source: 'fromDefinition', ...data });
+  }
+
   getEstimateProposals(estimateId: string) {
     return this.request<Array<{
       id: string;

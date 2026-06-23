@@ -57,6 +57,10 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
             (((ref as { productSubtypeOptions?: ProductSubtypeOption[] }).productSubtypeOptions) ?? []).length > 0
               ? (ref as { productSubtypeOptions?: ProductSubtypeOption[] }).productSubtypeOptions!
               : DEFAULT_MASTER_REFERENCE.productSubtypeOptions,
+          processOptions:
+            (((ref as { processOptions?: import('../lib/masterDataReference').ProcessOption[] }).processOptions) ?? []).length > 0
+              ? (ref as { processOptions?: import('../lib/masterDataReference').ProcessOption[] }).processOptions!
+              : DEFAULT_MASTER_REFERENCE.processOptions,
         });
       } catch {
         if (!cancelled) setReference(DEFAULT_MASTER_REFERENCE);

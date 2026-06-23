@@ -23,7 +23,15 @@ function normFamily(family?: string | null): string {
   return (family || '').trim().toUpperCase();
 }
 
-/** Whether a substrate family is valid for the template classification. */
+/**
+ * Whether a substrate family is valid for the template classification.
+ *
+ * Rule changes (Smart Template Builder — Task 1.2):
+ *   - PE materialClass restricts substrates to the PE family across **all** tiers
+ *     (not just Mono).  A PE Duplex/Triplex/Quadriplex is an all-PE recyclable stack.
+ *   - Non-PE multilayer remains unconstrained (mixed families allowed).
+ *   - Sleeve Non-PE Mono allows SLEEVE or PET only (unchanged).
+ */
 export function substrateFamilyAllowed(
   substrateFamily: string,
   ctx: TemplateClassification
@@ -35,7 +43,8 @@ export function substrateFamilyAllowed(
   const st = ctx.structureType?.trim();
   const pt = ctx.productType;
 
-  if (mc === 'PE' && st === 'Mono') {
+  // PE materialClass → only PE substrates, across ALL tiers (Mono + Multilayer)
+  if (mc === 'PE') {
     return fam === 'PE';
   }
 
@@ -47,6 +56,8 @@ export function substrateFamilyAllowed(
   }
 
   if (st === 'Multilayer') {
+    // Non-PE multilayer: mixed families allowed (but not PE-only stacks — those
+    // are caught by inferMaterialClassFromSubstrateFamilies and classified as PE).
     return true;
   }
 

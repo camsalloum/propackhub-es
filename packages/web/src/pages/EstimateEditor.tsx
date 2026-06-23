@@ -337,24 +337,31 @@ const EstimateEditor = () => {
     loadBaseData();
   }, [masterDataVersion, loadBaseData]);
 
-  // Map template ID → layers using real material IDs
-  function getTemplateLayers(templateId: number | null, mats: MaterialItem[]): LayerItem[] {
-    const findMat = (name: string) => mats.find(m => m.name.toLowerCase().includes(name.toLowerCase()));
-    const defaultSubstrate = findMat('pe plain') || findMat('pe') || mats.find(m => m.type === 'substrate');
-    const defaultInk = findMat('ink sb') || findMat('ink') || mats.find(m => m.type === 'ink');
-    const defaultAdhesive = findMat('adhesive sb') || findMat('adhesive') || mats.find(m => m.type === 'adhesive');
-    const toLayer = (mat: MaterialItem | undefined, micron: number, position: number, gsmHint?: number): LayerItem => ({
-      id: crypto.randomUUID(), materialId: mat?.id || '', materialName: mat?.name || 'Select material',
-      materialType: mat?.type || 'substrate', micron, gsm: gsmHint || micron * (mat?.density ? parseFloat(mat.density) : 0.9),
-      costPerKgUsd: mat?.costPerKgUsd ? parseFloat(mat.costPerKgUsd) : 0, isSolventBased: mat?.isSolventBased || false, position,
+  // Map template ID → layers using library-driven resolution (type/family, not hardcoded names).
+  // Task 5.2: replaced hardcoded name-matching with find-by-type fallbacks.
+  // Templates are now instantiated server-side (StandardTemplates → instantiate endpoint);
+  // this function is only reached when ?template= is a legacy numeric ID in the URL,
+  // so we simply scaffold one substrate + one ink using the first available material of each type.
+  function getTemplateLayers(_templateId: number | null, mats: MaterialItem[]): LayerItem[] {
+    const findByType = (type: string) => mats.find(m => m.type === type);
+    const defaultSubstrate = findByType('substrate');
+    const defaultInk = findByType('ink');
+    const toLayer = (mat: MaterialItem | undefined, type: string, micron: number, position: number): LayerItem => ({
+      id: crypto.randomUUID(),
+      materialId: mat?.id || '',
+      materialName: mat?.name || 'Select material',
+      materialType: mat?.type || type,
+      micron,
+      gsm: micron * (mat?.density ? parseFloat(mat.density) : 0.9),
+      costPerKgUsd: mat ? parseFloat(mat.costPerKgUsd) : 0,
+      isSolventBased: mat?.isSolventBased || false,
+      position,
       hoover: mat?.hoover || null,
     });
-    if (templateId === 11) {
-      const pet = findMat('pet') || defaultSubstrate;
-      const pe = findMat('pe ') || defaultSubstrate;
-      return [toLayer(pet, 12, 0, 18), toLayer(defaultAdhesive, 3, 1, 3), toLayer(pe, 40, 2, 36)];
-    }
-    return [toLayer(defaultSubstrate, 30, 0, 27), toLayer(defaultInk, 5, 1, 4.5)];
+    return [
+      toLayer(defaultSubstrate, 'substrate', 30, 0),
+      toLayer(defaultInk, 'ink', 5, 1),
+    ];
   }
 
   const fetchEstimate = async (estimateId: string) => {
@@ -935,7 +942,25 @@ const EstimateEditor = () => {
                           <td className="py-4 px-4 font-mono text-sm">{layer.gsm.toFixed(1)}</td>
                           {can('materialCostPerKg') && <td className="py-4 px-4 font-mono text-sm">{layer.costPerKgUsd.toFixed(2)}</td>}
                           <td className="py-4 px-4">
-                            <button onClick={() => setLayers((prev) => prev.filter((l) => l.id !== layer.id))} className="text-sm text-mist hover:text-danger">Remove</button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={idx === 0}
+                                onClick={() => moveLayer(idx, -1)}
+                                className="text-xs text-mist hover:text-navy disabled:opacity-30"
+                                title="Move up"
+                                aria-label="Move layer up"
+                              >▲</button>
+                              <button
+                                type="button"
+                                disabled={idx === layers.length - 1}
+                                onClick={() => moveLayer(idx, 1)}
+                                className="text-xs text-mist hover:text-navy disabled:opacity-30"
+                                title="Move down"
+                                aria-label="Move layer down"
+                              >▼</button>
+                              <button onClick={() => setLayers((prev) => prev.filter((l) => l.id !== layer.id))} className="text-sm text-mist hover:text-danger">Remove</button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -959,15 +984,8 @@ const EstimateEditor = () => {
                     <option value="ink">Ink & Coating</option>
                     <option value="adhesive">Adhesive</option>
                   </select>
-                  <button onClick={() => {
-                    const adhesive = materials.find(m => m.name.toLowerCase().includes('adhesive sb')) || materials.find(m => m.type === 'adhesive');
-                    const alu = materials.find(m => m.name.toLowerCase().includes('aluminium') || m.name.toLowerCase().includes('aluminum'));
-                    setLayers((prev) => [...prev,
-                      { id: crypto.randomUUID(), materialId: adhesive?.id || '', materialName: adhesive?.name || 'Adhesive SB', materialType: 'adhesive', micron: 3, gsm: 3, costPerKgUsd: adhesive ? parseFloat(adhesive.costPerKgUsd) : 0, isSolventBased: true, position: prev.length, hoover: adhesive?.hoover || null },
-                      { id: crypto.randomUUID(), materialId: alu?.id || '', materialName: alu?.name || 'Aluminium', materialType: 'substrate', micron: 7, gsm: 19, costPerKgUsd: alu ? parseFloat(alu.costPerKgUsd) : 0, isSolventBased: false, position: prev.length + 1, hoover: alu?.hoover || null },
-                      { id: crypto.randomUUID(), materialId: adhesive?.id || '', materialName: adhesive?.name || 'Adhesive SB', materialType: 'adhesive', micron: 3, gsm: 3, costPerKgUsd: adhesive ? parseFloat(adhesive.costPerKgUsd) : 0, isSolventBased: true, position: prev.length + 2, hoover: adhesive?.hoover || null },
-                    ]);
-                  }} className="btn-secondary">+ Metallized Barrier</button>
+                  {/* Note: "+ Metallized Barrier" auto-add removed (Req 8.1).
+                      Add metallized/barrier layers manually via the dropdown above. */}
                 </div>
 
                 {/* Solvent mix (admin only, wide web) */}

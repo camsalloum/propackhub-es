@@ -147,9 +147,9 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       totalGsm: 66.16,
       totalMicron: 65.6,
       filmDensity: 1.0085,
-      materialCostPerKg: 3.204, // layer cost/m2 + solvent/m2, converted to /kg
-      solventMixCostPerKg: 0.2177, // (3.6 / 0.5) * (2.0 / 1000) = 0.0144 m2, then /kg = 0.0144 / 66.16 * 1000
-      salePricePerKg: 3.9146, // 3.204 + 15% markup (0.4806) + plates (0.15) + delivery (0.08)
+      materialCostPerKg: 3.037, // no waste factor — (layer cost/m2 + solvent/m2) / totalGsm × 1000
+      solventMixCostPerKg: 0.2177,
+      salePricePerKg: 3.722, // 3.037 + 15% markup + plates (0.15) + delivery (0.08)
       piecesPerKg: 31.49,
       linearMPerKgWeb: 9.39,
       linearMPerKgReel: 18.89,
@@ -178,9 +178,9 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       totalGsm: 64.56,
       totalMicron: 64.0,
       filmDensity: 1.0088,
-      materialCostPerKg: 2.836,
+      materialCostPerKg: 2.678, // no waste factor
       solventMixCostPerKg: 0,
-      salePricePerKg: 3.492,
+      salePricePerKg: 3.310, // 2.678 + 15% markup + plates + delivery
       piecesPerKg: 32.27,
       linearMPerKgWeb: 19.24,
       linearMPerKgReel: 19.36,
@@ -207,9 +207,9 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       totalGsm: 37.7,
       totalMicron: 40.9,
       filmDensity: 0.9218,
-      materialCostPerKg: 3.298, // layer cost/m2 + solvent/m2, converted to /kg
-      solventMixCostPerKg: 0.0955, // (0.9 / 0.5) * (2.0 / 1000) = 0.0036 m2, then /kg = 0.0036 / 37.7 * 1000
-      salePricePerKg: 4.023, // 3.298 + 15% markup + plates + delivery
+      materialCostPerKg: 3.101, // no waste factor; includes solvent
+      solventMixCostPerKg: 0.0955,
+      salePricePerKg: 3.796, // 3.101 + 15% markup + plates + delivery
       piecesPerKg: 221.0,
       linearMPerKgWeb: 32.83,
       linearMPerKgReel: 66.31,
@@ -250,8 +250,8 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       totalGsm: 53.96,
       totalMicron: 52.6,
       filmDensity: 1.0259,
-      materialCostPerKg: 2.94, // layer cost/m2 + solvent/m2, converted to /kg
-      salePricePerKg: 3.786, // 2.94 + 15% markup + plates + delivery + operation (incl. setup)
+      materialCostPerKg: 2.780, // no waste factor; includes solvent
+      salePricePerKg: 3.602, // 2.780 + 15% markup + plates + delivery + operation
       operationCostPerKg: 0.175,
       linearMPerKgWeb: 11.51,
     },

@@ -44,9 +44,9 @@ describe('Laravel golden reference rows', () => {
     };
     const result = calculateEstimate(estimate, materials);
     const layer = result.estimate.layers[0];
-    // gsm = 3; cost = (3/1000) × 6.5 × 1.08 = 0.02106
+    // gsm = 3; cost = (3/1000) × 6.5 = 0.0195 (no waste factor)
     expect(layer.gsm).toBeCloseTo(3, 2);
-    expect(layer.costPerM2).toBeCloseTo(0.02106, 4);
+    expect(layer.costPerM2).toBeCloseTo(0.0195, 4);
   });
 
   it('sale price is additive — operation is not folded into markup % (Laravel §5)', () => {

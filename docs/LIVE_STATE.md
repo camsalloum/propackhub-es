@@ -22,7 +22,7 @@
 
 - **Sync:** Save on Master Data page → all tenants updated automatically
 
-- **Tests:** server 36/36 ✅
+- **Tests:** engine 67/67 ✅, server integration tests ✅
 
 - **GET /templates:** ✅ fixed (template_key collision on legacy duplicate rows)
 
@@ -38,7 +38,7 @@
 
 
 
-## What works (verified 2026-06-20)
+## What works (verified 2026-06-23)
 
 
 
@@ -50,27 +50,29 @@
 
 | Master Data page — materials + reference CRUD | ✅ |
 
-| Auto sync all tenants on platform master save | ✅ |
+| Template library — Standard Templates page (browse/create/edit) | ✅ |
 
-| `GET /api/v1/master-data/reference` from DB | ✅ |
+| Template → Estimate explosion (instantiate) | ✅ |
 
-| Library / EstimateEditor live reload via `MasterDataProvider` | ✅ |
+| Structure lock: template-exploded estimates lock layers (µ + dimensions only) | ✅ |
 
-| Tenant registration seeds from platform DB | ✅ |
+| Layer table: # / Type / Family / Grade Name / Value / Total GSM / Cost/Kg / Cost/M² | ✅ |
 
-| Excel refresh removed from Library UI | ✅ |
+| Family dropdown filtered by template materialClass (PE → PE only) | ✅ |
 
-| Legacy `refresh-from-excel` API → platform DB sync | ✅ |
+| Grade dropdown filtered by family + classification | ✅ |
 
-| Template → material via `costingKey` + relink | ✅ |
+| Micron starts at 0 on explosion — user fills in | ✅ |
 
-| Ink as layer — SB/UV from ink material | ✅ |
+| Total GSM formula: substrate = µ×density, ink/adhesive = (solid%×µ)/100 | ✅ |
 
-| Standard Templates admin CRUD | ✅ |
+| Waste removed from cost formula — applied at order level later | ✅ |
 
-| Client-side `@es/engine` instant price preview | ✅ |
+| Engine tests: 67/67 (golden fixtures updated for no-waste) | ✅ |
 
-| Server integration tests | ✅ **14/14** |
+| Cost/Kg shows x.xx in display currency | ✅ |
+
+| Cost/M² shows x.xxxx — **BUG: value showing 0.09 instead of 0.09384** | 🔴 |
 
 
 
@@ -78,35 +80,17 @@
 
 
 
-## How to build and test
+## Open Bug: Cost/M² wrong value
 
+**Symptom:** LDPE Natural 60µ → GSM=55.2, Cost/kg=1.70 USD → expected Cost/M²=0.0938, showing 0.09
 
+**Formula confirmed correct:** `(GSM × cost/kg) / 1000 = (55.2 × 1.70) / 1000 = 0.09384`
 
-```bash
+**Engine formula** (`calculateLayer`): substrate → `(gsm/1000) × costPerKgUsd` ✅ matches
 
-npm install   # postinstall builds @es/engine
+**Suspect:** `clientCalcResult.estimate.layers[idx].costPerM2` is receiving a wrong cost/kg value (possibly 1.50 instead of 1.70). Debug logs were added (`[toMaterial] LDPE` and `[runClientCalculation] layers[0]`) but console showed collapsed `Object` — not expanded before session close.
 
-cd packages/server && npm run db:patch
-
-cd ../.. && npm run start:servers   # also builds engine before start
-
-# Or double-click RUN-ES.bat (kill ports → engine build → db:patch → servers; browser after /health)
-
-# http://localhost:5000 (web)
-
-# http://localhost:5001 (api)
-
-
-
-# Platform admin → Master Data — edit materials/lists; saves sync all tenants
-
-
-
-cd packages/server && npm run test
-
-cd packages/engine && npm run test
-
-```
+**Next step:** Open DevTools → Console → expand `[toMaterial] LDPE` object → verify `costPerKgUsd` value. If it's not 1.70, trace where the wrong value enters `materials` state.
 
 
 
@@ -116,17 +100,6 @@ cd packages/engine && npm run test
 
 ## Next session
 
-1. **User smoke test:** `/templates?new=1` → job header → pick template → configure µ/dimensions → Save & Calculate → Cancel back to list
-2. **User smoke test:** Same customer, two estimates (different templates / job names)
-3. Run `npm run db:patch` in `packages/server` if `order_quantity_unit` column missing locally
-4. **P2 backlog:** side-by-side estimate compare; file attachments per estimate
-5. Commit when ready
-
-
-
----
-
-
-
-**Project Status:** ✅ In-app Master Data shipped; Excel optional for legacy import only
+1. **Fix Cost/M² bug** — expand DevTools objects to find wrong costPerKgUsd value in engine
+2. Commit all session changes when bug is resolved
 

@@ -163,14 +163,14 @@ function calculateLayer(layer: Layer, material: Material): Layer {
   if (material.type === 'substrate') {
     // Substrate: gsm = micron × density
     gsm = layer.micron * material.density;
-    // cost_m2 = (gsm / 1000) × cost_per_kg × (1 + waste/100)
-    costPerM2 = (gsm / 1000) * material.costPerKgUsd * (1 + material.wastePercent / 100);
+    // cost_m2 = (gsm / 1000) × cost_per_kg  (waste excluded — applied at order level)
+    costPerM2 = (gsm / 1000) * material.costPerKgUsd;
   } else {
     // Ink or Adhesive: gsm = (solid × micron) / 100
     gsm = (material.solidPercent * layer.micron) / 100;
-    // cost_m2 = (micron / 1000) × cost_per_kg × (1 + waste/100)
+    // cost_m2 = (micron / 1000) × cost_per_kg  (waste excluded — applied at order level)
     // Note: uses micron, not gsm (Laravel specific)
-    costPerM2 = (layer.micron / 1000) * material.costPerKgUsd * (1 + material.wastePercent / 100);
+    costPerM2 = (layer.micron / 1000) * material.costPerKgUsd;
   }
 
   return {

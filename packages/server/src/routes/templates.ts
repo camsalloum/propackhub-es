@@ -43,7 +43,11 @@ const TemplateLayerSchema = z.object({
 
 const UpdateTemplateSchema = z.object({
   name: z.string().min(1).optional(),
+  // Engine costing type — always 'roll' | 'sleeve' | 'pouch'.
+  // 'bag' is a UI family that maps to 'pouch' for costing; TemplateBuilder sends the engine type.
   productType: z.enum(['roll', 'sleeve', 'pouch']).optional(),
+  // UI product subtype (e.g. 'bag_punch_handle', 'pouch_stand_up'); stored alongside productType.
+  productSubtype: z.string().max(64).nullable().optional(),
   materialClass: z.string().nullable().optional(),
   structureType: z.string().nullable().optional(),
   /** Declared structure tier (Smart Template Builder — Task 3.3) */
@@ -375,6 +379,7 @@ export async function instantiateTemplateRoute(
         refNumber,
         jobName: jobName || template.name,
         productType: template.productType,
+        productSubtype: template.productSubtype ?? undefined,
         printingWebClass,
         dimensions,
         markupPercent: tenant.defaultMarkupPercent || '15.00',
@@ -390,16 +395,25 @@ export async function instantiateTemplateRoute(
       })
       .returning()) as EstimateRow[];
 
+    // Micron starts at 0 — user fills in the thickness for each layer.
+    const DEFAULT_MICRON_HINT: Record<string, number> = {
+      substrate: 0,
+      ink: 0,
+      adhesive: 0,
+    };
+
     const defaultLayersResolved = (template.defaultLayers as TemplateLayerRef[]) || [];
     let layerPosition = 0;
     for (const layer of defaultLayersResolved) {
       const materialId = resolveLayerMaterialId(layer, materialLookup, validIds)!;
       const mat = materialById.get(materialId);
+      // Use the layer-type hint — not 0 — so the estimate shows a non-zero price on first load.
+      const micronHint = DEFAULT_MICRON_HINT[layer.layer_type ?? 'substrate'] ?? 10;
       await db.insert(schema.layers).values(
         buildLayerInsertValues({
           estimateId: estimate.id,
           materialId,
-          micron: 0,
+          micron: micronHint,
           position: layerPosition,
           material: mat ? toMaterialLineageSource(mat) : null,
         })
@@ -461,6 +475,7 @@ const CreateTemplateFromDefinitionSchema = z.object({
   source: z.literal('fromDefinition'),
   name: z.string().min(1),
   productType: z.enum(['roll', 'sleeve', 'pouch']),
+  productSubtype: z.string().max(64).nullable().optional(),
   materialClass: z.enum(['PE', 'Non PE']),
   structureTier: z.enum(['Mono', 'Duplex', 'Triplex', 'Quadriplex']),
   printMode: z.enum(['Plain', 'Printed']),
@@ -628,6 +643,7 @@ async function createTemplateFromDefinition(
   const {
     name,
     productType,
+    productSubtype,
     materialClass,
     structureTier,
     printMode,
@@ -724,6 +740,7 @@ async function createTemplateFromDefinition(
       name,
       pebiParentPg: name,
       productType,
+      productSubtype: productSubtype ?? null,
       materialClass: resolved.materialClass,
       structureType: resolved.structureType,
       displayOrder: 900,
@@ -807,6 +824,7 @@ export async function updateTemplateRoute(
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (body.name !== undefined) updates.name = body.name;
     if (body.productType !== undefined) updates.productType = body.productType;
+    if (body.productSubtype !== undefined) updates.productSubtype = body.productSubtype;
     if (body.materialClass !== undefined) updates.materialClass = body.materialClass;
     if (body.structureType !== undefined) updates.structureType = body.structureType;
     // Task 3.3: structureTier → structureType reconciliation

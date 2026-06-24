@@ -562,6 +562,7 @@ export function TemplateBuilder({
         saved = await apiClient.createTemplateFromDefinition({
           name: name.trim(),
           productType: engineProductType,
+          productSubtype: productSubtype ?? undefined,
           materialClass,
           structureTier,
           printMode,
@@ -573,6 +574,7 @@ export function TemplateBuilder({
         saved = await apiClient.updateTemplate(template!.id, {
           name: name.trim(),
           productType: engineProductType,
+          productSubtype: productSubtype ?? null,
           materialClass,
           structureTier,
           printMode,

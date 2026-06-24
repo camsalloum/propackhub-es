@@ -24,6 +24,7 @@ import {
   subtypesForFamily,
   defaultSubtypeForFamily,
   engineTypeForFamily,
+  ALL_SUBTYPES,
   PRODUCT_FAMILY_LABELS,
   type ProductFamily,
 } from '../lib/productCatalog';
@@ -63,7 +64,6 @@ const EstimateEditor = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { can } = useVisibilityProfile(user?.role);
-  const isAdmin = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -88,6 +88,8 @@ const EstimateEditor = () => {
   // UI state
   const [activeSection, setActiveSection] = useState<'structure' | 'dimensions' | 'slabs' | 'markup'>('structure');
   const [productType, setProductType] = useState<string>('roll');
+
+  // Layer table column visibility — reserved for future optional columns
   const [jobName, setJobName] = useState('New estimate');
   const [customerId, setCustomerId] = useState<string>('');
   const [markupPercent, setMarkupPercent] = useState(15);
@@ -255,6 +257,15 @@ const EstimateEditor = () => {
   const productFamily: ProductFamily = productType;
   const subtypeDimensionFields = dimensionFieldsFor(productFamily, productSubtype);
 
+  // Subtype list — driven by Master Data (productSubtypeOptions), not the static catalog.
+  // Fall back to static catalog only when Master Data hasn't loaded yet.
+  const availableSubtypes: Array<{ code: string; label: string; parent: string; group?: string | null }> = (() => {
+    const mdSubtypes = (masterReference.productSubtypeOptions ?? []).filter(s => s.parent === productFamily);
+    if (mdSubtypes.length > 0) return mdSubtypes;
+    // Static fallback
+    return subtypesForFamily(productFamily).map(s => ({ code: s.key, label: s.label, parent: s.family, group: null }));
+  })();
+
   const subtypeParentByCode = new Map(
     (masterReference.productSubtypeOptions ?? []).map((s) => [s.code, s.parent])
   );
@@ -318,7 +329,7 @@ const EstimateEditor = () => {
             { quantityKg: 2000, pricePerKgUsd: 0, pricePerKg: 0, total: 0 },
             { quantityKg: 5000, pricePerKgUsd: 0, pricePerKg: 0, total: 0 },
           ]);
-          setEstimate({ id: undefined, status: 'draft', displayCurrency: 'AED', salePricePerKg: 0, materialCostPerKg: 0, totalGsm: 0, totalMicron: 0 });
+          setEstimate({ id: undefined, status: 'draft', displayCurrency: 'USD', salePricePerKg: 0, materialCostPerKg: 0, totalGsm: 0, totalMicron: 0 });
           const statePriceChanges = (location.state as any)?.priceChanges;
           if (statePriceChanges) setPriceChanges(statePriceChanges);
           setLoading(false);
@@ -397,8 +408,18 @@ const EstimateEditor = () => {
         };
       }));
       setProductType(
-        (data.productSubtype && subtypeParentByCode.get(data.productSubtype)) ||
-          normalizeProductType(data.productType, productTypeOptions)
+        // Prefer subtype-based family lookup (e.g. 'bag_punch_handle' → 'bag').
+        // Use static ALL_SUBTYPES catalog — no async dependency, always available on first render.
+        (() => {
+          if (data.productSubtype) {
+            const staticEntry = ALL_SUBTYPES.find((s) => s.key === data.productSubtype);
+            if (staticEntry) return staticEntry.family;
+            // Fallback: master data map if already loaded
+            const mdParent = subtypeParentByCode.get(data.productSubtype);
+            if (mdParent) return mdParent;
+          }
+          return normalizeProductType(data.productType, productTypeOptions);
+        })()
       );
       setProductSubtype(data.productSubtype ?? null);
       setJobName(data.jobName || '');
@@ -510,8 +531,9 @@ const EstimateEditor = () => {
   const layerInputsKey = layers.map((l) => `${l.materialId}:${l.micron}`).join('|');
 
   const clientCalcResult = useMemo(() => {
-    if (loading || needsConfiguration || materials.length === 0 || layers.length === 0) return null;
+    if (loading || materials.length === 0 || layers.length === 0) return null;
     if (layers.some((l) => !l.materialId)) return null;
+    if (layers.every((l) => l.micron === 0)) return null; // nothing to calculate yet
     try {
       return runClientCalculation({
         layers: layers.map((l, i) => ({ id: l.id, materialId: l.materialId, micron: l.micron, position: i })),
@@ -524,7 +546,7 @@ const EstimateEditor = () => {
         slabs: slabsState,
         processes: processesState,
         orderQuantityKg: orderQuantity,
-        displayCurrency: estimate?.displayCurrency || 'AED',
+        displayCurrency: estimate?.displayCurrency || 'USD',
         exchangeRateUsdToDisplay: parseFloat(estimate?.exchangeRateUsdToDisplay) || 1,
         solventCostPerKgUsd,
         solventRatio,
@@ -533,7 +555,7 @@ const EstimateEditor = () => {
       return null;
     }
   }, [
-    loading, needsConfiguration, materials, layerInputsKey, productType, dimensions,
+    loading, materials, layerInputsKey, productType, dimensions,
     markupPercent, platesPerKg, deliveryPerKg, slabQuantitiesKey,
     estimate?.displayCurrency, estimate?.exchangeRateUsdToDisplay,
     solventCostPerKgUsd, solventRatio, layers.length,
@@ -725,6 +747,31 @@ const EstimateEditor = () => {
   }
   if (!estimate) return <div className="p-8">Estimate not found</div>;
 
+  // ── Component-scope derived flags ────────────────────────────────────────
+  // structureLocked: estimate was created from a standard template → structure is fixed.
+  // Everyone including admins is locked — structure changes belong in the Templates page.
+  // Only µ (thickness) and dimensions are user-editable in the estimation view.
+  const structureLocked = Boolean(estimate?.sourceTemplateKey);
+
+  /** Round to at most `d` decimal places, stripping trailing zeros. */
+  const fmt = (n: number, d = 4): string => {
+    if (!Number.isFinite(n)) return '0';
+    return parseFloat(n.toFixed(d)).toString();
+  };
+
+  // Derive a meaningful stack label from the actual layers — not a hardcoded "Laminate Stack".
+  // Rules: sleeve → "Sleeve Structure"; multi-substrate → "Laminate Structure"; mono → "Film Structure"
+  const stackLabel = (() => {
+    if (engineTypeForFamily(productType) === 'sleeve') return 'Sleeve Structure';
+    const substrateCount = layers.filter(l => l.materialType === 'substrate').length;
+    if (substrateCount >= 2) return 'Laminate Structure';
+    return 'Film Structure';
+  })();
+
+  // templateClassification carried in dimensions JSONB — reserved for future material filter use
+  // when structureLocked is true (PE-only substrate filter etc.)
+  void ((dimensions as any)?.templateClassification);
+
   const displaySlabs = slabsState.length > 0 ? slabsState : [{ quantityKg: 1000, pricePerKgUsd: 0, pricePerKg: 0, total: 0 }, { quantityKg: 2000, pricePerKgUsd: 0, pricePerKg: 0, total: 0 }, { quantityKg: 5000, pricePerKgUsd: 0, pricePerKg: 0, total: 0 }];
   const totalMicron = layers.reduce((s, l) => s + l.micron, 0);
   const totalGsm = layers.reduce((s, l) => s + l.gsm, 0);
@@ -743,6 +790,7 @@ const EstimateEditor = () => {
           </button>
         </div>
       )}
+
       {/* BUG-8: requote price-change banner — shown after navigating from a requote */}
       {priceChanges.length > 0 && (
         <div className="mb-4 card bg-amber-50 border border-amber-200 text-sm text-amber-900">
@@ -813,9 +861,9 @@ const EstimateEditor = () => {
         </div>
       </div>
 
-      <div className="lg:flex lg:space-x-8">
-        {/* Left panel */}
-        <div className="lg:flex-1 lg:max-w-3xl">
+      <div className="lg:flex lg:space-x-6">
+        {/* Left panel — full width, no max-width cap so table expands */}
+        <div className="lg:flex-1 min-w-0">
           {/* Navigation tabs */}
           <div className="flex space-x-2 mb-6 overflow-x-auto">
             <button onClick={() => setActiveSection('structure')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap ${activeSection === 'structure' ? 'bg-gold/10 text-gold' : 'hover:bg-slate text-ink'}`}>
@@ -832,8 +880,11 @@ const EstimateEditor = () => {
           {/* Structure section */}
           {activeSection === 'structure' && (
             <div className="card space-y-6">
+              {/* structureLocked: from a template — only µ editable. Admins retain full edit. */}
               <div>
-                <h3 className="text-lg font-display font-semibold text-navy mb-4">Layer Stack</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-display font-semibold text-navy">{stackLabel}</h3>
+                </div>
 
                 {/* Mobile cards + bottom sheets (PRD §5.8) */}
                 <div className="space-y-3 md:hidden pb-24">
@@ -857,16 +908,16 @@ const EstimateEditor = () => {
                       total={layers.length}
                       layer={{ ...layer, type: layer.materialType, material: layer.materialName, costPerKg: can('materialCostPerKg') ? layer.costPerKgUsd : undefined }}
                       showCost={can('materialCostPerKg')}
-                      onEdit={() => openLayerEdit(layer.id)}
-                      onRemove={() => setLayers((prev) => prev.filter((l) => l.id !== layer.id))}
-                      onMoveUp={() => moveLayer(idx, -1)}
-                      onMoveDown={() => moveLayer(idx, 1)}
-                      onDragStart={(i) => setDragFromIndex(i)}
+                      onEdit={structureLocked ? undefined : () => openLayerEdit(layer.id)}
+                      onRemove={structureLocked ? undefined : () => setLayers((prev) => prev.filter((l) => l.id !== layer.id))}
+                      onMoveUp={structureLocked ? undefined : () => moveLayer(idx, -1)}
+                      onMoveDown={structureLocked ? undefined : () => moveLayer(idx, 1)}
+                      onDragStart={structureLocked ? undefined : (i) => setDragFromIndex(i)}
                       onDragEnter={(i) => {
-                        if (dragFromIndex !== null) setDragHoverIndex(i);
+                        if (!structureLocked && dragFromIndex !== null) setDragHoverIndex(i);
                       }}
                       onDragEnd={() => {
-                        if (dragFromIndex !== null && dragHoverIndex !== null) {
+                        if (!structureLocked && dragFromIndex !== null && dragHoverIndex !== null) {
                           reorderLayers(dragFromIndex, dragHoverIndex);
                         }
                         setDragFromIndex(null);
@@ -875,118 +926,256 @@ const EstimateEditor = () => {
                       isDragging={dragFromIndex === idx}
                     />
                   ))}
-                  <button
-                    type="button"
-                    onClick={() => setAddLayerSheetOpen(true)}
-                    className="w-full min-h-[48px] py-3 border-2 border-dashed border-border rounded-xl font-display font-semibold text-navy"
-                  >
-                    + Add layer
-                  </button>
+                  {!structureLocked && (
+                    <button
+                      type="button"
+                      onClick={() => setAddLayerSheetOpen(true)}
+                      className="w-full min-h-[48px] py-3 border-2 border-dashed border-border rounded-xl font-display font-semibold text-navy"
+                    >
+                      + Add layer
+                    </button>
+                  )}
                 </div>
 
                 {/* Desktop table */}
-                <div className="overflow-x-auto hidden md:block">
-                  <table className="w-full">
+                <div className="hidden md:block">
+                  {/* Column picker — optional columns */}
+                  {/* Column picker removed — Cost/Kg and Cost/M² are always visible */}
+
+                  <div className="overflow-x-auto">
+                  <table className="w-full min-w-[600px]">
                     <thead>
                       <tr className="border-b border-border">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-mist">#</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-mist">Type</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-mist">Material</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-mist">µ</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-mist">GSM</th>
-                        {can('materialCostPerKg') && <th className="text-left py-3 px-4 text-sm font-medium text-mist">$/kg</th>}
-                        <th className="text-left py-3 px-4 text-sm font-medium text-mist"></th>
+                        <th className="text-center py-3 px-3 text-sm font-medium text-mist w-10">#</th>
+                        <th className="text-center py-3 px-3 text-sm font-medium text-mist">Type</th>
+                        <th className="text-center py-3 px-3 text-sm font-medium text-mist">Family</th>
+                        <th className="text-center py-3 px-3 text-sm font-medium text-mist">Grade Name</th>
+                        <th className="text-center py-3 px-3 text-sm font-medium text-mist w-32">Value</th>
+                        <th className="text-center py-3 px-3 text-sm font-medium text-mist w-24">Total GSM</th>
+                        <th className="text-center py-3 px-3 text-sm font-medium text-mist w-28">
+                          Cost / Kg<br/><span className="font-normal text-xs">({estimate?.displayCurrency || 'USD'})</span>
+                        </th>
+                        <th className="text-center py-3 px-3 text-sm font-medium text-mist w-28">
+                          Cost / M²<br/><span className="font-normal text-xs">({estimate?.displayCurrency || 'USD'})</span>
+                        </th>
+                        {!structureLocked && <th className="py-3 px-3 w-20"></th>}
                       </tr>
                     </thead>
                     <tbody>
                       {layers.map((layer, idx) => (
                         <tr key={layer.id} className="border-b border-border last:border-0 hover:bg-slate/50">
-                          <td className="py-4 px-4 text-sm text-mist">{idx + 1}</td>
-                          <td className="py-4 px-4">
+                          <td className="py-4 px-4 text-sm text-mist text-center">{idx + 1}</td>
+                          <td className="py-4 px-4 text-center">
                             <span className={`text-xs px-2 py-1 rounded-md ${layer.materialType === 'substrate' ? 'bg-blue-100 text-blue-800' : layer.materialType === 'ink' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>{LAYER_TYPE_LABELS[layer.materialType] || layer.materialType}</span>
                           </td>
                           <td className="py-4 px-4">
-                            <select value={layer.materialId} onChange={(e) => {
-                              const mat = materials.find(m => m.id === e.target.value);
-                              if (!mat) return;
-                              setLayers((prev) => prev.map((l) => l.id === layer.id ? {
-                                ...l, materialId: mat.id, materialName: mat.name, materialType: layer.materialType,
-                                costPerKgUsd: parseFloat(mat.costPerKgUsd) || 0, isSolventBased: mat.isSolventBased || false,
-                                gsm: l.micron * (parseFloat(mat.density) || 0.9), hoover: mat.hoover,
-                              } : l));
-                            }} className="input w-full font-medium text-sm" title={materials.find(m => m.id === layer.materialId)?.hoover || ''}>
-                              <option value="">Select material</option>
-                              {renderMaterialOptions(layer.materialType)}
-                            </select>
-                            {isAdmin && (layer.platformMasterKeySnapshot || layer.costingKeySnapshot) && (
-                              <div className="mt-1 text-[10px] font-mono text-mist leading-tight">
-                                {layer.platformMasterKeySnapshot && (
-                                  <div title="platform_master_key at save">{layer.platformMasterKeySnapshot}</div>
-                                )}
-                                {layer.costingKeySnapshot &&
-                                  layer.costingKeySnapshot !== layer.platformMasterKeySnapshot && (
-                                    <div title="costing_key at save">{layer.costingKeySnapshot}</div>
-                                  )}
+                            {/* Family dropdown — filtered by template classification (PE → PE only, Non PE → no PE) */}
+                            {(() => {
+                              const currentMat = materials.find(m => m.id === layer.materialId);
+                              const currentFamily = currentMat?.substrateFamily ?? null;
+
+                              if (layer.materialType !== 'substrate') {
+                                // Ink/adhesive: family not applicable — show family label from material
+                                return <span className="text-sm text-mist">{currentFamily || '—'}</span>;
+                              }
+
+                              // Build allowed families using the engine's substrateFamilyAllowed rule
+                              const allowedFamilies = [...new Set(
+                                materials
+                                  .filter(m => m.type === 'substrate' && m.substrateFamily)
+                                  .filter(m => !templateClassification || materialAllowedForTemplateLayer(m, 'substrate', templateClassification))
+                                  .map(m => m.substrateFamily!)
+                              )].sort();
+
+                              return (
+                                <select
+                                  className="input w-full text-sm"
+                                  value={currentFamily ?? ''}
+                                  onChange={(e) => {
+                                    const newFamily = e.target.value;
+                                    // Auto-select first allowed grade in the new family
+                                    const firstInFamily = materials.find(m =>
+                                      m.type === 'substrate' &&
+                                      m.substrateFamily === newFamily &&
+                                      (!templateClassification || materialAllowedForTemplateLayer(m, 'substrate', templateClassification))
+                                    );
+                                    if (firstInFamily) {
+                                      setLayers(prev => prev.map(l => l.id === layer.id ? {
+                                        ...l, materialId: firstInFamily.id, materialName: firstInFamily.name,
+                                        costPerKgUsd: parseFloat(firstInFamily.costPerKgUsd) || 0,
+                                        isSolventBased: firstInFamily.isSolventBased || false,
+                                        gsm: l.micron * (parseFloat(firstInFamily.density) || 0.9),
+                                        hoover: firstInFamily.hoover ?? null,
+                                      } : l));
+                                    }
+                                  }}
+                                >
+                                  {allowedFamilies.map(f => <option key={f} value={f}>{f}</option>)}
+                                </select>
+                              );
+                            })()}
+                          </td>
+                          <td className="py-4 px-4">
+                            {/* Grade dropdown — filtered by family + classification; title shows hoover on hover */}
+                            {(() => {
+                              const currentMat = materials.find(m => m.id === layer.materialId);
+                              const currentFamily = currentMat?.substrateFamily ?? null;
+
+                              // Allowed grades: must pass layer type + classification + family filter
+                              const gradeOptions = materials.filter(m => {
+                                if (m.type !== layer.materialType) return false;
+                                if (layer.materialType === 'substrate') {
+                                  if (templateClassification && !materialAllowedForTemplateLayer(m, 'substrate', templateClassification)) return false;
+                                  if (currentFamily && m.substrateFamily !== currentFamily) return false;
+                                }
+                                return true;
+                              });
+
+                              return (
+                                <select
+                                  className="input w-full text-sm"
+                                  value={layer.materialId}
+                                  title={currentMat?.hoover ?? ''}
+                                  onChange={(e) => {
+                                    const mat = materials.find(m => m.id === e.target.value);
+                                    if (!mat) return;
+                                    setLayers(prev => prev.map(l => l.id === layer.id ? {
+                                      ...l, materialId: mat.id, materialName: mat.name,
+                                      costPerKgUsd: parseFloat(mat.costPerKgUsd) || 0,
+                                      isSolventBased: mat.isSolventBased || false,
+                                      gsm: l.micron * (parseFloat(mat.density) || 0.9),
+                                      hoover: mat.hoover ?? null,
+                                    } : l));
+                                  }}
+                                >
+                                  <option value="">— Grade —</option>
+                                  {gradeOptions.map(m => (
+                                    <option key={m.id} value={m.id} title={m.hoover ?? ''}>{m.name}</option>
+                                  ))}
+                                </select>
+                              );
+                            })()}
+                            {/* Admin key — hidden from UI, kept for debugging only via DevTools */}
+                          </td>
+
+                          {/* µ / GSM — input with unit label; substrate=µ, ink/adhesive=gsm; yellow when 0 */}
+                          <td className="py-4 px-3 text-center">
+                            {(() => {
+                              const mat = materials.find(m => m.id === layer.materialId);
+                              const solidPct = mat?.solidPercent ?? 100;
+                              const density = parseFloat(mat?.density ?? '0.9') || 0.9;
+                              const isSubstrate = layer.materialType === 'substrate';
+                              const unitLabel = isSubstrate ? 'µ' : 'gsm';
+                              const tooltip = isSubstrate
+                                ? `Density: ${density.toFixed(3)} g/cm³`
+                                : `Solid content: ${solidPct}%`;
+                              return (
+                                <div className="flex items-center justify-center gap-1">
+                                  <input
+                                    type="number"
+                                    value={layer.micron}
+                                    title={tooltip}
+                                    onChange={(e) => {
+                                      const micron = Number(e.target.value);
+                                      setLayers((prev) => prev.map((l) => l.id === layer.id ? {
+                                        ...l, micron,
+                                        gsm: isSubstrate ? micron * density : (solidPct * micron) / 100,
+                                      } : l));
+                                    }}
+                                    className={`input w-20 font-mono text-sm text-center ${layer.micron === 0 ? 'bg-amber-50 border-amber-200' : ''}`}
+                                    inputMode="decimal"
+                                  />
+                                  <span className="text-xs text-mist w-6 text-left">{unitLabel}</span>
+                                </div>
+                              );
+                            })()}
+                          </td>
+
+                          {/* Total GSM per row = layer.gsm (substrate: µ×density; ink: solid%×µ/100) */}
+                          <td className="py-4 px-3 font-mono text-sm text-center font-semibold text-navy">
+                            {layer.gsm > 0 ? fmt(layer.gsm) : <span className="text-mist">0</span>}
+                          </td>
+
+                          {/* Cost / Kg — in display currency, x.xx */}
+                          <td className="py-4 px-3 font-mono text-sm text-center">
+                            {layer.costPerKgUsd > 0
+                              ? usdToDisplay(layer.costPerKgUsd, fxRate).toFixed(2)
+                              : <span className="text-mist">—</span>}
+                          </td>
+
+                          {/* Cost / M² — from engine result, x.xxxx */}
+                          <td className="py-4 px-3 font-mono text-sm text-center">
+                            {(() => {
+                              const calcLayer = clientCalcResult?.estimate.layers[idx];
+                              const c = calcLayer?.costPerM2;
+                              if (c == null || c <= 0) return <span className="text-mist">—</span>;
+                              const display = usdToDisplay(c, fxRate);
+                              return display.toFixed(4);
+                            })()}
+                          </td>
+                          {!structureLocked && (
+                            <td className="py-4 px-3">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  disabled={idx === 0}
+                                  onClick={() => moveLayer(idx, -1)}
+                                  className="text-xs text-mist hover:text-navy disabled:opacity-30"
+                                  title="Move up"
+                                  aria-label="Move layer up"
+                                >▲</button>
+                                <button
+                                  type="button"
+                                  disabled={idx === layers.length - 1}
+                                  onClick={() => moveLayer(idx, 1)}
+                                  className="text-xs text-mist hover:text-navy disabled:opacity-30"
+                                  title="Move down"
+                                  aria-label="Move layer down"
+                                >▼</button>
+                                <button onClick={() => setLayers((prev) => prev.filter((l) => l.id !== layer.id))} className="text-sm text-mist hover:text-danger">Remove</button>
                               </div>
-                            )}
-                          </td>
-                          <td className="py-4 px-4">
-                            <input type="number" value={layer.micron} onChange={(e) => {
-                              const micron = Number(e.target.value);
-                              setLayers((prev) => prev.map((l) => l.id === layer.id ? {
-                                ...l, micron,
-                                gsm: micron * (materials.find(m => m.id === l.materialId)?.density ? parseFloat(materials.find(m => m.id === l.materialId)!.density) : 0.9),
-                              } : l));
-                            }} className="input w-20 font-mono text-sm" />
-                          </td>
-                          <td className="py-4 px-4 font-mono text-sm">{layer.gsm.toFixed(1)}</td>
-                          {can('materialCostPerKg') && <td className="py-4 px-4 font-mono text-sm">{layer.costPerKgUsd.toFixed(2)}</td>}
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                disabled={idx === 0}
-                                onClick={() => moveLayer(idx, -1)}
-                                className="text-xs text-mist hover:text-navy disabled:opacity-30"
-                                title="Move up"
-                                aria-label="Move layer up"
-                              >▲</button>
-                              <button
-                                type="button"
-                                disabled={idx === layers.length - 1}
-                                onClick={() => moveLayer(idx, 1)}
-                                className="text-xs text-mist hover:text-navy disabled:opacity-30"
-                                title="Move down"
-                                aria-label="Move layer down"
-                              >▼</button>
-                              <button onClick={() => setLayers((prev) => prev.filter((l) => l.id !== layer.id))} className="text-sm text-mist hover:text-danger">Remove</button>
-                            </div>
-                          </td>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-border bg-slate/40">
+                        <td colSpan={4} className="py-3 px-3 text-sm font-semibold text-navy text-right">Total GSM</td>
+                        <td className="py-3 px-3 text-center">
+                          {/* µ/GSM col — empty in footer */}
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <span className="font-mono font-bold text-navy">{fmt(totalGsm)}</span>
+                        </td>
+                        <td />{/* Cost/Kg */}
+                        <td />{/* Cost/M² */}
+                        {!structureLocked && <td />}
+                      </tr>
+                    </tfoot>
                   </table>
-                </div>
+                  </div> {/* end overflow-x-auto */}
+                </div> {/* end hidden md:block */}
 
-                {/* Add layer buttons */}
-                <div className="flex flex-wrap gap-3 pt-4">
-                  <select className="input w-48" onChange={(e) => {
-                    const type = e.target.value as 'substrate' | 'ink' | 'adhesive';
-                    if (!type) return;
-                    const defaultMat = materials.find(m => m.type === type);
-                    const micron = type === 'substrate' ? 25 : type === 'ink' ? 5 : 3;
-                    const newLayer: LayerItem = { id: crypto.randomUUID(), materialId: defaultMat?.id || '', materialName: defaultMat?.name || 'Select material', materialType: type, micron, gsm: micron * (defaultMat?.density ? parseFloat(defaultMat.density) : 0.9), costPerKgUsd: defaultMat ? parseFloat(defaultMat.costPerKgUsd) : 0, isSolventBased: defaultMat?.isSolventBased || false, position: layers.length, hoover: defaultMat?.hoover || null };
-                    setLayers((prev) => [...prev, newLayer]);
-                    e.target.value = '';
-                  }} defaultValue="">
-                    <option value="" disabled>+ Add Layer...</option>
-                    <option value="substrate">Substrate</option>
-                    <option value="ink">Ink & Coating</option>
-                    <option value="adhesive">Adhesive</option>
-                  </select>
-                  {/* Note: "+ Metallized Barrier" auto-add removed (Req 8.1).
-                      Add metallized/barrier layers manually via the dropdown above. */}
-                </div>
+                {/* Add layer buttons — hidden when structure is locked (came from template) */}
+                {!structureLocked && (
+                  <div className="flex flex-wrap gap-3 pt-4">
+                    <select className="input w-48" onChange={(e) => {
+                      const type = e.target.value as 'substrate' | 'ink' | 'adhesive';
+                      if (!type) return;
+                      const defaultMat = materials.find(m => m.type === type);
+                      const micron = type === 'substrate' ? 25 : type === 'ink' ? 5 : 3;
+                      const newLayer: LayerItem = { id: crypto.randomUUID(), materialId: defaultMat?.id || '', materialName: defaultMat?.name || 'Select material', materialType: type, micron, gsm: micron * (defaultMat?.density ? parseFloat(defaultMat.density) : 0.9), costPerKgUsd: defaultMat ? parseFloat(defaultMat.costPerKgUsd) : 0, isSolventBased: defaultMat?.isSolventBased || false, position: layers.length, hoover: defaultMat?.hoover || null };
+                      setLayers((prev) => [...prev, newLayer]);
+                      e.target.value = '';
+                    }} defaultValue="">
+                      <option value="" disabled>+ Add Layer...</option>
+                      <option value="substrate">Substrate</option>
+                      <option value="ink">Ink & Coating</option>
+                      <option value="adhesive">Adhesive</option>
+                    </select>
+                  </div>
+                )}
 
                 {/* Solvent mix (admin only, wide web) */}
                 {can('solventMixCost') && needsSolventMix && (
@@ -999,158 +1188,153 @@ const EstimateEditor = () => {
                   </div>
                 )}
               </div>
-            </div>
-          )}
 
-          {/* Dimensions — now rendered in the top panel (product type → subtype → dimensions).
-              This legacy section is disabled; safe to delete in a follow-up cleanup. */}
-          {false && (
-            <div className="card space-y-6">
-              <h3 className="text-lg font-display font-semibold text-navy">Dimensions</h3>
-              <p className="text-sm text-mist">
-                Product type:{' '}
-                <span className="font-medium text-navy">
-                  {productTypeOptions.find((pt) => pt.value === productType)?.label ?? productType}
-                </span>
-                {' '}— change in the job header above.
-              </p>
-              {productType === 'roll' && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label className="block text-sm font-medium text-navy mb-2">Reel width (mm)</label><input type="number" value={dimensions.reelWidthMm} onChange={(e) => setDimensions(prev => ({ ...prev, reelWidthMm: Number(e.target.value) }))} className="input w-full" /></div>
-                    <div><label className="block text-sm font-medium text-navy mb-2">Cut-off (mm)</label><input type="number" value={dimensions.cutoffMm} onChange={(e) => setDimensions(prev => ({ ...prev, cutoffMm: Number(e.target.value) }))} className="input w-full" /></div>
-                  </div>
-                  <details className="p-4 bg-slate rounded-lg">
-                    <summary className="font-medium cursor-pointer">Multi-up & trim</summary>
-                    <div className="mt-4 space-y-4">
-                      <div><label className="block text-sm font-medium text-navy mb-2">Number of ups</label><input type="number" value={dimensions.numberOfUps} onChange={(e) => setDimensions(prev => ({ ...prev, numberOfUps: Number(e.target.value) }))} className="input w-32" /></div>
-                      <div><label className="block text-sm font-medium text-navy mb-2">Extra printing trim (mm)</label><input type="number" value={dimensions.extraPrintingTrimMm} onChange={(e) => setDimensions(prev => ({ ...prev, extraPrintingTrimMm: Number(e.target.value) }))} className="input w-32" /></div>
-                      <div><label className="block text-sm font-medium text-navy mb-2">Pieces per cut</label><input type="number" value={dimensions.piecesPerCut} onChange={(e) => setDimensions(prev => ({ ...prev, piecesPerCut: Number(e.target.value) }))} className="input w-32" /></div>
-                    </div>
-                  </details>
-                </div>
-              )}
-              {productType === 'sleeve' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label className="block text-sm font-medium text-navy mb-2">Sleeve width (mm)</label><input type="number" value={dimensions.reelWidthMm} onChange={(e) => setDimensions(prev => ({ ...prev, reelWidthMm: Number(e.target.value) }))} className="input w-full" /></div>
-                  <div><label className="block text-sm font-medium text-navy mb-2">Height (mm)</label><input type="number" value={dimensions.cutoffMm} onChange={(e) => setDimensions(prev => ({ ...prev, cutoffMm: Number(e.target.value) }))} className="input w-full" /></div>
-                </div>
-              )}
-              {productType === 'pouch' && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-navy mb-2">Kind</label>
-                      <select
-                        className="input w-full"
-                        value={productFamily === 'bag' ? 'bag' : 'pouch'}
-                        onChange={(e) => setProductSubtype(defaultSubtypeForFamily(e.target.value as ProductFamily))}
-                      >
-                        <option value="pouch">Pouch</option>
-                        <option value="bag">Bag</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-navy mb-2">
-                        {PRODUCT_FAMILY_LABELS[productFamily]} type
-                      </label>
-                      <select
-                        className="input w-full"
-                        value={productSubtype ?? ''}
-                        onChange={(e) => setProductSubtype(e.target.value || null)}
-                      >
-                        <option value="">Select type…</option>
-                        {subtypesForFamily(productFamily).map((s) => (
-                          <option key={s.key} value={s.key}>
-                            {s.group ? `${s.group} — ${s.label}` : s.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {subtypeDimensionFields.map((f) =>
-                      f.type === 'boolean' ? (
-                        <label key={f.key} className="flex items-center gap-2 md:mt-7">
-                          <input
-                            type="checkbox"
-                            checked={Number(dimensions[f.key]) === 1}
-                            onChange={(e) =>
-                              setDimensions((prev) => ({ ...prev, [f.key]: e.target.checked ? 1 : 0 }))
-                            }
-                          />
-                          <span className="text-sm font-medium text-navy">{f.label}</span>
-                          {f.hint && <span className="text-xs text-mist">— {f.hint}</span>}
-                        </label>
-                      ) : (
-                        <div key={f.key}>
-                          <label className="block text-sm font-medium text-navy mb-2">
-                            {f.label}{f.unit ? ` (${f.unit})` : ''}{f.required ? ' *' : ''}
-                          </label>
-                          <input
-                            type="number"
-                            className="input w-full"
-                            value={dimensions[f.key] ?? 0}
-                            onChange={(e) =>
-                              setDimensions((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))
-                            }
-                          />
-                          {f.hint && <p className="text-xs text-mist mt-1">{f.hint}</p>}
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
-              <div className="pt-4 border-t border-border">
-                <h4 className="font-display font-semibold text-navy mb-4">Calculated Values</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {can('printingWebWidth') && (
-                  <div title="Press/lamination width before slitting — not your finished reel width.">
-                    <p className="text-sm text-mist">Printing web width <span className="text-mist cursor-help">ⓘ</span></p>
-                    <p className="font-mono font-semibold text-gold">{printWebWidth} mm</p>
-                  </div>
+              {/* ── Dimensions ───────────────────────────────────────────────── */}
+              <div className="border-t border-border pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-display font-semibold text-navy">Dimensions</h3>
+                  {/* Printing web class badge — read-only, auto-derived from ink layers */}
+                  {can('printingWebClass') && derivedPrintingWebClass && (
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${derivedPrintingWebClass === 'wide_web' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
+                      {derivedPrintingWebClass === 'wide_web' ? 'Wide Web (SB)' : 'Narrow Web (UV)'}
+                    </span>
                   )}
-                  <div><p className="text-sm text-mist">Total µ</p><p className="font-mono font-semibold">{totalMicron}</p></div>
-                  <div><p className="text-sm text-mist">Total GSM</p><p className="font-mono font-semibold">{totalGsm.toFixed(1)}</p></div>
-                  <div><p className="text-sm text-mist">Density</p><p className="font-mono font-semibold">{density}</p></div>
                 </div>
-              </div>
-              {can('rollAfterSlitting') && productType === 'roll' && (
-                <details className="p-4 border border-border rounded-lg">
-                  <summary className="font-medium cursor-pointer select-none">Roll spec (after slitting)</summary>
-                  <div className="mt-4 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div><label className="block text-sm text-mist mb-1">Slit width (mm)</label><input type="number" className="input w-full" defaultValue={(dimensions as any).slitWidthMm || dimensions.reelWidthMm} /></div>
-                      <div><label className="block text-sm text-mist mb-1">Core diameter (mm)</label><input type="number" className="input w-full" defaultValue={(dimensions as any).coreDiameterMm || 76} /></div>
-                      <div><label className="block text-sm text-mist mb-1">Max OD (mm)</label><input type="number" className="input w-full" defaultValue={(dimensions as any).outerDiameterMm || 400} /></div>
-                      <div><label className="block text-sm text-mist mb-1">Film weight / roll (kg)</label><input type="number" className="input w-full" defaultValue={(dimensions as any).weightPerRollKg || orderQuantity} /></div>
+
+                {/* Pouch/Bag: Kind locked from template, subtype chosen per job */}
+                {(productFamily === 'pouch' || productFamily === 'bag') && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-xs font-medium text-mist mb-1">Kind</label>
+                      {structureLocked ? (
+                        <p className="input bg-slate text-navy font-medium capitalize">{productFamily}</p>
+                      ) : (
+                        <select
+                          className="input w-full"
+                          value={productFamily}
+                          onChange={(e) => {
+                            setProductType(e.target.value);
+                            setProductSubtype(defaultSubtypeForFamily(e.target.value as ProductFamily));
+                          }}
+                        >
+                          {/* Kind options — pouch/bag families from Master Data productTypeOptions */}
+                          {productTypeOptions
+                            .filter(opt => opt.value === 'pouch' || opt.value === 'bag')
+                            .map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                      )}
                     </div>
-                    {/* Derived read-only fields */}
-                    {totalGsm > 0 && (
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-3 bg-slate rounded-lg">
-                        <div>
-                          <p className="text-xs text-mist">Film density (g/cm³)</p>
-                          <p className="font-mono text-sm font-semibold">{density}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-mist">m²/kg</p>
-                          <p className="font-mono text-sm font-semibold">{totalGsm > 0 ? (1000 / totalGsm).toFixed(2) : '—'}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-mist">LM/kg (reel width)</p>
-                          <p className="font-mono text-sm font-semibold">
-                            {totalGsm > 0 && dimensions.reelWidthMm > 0
-                              ? ((1000 / totalGsm) * (1000 / dimensions.reelWidthMm)).toFixed(1)
-                              : '—'}
-                          </p>
-                        </div>
+                    {availableSubtypes.length > 0 && (
+                      <div>
+                        <label className="block text-xs font-medium text-mist mb-1">
+                          {PRODUCT_FAMILY_LABELS[productFamily] ?? productFamily} type
+                        </label>
+                        <select
+                          className="input w-full"
+                          value={productSubtype ?? ''}
+                          onChange={(e) => setProductSubtype(e.target.value || null)}
+                        >
+                          <option value="">Select type…</option>
+                          {availableSubtypes.map((s) => (
+                            <option key={s.code} value={s.code}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     )}
-                    <p className="text-xs text-mist">Display-only — these values are not included in costing calculations.</p>
                   </div>
-                </details>
-              )}
+                )}
+
+                {/* Dynamic dimension fields driven by productCatalog */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {subtypeDimensionFields.map((f) =>
+                    f.type === 'boolean' ? (
+                      <label key={f.key} className="flex items-center gap-2 md:mt-7">
+                        <input
+                          type="checkbox"
+                          checked={Number(dimensions[f.key]) === 1}
+                          onChange={(e) =>
+                            setDimensions((prev) => ({ ...prev, [f.key]: e.target.checked ? 1 : 0 }))
+                          }
+                        />
+                        <span className="text-sm font-medium text-navy">{f.label}</span>
+                        {f.hint && <span className="text-xs text-mist">— {f.hint}</span>}
+                      </label>
+                    ) : (
+                      <div key={f.key}>
+                        <label className="block text-sm font-medium text-navy mb-2">
+                          {f.label}{f.unit ? ` (${f.unit})` : ''}{f.required ? ' *' : ''}
+                        </label>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          className={`input w-full ${f.required && (dimensions[f.key] ?? 0) === 0 ? 'bg-amber-50 border-amber-200' : ''}`}
+                          value={dimensions[f.key] ?? 0}
+                          onChange={(e) =>
+                            setDimensions((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))
+                          }
+                        />
+                        {f.hint && <p className="text-xs text-mist mt-1">{f.hint}</p>}
+                      </div>
+                    )
+                  )}
+                </div>
+
+                {/* Printing web width badge (read-only, always visible for roll/sleeve) */}
+                {can('printingWebWidth') && (productFamily === 'roll' || productFamily === 'sleeve') && printWebWidth > 0 && (
+                  <div className="mt-4 p-3 bg-slate rounded-lg flex items-center gap-6 text-sm flex-wrap">
+                    <div title="Press/lamination width before slitting — not your finished reel width.">
+                      <p className="text-xs text-mist">Printing web width <span className="cursor-help">ⓘ</span></p>
+                      <p className="font-mono font-semibold text-gold">{printWebWidth} mm</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-mist">Total µ</p>
+                      <p className="font-mono font-semibold">{totalMicron}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-mist">Total GSM</p>
+                      <p className="font-mono font-semibold">{totalGsm.toFixed(1)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-mist">Density (g/cm³)</p>
+                      <p className="font-mono font-semibold">{density}</p>
+                    </div>
+                    {totalGsm > 0 && (
+                      <div>
+                        <p className="text-xs text-mist">m²/kg</p>
+                        <p className="font-mono font-semibold">{(1000 / totalGsm).toFixed(2)}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Pouch/Bag: show GSM + density summary */}
+                {(productFamily === 'pouch' || productFamily === 'bag') && totalGsm > 0 && (
+                  <div className="mt-4 p-3 bg-slate rounded-lg flex items-center gap-6 text-sm flex-wrap">
+                    <div>
+                      <p className="text-xs text-mist">Total µ</p>
+                      <p className="font-mono font-semibold">{totalMicron}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-mist">Total GSM</p>
+                      <p className="font-mono font-semibold">{totalGsm.toFixed(1)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-mist">Density (g/cm³)</p>
+                      <p className="font-mono font-semibold">{density}</p>
+                    </div>
+                    {totalGsm > 0 && (
+                      <div>
+                        <p className="text-xs text-mist">m²/kg</p>
+                        <p className="font-mono font-semibold">{(1000 / totalGsm).toFixed(2)}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1197,12 +1381,12 @@ const EstimateEditor = () => {
         </div>
 
         {/* Right panel - sticky sidebar */}
-        <div className="lg:w-80 lg:flex-shrink-0 mt-8 lg:mt-0">
+        <div className="lg:w-56 lg:flex-shrink-0 mt-8 lg:mt-0">
           <div className="sticky top-8 space-y-6">
             <div className="card">
-              <h3 className="font-display font-semibold text-navy mb-4">Laminate Stack</h3>
+              <h3 className="font-display font-semibold text-navy mb-4">{stackLabel}</h3>
               <div className="flex items-center justify-center">
-                <LaminateVisualizer layers={layers.map(l => ({ id: l.id, type: l.materialType, material: l.materialName, micron: l.micron, gsm: l.gsm }))} width={220} height={180} />
+                <LaminateVisualizer layers={layers.map(l => ({ id: l.id, type: l.materialType, material: l.materialName, micron: l.micron, gsm: l.gsm }))} width={180} height={150} />
               </div>
             </div>
 
@@ -1221,24 +1405,90 @@ const EstimateEditor = () => {
               {can('costBreakdown') && <div className="text-sm text-mist">{calculating ? 'Saving to server...' : 'Live preview — save to persist'}</div>}
             </div>
 
-            {can('costBreakdown') && <div className="card">
-              <h3 className="font-display font-semibold text-navy mb-4">Cost Breakdown</h3>
-              <div className="space-y-2">{(() => {
-                const mat = Number(estimate?.materialCostPerKg) || 0;
-                const sale = Number(estimate?.salePricePerKg) || 0;
-                const materialPct = sale ? Math.round((mat / sale) * 100) : 0;
-                const markupPct = Math.round(markupPercent);
-                const processPct = Math.max(0, 100 - materialPct - markupPct);
-                return (<>
-                  <div className="flex items-center justify-between"><span className="text-sm">Material</span><span className="text-sm font-semibold">{materialPct}%</span></div>
-                  <div className="w-full bg-slate rounded-full h-2"><div className="bg-blue-500 rounded-full h-2" style={{ width: `${materialPct}%` }}></div></div>
-                  <div className="flex items-center justify-between"><span className="text-sm">Markup</span><span className="text-sm font-semibold">{markupPct}%</span></div>
-                  <div className="w-full bg-slate rounded-full h-2"><div className="bg-gold rounded-full h-2" style={{ width: `${markupPct}%` }}></div></div>
-                  <div className="flex items-center justify-between"><span className="text-sm">Process</span><span className="text-sm font-semibold">{processPct}%</span></div>
-                  <div className="w-full bg-slate rounded-full h-2"><div className="bg-green-500 rounded-full h-2" style={{ width: `${processPct}%` }}></div></div>
-                </>);
-              })()}</div>
-            </div>}
+            {can('costBreakdown') && (
+              <div className="card">
+                <h3 className="font-display font-semibold text-navy mb-4">Cost Breakdown</h3>
+                {(() => {
+                  // Use engine result when available (accurate); fall back to saved estimate fields
+                  const cb = clientCalcResult?.costBreakdown;
+                  const matPct = cb ? Math.round(cb.materialPercent) : (() => {
+                    const mat = Number(estimate?.materialCostPerKg) || 0;
+                    const sale = Number(estimate?.salePricePerKg) || 0;
+                    return sale ? Math.round((mat / sale) * 100) : 0;
+                  })();
+                  const mkupPct = cb ? Math.round(cb.markupPercent) : 0;
+                  const procPct = cb ? Math.round(cb.processPercent) : 0;
+                  const wasteAdjPct = Math.max(0, 100 - matPct - mkupPct - procPct);
+
+                  const matCostUsd = clientCalcResult?.estimate.materialCostPerKg ?? Number(estimate?.materialCostPerKg) ?? 0;
+                  const saleUsd = clientCalcResult?.estimate.salePricePerKg ?? Number(estimate?.salePricePerKg) ?? 0;
+                  const effMargin = effectiveMarginPercent(matCostUsd, markupPercent, saleUsd);
+
+                  return (
+                    <div className="space-y-3">
+                      {/* Cost line items (admin) */}
+                      {can('rmCostPerKg') && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-mist">RM cost/kg</span>
+                          <span className="font-mono font-semibold">{estimate?.displayCurrency || 'USD'} {usdToDisplay(matCostUsd, fxRate).toFixed(2)}</span>
+                        </div>
+                      )}
+                      {can('markupAmount') && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-mist">Markup ({markupPercent}% on RM)</span>
+                          <span className="font-mono font-semibold">{estimate?.displayCurrency || 'USD'} {usdToDisplay(matCostUsd * markupPercent / 100, fxRate).toFixed(2)}</span>
+                        </div>
+                      )}
+                      {can('platesPerKg') && platesPerKg > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-mist">Plates/kg</span>
+                          <span className="font-mono font-semibold">{estimate?.displayCurrency || 'USD'} {platesPerKg.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {can('deliveryPerKg') && deliveryPerKg > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-mist">Delivery/kg</span>
+                          <span className="font-mono font-semibold">{estimate?.displayCurrency || 'USD'} {deliveryPerKg.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {/* Effective margin % — always shown to admin (PRD §7.3 label) */}
+                      {saleUsd > 0 && (
+                        <div className="flex justify-between text-sm pt-2 border-t border-border">
+                          <span className="text-mist" title="Markup amount ÷ sale price">Effective margin %</span>
+                          <span className="font-mono font-semibold text-green-700">{effMargin.toFixed(1)}%</span>
+                        </div>
+                      )}
+                      {/* Visual breakdown bars */}
+                      <div className="space-y-2 pt-1">
+                        <div>
+                          <div className="flex justify-between text-xs mb-1"><span>Material</span><span>{matPct}%</span></div>
+                          <div className="w-full bg-slate rounded-full h-1.5"><div className="bg-blue-500 rounded-full h-1.5" style={{ width: `${matPct}%` }} /></div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-xs mb-1"><span>Markup (on RM)</span><span>{mkupPct}%</span></div>
+                          <div className="w-full bg-slate rounded-full h-1.5"><div className="bg-gold rounded-full h-1.5" style={{ width: `${mkupPct}%` }} /></div>
+                        </div>
+                        {procPct > 0 && (
+                          <div>
+                            <div className="flex justify-between text-xs mb-1"><span>Process</span><span>{procPct}%</span></div>
+                            <div className="w-full bg-slate rounded-full h-1.5"><div className="bg-green-500 rounded-full h-1.5" style={{ width: `${procPct}%` }} /></div>
+                          </div>
+                        )}
+                        {wasteAdjPct > 0 && (
+                          <div>
+                            <div className="flex justify-between text-xs mb-1"><span>Waste / other</span><span>{wasteAdjPct}%</span></div>
+                            <div className="w-full bg-slate rounded-full h-1.5"><div className="bg-orange-400 rounded-full h-1.5" style={{ width: `${wasteAdjPct}%` }} /></div>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-mist pt-1">
+                        {clientCalcResult ? 'Live engine preview' : 'Save & Calculate to refresh'}
+                      </p>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
             <div className="space-y-2">
               <button onClick={handleSaveAndCalculate} className="btn-primary w-full">Save & Calculate</button>

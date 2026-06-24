@@ -83,7 +83,7 @@ const Dashboard = () => {
     : [];
 
   const formatTotal = (e: SummaryEstimate) =>
-    `${e.displayCurrency || 'AED'} ${(e.totalPrice || 0).toLocaleString('en-AE', { minimumFractionDigits: 2 })}`;
+    `${e.displayCurrency || 'USD'} ${(e.totalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
   if (loading) {
     return (

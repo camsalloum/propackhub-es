@@ -508,6 +508,7 @@ export class ApiClient {
   createTemplateFromDefinition(data: {
     name: string;
     productType: 'roll' | 'sleeve' | 'pouch';
+    productSubtype?: string | null;
     materialClass: 'PE' | 'Non PE';
     structureTier: 'Mono' | 'Duplex' | 'Triplex' | 'Quadriplex';
     printMode: 'Plain' | 'Printed';

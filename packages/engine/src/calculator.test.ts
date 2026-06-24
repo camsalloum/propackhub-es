@@ -144,10 +144,9 @@ describe('Engine calculator — golden tests', () => {
     };
 
     const result = calculateEstimate(estimate, materials);
-    // PE Plain: gsm = 23, cost/kg = 1.2 USD
-    // cost_m2 = (gsm / 1000) × cost_per_kg × (1 + waste/100)
-    //         = (23 / 1000) × 1.2 × 1.03 = 0.02838 USD/m²
-    expect(result.estimate.layers[0].costPerM2).toBeCloseTo(0.02838, 4);
+    // PE Plain: gsm = 23, cost/kg = 1.2 USD, waste excluded
+    // cost_m2 = (gsm / 1000) × cost_per_kg = (23 / 1000) × 1.2 = 0.0276 USD/m²
+    expect(result.estimate.layers[0].costPerM2).toBeCloseTo(0.0276, 4);
   });
 
   it('should calculate ink GSM (SB 30% solid at 5µ)', () => {
@@ -448,11 +447,11 @@ describe('Engine calculator — golden tests', () => {
     };
 
     const result = calculateEstimate(estimate, materials);
-    // gsm = 27.6 GSM
-    // cost_m2 = (27.6 / 1000) × 1.2 × 1.03 = 0.03410 USD/m²
+    // gsm = 27.6 GSM, cost/kg = 1.2 USD, waste excluded
+    // cost_m2 = (27.6 / 1000) × 1.2 = 0.03312 USD/m²
     // sqm_per_kg = 36.23
-    // mat_cost_kg = (0.03410 / 27.6) × 1000 = 1.235 USD/kg
-    const expectedMatCostKg = 1.235;
+    // mat_cost_kg = (0.03312 / 27.6) × 1000 = 1.2 USD/kg
+    const expectedMatCostKg = 1.2;
     expect(result.estimate.materialCostPerKg).toBeCloseTo(expectedMatCostKg, 2);
   });
 
@@ -495,10 +494,10 @@ describe('Engine calculator — golden tests', () => {
     };
 
     const result = calculateEstimate(estimate, materials);
-    // mat_cost_kg ≈ 1.235 USD/kg
-    // markup = 1.235 × 15/100 = 0.185 USD/kg
-    // sale_price = 1.235 + 0.185 + 0.2 + 0.1 = 1.72 USD/kg
-    expect(result.estimate.salePricePerKg).toBeCloseTo(1.72, 2);
+    // mat_cost_kg = 1.2 USD/kg (no waste)
+    // markup = 1.2 × 15/100 = 0.18 USD/kg
+    // sale_price = 1.2 + 0.18 + 0.2 + 0.1 = 1.68 USD/kg
+    expect(result.estimate.salePricePerKg).toBeCloseTo(1.68, 2);
   });
 
   it('should compute waste percentage in cost breakdown', () => {

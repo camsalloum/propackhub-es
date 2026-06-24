@@ -402,6 +402,7 @@ async function getEstimateRoute(
         materialName: l.materialName || mat?.name || 'Unknown',
         materialType: mat?.type ?? 'substrate',
         materialHoover: mat?.hoover ?? null,
+        materialCostPerKgUsd: mat?.costPerKgUsd ?? '0',
         isSolventBased: mat?.isSolventBased ?? false,
         materialStale: stale,
       };

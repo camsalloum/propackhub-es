@@ -1,105 +1,106 @@
 # LIVE STATE — Estimation Studio
 
-> ✅ **2026-06-21 update:** Deep re-audit + fixes ([ES_DEEP_AUDIT_AND_ENHANCEMENT_PLAN_2026-06-21.md](./ES_DEEP_AUDIT_AND_ENHANCEMENT_PLAN_2026-06-21.md)). Build blockers are now **fixed**: web `tsc` **0 errors**, server `tsc` **0 errors**, engine **34/34**, server **36/36** (verified, live Postgres). A CI typecheck gate now fails the build on type errors. Remaining work (verified bug backlog BUG-1…13, migrations, mobile, PEBI seam, visual/domain Phase 7) is tracked in the deep-audit doc — treat it as the roadmap of record. Note: the prior "TypeScript clean" claim only became true with this session's fixes.
+> ✅ **2026-06-24 update:** Major session — single source of truth for materials, new ink costing model, Bag as first-class type, template repair, all bugs fixed. Engine 67/67, server 37/37. All changes committed and merged to `main`.
 
+**Last updated:** 2026-06-24
+**Session:** Raw Materials single source, ink costing model, Bag type, template explosion fix, layer table UX
 
+---
 
-**Last updated:** 2026-06-21  
-
-**Session:** Template/estimate UX polish — Excel job header, Cancel nav, blank canvas removed (ready for user smoke test)
-
-
-
-## Status: ✅ MES plan complete (Phases A–F + §14 UI + V1 nice-to-haves)
-
-
+## Architecture
 
 - **Workspace:** `D:\ProPackHub\apps\estimation-studio\`
-
-- **Platform master:** PostgreSQL `platform_master_materials` + `platform_reference_items`
-
-- **Admin UI:** `/platform/master-data` (platform_admin)
-
-- **Sync:** Save on Master Data page → all tenants updated automatically
-
+- **Platform master:** `platform_master_materials` + `platform_reference_items` (PostgreSQL)
+- **Single source:** Raw Materials page (`/library`) IS the Master Data page — no separate Library
+- **Sync:** Admin saves Raw Materials → all tenant `materials` rows auto-synced; platform master always wins (no manual override at library level)
+- **Temporary price override:** Edit Cost/Kg in the estimate layer table → saved as `unit_cost_snapshot_usd` per layer
 - **Tests:** engine 67/67 ✅, server integration tests ✅
-
-- **GET /templates:** ✅ fixed (template_key collision on legacy duplicate rows)
-
-- **Change feed:** `GET /api/v1/platform/master-data/changes` (JWT or service key)
-
-- **API contract:** [docs/API_MASTER_DATA.md](./API_MASTER_DATA.md)
-
-- **All changes uncommitted** — user to commit when ready
-
-
+- **Migrations applied:** 0000_initial_schema, 0001_sessions, 0002_liquid_cost_usd, 0003_product_type_bag
 
 ---
 
-
-
-## What works (verified 2026-06-23)
-
-
+## What works (verified 2026-06-24)
 
 | Area | Status |
-
 |------|--------|
-
 | Platform master tables + seed from JSON on first API start | ✅ |
-
-| Master Data page — materials + reference CRUD | ✅ |
-
-| Template library — Standard Templates page (browse/create/edit) | ✅ |
-
-| Template → Estimate explosion (instantiate) | ✅ |
-
-| Structure lock: template-exploded estimates lock layers (µ + dimensions only) | ✅ |
-
-| Layer table: # / Type / Family / Grade Name / Value / Total GSM / Cost/Kg / Cost/M² | ✅ |
-
-| Family dropdown filtered by template materialClass (PE → PE only) | ✅ |
-
-| Grade dropdown filtered by family + classification | ✅ |
-
-| Micron starts at 0 on explosion — user fills in | ✅ |
-
-| Total GSM formula: substrate = µ×density, ink/adhesive = (solid%×µ)/100 | ✅ |
-
-| Waste removed from cost formula — applied at order level later | ✅ |
-
-| Engine tests: 67/67 (golden fixtures updated for no-waste) | ✅ |
-
-| Cost/Kg shows x.xx in display currency | ✅ |
-
-| Cost/M² shows x.xxxx — **BUG: value showing 0.09 instead of 0.09384** | 🔴 |
-
-
+| Raw Materials page — RM Types first tab, then material tabs (dynamic from RM types) | ✅ |
+| Adding new RM Type → auto-generates material tab + filter tab in estimates | ✅ |
+| All users can view Raw Materials; only admins can edit/save | ✅ |
+| Template → Estimate explosion: correct layer types + seed micron defaults | ✅ |
+| Template material repair: 499 templates fixed across 109 tenants | ✅ |
+| Layer table: Type / Family (dropdown) / Grade Name (filtered) / Value / Total GSM / Cost/Kg / Cost/M² | ✅ |
+| Cost/Kg: always-editable inline input; updates all formulas live | ✅ |
+| Cost/M² precision: 4dp, no rounding via usdToDisplay (fixed) | ✅ |
+| Ink/Adhesive new costing model: user enters DRY GSM; library stores dry-equiv cost | ✅ |
+| Liquid Cost column in Raw Materials with auto-computed dry-equiv Cost/Kg | ✅ |
+| Correct ink density + solid% values (owner spec) applied to all tenants | ✅ |
+| Bag = first-class product type (DB enum, engine, Zod, validation) | ✅ |
+| Save & Calculate: dimension errors now offer "save structure only" fallback | ✅ |
+| Total GSM format: xx.xx; Value column: xx.x | ✅ |
+| Materials pagination: limit=500 request, limit=1000 server cap, sorted by type+name | ✅ |
+| GIT-SAVE.bat: pushes current branch dynamically | ✅ |
+| All migrations applied to DB | ✅ |
 
 ---
 
+## Ink/Adhesive Costing Model (new 2026-06-24)
 
+**User enters:** dry GSM (e.g. 2 gsm of ink deposited on film)
 
-## Open Bug: Cost/M² wrong value
+**Library stores:**
+- `liquidCostUsd` — price paid per kg of liquid ink (user-entered, stored to avoid float drift)
+- `solidPercent` — solid content % of the liquid ink
+- `costPerKgUsd` — **auto-computed dry-equivalent**: `liquidCostUsd / (solidPercent / 100)`
 
-**Symptom:** LDPE Natural 60µ → GSM=55.2, Cost/kg=1.70 USD → expected Cost/M²=0.0938, showing 0.09
+**Engine formula:**
+```
+cost/m² = (dry_gsm / 1000) × costPerKgUsd_dry_equiv
+```
 
-**Formula confirmed correct:** `(GSM × cost/kg) / 1000 = (55.2 × 1.70) / 1000 = 0.09384`
+**Example:** 2 gsm dry, SB ink 35% solid, liquid price $4.60/kg
+- dry-equiv = $4.60 / 0.35 = $13.14/kg
+- cost/m² = (2/1000) × 13.14 = **$0.0263/m²** ✓
 
-**Engine formula** (`calculateLayer`): substrate → `(gsm/1000) × costPerKgUsd` ✅ matches
-
-**Suspect:** `clientCalcResult.estimate.layers[idx].costPerM2` is receiving a wrong cost/kg value (possibly 1.50 instead of 1.70). Debug logs were added (`[toMaterial] LDPE` and `[runClientCalculation] layers[0]`) but console showed collapsed `Object` — not expanded before session close.
-
-**Next step:** Open DevTools → Console → expand `[toMaterial] LDPE` object → verify `costPerKgUsd` value. If it's not 1.70, trace where the wrong value enters `materials` state.
-
-
+**For UV-LED (100% solid):** dry-equiv = liquid price (no conversion needed)
 
 ---
 
+## Default Ink/Adhesive Specs (owner-confirmed 2026-06-24)
 
+| Family | Name | Density | Solid% |
+|--------|------|---------|--------|
+| Solvent Based | Common Colors | 1.05 | 35 |
+| Solvent Based | Special Colors | 1.10 | 45 |
+| Solvent Based | Primer | 0.95 | 20 |
+| Solvent Based | Glossy Varnish | 0.95 | 25 |
+| Solvent Based | Matt Varnish | 0.95 | 27 |
+| Solvent Based | Heat Seal | 0.95 | 42 |
+| Solvent Based | Wax | 0.95 | 100 |
+| Solvent Based | Cold Seal | 1.00 | 52 |
+| UV-LED | All types | 1.05–1.15 | 100 |
+| Solvent Base (adhesive) | Solvent Base | 1.10 | 35 |
+| Solvent Less (adhesive) | Solvent Less | 1.10 | 100 |
+| Mono Component (adhesive) | Mono Component | 1.05 | 35 |
 
-## Next session
+---
 
-1. **Fix Cost/M² bug** — expand DevTools objects to find wrong costPerKgUsd value in engine
-2. Commit all session changes when bug is resolved
+## Product Types
 
+| Code | Engine path | Costing formula |
+|------|-------------|-----------------|
+| `roll` | roll | reel_width × cutoff |
+| `sleeve` | sleeve | same as roll |
+| `pouch` | pouch | open_width × open_height |
+| `bag` | **bag** (first-class, own DB value) | open_width × open_height (same area formula as pouch) |
+
+---
+
+## Open Items / Next Session
+
+- [ ] Verify full estimate save flow for Bag type end-to-end
+- [ ] PDF proposal: check bag dimensions appear correctly
+- [ ] Phase 6 value features (comparison view, attachments)
+- [ ] Phase 7 visuals (per-subtype product visual, domain catalog)
+- [ ] Server integration tests: update for new costing model + bag type
+- [ ] Consider: `isSolventBased` flag update for adhesives with solid% < 100

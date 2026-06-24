@@ -73,6 +73,7 @@ export async function getMaterialsRoute(
       .select()
       .from(schema.materials)
       .where(whereClause)
+      .orderBy(schema.materials.type, schema.materials.name)
       .limit(limit)
       .offset(offset);
 

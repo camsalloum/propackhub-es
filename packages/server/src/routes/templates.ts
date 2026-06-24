@@ -395,11 +395,12 @@ export async function instantiateTemplateRoute(
       })
       .returning()) as EstimateRow[];
 
-    // Micron starts at 0 — user fills in the thickness for each layer.
-    const DEFAULT_MICRON_HINT: Record<string, number> = {
-      substrate: 0,
-      ink: 0,
-      adhesive: 0,
+    // Use the seed's default_micron hint so estimates open with meaningful values.
+    // Users can still change microns freely — these are just starting points.
+    const DEFAULT_MICRON_BY_TYPE: Record<string, number> = {
+      substrate: 25,
+      ink: 2,
+      adhesive: 3,
     };
 
     const defaultLayersResolved = (template.defaultLayers as TemplateLayerRef[]) || [];
@@ -407,8 +408,10 @@ export async function instantiateTemplateRoute(
     for (const layer of defaultLayersResolved) {
       const materialId = resolveLayerMaterialId(layer, materialLookup, validIds)!;
       const mat = materialById.get(materialId);
-      // Use the layer-type hint — not 0 — so the estimate shows a non-zero price on first load.
-      const micronHint = DEFAULT_MICRON_HINT[layer.layer_type ?? 'substrate'] ?? 10;
+      // Prefer the seed's default_micron, fall back to type-based default
+      const micronHint = (layer.default_micron && layer.default_micron > 0)
+        ? layer.default_micron
+        : (DEFAULT_MICRON_BY_TYPE[layer.layer_type ?? 'substrate'] ?? 10);
       await db.insert(schema.layers).values(
         buildLayerInsertValues({
           estimateId: estimate.id,

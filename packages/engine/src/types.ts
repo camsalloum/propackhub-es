@@ -32,7 +32,7 @@ export interface Layer {
 }
 
 export interface EstimateDimensions {
-  productType: 'roll' | 'sleeve' | 'pouch';
+  productType: 'roll' | 'sleeve' | 'pouch' | 'bag';
   // Roll/Sleeve fields
   reelWidthMm?: number;
   cutoffMm?: number;

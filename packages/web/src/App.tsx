@@ -61,10 +61,10 @@ function App() {
           <Route path="estimates" element={<EstimatesList />} />
           <Route path="customers" element={<CustomersList />} />
           <Route path="customers/:id" element={<CustomerDetail />} />
-          <Route path="library" element={<Library />} />
+          <Route path="library" element={<MasterData />} />
           <Route path="settings" element={<Settings />} />
-          <Route path="platform/master-data" element={<MasterData />} />
-          <Route path="platform/master-library" element={<Navigate to="/platform/master-data" replace />} />
+          <Route path="platform/master-data" element={<Navigate to="/library" replace />} />
+          <Route path="platform/master-library" element={<Navigate to="/library" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>

@@ -22,7 +22,7 @@ export interface PaginatedResult<T> {
 
 /** Parse + clamp pagination params from query string. */
 export function parsePagination(query: PaginationQuery): { limit: number; offset: number } {
-  const limit = Math.min(Math.max(1, parseInt(String(query.limit ?? '50'), 10) || 50), 200);
+  const limit = Math.min(Math.max(1, parseInt(String(query.limit ?? '50'), 10) || 50), 1000);
   const offset = Math.max(0, parseInt(String(query.offset ?? '0'), 10) || 0);
   return { limit, offset };
 }

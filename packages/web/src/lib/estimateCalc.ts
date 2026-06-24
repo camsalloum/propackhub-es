@@ -31,7 +31,7 @@ export interface ClientCalcInput {
   layers: Array<{ id?: string; materialId: string; micron: number; position: number }>;
   materials: ClientCalcMaterial[];
   processes?: ClientCalcProcess[];
-  productType: 'roll' | 'sleeve' | 'pouch';
+  productType: 'roll' | 'sleeve' | 'pouch' | 'bag';
   dimensions: Record<string, number | undefined>;
   markupPercent: number;
   platesPerKg: number;

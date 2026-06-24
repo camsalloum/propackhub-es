@@ -24,7 +24,7 @@ interface Material {
   isTenantOnly?: boolean;
 }
 
-type PriceDraft = { costPerKgUsd: string; marketPriceUsd: string };
+type PriceDraft = { costPerKgUsd: string; marketPriceUsd: string; solidPercent?: string };
 
 /**
  * Resolve the effective MaterialFormKind for a given RmTypeOption.
@@ -180,6 +180,7 @@ const Library = () => {
     return {
       costPerKgUsd: priceInputValue(material.costPerKgUsd),
       marketPriceUsd: priceInputValue(savedMarket(material)),
+      solidPercent: String(material.solidPercent),
     };
   };
 
@@ -187,8 +188,9 @@ const Library = () => {
     const draft = draftFor(material);
     const user = roundUsd(Number(draft.costPerKgUsd));
     const market = roundUsd(Number(draft.marketPriceUsd));
+    const solid = Number(draft.solidPercent ?? material.solidPercent);
     if (!Number.isFinite(user) || !Number.isFinite(market)) return true;
-    return user !== roundUsd(material.costPerKgUsd) || market !== savedMarket(material);
+    return user !== roundUsd(material.costPerKgUsd) || market !== savedMarket(material) || solid !== material.solidPercent;
   };
 
   const setPriceDraft = (id: string, patch: Partial<PriceDraft>) => {
@@ -368,16 +370,20 @@ const Library = () => {
     }
   };
 
-  const handleInlinePriceSave = async (material: Material, patch: { costPerKgUsd: number; marketPriceUsd: number }) => {
+  const handleInlinePriceSave = async (material: Material, patch: { costPerKgUsd: number; marketPriceUsd: number; solidPercent?: number }) => {
     const costPerKgUsd = roundUsd(patch.costPerKgUsd);
     const marketPriceUsd = roundUsd(patch.marketPriceUsd);
+    const payload: Record<string, unknown> = { costPerKgUsd, marketPriceUsd };
+    if (patch.solidPercent != null && Number.isFinite(patch.solidPercent)) {
+      payload.solidPercent = Math.min(100, Math.max(1, Math.round(patch.solidPercent)));
+    }
     setSavingPriceId(material.id);
     try {
-      const updated = await apiClient.updateMaterial(material.id, { costPerKgUsd, marketPriceUsd }) as Material;
+      const updated = await apiClient.updateMaterial(material.id, payload) as Material;
       setMaterials((prev) => prev.map((m) => m.id === material.id ? parseMaterialRow(updated as unknown as Record<string, unknown>) : m));
       resetPriceDraft(material.id);
     } catch (err) {
-      alert('Failed to save price: ' + (err instanceof Error ? err.message : 'Unknown'));
+      alert('Failed to save: ' + (err instanceof Error ? err.message : 'Unknown'));
     } finally {
       setSavingPriceId(null);
     }
@@ -387,11 +393,12 @@ const Library = () => {
     const draft = draftFor(material);
     const costPerKgUsd = roundUsd(Number(draft.costPerKgUsd));
     const marketPriceUsd = roundUsd(Number(draft.marketPriceUsd));
+    const solidPercent = Number(draft.solidPercent ?? material.solidPercent);
     if (!Number.isFinite(costPerKgUsd) || costPerKgUsd < 0 || !Number.isFinite(marketPriceUsd) || marketPriceUsd < 0) {
       alert('Enter valid prices (0 or greater).');
       return;
     }
-    void handleInlinePriceSave(material, { costPerKgUsd, marketPriceUsd });
+    void handleInlinePriceSave(material, { costPerKgUsd, marketPriceUsd, solidPercent });
   };
 
   const renderPriceSaveActions = (material: Material, compact = false) => {
@@ -431,7 +438,7 @@ const Library = () => {
   );
 
   const filteredMaterials = useMemo(() => {
-    return materials.filter((material) => {
+    const filtered = materials.filter((material) => {
       const matchesSearch =
         material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (material.substrateFamily || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -441,6 +448,13 @@ const Library = () => {
         (activeRmType ? materialMatchesRmType(material, activeRmType, rmTypeOptions) : true);
       const matchesFamily = familyFilter === 'all' || material.substrateFamily === familyFilter;
       return matchesSearch && matchesFilter && matchesFamily;
+    });
+    // Sort: family first (groups Solvent Based / UV-LED together), then name alphabetically
+    return filtered.sort((a, b) => {
+      const fa = (a.substrateFamily || '').toLowerCase();
+      const fb = (b.substrateFamily || '').toLowerCase();
+      if (fa !== fb) return fa.localeCompare(fb);
+      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
     });
   }, [materials, searchTerm, activeFilterCode, activeRmType, rmTypeOptions, familyFilter]);
 
@@ -646,7 +660,8 @@ const Library = () => {
                   <th className="text-left py-2 px-3 text-xs font-medium text-mist">Density</th>
                   <th className="text-left py-2 px-3 text-xs font-medium text-mist">Solid %</th>
                   <th className="text-left py-2 px-3 text-xs font-medium text-mist">Hoover</th>
-                  <th className="text-left py-2 px-3 text-xs font-medium text-mist">User Price</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-mist">User Price<br/><span className="font-normal text-[10px]">liquid $/kg</span></th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-mist">Cost at 100%<br/><span className="font-normal text-[10px]">dry equiv $/kg</span></th>
                   <th className="text-left py-2 px-3 text-xs font-medium text-mist">Market Price</th>
                   <th className="text-left py-2 px-3 text-xs font-medium text-mist">Actions</th>
                 </tr>
@@ -684,7 +699,21 @@ const Library = () => {
                       )}
                     </td>
                     <td className="py-1.5 px-3 font-mono text-sm">{material.density.toFixed(2)}</td>
-                    <td className="py-1.5 px-3 font-mono text-sm">{material.solidPercent}</td>
+                    <td className="py-1.5 px-3 font-mono text-sm">
+                      {(material.type === 'ink' || material.type === 'adhesive') ? (
+                        <input
+                          type="number" min="1" max="100" step="1"
+                          className="input !min-h-0 h-8 w-16 font-mono text-sm py-0.5 px-2"
+                          value={draftFor(material).solidPercent ?? String(material.solidPercent)}
+                          disabled={savingPriceId === material.id}
+                          onChange={(e) => setPriceDraft(material.id, { solidPercent: e.target.value })}
+                          onKeyDown={(e) => { if (e.key === 'Enter' && isPriceDirty(material)) savePriceDraft(material); if (e.key === 'Escape') resetPriceDraft(material.id); }}
+                          title="Solid content % — affects cost calculation for liquid inks"
+                        />
+                      ) : (
+                        <span className="text-mist">{material.solidPercent}</span>
+                      )}
+                    </td>
                     <td className="py-1.5 px-3 text-sm text-mist max-w-[200px] truncate" title={material.hoover || ''}>
                       {material.hoover || '—'}
                     </td>
@@ -694,6 +723,25 @@ const Library = () => {
                         value={draftFor(material).costPerKgUsd} disabled={savingPriceId === material.id}
                         onChange={(e) => setPriceDraft(material.id, { costPerKgUsd: e.target.value })}
                         onKeyDown={(e) => { if (e.key === 'Enter' && isPriceDirty(material)) savePriceDraft(material); if (e.key === 'Escape') resetPriceDraft(material.id); }} />
+                    </td>
+                    <td className="py-1.5 px-3">
+                      {/* Cost at 100% solid = User Price / (Solid% / 100)
+                          For ink/adhesive: this is the effective dry-equivalent cost the engine uses.
+                          For substrate / 100% solid: equals User Price. */}
+                      {(() => {
+                        const solid = Math.max(1, Number(draftFor(material).solidPercent ?? material.solidPercent));
+                        const liquid = Number(draftFor(material).costPerKgUsd);
+                        if (!Number.isFinite(liquid) || liquid <= 0) return <span className="text-mist font-mono text-sm">—</span>;
+                        const dryEquiv = liquid / (solid / 100);
+                        return (
+                          <span
+                            className={`font-mono text-sm font-semibold ${solid < 100 ? 'text-amber-700' : 'text-mist'}`}
+                            title={`${liquid.toFixed(2)} ÷ ${solid}% = ${dryEquiv.toFixed(2)} $/kg dry equiv`}
+                          >
+                            {dryEquiv.toFixed(2)}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="py-1.5 px-3">
                       <input type="number" step="0.01" min="0"

@@ -28,10 +28,10 @@ export function validateConfiguredEstimate(input: {
     if (w <= 0 || c <= 0) return 'Set reel width and cutoff in Dimensions.';
   }
 
-  if (input.productType === 'pouch') {
+  if (input.productType === 'pouch' || input.productType === 'bag') {
     const w = Number(input.dimensions.openWidthMm || 0);
     const h = Number(input.dimensions.openHeightMm || 0);
-    if (w <= 0 || h <= 0) return 'Set open width and height in Dimensions.';
+    if (w <= 0 || h <= 0) return 'Set width and height in Dimensions.';
   }
 
   return null;

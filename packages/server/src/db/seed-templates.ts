@@ -265,6 +265,8 @@ export async function relinkTemplatesForTenant(tenantId: string): Promise<number
   const materials = await loadTenantMaterials(tenantId);
   const lookup = buildTemplateMaterialLookup(materials);
   const validIds = buildValidMaterialIdSet(materials);
+  // Type map so resolveLayerMaterialId can reject stale materialIds that point to the wrong type
+  const typeMap = new Map<string, string>(materials.map((m) => [m.id, m.type]));
 
   const templates = await db
     .select()
@@ -274,7 +276,8 @@ export async function relinkTemplatesForTenant(tenantId: string): Promise<number
   let updated = 0;
   for (const template of templates) {
     const layers = (template.defaultLayers as TemplateLayerRef[]) || [];
-    const resolved = resolveTemplateLayers(layers, lookup, validIds);
+    const resolved = resolveTemplateLayers(layers, lookup, validIds, typeMap);
+    // Always update when any layer's materialId changed (including type-mismatch corrections)
     const changed = resolved.some(
       (layer, i) => layer.materialId !== layers[i]?.materialId
     );

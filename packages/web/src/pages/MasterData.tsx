@@ -11,26 +11,48 @@ import {
 } from '../lib/api';
 import { DEFAULT_PRODUCT_SUBTYPE_OPTIONS } from '../lib/masterDataReference';
 
-type MaterialTab = 'substrate' | 'ink' | 'adhesive' | 'packaging';
+type MaterialTab = string; // now dynamic — any rm_type code can be a material tab
 type RefTab = 'product_type' | 'product_subtype' | 'unit' | 'rm_type' | 'process';
 type Tab = MaterialTab | RefTab;
 
-const MATERIAL_TABS: { id: MaterialTab; label: string }[] = [
+// Static ref tabs — these never change
+const REF_TABS: { id: RefTab; label: string }[] = [
+  { id: 'rm_type', label: 'RM Types' },
+  { id: 'product_type', label: 'Product Types' },
+  { id: 'unit', label: 'Units' },
+  { id: 'process', label: 'Processes' },
+];
+
+// Static reference tab IDs — used to distinguish material tabs from ref tabs
+const REF_TAB_IDS = new Set<string>(['product_type', 'product_subtype', 'unit', 'rm_type', 'process']);
+
+const PACKAGING_FAMILY = 'Packaging';
+
+// Standard material types — always present regardless of RM type config
+const STANDARD_MATERIAL_TABS = [
   { id: 'substrate', label: 'Substrates' },
   { id: 'ink', label: 'Ink & Coating' },
   { id: 'adhesive', label: 'Adhesive' },
   { id: 'packaging', label: 'Packaging' },
 ];
 
-const REF_TABS: { id: RefTab; label: string }[] = [
-  { id: 'product_type', label: 'Product Types' },
-  { id: 'unit', label: 'Units' },
-  { id: 'rm_type', label: 'RM Types' },
-  { id: 'process', label: 'Processes' },
-];
+/** Map an RM type to the DB type field used for new rows */
+function dbTypeForRmCode(code: string): 'substrate' | 'ink' | 'adhesive' {
+  if (code === 'ink') return 'ink';
+  if (code === 'adhesive') return 'adhesive';
+  return 'substrate'; // custom types map to substrate with substrateFamily = label
+}
 
-const PACKAGING_FAMILY = 'Packaging';
+/** Default substrateFamily for a new row of a given RM type code */
+function defaultFamilyForRmCode(code: string, label: string): string {
+  if (code === 'packaging') return PACKAGING_FAMILY;
+  if (code === 'substrate') return 'BOPP';
+  if (code === 'ink') return 'Ink & Coating';
+  if (code === 'adhesive') return 'Adhesive';
+  return label; // custom types: family = label
+}
 
+/** Generate a stable key from a name */
 function slugKey(name: string): string {
   return name
     .toLowerCase()
@@ -39,49 +61,60 @@ function slugKey(name: string): string {
     .slice(0, 64);
 }
 
-function filterMaterials(tab: MaterialTab, rows: PlatformMasterMaterialRow[]) {
-  if (tab === 'packaging') {
+/** Filter materials for a given RM type tab (supports dynamic custom types) */
+function filterMaterialsForTab(
+  tabCode: string,
+  tabLabel: string,
+  rows: PlatformMasterMaterialRow[],
+  allRmTabs: { id: string; label: string }[]
+): PlatformMasterMaterialRow[] {
+  if (tabCode === 'packaging') {
     return rows.filter((m) => m.type === 'substrate' && m.substrateFamily === PACKAGING_FAMILY);
   }
-  if (tab === 'substrate') {
+  if (tabCode === 'substrate') {
+    const customFamilies = allRmTabs
+      .filter((t) => !['substrate', 'ink', 'adhesive', 'packaging'].includes(t.id))
+      .map((t) => t.label);
     return rows.filter(
-      (m) => m.type === 'substrate' && m.substrateFamily !== PACKAGING_FAMILY
+      (m) => m.type === 'substrate' && m.substrateFamily !== PACKAGING_FAMILY && !customFamilies.includes(m.substrateFamily ?? '')
     );
   }
-  return rows.filter((m) => m.type === tab);
+  if (tabCode === 'ink' || tabCode === 'adhesive') {
+    return rows.filter((m) => m.type === tabCode);
+  }
+  // Custom RM type: match by substrateFamily = tab label
+  return rows.filter((m) => m.type === 'substrate' && m.substrateFamily === tabLabel);
 }
 
-function newMaterialRow(tab: MaterialTab): PlatformMasterMaterialRow {
-  const base = {
+/** Create a new blank material row for a given RM type tab */
+function newMaterialRow(tabCode: string, tabLabel: string): PlatformMasterMaterialRow {
+  const dbType = dbTypeForRmCode(tabCode);
+  const family = defaultFamilyForRmCode(tabCode, tabLabel);
+  const defaultCost = tabCode === 'ink' ? 12 : tabCode === 'adhesive' ? 8 : 3;
+  return {
     id: `new-${Date.now()}`,
     key: '',
-    name: '',
+    name: `New ${tabLabel.toLowerCase()}`,
+    type: dbType,
     solidPercent: 100,
     density: 0.91,
-    costPerKgUsd: tab === 'ink' ? 12 : tab === 'adhesive' ? 8 : 3,
+    costPerKgUsd: defaultCost,
+    liquidCostUsd: defaultCost,
     wastePercent: 0,
-    isSolventBased: tab === 'ink' || tab === 'adhesive',
-    substrateFamily: tab === 'packaging' ? PACKAGING_FAMILY : tab === 'substrate' ? 'BOPP' : tab === 'ink' ? 'Ink & Coating' : 'Adhesive',
+    isSolventBased: tabCode === 'ink' || tabCode === 'adhesive',
+    substrateFamily: family,
     substrateGrade: '',
     hoover: '',
-    marketPriceUsd: null as number | null,
-    externalId: null as string | null,
-    externalSource: null as string | null,
-  };
-  if (tab === 'packaging') {
-    return { ...base, type: 'substrate', name: 'New packaging item' };
-  }
-  return {
-    ...base,
-    type: tab,
-    name: `New ${tab}`,
+    marketPriceUsd: null,
+    externalId: null,
+    externalSource: null,
   };
 }
 
 const MasterData = () => {
   const { user, isLoading } = useAuth();
   const { invalidate } = useMasterDataContext();
-  const [tab, setTab] = useState<Tab>('substrate');
+  const [tab, setTab] = useState<Tab>('rm_type');
   const [materials, setMaterials] = useState<PlatformMasterMaterialRow[]>([]);
   const [refItems, setRefItems] = useState<PlatformReferenceItemInput[]>([]);
   /** Subtypes (all parents) — edited nested under Product Types. */
@@ -93,12 +126,28 @@ const MasterData = () => {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const isMaterialTab = (t: Tab): t is MaterialTab =>
-    MATERIAL_TABS.some((x) => x.id === t);
+  const isMaterialTab = (t: Tab): boolean => !REF_TAB_IDS.has(t);
+
+  // Dynamic material tabs built from loaded RM types — starts with standard tabs,
+  // then any custom RM types are appended automatically
+  const [rmTypeTabs, setRmTypeTabs] = useState<{ id: string; label: string }[]>(STANDARD_MATERIAL_TABS);
 
   const loadMaterials = useCallback(async () => {
     const rows = await apiClient.getPlatformMasterDataMaterials();
-    setMaterials(rows);
+    // Derive liquidCostUsd for ink/adhesive rows: liquidCostUsd = costPerKgUsd × (solidPercent/100)
+    // (reverse of the computation — so when user opens the page they see the liquid price)
+    const withLiquid = rows.map((row) => {
+      // Use stored liquidCostUsd if available (avoids floating-point round-trip loss).
+      // Fall back to reverse-calculation only for legacy rows that predate this column.
+      if (row.liquidCostUsd != null) {
+        return { ...row, liquidCostUsd: Number(row.liquidCostUsd) };
+      }
+      if ((row.type === 'ink' || row.type === 'adhesive') && row.solidPercent > 0 && row.solidPercent < 100) {
+        return { ...row, liquidCostUsd: Math.round(row.costPerKgUsd * row.solidPercent) / 100 };
+      }
+      return { ...row, liquidCostUsd: row.costPerKgUsd };
+    });
+    setMaterials(withLiquid);
   }, []);
 
   const loadReference = useCallback(async () => {
@@ -139,6 +188,14 @@ const MasterData = () => {
       ),
       process: [],  // process tab managed separately via processRows state
     };
+
+    // Build dynamic material tabs from RM types.
+    // Standard types always present; custom types (code not in standard set) added after packaging.
+    const STANDARD_CODES = new Set(['substrate', 'ink', 'adhesive', 'packaging']);
+    const customRmTabs = map.rm_type
+      .filter((r) => r.label.trim() && !STANDARD_CODES.has((r.code || r.label).toLowerCase()))
+      .map((r) => ({ id: (r.code || slugKey(r.label)).toLowerCase(), label: r.label }));
+    setRmTypeTabs([...STANDARD_MATERIAL_TABS, ...customRmTabs]);
     if (!isMaterialTab(tab)) {
       setRefItems(map[tab] ?? []);
     }
@@ -167,11 +224,10 @@ const MasterData = () => {
     }
   }, [tab]);
 
-  const canManageMasterData =
-    user?.role === 'tenant_admin' || user?.role === 'platform_admin';
+  const canManageMasterData = true; // All users can view Raw Materials; save is restricted to admins below
+  const canEdit = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
 
   useEffect(() => {
-    if (!canManageMasterData) return;
     (async () => {
       setLoading(true);
       setError(null);
@@ -179,12 +235,12 @@ const MasterData = () => {
         await loadMaterials();
         await loadReference();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load master data');
+        setError(err instanceof Error ? err.message : 'Failed to load materials');
       } finally {
         setLoading(false);
       }
     })();
-  }, [canManageMasterData, loadMaterials, loadReference]);
+  }, [loadMaterials, loadReference]);
 
   useEffect(() => {
     if (!isMaterialTab(tab)) {
@@ -194,8 +250,9 @@ const MasterData = () => {
 
   const visibleMaterials = useMemo(() => {
     if (!isMaterialTab(tab)) return [];
-    return filterMaterials(tab, materials);
-  }, [tab, materials]);
+    const currentTab = rmTypeTabs.find((t) => t.id === tab);
+    return filterMaterialsForTab(tab, currentTab?.label ?? tab, materials, rmTypeTabs);
+  }, [tab, materials, rmTypeTabs]);
 
   if (isLoading) {
     return (
@@ -205,25 +262,10 @@ const MasterData = () => {
     );
   }
 
-  if (!canManageMasterData) {
-    return (
-      <div className="max-w-lg mx-auto card p-6 mt-8">
-        <h1 className="text-xl font-display font-bold text-navy mb-2">Master Data</h1>
-        <p className="text-mist text-sm mb-4">
-          Admin access required. You are signed in as <strong>{user?.role ?? 'user'}</strong>.
-        </p>
-        <p className="text-sm text-ink">
-          Sign out and log in with an admin account (e.g.{' '}
-          <code className="text-xs bg-slate px-1 rounded">admin@propackhub.com</code>).
-        </p>
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[300px] text-mist">
-        Loading master data…
+        Loading…
       </div>
     );
   }
@@ -253,14 +295,9 @@ const MasterData = () => {
         };
       });
 
+      const currentTab = rmTypeTabs.find((t) => t.id === tab);
       const isInCurrentTab = (m: PlatformMasterMaterialRow) => {
-        if (tab === 'packaging') {
-          return m.type === 'substrate' && m.substrateFamily === PACKAGING_FAMILY;
-        }
-        if (tab === 'substrate') {
-          return m.type === 'substrate' && m.substrateFamily !== PACKAGING_FAMILY;
-        }
-        return m.type === tab;
+        return filterMaterialsForTab(tab, currentTab?.label ?? tab, [m], rmTypeTabs).length > 0;
       };
       const other = materials.filter((m) => !isInCurrentTab(m));
       const merged = [...other, ...tabRows].map(
@@ -398,12 +435,24 @@ const MasterData = () => {
   };
 
   const updateMaterialRow = (id: string, patch: Partial<PlatformMasterMaterialRow>) => {
-    setMaterials((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+    setMaterials((prev) => prev.map((m) => {
+      if (m.id !== id) return m;
+      const updated = { ...m, ...patch };
+      // Auto-compute costPerKgUsd when liquidCostUsd or solidPercent changes (ink/adhesive only)
+      if ((updated.type === 'ink' || updated.type === 'adhesive') &&
+          ('liquidCostUsd' in patch || 'solidPercent' in patch)) {
+        const liquid = updated.liquidCostUsd ?? updated.costPerKgUsd;
+        const solid = Math.max(1, updated.solidPercent || 100);
+        updated.costPerKgUsd = parseFloat((liquid / (solid / 100)).toFixed(4));
+      }
+      return updated;
+    }));
   };
 
   const addMaterialRow = () => {
     if (!isMaterialTab(tab)) return;
-    setMaterials((prev) => [...prev, newMaterialRow(tab)]);
+    const currentTab = rmTypeTabs.find((t) => t.id === tab);
+    setMaterials((prev) => [...prev, newMaterialRow(tab, currentTab?.label ?? tab)]);
   };
 
   const removeMaterialRow = async (row: PlatformMasterMaterialRow) => {
@@ -456,21 +505,25 @@ const MasterData = () => {
         <div className="min-w-0">
           <h1 className="text-2xl font-display font-bold text-navy flex items-center gap-2">
             <Database className="w-7 h-7 text-gold shrink-0" />
-            Master Data
+            Raw Materials
           </h1>
           <p className="text-mist mt-1 text-sm">
-            Platform materials and reference lists — saves sync to all tenants automatically.
+            Material catalog — the single source of truth for all estimates.
+            {canEdit && ' Changes sync to all users automatically.'}
+            {!canEdit && ' Contact an admin to update prices or add materials.'}
           </p>
         </div>
-        <button
-          type="button"
-          className="btn-primary flex items-center gap-2 shrink-0"
-          disabled={saving}
-          onClick={isMaterialTab(tab) ? handleSaveMaterials : handleSaveReference}
-        >
-          <Save className="w-4 h-4" />
-          {saving ? 'Saving…' : 'Save tab'}
-        </button>
+        {canEdit && (
+          <button
+            type="button"
+            className="btn-primary flex items-center gap-2 shrink-0"
+            disabled={saving}
+            onClick={isMaterialTab(tab) ? handleSaveMaterials : handleSaveReference}
+          >
+            <Save className="w-4 h-4" />
+            {saving ? 'Saving…' : 'Save tab'}
+          </button>
+        )}
       </div>
 
       {error && (
@@ -481,7 +534,7 @@ const MasterData = () => {
       )}
 
       <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
-        {[...MATERIAL_TABS, ...REF_TABS].map((t) => (
+        {[REF_TABS[0], ...rmTypeTabs, ...REF_TABS.slice(1)].map((t) => (
           <button
             key={t.id}
             type="button"
@@ -499,9 +552,11 @@ const MasterData = () => {
         <div className="card overflow-hidden">
           <div className="flex justify-between items-center px-3 py-2 border-b border-border bg-slate/30">
             <span className="text-sm text-mist">{visibleMaterials.length} row(s)</span>
-            <button type="button" className="btn-secondary text-sm flex items-center gap-1 py-1.5" onClick={addMaterialRow}>
-              <Plus className="w-4 h-4" /> Add row
-            </button>
+            {canEdit && (
+              <button type="button" className="btn-secondary text-sm flex items-center gap-1 py-1.5" onClick={addMaterialRow}>
+                <Plus className="w-4 h-4" /> Add row
+              </button>
+            )}
           </div>
           <div className="table-wrap">
             <table className="data-table">
@@ -512,7 +567,14 @@ const MasterData = () => {
                   <th>Grade</th>
                   <th className="text-right">Density</th>
                   <th className="text-right">Solid %</th>
-                  <th className="text-right">Cost/kg</th>
+                  {(tab === 'ink' || tab === 'adhesive') && (
+                    <th className="text-right">Liquid Cost<br/><span className="font-normal text-[10px]">$/kg liquid</span></th>
+                  )}
+                  <th className="text-right">
+                    {(tab === 'ink' || tab === 'adhesive') ? (
+                      <>Cost/kg<br/><span className="font-normal text-[10px]">dry equiv (auto)</span></>
+                    ) : 'Cost/kg'}
+                  </th>
                   <th className="text-right">Market</th>
                   <th />
                 </tr>
@@ -525,6 +587,7 @@ const MasterData = () => {
                         className="cell-input w-full min-w-0"
                         value={row.substrateFamily ?? ''}
                         title={row.substrateFamily ?? ''}
+                        disabled={!canEdit}
                         onChange={(e) => updateMaterialRow(row.id, { substrateFamily: e.target.value })}
                       />
                     </td>
@@ -533,6 +596,7 @@ const MasterData = () => {
                         className="cell-input w-full min-w-0"
                         value={row.name}
                         title={row.name}
+                        disabled={!canEdit}
                         onChange={(e) => updateMaterialRow(row.id, { name: e.target.value })}
                       />
                     </td>
@@ -541,6 +605,7 @@ const MasterData = () => {
                         className="cell-input w-full min-w-0"
                         value={row.substrateGrade ?? ''}
                         title={row.substrateGrade ?? ''}
+                        disabled={!canEdit}
                         onChange={(e) => updateMaterialRow(row.id, { substrateGrade: e.target.value })}
                       />
                     </td>
@@ -550,6 +615,7 @@ const MasterData = () => {
                         step="0.01"
                         className="cell-input cell-num w-[72px]"
                         value={row.density}
+                        disabled={!canEdit}
                         onChange={(e) => updateMaterialRow(row.id, { density: Number(e.target.value) })}
                       />
                     </td>
@@ -558,21 +624,48 @@ const MasterData = () => {
                         type="number"
                         className="cell-input cell-num w-[64px]"
                         value={row.solidPercent}
+                        disabled={!canEdit}
                         onChange={(e) =>
                           updateMaterialRow(row.id, { solidPercent: Number(e.target.value) })
                         }
                       />
                     </td>
+                    {/* Liquid Cost — editable for ink/adhesive; derives costPerKgUsd automatically */}
+                    {(tab === 'ink' || tab === 'adhesive') && (
+                      <td>
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="cell-input cell-num w-[72px]"
+                          value={row.liquidCostUsd ?? row.costPerKgUsd}
+                          title="Price you pay per kg of liquid ink/adhesive"
+                          disabled={!canEdit}
+                          onChange={(e) =>
+                            updateMaterialRow(row.id, { liquidCostUsd: Number(e.target.value) })
+                          }
+                        />
+                      </td>
+                    )}
                     <td>
-                      <input
-                        type="number"
-                        step="0.01"
-                        className="cell-input cell-num w-[72px]"
-                        value={row.costPerKgUsd}
-                        onChange={(e) =>
-                          updateMaterialRow(row.id, { costPerKgUsd: Number(e.target.value) })
-                        }
-                      />
+                      {(tab === 'ink' || tab === 'adhesive') ? (
+                        <span
+                          className="cell-num font-mono text-sm font-semibold text-amber-700 px-2"
+                          title={`${(row.liquidCostUsd ?? row.costPerKgUsd).toFixed(2)} ÷ ${row.solidPercent}% = ${row.costPerKgUsd.toFixed(4)}`}
+                        >
+                          {row.costPerKgUsd.toFixed(2)}
+                        </span>
+                      ) : (
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="cell-input cell-num w-[72px]"
+                          value={row.costPerKgUsd}
+                          disabled={!canEdit}
+                          onChange={(e) =>
+                            updateMaterialRow(row.id, { costPerKgUsd: Number(e.target.value) })
+                          }
+                        />
+                      )}
                     </td>
                     <td>
                       <input
@@ -580,20 +673,23 @@ const MasterData = () => {
                         step="0.01"
                         className="cell-input cell-num w-[72px]"
                         value={row.marketPriceUsd ?? row.costPerKgUsd}
+                        disabled={!canEdit}
                         onChange={(e) =>
                           updateMaterialRow(row.id, { marketPriceUsd: Number(e.target.value) })
                         }
                       />
                     </td>
                     <td className="text-center">
-                      <button
-                        type="button"
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                        onClick={() => removeMaterialRow(row)}
-                        aria-label="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                          onClick={() => removeMaterialRow(row)}
+                          aria-label="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -788,17 +884,6 @@ const MasterData = () => {
               <Plus className="w-4 h-4" /> Add
             </button>
           </div>
-          {tab === 'rm_type' && (
-            <p className="text-xs text-mist mb-2">
-              <strong>Code</strong> maps to the DB type:{' '}
-              <code className="bg-slate rounded px-1">substrate</code> ·{' '}
-              <code className="bg-slate rounded px-1">ink</code> ·{' '}
-              <code className="bg-slate rounded px-1">adhesive</code> ·{' '}
-              <code className="bg-slate rounded px-1">packaging</code> · or a custom slug (e.g.{' '}
-              <code className="bg-slate rounded px-1">plate</code>). Custom slugs appear as new
-              filter tabs in Raw Materials.
-            </p>
-          )}
           {tab === 'product_subtype' && (
             <p className="text-xs text-mist mb-2">
               <strong>Code</strong> sets the family + dimension fields: prefix{' '}

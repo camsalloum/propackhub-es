@@ -26,7 +26,9 @@ export const LARAVEL_REFERENCE_MATERIALS = new Map<string, Material>([
       type: 'ink',
       solidPercent: 30,
       density: 1.0,
-      costPerKgUsd: 12.0,
+      // costPerKgUsd is the dry-equivalent cost: liquidPrice / solidFraction = 12.0 / 0.30 = 40.0
+      // The engine uses (dry_gsm/1000) × costPerKgUsd_dry_equiv for cost/m²
+      costPerKgUsd: 40.0,
       wastePercent: 10,
       isSolventBased: true,
     },
@@ -39,6 +41,7 @@ export const LARAVEL_REFERENCE_MATERIALS = new Map<string, Material>([
       type: 'adhesive',
       solidPercent: 100,
       density: 1.0,
+      // 100% solid: dry-equiv = liquid price = 6.5
       costPerKgUsd: 6.5,
       wastePercent: 8,
       isSolventBased: true,
@@ -129,8 +132,8 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       ...baseEstimate(),
       layers: [
         { id: '1', materialId: 'pet-transparent', micron: 12, position: 0 },
-        { id: '2', materialId: 'ink-sb', micron: 2, position: 1 },
-        { id: '3', materialId: 'adhesive-sb', micron: 3, position: 2 },
+        { id: '2', materialId: 'ink-sb', micron: 2, position: 1 },   // 2 gsm dry ink
+        { id: '3', materialId: 'adhesive-sb', micron: 3, position: 2 }, // 3 gsm dry adhesive
         { id: '4', materialId: 'ldpe-natural', micron: 50, position: 3 },
       ],
       dimensions: {
@@ -144,15 +147,24 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       },
     },
     expected: {
-      totalGsm: 66.16,
-      totalMicron: 65.6,
-      filmDensity: 1.0085,
-      materialCostPerKg: 3.037, // no waste factor — (layer cost/m2 + solvent/m2) / totalGsm × 1000
-      solventMixCostPerKg: 0.2177,
-      salePricePerKg: 3.722, // 3.037 + 15% markup + plates (0.15) + delivery (0.08)
-      piecesPerKg: 31.49,
-      linearMPerKgWeb: 9.39,
-      linearMPerKgReel: 18.89,
+      // New model: ink/adhesive layer.micron = dry gsm
+      // totalGsm = 16.56 + 2 + 3 + 46 = 67.56
+      // totalMicron = 12 + 2 + 3 + 50 = 67
+      // ink cost/m²  = (2/0.3)/1000 × 12 = 0.0800
+      // adh cost/m²  = (3/1.0)/1000 × 6.5 = 0.0195
+      // pet cost/m²  = (16.56/1000) × 2.8 = 0.04637
+      // ldpe cost/m² = (46/1000) × 2.1   = 0.09660
+      // solvent: sb_gsm=5, cost/m² = (5/0.5)×(2/1000) = 0.020
+      // materialCost = (0.2425+0.020)/67.56×1000 = 3.888
+      totalGsm: 67.56,
+      totalMicron: 67.0,
+      filmDensity: 1.0082,
+      materialCostPerKg: 3.888,
+      solventMixCostPerKg: 0.2960,
+      salePricePerKg: 4.698,
+      piecesPerKg: 30.86,
+      linearMPerKgWeb: 9.22,
+      linearMPerKgReel: 18.54,
     },
   },
   {
@@ -161,7 +173,7 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       ...baseEstimate(),
       layers: [
         { id: '1', materialId: 'pet-transparent', micron: 12, position: 0 },
-        { id: '2', materialId: 'ink-uv', micron: 2, position: 1 },
+        { id: '2', materialId: 'ink-uv', micron: 2, position: 1 }, // 2 gsm dry UV ink (100% solid → same)
         { id: '3', materialId: 'ldpe-natural', micron: 50, position: 2 },
       ],
       dimensions: {
@@ -175,12 +187,15 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       },
     },
     expected: {
+      // UV 100% solid: cost/m² = (2/1.0)/1000 × 15 = 0.030 (same as before)
+      // totalGsm = 16.56 + 2 + 46 = 64.56
+      // totalMicron = 12 + 2 + 50 = 64
       totalGsm: 64.56,
       totalMicron: 64.0,
       filmDensity: 1.0088,
-      materialCostPerKg: 2.678, // no waste factor
+      materialCostPerKg: 2.678, // UV unchanged
       solventMixCostPerKg: 0,
-      salePricePerKg: 3.310, // 2.678 + 15% markup + plates + delivery
+      salePricePerKg: 3.310,
       piecesPerKg: 32.27,
       linearMPerKgWeb: 19.24,
       linearMPerKgReel: 19.36,
@@ -192,7 +207,7 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       ...baseEstimate(),
       layers: [
         { id: '1', materialId: 'ldpe-natural', micron: 40, position: 0 },
-        { id: '2', materialId: 'ink-sb', micron: 3, position: 1 },
+        { id: '2', materialId: 'ink-sb', micron: 3, position: 1 }, // 3 gsm dry SB ink
       ],
       dimensions: {
         productType: 'sleeve',
@@ -204,15 +219,20 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       },
     },
     expected: {
-      totalGsm: 37.7,
-      totalMicron: 40.9,
-      filmDensity: 0.9218,
-      materialCostPerKg: 3.101, // no waste factor; includes solvent
-      solventMixCostPerKg: 0.0955,
-      salePricePerKg: 3.796, // 3.101 + 15% markup + plates + delivery
-      piecesPerKg: 221.0,
-      linearMPerKgWeb: 32.83,
-      linearMPerKgReel: 66.31,
+      // totalGsm = 36.8 + 3 = 39.8 ; totalMicron = 40 + 3 = 43
+      // ink cost/m² = (3/0.3)/1000 × 12 = 0.12
+      // ldpe cost/m² = (36.8/1000) × 2.1 = 0.07728
+      // solvent: sb_gsm=3, cost/m² = (3/0.5)×(2/1000) = 0.012
+      // materialCost = (0.07728+0.12+0.012)/39.8×1000 = 5.249
+      totalGsm: 39.8,
+      totalMicron: 43.0,
+      filmDensity: 0.9256,
+      materialCostPerKg: 5.258,
+      solventMixCostPerKg: 0.3015,
+      salePricePerKg: 6.277,
+      piecesPerKg: 209.4,
+      linearMPerKgWeb: 31.09,
+      linearMPerKgReel: 62.81,
     },
   },
   {
@@ -233,7 +253,7 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       ],
       layers: [
         { id: '1', materialId: 'pet-transparent', micron: 12, position: 0 },
-        { id: '2', materialId: 'ink-sb', micron: 2, position: 1 },
+        { id: '2', materialId: 'ink-sb', micron: 2, position: 1 }, // 2 gsm dry SB ink
         { id: '3', materialId: 'ldpe-natural', micron: 40, position: 2 },
       ],
       dimensions: {
@@ -247,13 +267,19 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       },
     },
     expected: {
-      totalGsm: 53.96,
-      totalMicron: 52.6,
-      filmDensity: 1.0259,
-      materialCostPerKg: 2.780, // no waste factor; includes solvent
-      salePricePerKg: 3.602, // 2.780 + 15% markup + plates + delivery + operation
+      // totalGsm = 16.56 + 2 + 36.8 = 55.36 ; totalMicron = 12+2+40 = 54
+      // ink cost/m² = (2/0.3)/1000×12 = 0.08
+      // pet cost/m² = (16.56/1000)×2.8 = 0.04637
+      // ldpe cost/m² = (36.8/1000)×2.1 = 0.07728
+      // solvent: sb_gsm=2, cost/m²=(2/0.5)×(2/1000)=0.008
+      // matCost = (0.04637+0.08+0.07728+0.008)/55.36×1000 = 3.832
+      totalGsm: 55.36,
+      totalMicron: 54.0,
+      filmDensity: 1.0252,
+      materialCostPerKg: 3.823,
+      salePricePerKg: 4.799,
       operationCostPerKg: 0.175,
-      linearMPerKgWeb: 11.51,
+      linearMPerKgWeb: 11.25,
     },
   },
 ];

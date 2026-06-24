@@ -191,8 +191,9 @@ describe('Engine calculator — golden tests', () => {
     };
 
     const result = calculateEstimate(estimate, materials);
-    // Ink SB: gsm = (solid × micron) / 100 = (30 × 5) / 100 = 1.5 GSM
-    expect(result.estimate.layers[0].gsm).toBeCloseTo(1.5, 1);
+    // New model: user enters dry GSM directly — micron=5 means 5 gsm dry
+    // gsm = micron = 5
+    expect(result.estimate.layers[0].gsm).toBeCloseTo(5, 1);
   });
 
   it('should calculate total GSM and micron for duplex (PET/Ink/PE)', () => {
@@ -252,13 +253,14 @@ describe('Engine calculator — golden tests', () => {
     };
 
     const result = calculateEstimate(estimate, materials);
-    // PET: gsm = 12 × 1.39 = 16.68, total contribution = 16.68
-    // Ink: gsm = (30 × 5) / 100 = 1.5, total contribution = 1.5
-    // PE: gsm = 40 × 0.92 = 36.8, total contribution = 36.8
-    // total_gsm = 16.68 + 1.5 + 36.8 = 54.98 GSM
-    // total_micron = 12 (PET) + 1.5 (Ink GSM as µ) + 40 (PE) = 53.5 µ
-    expect(result.estimate.totalGsm).toBeCloseTo(54.98, 1);
-    expect(result.estimate.totalMicron).toBeCloseTo(53.5, 1);
+    // New model: user enters dry GSM for ink/adhesive directly
+    // PET: gsm = 12 × 1.39 = 16.68
+    // Ink: gsm = micron = 5 (dry gsm entered by user)
+    // PE:  gsm = 40 × 0.92 = 36.8
+    // total_gsm = 16.68 + 5 + 36.8 = 58.48
+    // total_micron = 12 + 5 + 40 = 57 (all values used as-entered)
+    expect(result.estimate.totalGsm).toBeCloseTo(58.48, 1);
+    expect(result.estimate.totalMicron).toBeCloseTo(57.0, 1);
   });
 
   it('should calculate film density', () => {

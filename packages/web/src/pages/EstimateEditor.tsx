@@ -226,7 +226,7 @@ const EstimateEditor = () => {
     const defaultMat = materialId
       ? materials.find((m) => m.id === materialId)
       : materials.find((m) => m.type === type);
-    const micron = type === 'substrate' ? 25 : type === 'ink' ? 5 : 3;
+    const micron = type === 'substrate' ? 25 : type === 'ink' ? 2 : 2;
     const density = defaultMat?.density ? parseFloat(defaultMat.density) : 0.9;
     const newLayer: LayerItem = {
       id: crypto.randomUUID(),
@@ -234,7 +234,8 @@ const EstimateEditor = () => {
       materialName: defaultMat?.name || 'Select material',
       materialType: type,
       micron,
-      gsm: micron * density,
+      // Substrate: gsm = micron × density; Ink/Adhesive: user enters dry gsm = micron directly
+      gsm: type === 'substrate' ? micron * density : micron,
       costPerKgUsd: defaultMat ? parseFloat(defaultMat.costPerKgUsd) : 0,
       isSolventBased: defaultMat?.isSolventBased || false,
       position: layers.length,
@@ -382,7 +383,9 @@ const EstimateEditor = () => {
       const mappedLayers: LayerItem[] = (data.layers || []).map((l: any) => ({
         id: l.id, materialId: l.materialId, materialName: l.materialName || 'Unknown',
         materialType: l.materialType || 'substrate', micron: parseFloat(l.micron) || 0,
-        gsm: parseFloat(l.gsm) || 0, costPerKgUsd: parseFloat(l.materialCostPerKgUsd) || 0,
+        gsm: parseFloat(l.gsm) || 0,
+        // Prefer the saved per-layer override (unit_cost_snapshot_usd) over the live library price
+        costPerKgUsd: parseFloat(l.unit_cost_snapshot_usd || l.unitCostSnapshotUsd) || parseFloat(l.materialCostPerKgUsd) || 0,
         isSolventBased: l.materialIsSolventBased || false, position: l.position || 0,
         hoover: l.materialHoover || null,
         platformMasterKeySnapshot: l.platformMasterKeySnapshot ?? l.platform_master_key_snapshot ?? null,
@@ -513,7 +516,7 @@ const EstimateEditor = () => {
   };
 
   const buildSavePayload = useCallback(() => ({
-    jobName, customerId: customerId || undefined, productType: engineTypeForFamily(productType),
+    jobName, customerId: customerId || undefined, productType: productType,
     productSubtype: productSubtype ?? undefined,
     printingWebClass: derivedPrintingWebClass,
     dimensions: dimensionsForSave(dimensions as Record<string, unknown>),
@@ -522,23 +525,37 @@ const EstimateEditor = () => {
     solventRatio: needsSolventMix ? solventRatio : undefined,
     orderQuantityKg: orderQuantity,
     orderQuantityUnit,
-    layers: layers.map((l, i) => ({ materialId: l.materialId, micron: l.micron, position: i })),
+    layers: layers.map((l, i) => ({ materialId: l.materialId, micron: l.micron, position: i, unitCostSnapshotUsd: l.costPerKgUsd > 0 ? l.costPerKgUsd : undefined })),
     slabs: slabsState.map(s => ({ quantityKg: s.quantityKg, pricePerKg: s.pricePerKgUsd ?? s.pricePerKg })),
     processes: processesState,
   }), [jobName, customerId, productType, productSubtype, derivedPrintingWebClass, needsSolventMix, dimensions, markupPercent, platesPerKg, deliveryPerKg, solventCostPerKgUsd, solventRatio, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   const slabQuantitiesKey = slabsState.map((s) => s.quantityKg).join(',');
-  const layerInputsKey = layers.map((l) => `${l.materialId}:${l.micron}`).join('|');
+  const layerInputsKey = layers.map((l) => `${l.materialId}:${l.micron}:${l.costPerKgUsd}`).join('|');
 
   const clientCalcResult = useMemo(() => {
     if (loading || materials.length === 0 || layers.length === 0) return null;
     if (layers.some((l) => !l.materialId)) return null;
     if (layers.every((l) => l.micron === 0)) return null; // nothing to calculate yet
     try {
+      // Build per-layer virtual material IDs so each layer can have its own price override.
+      // When a layer's costPerKgUsd differs from the library material, inject a patched entry.
+      const patchedMaterials = [...materials];
+      const layerMaterialIds = layers.map((l, i) => {
+        const libMat = materials.find((m) => m.id === l.materialId);
+        const libraryPrice = libMat ? parseFloat(libMat.costPerKgUsd) || 0 : 0;
+        if (libMat && l.costPerKgUsd > 0 && l.costPerKgUsd !== libraryPrice) {
+          // Inject a virtual material keyed by layer id with the overridden price
+          patchedMaterials.push({ ...libMat, id: l.id, costPerKgUsd: String(l.costPerKgUsd) });
+          return { id: l.id, materialId: l.id, micron: l.micron, position: i };
+        }
+        return { id: l.id, materialId: l.materialId, micron: l.micron, position: i };
+      });
+
       return runClientCalculation({
-        layers: layers.map((l, i) => ({ id: l.id, materialId: l.materialId, micron: l.micron, position: i })),
-        materials,
-        productType: engineTypeForFamily(productType),
+        layers: layerMaterialIds,
+        materials: patchedMaterials,
+        productType: productType as 'roll' | 'sleeve' | 'pouch' | 'bag',
         dimensions: { ...dimensions },
         markupPercent,
         platesPerKg,
@@ -607,6 +624,12 @@ const EstimateEditor = () => {
         dimensions: dimensions as Record<string, unknown>,
       });
       if (validationError) {
+        // For dimension errors, warn but still allow saving the structural changes
+        if (validationError.includes('Dimensions') || validationError.includes('width') || validationError.includes('height') || validationError.includes('cutoff')) {
+          if (!window.confirm(`${validationError}\n\nSave structure changes without calculating?`)) return;
+          // Fall through to save-only (skip calculate)
+          return persistEstimate(false);
+        }
         alert(validationError);
         if (validationError.includes('Structure')) setActiveSection('structure');
         return;
@@ -950,7 +973,7 @@ const EstimateEditor = () => {
                         <th className="text-center py-3 px-3 text-sm font-medium text-mist">Type</th>
                         <th className="text-center py-3 px-3 text-sm font-medium text-mist">Family</th>
                         <th className="text-center py-3 px-3 text-sm font-medium text-mist">Grade Name</th>
-                        <th className="text-center py-3 px-3 text-sm font-medium text-mist w-32">Value</th>
+                        <th className="text-center py-3 px-3 text-sm font-medium text-mist w-32">Value<br/><span className="font-normal text-xs">µ / gsm</span></th>
                         <th className="text-center py-3 px-3 text-sm font-medium text-mist w-24">Total GSM</th>
                         <th className="text-center py-3 px-3 text-sm font-medium text-mist w-28">
                           Cost / Kg<br/><span className="font-normal text-xs">({estimate?.displayCurrency || 'USD'})</span>
@@ -965,7 +988,7 @@ const EstimateEditor = () => {
                       {layers.map((layer, idx) => (
                         <tr key={layer.id} className="border-b border-border last:border-0 hover:bg-slate/50">
                           <td className="py-4 px-4 text-sm text-mist text-center">{idx + 1}</td>
-                          <td className="py-4 px-4 text-center">
+                          <td className="py-4 px-4">
                             <span className={`text-xs px-2 py-1 rounded-md ${layer.materialType === 'substrate' ? 'bg-blue-100 text-blue-800' : layer.materialType === 'ink' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>{LAYER_TYPE_LABELS[layer.materialType] || layer.materialType}</span>
                           </td>
                           <td className="py-4 px-4">
@@ -975,8 +998,40 @@ const EstimateEditor = () => {
                               const currentFamily = currentMat?.substrateFamily ?? null;
 
                               if (layer.materialType !== 'substrate') {
-                                // Ink/adhesive: family not applicable — show family label from material
-                                return <span className="text-sm text-mist">{currentFamily || '—'}</span>;
+                                // Ink/adhesive: show family dropdown (Solvent Based, UV-LED, etc.)
+                                const inkFamilies = [...new Set(
+                                  materials
+                                    .filter(m => m.type === layer.materialType && m.substrateFamily)
+                                    .map(m => m.substrateFamily!)
+                                )].sort();
+
+                                if (inkFamilies.length === 0) {
+                                  return <span className="text-sm text-mist">{currentFamily || '—'}</span>;
+                                }
+
+                                return (
+                                  <select
+                                    className="input w-full text-sm"
+                                    value={currentFamily ?? ''}
+                                    onChange={(e) => {
+                                      const newFamily = e.target.value;
+                                      // Auto-select first material in the new family
+                                      const firstInFamily = materials.find(m =>
+                                        m.type === layer.materialType && m.substrateFamily === newFamily
+                                      );
+                                      if (firstInFamily) {
+                                        setLayers(prev => prev.map(l => l.id === layer.id ? {
+                                          ...l, materialId: firstInFamily.id, materialName: firstInFamily.name,
+                                          costPerKgUsd: parseFloat(firstInFamily.costPerKgUsd) || 0,
+                                          isSolventBased: firstInFamily.isSolventBased || false,
+                                          hoover: firstInFamily.hoover ?? null,
+                                        } : l));
+                                      }
+                                    }}
+                                  >
+                                    {inkFamilies.map(f => <option key={f} value={f}>{f}</option>)}
+                                  </select>
+                                );
                               }
 
                               // Build allowed families using the engine's substrateFamilyAllowed rule
@@ -1015,9 +1070,8 @@ const EstimateEditor = () => {
                               );
                             })()}
                           </td>
-                          <td className="py-4 px-4">
-                            {/* Grade dropdown — filtered by family + classification; title shows hoover on hover */}
-                            {(() => {
+                          <td className="py-4 px-4 text-center">
+                            {/* Grade dropdown — filtered by family + classification; title shows hoover on hover */}                            {(() => {
                               const currentMat = materials.find(m => m.id === layer.materialId);
                               const currentFamily = currentMat?.substrateFamily ?? null;
 
@@ -1026,8 +1080,9 @@ const EstimateEditor = () => {
                                 if (m.type !== layer.materialType) return false;
                                 if (layer.materialType === 'substrate') {
                                   if (templateClassification && !materialAllowedForTemplateLayer(m, 'substrate', templateClassification)) return false;
-                                  if (currentFamily && m.substrateFamily !== currentFamily) return false;
                                 }
+                                // Family filter applies to ALL layer types (substrate, ink, adhesive)
+                                if (currentFamily && m.substrateFamily !== currentFamily) return false;
                                 return true;
                               });
 
@@ -1048,7 +1103,6 @@ const EstimateEditor = () => {
                                     } : l));
                                   }}
                                 >
-                                  <option value="">— Grade —</option>
                                   {gradeOptions.map(m => (
                                     <option key={m.id} value={m.id} title={m.hoover ?? ''}>{m.name}</option>
                                   ))}
@@ -1073,13 +1127,16 @@ const EstimateEditor = () => {
                                 <div className="flex items-center justify-center gap-1">
                                   <input
                                     type="number"
-                                    value={layer.micron}
+                                    value={parseFloat(layer.micron.toFixed(1))}
+                                    step="0.1"
                                     title={tooltip}
                                     onChange={(e) => {
                                       const micron = Number(e.target.value);
                                       setLayers((prev) => prev.map((l) => l.id === layer.id ? {
                                         ...l, micron,
-                                        gsm: isSubstrate ? micron * density : (solidPct * micron) / 100,
+                                        // Substrate: gsm = micron × density
+                                        // Ink/Adhesive: user enters dry gsm directly → gsm = micron
+                                        gsm: isSubstrate ? micron * density : micron,
                                       } : l));
                                     }}
                                     className={`input w-20 font-mono text-sm text-center ${layer.micron === 0 ? 'bg-amber-50 border-amber-200' : ''}`}
@@ -1093,14 +1150,27 @@ const EstimateEditor = () => {
 
                           {/* Total GSM per row = layer.gsm (substrate: µ×density; ink: solid%×µ/100) */}
                           <td className="py-4 px-3 font-mono text-sm text-center font-semibold text-navy">
-                            {layer.gsm > 0 ? fmt(layer.gsm) : <span className="text-mist">0</span>}
+                            {layer.gsm > 0 ? layer.gsm.toFixed(2) : <span className="text-mist">0.00</span>}
                           </td>
 
-                          {/* Cost / Kg — in display currency, x.xx */}
-                          <td className="py-4 px-3 font-mono text-sm text-center">
-                            {layer.costPerKgUsd > 0
-                              ? usdToDisplay(layer.costPerKgUsd, fxRate).toFixed(2)
-                              : <span className="text-mist">—</span>}
+                          {/* Cost / Kg — always editable input; column visibility controlled by header */}
+                          <td className="py-2 px-3 font-mono text-sm text-center">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={usdToDisplay(layer.costPerKgUsd, fxRate).toFixed(2)}
+                              onChange={(e) => {
+                                const displayVal = parseFloat(e.target.value) || 0;
+                                const usd = fxRate > 0 ? displayVal / fxRate : displayVal;
+                                setLayers((prev) => prev.map((l) =>
+                                  l.id === layer.id ? { ...l, costPerKgUsd: usd } : l
+                                ));
+                              }}
+                              className="input w-24 font-mono text-sm text-center"
+                              inputMode="decimal"
+                              aria-label={`Cost per kg for ${layer.materialName}`}
+                            />
                           </td>
 
                           {/* Cost / M² — from engine result, x.xxxx */}
@@ -1109,7 +1179,9 @@ const EstimateEditor = () => {
                               const calcLayer = clientCalcResult?.estimate.layers[idx];
                               const c = calcLayer?.costPerM2;
                               if (c == null || c <= 0) return <span className="text-mist">—</span>;
-                              const display = usdToDisplay(c, fxRate);
+                              // Apply FX rate without rounding to 2dp — Cost/M² needs 4dp precision
+                              const rate = fxRate > 0 ? fxRate : 1;
+                              const display = c * rate;
                               return display.toFixed(4);
                             })()}
                           </td>
@@ -1146,7 +1218,7 @@ const EstimateEditor = () => {
                           {/* µ/GSM col — empty in footer */}
                         </td>
                         <td className="py-3 px-3 text-center">
-                          <span className="font-mono font-bold text-navy">{fmt(totalGsm)}</span>
+                          <span className="font-mono font-bold text-navy">{totalGsm.toFixed(2)}</span>
                         </td>
                         <td />{/* Cost/Kg */}
                         <td />{/* Cost/M² */}
@@ -1164,8 +1236,8 @@ const EstimateEditor = () => {
                       const type = e.target.value as 'substrate' | 'ink' | 'adhesive';
                       if (!type) return;
                       const defaultMat = materials.find(m => m.type === type);
-                      const micron = type === 'substrate' ? 25 : type === 'ink' ? 5 : 3;
-                      const newLayer: LayerItem = { id: crypto.randomUUID(), materialId: defaultMat?.id || '', materialName: defaultMat?.name || 'Select material', materialType: type, micron, gsm: micron * (defaultMat?.density ? parseFloat(defaultMat.density) : 0.9), costPerKgUsd: defaultMat ? parseFloat(defaultMat.costPerKgUsd) : 0, isSolventBased: defaultMat?.isSolventBased || false, position: layers.length, hoover: defaultMat?.hoover || null };
+                      const micron = type === 'substrate' ? 25 : 2;
+                      const newLayer: LayerItem = { id: crypto.randomUUID(), materialId: defaultMat?.id || '', materialName: defaultMat?.name || 'Select material', materialType: type, micron, gsm: type === 'substrate' ? micron * (defaultMat?.density ? parseFloat(defaultMat.density) : 0.9) : micron, costPerKgUsd: defaultMat ? parseFloat(defaultMat.costPerKgUsd) : 0, isSolventBased: defaultMat?.isSolventBased || false, position: layers.length, hoover: defaultMat?.hoover || null };
                       setLayers((prev) => [...prev, newLayer]);
                       e.target.value = '';
                     }} defaultValue="">

@@ -16,6 +16,8 @@ export interface MasterMaterial {
   solidPercent: number;
   density: number;
   costPerKgUsd: number;
+  /** Stored liquid price (ink/adhesive only) — avoids floating-point round-trip loss on reload */
+  liquidCostUsd?: number | null;
   wastePercent: number;
   isSolventBased: boolean;
   substrateFamily: string | null;

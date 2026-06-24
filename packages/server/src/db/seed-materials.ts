@@ -236,14 +236,11 @@ export async function syncMaterialsForTenant(
         updatedAt: new Date(),
       };
 
-      // Phase 1.4: protect tenant manual price overrides and tenant-only rows.
-      // isTenantOnly rows are never matched (findExistingMatch excludes them).
-      // For platform-synced rows, update prices from master UNLESS admin set a manual override.
-      if (match.priceSource !== 'manual') {
-        patch.costPerKgUsd = row.costPerKgUsd;
-        patch.marketPriceUsd = row.marketPriceUsd;
-        patch.priceSource = 'platform';
-      }
+      // Single source of truth: platform master always overwrites tenant prices.
+      // Temporary overrides live only in estimate layer unit_cost_snapshot_usd, not in the library.
+      patch.costPerKgUsd = row.costPerKgUsd;
+      patch.marketPriceUsd = row.marketPriceUsd;
+      patch.priceSource = 'platform';
 
       const [updatedRow] = await db
         .update(schema.materials)

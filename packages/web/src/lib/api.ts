@@ -63,6 +63,8 @@ export type PlatformMasterMaterialInput = {
   solidPercent: number;
   density: number;
   costPerKgUsd: number;
+  /** Stored liquid price — avoids round-trip floating-point loss */
+  liquidCostUsd?: number | null;
   wastePercent?: number;
   isSolventBased?: boolean;
   substrateFamily?: string | null;
@@ -77,6 +79,8 @@ export type PlatformMasterMaterialInput = {
 export type PlatformMasterMaterialRow = PlatformMasterMaterialInput & {
   id: string;
   costingKey?: string | null;
+  /** UI-only: liquid ink price entered by user. costPerKgUsd = liquidCostUsd / (solidPercent/100) */
+  liquidCostUsd?: number | null;
 };
 
 export class ApiClient {
@@ -321,8 +325,10 @@ export class ApiClient {
 
   // Materials
   getMaterials() {
+    // Request a high limit to get all materials in one shot — a tenant library
+    // realistically won't exceed a few hundred rows.
     return this.request<{ items: any[]; total: number; limit: number; offset: number } | any[]>(
-      'GET', '/api/v1/materials'
+      'GET', '/api/v1/materials?limit=500'
     ).then(res => {
       if (res && !Array.isArray(res) && 'items' in res) return res.items;
       return res as any[];

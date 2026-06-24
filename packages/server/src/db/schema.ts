@@ -18,7 +18,7 @@ import { relations } from 'drizzle-orm';
 export const userRoleEnum = pgEnum('user_role', ['user', 'tenant_admin', 'platform_admin']);
 export const estimateStatusEnum = pgEnum('estimate_status', ['draft', 'sent', 'won', 'lost']);
 export const layerTypeEnum = pgEnum('layer_type', ['substrate', 'ink', 'adhesive']);
-export const productTypeEnum = pgEnum('product_type', ['roll', 'sleeve', 'pouch']);
+export const productTypeEnum = pgEnum('product_type', ['roll', 'sleeve', 'pouch', 'bag']);
 export const tenantTypeEnum = pgEnum('tenant_type', ['individual', 'company']);
 export const printingWebClassEnum = pgEnum('printing_web_class', ['wide_web', 'narrow_web']);
 export const materialPriceSourceEnum = pgEnum('material_price_source', ['excel', 'manual', 'platform']);
@@ -45,6 +45,8 @@ export const platformMasterMaterials = pgTable(
     solidPercent: integer('solid_percent').notNull(),
     density: decimal('density', { precision: 10, scale: 4 }).notNull(),
     costPerKgUsd: decimal('cost_per_kg_usd', { precision: 12, scale: 4 }).notNull(),
+    /** Liquid ink/adhesive price entered by user — stored to avoid floating-point round-trip loss */
+    liquidCostUsd: decimal('liquid_cost_usd', { precision: 12, scale: 2 }),
     wastePercent: integer('waste_percent').notNull().default(0),
     isSolventBased: boolean('is_solvent_based').notNull().default(false),
     substrateFamily: varchar('substrate_family', { length: 100 }),

@@ -31,7 +31,7 @@ async function getUserVisibilityProfile(db: any, userId: string): Promise<Visibi
 const EstimateCreateSchema = z.object({
   customerId: z.string().uuid().optional(),
   jobName: z.string().min(1),
-  productType: z.enum(['roll', 'sleeve', 'pouch']),
+  productType: z.enum(['roll', 'sleeve', 'pouch', 'bag']),
   productSubtype: z.string().max(64).optional(),
   printingWebClass: z.enum(['wide_web', 'narrow_web']).default('wide_web'),
   dimensions: z.record(z.any()),
@@ -42,6 +42,7 @@ const EstimateCreateSchema = z.object({
     materialId: z.string().uuid(),
     micron: z.number().positive(),
     position: z.number().nonnegative(),
+    unitCostSnapshotUsd: z.number().nonnegative().optional(), // per-layer price override
   })),
   processes: z.array(z.object({
     name: z.string(),
@@ -580,6 +581,7 @@ async function updateEstimateRoute(
               micron: layer.micron,
               position: layer.position,
               material: mat ? toMaterialLineageSource(mat) : null,
+              unitCostOverrideUsd: layer.unitCostSnapshotUsd ?? null,
             })
           );
         }

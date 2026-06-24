@@ -160,24 +160,50 @@ function gradeOf(m: TemplateLookupMaterial): string {
 export function resolveLayerMaterialId(
   layer: TemplateLayerRef,
   lookup: Map<string, string>,
-  validIds?: Set<string>
+  validIds?: Set<string>,
+  /** Optional map of materialId → type for validating stale cached IDs */
+  typeMap?: Map<string, string>
 ): string | null {
-  if (layer.materialId && (!validIds || validIds.has(layer.materialId))) {
-    return layer.materialId;
+  // Guard against corrupted string literals stored by earlier repair scripts
+  const refKey =
+    layer.ref_material_key && layer.ref_material_key !== 'undefined' && layer.ref_material_key !== 'null'
+      ? layer.ref_material_key
+      : null;
+  const cachedId =
+    layer.materialId && layer.materialId !== 'undefined' && layer.materialId !== 'null'
+      ? layer.materialId
+      : null;
+
+  // Always prefer the semantic ref_material_key — it re-resolves to the correct
+  // material regardless of whether the cached materialId has gone stale.
+  if (refKey) {
+    const byKey = lookup.get(refKey);
+    if (byKey && (!validIds || validIds.has(byKey))) {
+      return byKey; // trust the key unconditionally — it's the source of truth
+    }
   }
-  if (layer.ref_material_key) {
-    return lookup.get(layer.ref_material_key) || null;
+
+  // Fall back to cached materialId, but reject if the type is wrong
+  if (cachedId && (!validIds || validIds.has(cachedId))) {
+    if (typeMap && layer.layer_type) {
+      const matType = typeMap.get(cachedId);
+      if (matType === layer.layer_type) return cachedId;
+      return null; // stale wrong-type ID
+    }
+    return cachedId;
   }
+
   return null;
 }
 
 export function resolveTemplateLayers<T extends TemplateLayerRef>(
   layers: T[],
   lookup: Map<string, string>,
-  validIds?: Set<string>
+  validIds?: Set<string>,
+  typeMap?: Map<string, string>
 ): T[] {
   return layers.map((layer) => ({
     ...layer,
-    materialId: resolveLayerMaterialId(layer, lookup, validIds),
+    materialId: resolveLayerMaterialId(layer, lookup, validIds, typeMap),
   }));
 }

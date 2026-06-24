@@ -1034,3 +1034,19 @@ npm run update-materials
 **Data model reminder:** One estimate = one structure + dimensions + qty slabs. Same customer, different structure → separate estimates (customer reused from DB).
 
 **Not built (P2):** Side-by-side compare; estimate file attachments.
+
+### 2026-06-24 — Estimate save PATCH validation fix
+
+**Root cause:** After SC-3 added Zod validation on PATCH, `processes` loaded from GET (Postgres decimals as strings like `"50.0000"`) were sent back unchanged → `400 Validation failed` → nothing persisted (µ, GSM, cost overrides all appeared "not saved").
+
+**Fix:** `normalizeProcessesForSave` on load + in `buildSavePayload`; server `z.coerce.number()` on numeric estimate fields; per-layer `gsm` included in PATCH payload and `buildLayerInsertValues`; silent `fetchEstimate` after successful save to refresh from DB.
+
+**Follow-up (same day):** Browser was reusing cached GET responses after PATCH (`cache: 'no-store'` on client + `Cache-Control: no-store` on estimate GET/PATCH). Template `configureFromTemplate` in React Router state kept re-entering configure mode after save — cleared on first successful save. Green “Changes saved” banner added.
+
+### 2026-06-24 — Template resume after save (Cancel ≠ lost work)
+
+**User confusion:** Dialog “OK = open draft / Cancel = start new quote”. User Cancel’d old draft (e.g. QT-00146), edited new quote, saved, returned to Templates — dialog offered **older** draft again (list capped at 50 by `createdAt`) or they Cancel’d again → another blank quote → felt like save failed (HAR proved PATCH worked on F5).
+
+**Fix:** `sessionStorage` key `es:workingEstimate:{sourceTemplateKey}` set on save + instantiate. Templates page checks session first (“Continue your last saved quote?”). API `GET /estimates?sourceTemplateKey=&status=draft&limit=1` orders by `updatedAt` desc when filtering by template. Declining session resume skips second draft prompt and starts fresh.
+
+**User verified (end of session):** Save + resume flow OK. Dev console: `service-worker.js` “Failed to convert value to 'Response'” = PWA worker on localhost:5000 (not save-related); `searchAnalyzer.js` = browser extension.

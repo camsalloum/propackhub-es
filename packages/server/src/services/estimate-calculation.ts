@@ -1,7 +1,6 @@
 import { eq, and } from 'drizzle-orm';
 import { calculateEstimate, type Estimate as EngineEstimate, type CalculationResult, derivePrintingWebClass } from '@es/engine';
 import { schema } from '../db';
-import { usdToDisplay } from '../utils/currency';
 import { buildEngineMaterialMap, type MaterialRow } from '../utils/material-map';
 import { snapshotsFromMaterial, toMaterialLineageSource } from '../utils/layer-lineage';
 import { getMasterDataVersion } from '../db/platform-master-data';
@@ -129,15 +128,11 @@ export async function calculateAndPersistEstimate(
   const result = calculateEstimate(estimateForEngine, patchedMaterialMap);
   const fxRate = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;
 
-  // Convert per‑slab USD prices to display currency and persist
-  const slabsWithDisplay = result.slabs.map(slab => {
-    const pricePerKgDisplay = usdToDisplay(slab.pricePerKg, fxRate);
-    return {
-      ...slab,
-      pricePerKgDisplay,
-      totalDisplay: slab.quantityKg * pricePerKgDisplay
-    };
-  });
+  // Sanitize engine outputs: a degenerate estimate (e.g. all-zero µ) can yield
+  // NaN/Infinity. Persisting "NaN" into a numeric column corrupts the row, so we
+  // coerce non-finite values to 0 before any DB write.
+  const safe = (n: number | undefined | null): number =>
+    typeof n === 'number' && Number.isFinite(n) ? n : 0;
 
   // Persist layer snapshots — material name, cost, stable keys at calculation time
   // Always snapshot from the real material (for lineage), but record the effective price used
@@ -162,31 +157,35 @@ export async function calculateAndPersistEstimate(
   await db
     .update(schema.estimates)
     .set({
-      totalGsm: result.estimate.totalGsm?.toString(),
-      totalMicron: result.estimate.totalMicron?.toString(),
-      materialCostPerKg: result.estimate.materialCostPerKg?.toString(),
-      salePricePerKg: result.estimate.salePricePerKg?.toString(),
+      totalGsm: safe(result.estimate.totalGsm).toString(),
+      totalMicron: safe(result.estimate.totalMicron).toString(),
+      materialCostPerKg: safe(result.estimate.materialCostPerKg).toString(),
+      salePricePerKg: safe(result.estimate.salePricePerKg).toString(),
       masterDataVersion,
       updatedAt: new Date(),
     })
     .where(eq(schema.estimates.id, estimateId));
 
-  // Persist per‑slab prices (display currency) and collect for snapshot
+  // Persist per‑slab prices in CANONICAL USD. Display-currency conversion is the
+  // responsibility of the API/PDF boundary (web `usdToDisplay`, `slabsUsdToDisplay`).
+  // Storing display values here caused an FX double-conversion on reload (SC-1).
   const slabSnapshots = [];
   for (let i = 0; i < slabs.length; i++) {
     const dbSlab = slabs[i];
-    const calcSlab = slabsWithDisplay[i];
+    const calcSlab = result.slabs[i];
+    const usdPrice = safe(calcSlab?.pricePerKg);
+    const quantityKg = parseFloat(dbSlab.quantityKg);
     await db
       .update(schema.slabs)
       .set({
-        pricePerKg: calcSlab.pricePerKgDisplay.toString(),
+        pricePerKg: usdPrice.toString(),
         updatedAt: new Date()
       })
       .where(eq(schema.slabs.id, dbSlab.id));
     slabSnapshots.push({
-      quantityKg: parseFloat(dbSlab.quantityKg),
-      pricePerKg: calcSlab.pricePerKgDisplay,
-      total: calcSlab.totalDisplay
+      quantityKg,
+      pricePerKg: usdPrice,
+      total: quantityKg * usdPrice
     });
   }
 

@@ -24,6 +24,7 @@ export function buildLayerInsertValues(args: {
   material?: MaterialLineageSource | null;
   /** Per-layer price override — when set, calculation uses this instead of the library price */
   unitCostOverrideUsd?: number | null;
+  gsm?: string | number | null;
 }) {
   const base = {
     estimateId: args.estimateId,
@@ -35,6 +36,9 @@ export function buildLayerInsertValues(args: {
   // If an explicit price override is provided, write it as unit_cost_snapshot_usd
   if (args.unitCostOverrideUsd != null) {
     (base as any).unit_cost_snapshot_usd = String(args.unitCostOverrideUsd);
+  }
+  if (args.gsm != null && args.gsm !== '') {
+    (base as any).gsm = String(args.gsm);
   }
   return base;
 }

@@ -150,6 +150,8 @@ export class ApiClient {
         method,
         headers,
         body: payload !== undefined ? JSON.stringify(payload) : undefined,
+        // Never serve stale estimate/material GETs from the HTTP cache after PATCH.
+        cache: 'no-store',
       });
     } catch (networkErr) {
       // BUG-12: typed offline/network error so mobile client can distinguish it
@@ -440,14 +442,26 @@ export class ApiClient {
   }
 
   // Estimates
-  getEstimates() {
+  getEstimates(params?: { limit?: number; sourceTemplateKey?: string; status?: string }) {
+    const qs = new URLSearchParams();
+    if (params?.limit != null) qs.set('limit', String(params.limit));
+    if (params?.sourceTemplateKey) qs.set('sourceTemplateKey', params.sourceTemplateKey);
+    if (params?.status) qs.set('status', params.status);
+    const query = qs.toString();
     return this.request<{ items: any[]; total: number; limit: number; offset: number } | any[]>(
-      'GET', '/api/v1/estimates'
-    ).then(res => {
-      // Support both paginated { items } and legacy bare array
+      'GET',
+      `/api/v1/estimates${query ? `?${query}` : ''}`
+    ).then((res) => {
       if (res && !Array.isArray(res) && 'items' in res) return res.items;
       return res as any[];
     });
+  }
+
+  /** Most recently saved draft for a standard template (by sourceTemplateKey). */
+  getLatestDraftForTemplate(sourceTemplateKey: string) {
+    return this.getEstimates({ sourceTemplateKey, status: 'draft', limit: 1 }).then(
+      (rows) => rows[0] ?? null
+    );
   }
 
   getDashboardSummary() {

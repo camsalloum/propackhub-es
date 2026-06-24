@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Save, Download, ArrowLeft, Layers, Calculator, DollarSign, Loader2, X } from 'lucide-react';
 import LayerCard from '../components/LayerCard';
@@ -9,7 +9,13 @@ import { useAuth } from '../hooks/useAuth';
 import { usdToDisplay, displayToUsd } from '../lib/currency';
 import { runClientCalculation, effectiveMarginPercent } from '../lib/estimateCalc';
 import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
-import { dimensionsForSave, validateConfiguredEstimate } from '../lib/estimateConfigure';
+import {
+  dimensionsForSave,
+  normalizeProcessesForSave,
+  productTypeForSave,
+  validateConfiguredEstimate,
+} from '../lib/estimateConfigure';
+import { setWorkingEstimateForTemplate } from '../lib/estimateSession';
 import { groupMaterialsForPicker, type CategoryNode } from '../lib/materialTaxonomy';
 import { derivePrintingWebClass, stackNeedsSolventMix, materialAllowedForTemplateLayer } from '@es/engine';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
@@ -109,8 +115,10 @@ const EstimateEditor = () => {
   const [dragHoverIndex, setDragHoverIndex] = useState<number | null>(null);
   const [mobileStackOpen, setMobileStackOpen] = useState(false);
   const [needsConfiguration, setNeedsConfiguration] = useState(false);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
 
   const location = useLocation();
+  const templateNavConfigureRef = useRef(false);
   const locationState = location.state as {
     returnTo?: string;
     configureFromTemplate?: boolean;
@@ -250,6 +258,10 @@ const EstimateEditor = () => {
     setLayerSheetOpen(true);
   };
 
+  useEffect(() => {
+    templateNavConfigureRef.current = Boolean(locationState?.configureFromTemplate);
+  }, [id, locationState?.configureFromTemplate]);
+
   const productTypeOptions = masterReference.productTypeOptions ?? DEFAULT_PRODUCT_TYPE_OPTIONS;
   const unitOptions = masterReference.unitOptions ?? DEFAULT_UNIT_OPTIONS;
 
@@ -376,9 +388,9 @@ const EstimateEditor = () => {
     ];
   }
 
-  const fetchEstimate = async (estimateId: string) => {
+  const fetchEstimate = async (estimateId: string, options?: { silent?: boolean }) => {
     try {
-      setLoading(true);
+      if (!options?.silent) setLoading(true);
       const data = await apiClient.getEstimate(estimateId);
       const mappedLayers: LayerItem[] = (data.layers || []).map((l: any) => ({
         id: l.id, materialId: l.materialId, materialName: l.materialName || 'Unknown',
@@ -436,9 +448,10 @@ const EstimateEditor = () => {
       if (data.orderQuantityUnit) {
         setOrderQuantityUnit(normalizeUnitValue(data.orderQuantityUnit, unitOptions));
       }
-      if (data.processes) setProcessesState(data.processes);
+      if (data.processes) setProcessesState(normalizeProcessesForSave(data.processes));
       const fromTemplate =
-        Boolean(data.dimensions?.configureFromTemplate) || Boolean(locationState?.configureFromTemplate);
+        Boolean(data.dimensions?.configureFromTemplate) ||
+        (templateNavConfigureRef.current && Boolean(locationState?.configureFromTemplate));
       if (fromTemplate) {
         setNeedsConfiguration(true);
         setActiveSection('structure');
@@ -464,7 +477,11 @@ const EstimateEditor = () => {
           openHeightMm: data.dimensions.openHeightMm || 250,
         });
       }
-      if (!fromTemplate && (!data.salePricePerKg || parseFloat(data.salePricePerKg) === 0)) {
+      if (
+        !options?.silent &&
+        !fromTemplate &&
+        (!data.salePricePerKg || parseFloat(data.salePricePerKg) === 0)
+      ) {
         try {
           const result = await apiClient.calculateEstimate(estimateId);
           applyCalculationResult(data, result);
@@ -484,7 +501,9 @@ const EstimateEditor = () => {
       console.error('Failed to load estimate:', error);
       setEstimate(null);
       setLoadError('Estimate not found or could not be loaded.');
-    } finally { setLoading(false); }
+    } finally {
+      if (!options?.silent) setLoading(false);
+    }
   };
 
   const applyCalculationResult = (baseEstimate: any, result: any) => {
@@ -515,20 +534,41 @@ const EstimateEditor = () => {
     }
   };
 
-  const buildSavePayload = useCallback(() => ({
-    jobName, customerId: customerId || undefined, productType: productType,
-    productSubtype: productSubtype ?? undefined,
-    printingWebClass: derivedPrintingWebClass,
-    dimensions: dimensionsForSave(dimensions as Record<string, unknown>),
-    markupPercent, platesPerKg, deliveryPerKg,
-    solventCostPerKgUsd: needsSolventMix ? solventCostPerKgUsd : undefined,
-    solventRatio: needsSolventMix ? solventRatio : undefined,
-    orderQuantityKg: orderQuantity,
-    orderQuantityUnit,
-    layers: layers.map((l, i) => ({ materialId: l.materialId, micron: l.micron, position: i, unitCostSnapshotUsd: l.costPerKgUsd > 0 ? l.costPerKgUsd : undefined })),
-    slabs: slabsState.map(s => ({ quantityKg: s.quantityKg, pricePerKg: s.pricePerKgUsd ?? s.pricePerKg })),
-    processes: processesState,
-  }), [jobName, customerId, productType, productSubtype, derivedPrintingWebClass, needsSolventMix, dimensions, markupPercent, platesPerKg, deliveryPerKg, solventCostPerKgUsd, solventRatio, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
+  const buildSavePayload = useCallback(() => {
+    const payload: Record<string, unknown> = {
+      jobName,
+      customerId: customerId || undefined,
+      productType: productTypeForSave(estimate?.productType, productType, productTypeOptions),
+      productSubtype: productSubtype ?? undefined,
+      dimensions: dimensionsForSave(dimensions as Record<string, unknown>),
+      markupPercent,
+      platesPerKg,
+      deliveryPerKg,
+      solventCostPerKgUsd: needsSolventMix ? solventCostPerKgUsd : undefined,
+      solventRatio: needsSolventMix ? solventRatio : undefined,
+      orderQuantityKg: orderQuantity,
+      orderQuantityUnit,
+      layers: layers.map((l, i) => ({
+        materialId: l.materialId,
+        micron: Number(l.micron),
+        gsm: Number(l.gsm) || 0,
+        position: i,
+        unitCostSnapshotUsd: l.costPerKgUsd > 0 ? Number(l.costPerKgUsd) : undefined,
+      })),
+    };
+    // Visibility can hide processes/slabs on GET — omit empty arrays so PATCH does not
+    // delete-and-reinsert children the editor never loaded (HAR: processes:[] wiped DB rows).
+    if (processesState.length > 0) {
+      payload.processes = normalizeProcessesForSave(processesState);
+    }
+    if (slabsState.length > 0) {
+      payload.slabs = slabsState.map((s) => ({
+        quantityKg: Number(s.quantityKg),
+        pricePerKg: Number(s.pricePerKgUsd ?? s.pricePerKg) || 0,
+      }));
+    }
+    return payload;
+  }, [jobName, customerId, estimate?.productType, productType, productTypeOptions, productSubtype, needsSolventMix, dimensions, markupPercent, platesPerKg, deliveryPerKg, solventCostPerKgUsd, solventRatio, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   const slabQuantitiesKey = slabsState.map((s) => s.quantityKg).join(',');
   const layerInputsKey = layers.map((l) => `${l.materialId}:${l.micron}:${l.costPerKgUsd}`).join('|');
@@ -617,25 +657,24 @@ const EstimateEditor = () => {
 
   const persistEstimate = async (andCalculate: boolean) => {
     if (saving) return;
-    if (andCalculate) {
-      const validationError = validateConfiguredEstimate({
-        layers,
-        productType,
-        dimensions: dimensions as Record<string, unknown>,
-      });
-      if (validationError) {
-        // For dimension errors, warn but still allow saving the structural changes
-        if (validationError.includes('Dimensions') || validationError.includes('width') || validationError.includes('height') || validationError.includes('cutoff')) {
-          if (!window.confirm(`${validationError}\n\nSave structure changes without calculating?`)) return;
-          // Fall through to save-only (skip calculate)
-          return persistEstimate(false);
-        }
-        alert(validationError);
-        if (validationError.includes('Structure')) setActiveSection('structure');
-        return;
-      }
+    if (layers.length === 0) {
+      alert('Add at least one layer before saving.');
+      return;
     }
+    if (layers.some((l) => !l.materialId)) {
+      alert('Select a material for every layer before saving.');
+      return;
+    }
+
+    const validationError = validateConfiguredEstimate({
+      layers,
+      productType,
+      dimensions: dimensions as Record<string, unknown>,
+    });
+    const willCalculate = andCalculate && !validationError;
+
     setSaving(true);
+    setSaveNotice(null);
     try {
       const payload = buildSavePayload();
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -643,31 +682,62 @@ const EstimateEditor = () => {
         alert('Offline — draft saved locally');
         return;
       }
-      let saved;
       if (estimate?.id) {
-        saved = await apiClient.updateEstimate(estimate.id, payload);
+        await apiClient.updateEstimate(estimate.id, payload);
+        templateNavConfigureRef.current = false;
+        const templateKey = estimate.sourceTemplateKey?.trim();
+        if (templateKey) {
+          setWorkingEstimateForTemplate(templateKey, estimate.id);
+        }
+        navigate(`/estimate/${estimate.id}`, {
+          replace: true,
+          state: returnTo !== '/estimates' ? { returnTo } : undefined,
+        });
+        await fetchEstimate(estimate.id, { silent: true });
+        setNeedsConfiguration(false);
+        setSaveNotice('Changes saved.');
       } else {
-        saved = await apiClient.createEstimate(payload);
+        const saved = await apiClient.createEstimate(payload);
+        const templateKey = saved?.sourceTemplateKey?.trim();
+        if (templateKey && saved?.id) {
+          setWorkingEstimateForTemplate(templateKey, saved.id);
+        }
         navigate(`/estimate/${saved.id}`, { replace: true });
       }
-      setEstimate((prev: any) => ({ ...prev, ...saved }));
-      setDimensions((prev) => dimensionsForSave(prev as Record<string, unknown>) as DimensionState);
-      setNeedsConfiguration(false);
-      if (andCalculate && saved.id) {
+
+      if (andCalculate && validationError) {
+        if (
+          validationError.includes('Structure') ||
+          validationError.includes('thickness') ||
+          validationError.includes('µ') ||
+          validationError.includes('layer')
+        ) {
+          setActiveSection('structure');
+        }
+        setSaveNotice(`Saved as draft. ${validationError}`);
+        return;
+      }
+
+      if (willCalculate && estimate?.id) {
         setCalculating(true);
         try {
-          const result = await apiClient.calculateEstimate(saved.id);
-          applyCalculationResult({ ...estimate, ...saved }, result);
+          const result = await apiClient.calculateEstimate(estimate.id);
+          applyCalculationResult(estimate, result);
+          await fetchEstimate(estimate.id, { silent: true });
+          setSaveNotice('Saved and calculated.');
         } catch (calcErr) {
           const msg = calcErr instanceof Error ? calcErr.message : 'Calculate failed';
-          alert(`Calculate failed: ${msg}`);
+          setSaveNotice(`Saved, but calculate failed: ${msg}`);
+        } finally {
+          setCalculating(false);
         }
-        finally { setCalculating(false); }
       }
     } catch (err: any) {
       console.error('Save failed:', err);
       alert(`Save failed: ${err.message || 'Unknown error'}`);
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -811,6 +881,12 @@ const EstimateEditor = () => {
           <button type="button" className="btn-secondary text-sm" onClick={loadBaseData}>
             Retry materials
           </button>
+        </div>
+      )}
+      {saveNotice && (
+        <div className="mb-4 card bg-green-50 border border-green-200 text-sm text-green-900 flex items-center justify-between gap-2">
+          <span>{saveNotice}</span>
+          <button type="button" className="text-green-700 hover:text-green-900" onClick={() => setSaveNotice(null)} aria-label="Dismiss">✕</button>
         </div>
       )}
 

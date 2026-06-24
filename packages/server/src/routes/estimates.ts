@@ -35,33 +35,39 @@ const EstimateCreateSchema = z.object({
   productSubtype: z.string().max(64).optional(),
   printingWebClass: z.enum(['wide_web', 'narrow_web']).default('wide_web'),
   dimensions: z.record(z.any()),
-  markupPercent: z.number().default(15),
-  platesPerKg: z.number().default(0),
-  deliveryPerKg: z.number().default(0),
+  markupPercent: z.coerce.number().default(15),
+  platesPerKg: z.coerce.number().default(0),
+  deliveryPerKg: z.coerce.number().default(0),
   layers: z.array(z.object({
     materialId: z.string().uuid(),
-    micron: z.number().positive(),
-    position: z.number().nonnegative(),
-    unitCostSnapshotUsd: z.number().nonnegative().optional(), // per-layer price override
+    micron: z.coerce.number().positive(),
+    position: z.coerce.number().nonnegative(),
+    gsm: z.coerce.number().nonnegative().optional(),
+    unitCostSnapshotUsd: z.coerce.number().nonnegative().optional(), // per-layer price override
   })),
   processes: z.array(z.object({
     name: z.string(),
-    costPerHour: z.number(),
+    costPerHour: z.coerce.number(),
     speedBasis: z.enum(['kg_per_hour', 'm_per_min', 'pcs_per_min']),
-    speedValue: z.number(),
-    setupHours: z.number().default(0),
+    speedValue: z.coerce.number(),
+    setupHours: z.coerce.number().default(0),
     enabled: z.boolean().default(true),
   })).default([]),
   slabs: z.array(z.object({
-    quantityKg: z.number().positive(),
-    pricePerKg: z.number().nonnegative(),
+    quantityKg: z.coerce.number().positive(),
+    pricePerKg: z.coerce.number().nonnegative(),
   })).default([]),
-  orderQuantityKg: z.number().positive().optional(),
+  orderQuantityKg: z.coerce.number().positive().optional(),
   orderQuantityUnit: z.string().max(32).optional(),
+  solventCostPerKgUsd: z.coerce.number().nonnegative().optional(),
+  solventRatio: z.coerce.number().positive().optional(),
   status: z.enum(['draft', 'sent', 'won', 'lost']).optional(),
   notes: z.string().optional(),
   note: z.string().optional(), // used in activity log
 });
+
+/** PATCH accepts any subset of the create fields. */
+const EstimateUpdateSchema = EstimateCreateSchema.partial();
 
 async function generateRefNumber(db: Database, tenantId: string): Promise<string> {
   const year = new Date().getFullYear();
@@ -106,7 +112,9 @@ async function generateRefNumber(db: Database, tenantId: string): Promise<string
 
 export async function getEstimatesRoute(
   _fastify: FastifyInstance,
-  request: FastifyRequest<{ Querystring: { limit?: string; offset?: string } }>,
+  request: FastifyRequest<{
+    Querystring: { limit?: string; offset?: string; sourceTemplateKey?: string; status?: string };
+  }>,
   reply: FastifyReply
 ) {
   try {
@@ -115,10 +123,21 @@ export async function getEstimatesRoute(
     const user = extractUserFromRequest(request);
     const db = getDatabase();
     const { limit, offset } = parsePagination(request.query);
+    const { sourceTemplateKey, status } = request.query;
 
     const profile = await getUserVisibilityProfile(db, user.userId);
 
-    const whereClause = and(eq(schema.estimates.tenantId, tenantId), isNull(schema.estimates.deletedAt));
+    const conditions = [
+      eq(schema.estimates.tenantId, tenantId),
+      isNull(schema.estimates.deletedAt),
+    ];
+    if (sourceTemplateKey) {
+      conditions.push(eq(schema.estimates.sourceTemplateKey, sourceTemplateKey));
+    }
+    if (status) {
+      conditions.push(eq(schema.estimates.status, status as 'draft' | 'sent' | 'won' | 'lost'));
+    }
+    const whereClause = and(...conditions);
 
     // Count total (for pagination metadata)
     const [{ total }] = await db
@@ -130,7 +149,9 @@ export async function getEstimatesRoute(
       .select()
       .from(schema.estimates)
       .where(whereClause)
-      .orderBy(desc(schema.estimates.createdAt))
+      .orderBy(
+        desc(sourceTemplateKey ? schema.estimates.updatedAt : schema.estimates.createdAt)
+      )
       .limit(limit)
       .offset(offset);
 
@@ -218,6 +239,8 @@ export async function createEstimateRoute(
         masterDataVersion,
         orderQuantityKg: data.orderQuantityKg != null ? String(data.orderQuantityKg) : undefined,
         orderQuantityUnit: data.orderQuantityUnit ?? 'kgs',
+        solventCostPerKgUsd: data.solventCostPerKgUsd != null ? String(data.solventCostPerKgUsd) : undefined,
+        solventRatio: data.solventRatio != null ? String(data.solventRatio) : undefined,
       })
       .returning()) as EstimateRow[];
 
@@ -231,6 +254,8 @@ export async function createEstimateRoute(
           micron: layer.micron,
           position: layer.position,
           material: mat ? toMaterialLineageSource(mat) : null,
+          unitCostOverrideUsd: layer.unitCostSnapshotUsd ?? null,
+          gsm: layer.gsm ?? null,
         })
       );
     }
@@ -409,6 +434,7 @@ async function getEstimateRoute(
       };
     });
 
+    reply.header('Cache-Control', 'no-store');
     return reply.send({
       ...stripEstimateRow(estimate, profile),
       layers: enrichedLayers,
@@ -439,6 +465,11 @@ async function updateEstimateRoute(
     const { id } = request.params;
     const db = getDatabase();
 
+    // SC-3: validate the PATCH body. Without this, mistyped keys are silently
+    // ignored and out-of-range values (negative µ, NaN) reach the DB. `.partial()`
+    // keeps every field optional so callers can PATCH a subset.
+    const data = EstimateUpdateSchema.parse(request.body ?? {});
+
     // Check estimate exists and belongs to tenant (BUG-5: honor soft-delete)
     const [existing] = await db
       .select()
@@ -463,11 +494,11 @@ async function updateEstimateRoute(
     const updates: any = { updatedAt: new Date() };
 
     // Update basic fields if provided
-    if (request.body.jobName !== undefined) updates.jobName = request.body.jobName;
-    if (request.body.customerId !== undefined) updates.customerId = request.body.customerId;
-    if (request.body.status !== undefined) {
-      updates.status = request.body.status;
-      if (request.body.status === 'sent' && existing.status !== 'sent') {
+    if (data.jobName !== undefined) updates.jobName = data.jobName;
+    if (data.customerId !== undefined) updates.customerId = data.customerId;
+    if (data.status !== undefined) {
+      updates.status = data.status;
+      if (data.status === 'sent' && existing.status !== 'sent') {
         const sentAt = new Date();
         const validDays = tenant?.quotationValidDays ?? 30;
         updates.sentAt = sentAt;
@@ -496,28 +527,28 @@ async function updateEstimateRoute(
         }
       }
     }
-    if (request.body.productType !== undefined) updates.productType = request.body.productType;
-    if ((request.body as any).productSubtype !== undefined) updates.productSubtype = (request.body as any).productSubtype;
-    if (request.body.markupPercent !== undefined) updates.markupPercent = request.body.markupPercent.toString();
-    if (request.body.platesPerKg !== undefined) updates.platesPerKg = request.body.platesPerKg.toString();
-    if (request.body.deliveryPerKg !== undefined) updates.deliveryPerKg = request.body.deliveryPerKg.toString();
-    if (request.body.dimensions !== undefined) {
+    if (data.productType !== undefined) updates.productType = data.productType;
+    if (data.productSubtype !== undefined) updates.productSubtype = data.productSubtype;
+    if (data.markupPercent !== undefined) updates.markupPercent = data.markupPercent.toString();
+    if (data.platesPerKg !== undefined) updates.platesPerKg = data.platesPerKg.toString();
+    if (data.deliveryPerKg !== undefined) updates.deliveryPerKg = data.deliveryPerKg.toString();
+    if (data.dimensions !== undefined) {
       updates.dimensions = stripConfigureFromTemplateFlag(
-        request.body.dimensions as Record<string, unknown>
+        data.dimensions as Record<string, unknown>
       );
     }
-    if (request.body.notes !== undefined) updates.notes = request.body.notes;
-    if ((request.body as any).orderQuantityKg !== undefined) {
-      updates.orderQuantityKg = String((request.body as any).orderQuantityKg);
+    if (data.notes !== undefined) updates.notes = data.notes;
+    if (data.orderQuantityKg !== undefined) {
+      updates.orderQuantityKg = String(data.orderQuantityKg);
     }
-    if ((request.body as any).orderQuantityUnit !== undefined) {
-      updates.orderQuantityUnit = (request.body as any).orderQuantityUnit;
+    if (data.orderQuantityUnit !== undefined) {
+      updates.orderQuantityUnit = data.orderQuantityUnit;
     }
-    if ((request.body as any).solventCostPerKgUsd !== undefined) {
-      updates.solventCostPerKgUsd = String((request.body as any).solventCostPerKgUsd);
+    if (data.solventCostPerKgUsd !== undefined) {
+      updates.solventCostPerKgUsd = String(data.solventCostPerKgUsd);
     }
-    if ((request.body as any).solventRatio !== undefined) {
-      updates.solventRatio = String((request.body as any).solventRatio);
+    if (data.solventRatio !== undefined) {
+      updates.solventRatio = String(data.solventRatio);
     }
 
     // BUG-1 (full fix): ONE transaction wraps the base-field update + layers + processes + slabs
@@ -534,7 +565,7 @@ async function updateEstimateRoute(
       updated = txUpdated;
 
       // 2. Layers (delete + re-insert)
-      if (request.body.layers !== undefined) {
+      if (data.layers !== undefined) {
         const tenantMaterials = await tx
           .select()
           .from(schema.materials)
@@ -546,7 +577,7 @@ async function updateEstimateRoute(
 
         const materialMap = buildEngineMaterialMap(tenantMaterials);
         const derivedPrintingWeb = derivePrintingWebClass(
-          request.body.layers.map((l) => ({ materialId: l.materialId })),
+          data.layers.map((l) => ({ materialId: l.materialId })),
           materialMap
         );
 
@@ -557,22 +588,22 @@ async function updateEstimateRoute(
         )?.materialClass;
 
         const classificationSnapshot = buildEstimateClassificationSnapshot({
-          jobName: request.body.jobName ?? existing.jobName,
-          productType: request.body.productType ?? existing.productType,
+          jobName: data.jobName ?? existing.jobName,
+          productType: data.productType ?? existing.productType,
           materialClass: templateMc ?? null,
-          layers: request.body.layers.map((layer) => {
+          layers: data.layers.map((layer) => {
             const mat = materialById.get(layer.materialId);
             return { materialType: mat?.type };
           }),
         });
 
         const mergedDimensions = mergeEstimateDimensionsClassification(
-          (request.body.dimensions ?? existing.dimensions) as Record<string, unknown>,
+          (data.dimensions ?? existing.dimensions) as Record<string, unknown>,
           classificationSnapshot
         );
 
         await tx.delete(schema.layers).where(eq(schema.layers.estimateId, id));
-        for (const layer of request.body.layers) {
+        for (const layer of data.layers) {
           const mat = materialById.get(layer.materialId);
           await tx.insert(schema.layers).values(
             buildLayerInsertValues({
@@ -582,6 +613,7 @@ async function updateEstimateRoute(
               position: layer.position,
               material: mat ? toMaterialLineageSource(mat) : null,
               unitCostOverrideUsd: layer.unitCostSnapshotUsd ?? null,
+              gsm: layer.gsm ?? null,
             })
           );
         }
@@ -598,9 +630,9 @@ async function updateEstimateRoute(
       }
 
       // 3. Processes (delete + re-insert)
-      if (request.body.processes !== undefined) {
+      if (data.processes !== undefined) {
         await tx.delete(schema.processes).where(eq(schema.processes.estimateId, id));
-        for (const process of request.body.processes) {
+        for (const process of data.processes) {
           await tx.insert(schema.processes).values({
             estimateId: id,
             name: process.name,
@@ -614,10 +646,10 @@ async function updateEstimateRoute(
       }
 
       // 4. Slabs (delete + re-insert)
-      if (request.body.slabs !== undefined) {
+      if (data.slabs !== undefined) {
         await tx.delete(schema.slabs).where(eq(schema.slabs.estimateId, id));
-        for (let i = 0; i < request.body.slabs.length; i++) {
-          const slab = request.body.slabs[i];
+        for (let i = 0; i < data.slabs.length; i++) {
+          const slab = data.slabs[i];
           await tx.insert(schema.slabs).values({
             estimateId: id,
             quantityKg: slab.quantityKg.toString(),
@@ -638,7 +670,7 @@ async function updateEstimateRoute(
           action: 'status_change',
           entityType: 'estimate',
           entityId: id,
-          changes: { status: updates.status, note: request.body.note || null },
+          changes: { status: updates.status, note: data.note || null },
         });
       } catch (logErr) {
         console.warn('Failed to write activity log:', logErr);
@@ -653,8 +685,12 @@ async function updateEstimateRoute(
       .from(schema.estimates)
       .where(and(eq(schema.estimates.id, id), eq(schema.estimates.tenantId, tenantId)))) as EstimateRow[];
 
+    reply.header('Cache-Control', 'no-store');
     return reply.send(finalRow ?? updated);
   } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return reply.status(400).send({ error: 'Validation failed', details: error.errors });
+    }
     console.error('Update estimate error:', error);
     return reply.status(500).send({ error: 'Failed to update estimate' });
   }
@@ -1020,7 +1056,9 @@ async function duplicateEstimateRoute(
 }
 
 export async function registerEstimateRoutes(fastify: FastifyInstance) {
-  fastify.get<{ Querystring: { limit?: string; offset?: string } }>(
+  fastify.get<{
+    Querystring: { limit?: string; offset?: string; sourceTemplateKey?: string; status?: string };
+  }>(
     '/api/v1/estimates',
     async (request, reply) => getEstimatesRoute(fastify, request, reply)
   );

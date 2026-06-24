@@ -53,12 +53,17 @@ export function calculateEstimate(
   // Step 7: Calculate solvent mix if needed
   const solventMix = calculateSolventMix(estimate, layersWithCalc, materials, totalGsm);
 
+  // Solvent cost expressed per‑kg. Guard against totalGsm === 0 — `x / 0 * 1000` is
+  // NaN/Infinity in JS, which would propagate into salePricePerKg and get persisted
+  // as "NaN", breaking Save & Calculate for any estimate whose layers have 0 µ.
+  const solventCostPerKg = totalGsm > 0 ? ((solventMix.costPerM2 || 0) / totalGsm) * 1000 : 0;
+
   // Step 8: Calculate operation costs from processes
   const processResults = calculateProcessCosts(estimate.processes, estimate.orderQuantityKg, productMetrics);
 
   // Step 9: Calculate sale price per kg (Laravel additive formula)
   const salePricePerKg = calculateSalePrice(
-    materialCostPerKg + (solventMix.costPerM2 || 0) / totalGsm * 1000,
+    materialCostPerKg + solventCostPerKg,
     estimate.markupPercent,
     estimate.platesPerKg,
     estimate.deliveryPerKg,
@@ -76,7 +81,7 @@ export function calculateEstimate(
     );
 
     const slabSalePricePerKg = calculateSalePrice(
-      materialCostPerKg + (solventMix.costPerM2 || 0) / totalGsm * 1000,
+      materialCostPerKg + solventCostPerKg,
       estimate.markupPercent,
       estimate.platesPerKg,
       estimate.deliveryPerKg,
@@ -91,7 +96,7 @@ export function calculateEstimate(
   });
 
   // Step 11: Calculate cost breakdown percentages
-  const materialCost = materialCostPerKg + (solventMix.costPerM2 || 0) / totalGsm * 1000;
+  const materialCost = materialCostPerKg + solventCostPerKg;
   const markupAmount = materialCost * (estimate.markupPercent / 100);
   const totalCost = materialCost + markupAmount + estimate.platesPerKg +
     estimate.deliveryPerKg + processResults.operationCostPerKg;
@@ -134,7 +139,7 @@ export function calculateEstimate(
     markupAmountPerKg: markupAmount,
     operationCostPerKg: processResults.operationCostPerKg,
     salePricePerKg,
-    solventMixCostPerKg: solventMix.costPerM2 ? solventMix.costPerM2 / totalGsm * 1000 : 0,
+    solventMixCostPerKg: solventCostPerKg,
     solventMixRatio: solventMix.ratio,
     // Product metrics
     piecesPerKg: productMetrics.piecesPerKg,

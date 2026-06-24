@@ -23,6 +23,11 @@ import {
   normalizeProductType,
   normalizeUnitValue,
 } from '../lib/masterDataReference';
+import {
+  clearWorkingEstimateForTemplate,
+  getWorkingEstimateForTemplate,
+  setWorkingEstimateForTemplate,
+} from '../lib/estimateSession';
 
 interface TemplateLayer {
   layer_order: number;
@@ -354,15 +359,95 @@ const StandardTemplates = () => {
     setInstantiating(template.id);
     setInstantiateError(null);
     try {
+      const templateKey = template.templateKey?.trim() || null;
+      const returnState = {
+        returnTo: isNewQuoteFlow ? '/estimates' : '/templates',
+      };
+
+      const tryOpenDraft = async (draft: { id: string; jobName?: string; refNumber?: string }) => {
+        setWorkingEstimateForTemplate(templateKey!, draft.id);
+        navigate(`/estimate/${draft.id}`, { state: returnState });
+      };
+
+      const promptResumeDraft = (
+        draft: { id: string; jobName?: string; refNumber?: string },
+        headline: string
+      ): boolean => {
+        const ref = draft.refNumber || draft.id.slice(0, 8);
+        return window.confirm(
+          `${headline}\n\n` +
+            `${draft.jobName || template.name} (${ref})\n\n` +
+            `OK = open it (your saved changes)\n` +
+            `Cancel = start a brand-new quote`
+        );
+      };
+
+      let startFresh = false;
+
+      if (templateKey) {
+        const workingId = getWorkingEstimateForTemplate(templateKey);
+        if (workingId) {
+          try {
+            const working = await apiClient.getEstimate(workingId);
+            if (
+              working?.status === 'draft' &&
+              working.sourceTemplateKey === templateKey
+            ) {
+              if (
+                promptResumeDraft(
+                  working,
+                  `Continue your last saved quote for "${template.name}"?`
+                )
+              ) {
+                await tryOpenDraft(working);
+                return;
+              }
+              clearWorkingEstimateForTemplate(templateKey);
+              startFresh = true;
+            } else {
+              clearWorkingEstimateForTemplate(templateKey);
+            }
+          } catch {
+            clearWorkingEstimateForTemplate(templateKey);
+          }
+        }
+
+        if (!startFresh && !workingId) {
+          try {
+            const latest = await apiClient.getLatestDraftForTemplate(templateKey);
+            if (latest?.id) {
+              if (
+                promptResumeDraft(
+                  latest,
+                  `You have a saved draft for "${template.name}".`
+                )
+              ) {
+                await tryOpenDraft(latest);
+                return;
+              }
+            }
+          } catch {
+            // Fall through to create a new estimate.
+          }
+        }
+      }
+
+      if (templateKey) {
+        clearWorkingEstimateForTemplate(templateKey);
+      }
+
       const created = await apiClient.instantiateTemplate(template.id, {
         customerId: selectedCustomer || undefined,
         jobName: jobName.trim() || template.name,
         orderQuantityKg: orderQuantity,
         orderQuantityUnit,
       });
+      if (templateKey && created?.id) {
+        setWorkingEstimateForTemplate(templateKey, created.id);
+      }
       navigate(`/estimate/${created.id}`, {
         state: {
-          returnTo: isNewQuoteFlow ? '/estimates' : '/templates',
+          ...returnState,
           configureFromTemplate: true,
         },
       });

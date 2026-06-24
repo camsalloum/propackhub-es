@@ -3,7 +3,7 @@
 > ✅ **2026-06-24 update:** Major session — single source of truth for materials, new ink costing model, Bag as first-class type, template repair, all bugs fixed. Engine 67/67, server 37/37. All changes committed and merged to `main`.
 
 **Last updated:** 2026-06-24
-**Session:** Raw Materials single source, ink costing model, Bag type, template explosion fix, layer table UX
+**Session:** Estimate save + template resume — **user verified OK**; paused for tomorrow
 
 ---
 
@@ -37,6 +37,8 @@
 | Correct ink density + solid% values (owner spec) applied to all tenants | ✅ |
 | Bag = first-class product type (DB enum, engine, Zod, validation) | ✅ |
 | Save & Calculate: dimension errors now offer "save structure only" fallback | ✅ |
+| Estimate Save/PATCH: processes + gsm persist; no-store cache on GET after PATCH | ✅ (2026-06-24) |
+| Template re-use: resume last saved draft (session + API by `sourceTemplateKey`) | ✅ user-verified 2026-06-24 |
 | Total GSM format: xx.xx; Value column: xx.x | ✅ |
 | Materials pagination: limit=500 request, limit=1000 server cap, sorted by type+name | ✅ |
 | GIT-SAVE.bat: pushes current branch dynamically | ✅ |
@@ -98,6 +100,9 @@ cost/m² = (dry_gsm / 1000) × costPerKgUsd_dry_equiv
 
 ## Open Items / Next Session
 
+- [x] Estimate save + template resume flow (micron/GSM, Save, return to Templates, OK on resume) — **verified by user 2026-06-24**
+- [ ] PWA: disable service worker in dev or fix `undefined` Response in `service-worker.js` (console noise only)
+- [ ] SC-7: cancel doesn’t detect dirty layers; SC-8: cost/kg override `> 0` check (from SAVE_AND_CALCULATE audit)
 - [ ] Verify full estimate save flow for Bag type end-to-end
 - [ ] PDF proposal: check bag dimensions appear correctly
 - [ ] Phase 6 value features (comparison view, attachments)

@@ -22,7 +22,7 @@
       "when": 1750700000000,
       "tag": "0002_liquid_cost_usd",
       "breakpoints": true
-    }
+    },
     {
       "idx": 3,
       "version": "5",

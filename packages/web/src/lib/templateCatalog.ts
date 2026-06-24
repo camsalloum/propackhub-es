@@ -33,6 +33,8 @@ export interface TemplateCatalogInput {
   structureType?: string | null;
   defaultLayers?: Array<{ layer_type?: string }> | null;
   isStandard?: boolean;
+  /** Declared printMode stored in defaultDimensions (Smart Template Builder Task 4.5) */
+  defaultDimensions?: Record<string, unknown> | null;
 }
 
 function substrateCount(layers?: TemplateCatalogInput['defaultLayers']): number {
@@ -40,6 +42,11 @@ function substrateCount(layers?: TemplateCatalogInput['defaultLayers']): number 
 }
 
 function isPrintedTemplate(t: TemplateCatalogInput): boolean {
+  // Prefer declared printMode when available (Task 4.5)
+  const declaredMode = t.defaultDimensions?.printMode as string | undefined;
+  if (declaredMode === 'Plain') return false;
+  if (declaredMode === 'Printed') return true;
+  // Legacy fallback: derive from name or ink layer presence
   if (/printed/i.test(t.name)) return true;
   return (t.defaultLayers || []).some((l) => l.layer_type === 'ink');
 }

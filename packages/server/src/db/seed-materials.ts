@@ -4,7 +4,7 @@ import masterMaterialsFallback from './master-materials-seed.json';
 import type { MasterMaterial } from './master-materials-io';
 import { PACKAGING_FAMILY, materialSyncKey, costingKeyForMasterKey } from './master-materials-io';
 import { roundUsd } from '../utils/usd';
-import { itemClassForMasterMaterial, isPlatformPriceSource } from '../utils/item-class';
+import { itemClassForMasterMaterial } from '../utils/item-class';
 import { backfillMaterialSubcategories } from './seed-categories';
 import { listPlatformMasterMaterials } from './platform-master-data';
 
@@ -236,10 +236,11 @@ export async function syncMaterialsForTenant(
         updatedAt: new Date(),
       };
 
-      if (!isPlatformPriceSource(match.priceSource)) {
-        patch.costPerKgUsd = row.costPerKgUsd;
-        patch.marketPriceUsd = row.marketPriceUsd;
-      }
+      // Single source of truth: platform master always overwrites tenant prices.
+      // Temporary overrides live only in estimate layer unit_cost_snapshot_usd, not in the library.
+      patch.costPerKgUsd = row.costPerKgUsd;
+      patch.marketPriceUsd = row.marketPriceUsd;
+      patch.priceSource = 'platform';
 
       const [updatedRow] = await db
         .update(schema.materials)

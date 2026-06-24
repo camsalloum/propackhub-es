@@ -1,6 +1,35 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ??
-  (import.meta.env.DEV ? '' : 'http://localhost:5001');
+import { Capacitor } from '@capacitor/core';
+import { tokenStore } from './tokenStore';
+
+/**
+ * API base URL resolver (Phase 4 / M5).
+ *
+ * - Dev web:        '' (relative, proxied by Vite)
+ * - Prod web:       VITE_API_BASE_URL env (or empty → same origin)
+ * - Native iOS/Android: VITE_API_BASE_URL must be set to the deployed API host
+ *   (e.g. https://api.propackhub.com) — relative URLs don't work on device.
+ *
+ * Build: set VITE_API_BASE_URL in .env.production (do not commit secrets).
+ */
+function resolveApiBase(): string {
+  // Explicit override always wins (CI, staging, production)
+  const envUrl = import.meta.env.VITE_API_BASE_URL as string | undefined;
+  if (envUrl) return envUrl.replace(/\/$/, '');
+
+  // On a native Capacitor platform relative URLs don't resolve — warn loudly
+  if (Capacitor.isNativePlatform()) {
+    console.warn(
+      '[API] Running on native platform without VITE_API_BASE_URL set. ' +
+      'Set VITE_API_BASE_URL=https://your-api-host in .env.production before building.'
+    );
+    return '';
+  }
+
+  // Dev web: empty string → same-origin / Vite proxy
+  return import.meta.env.DEV ? '' : '';
+}
+
+const API_BASE_URL = resolveApiBase();
 
 export type TenantSyncResult = {
   tenantsSynced: number;
@@ -34,6 +63,8 @@ export type PlatformMasterMaterialInput = {
   solidPercent: number;
   density: number;
   costPerKgUsd: number;
+  /** Stored liquid price — avoids round-trip floating-point loss */
+  liquidCostUsd?: number | null;
   wastePercent?: number;
   isSolventBased?: boolean;
   substrateFamily?: string | null;
@@ -48,26 +79,50 @@ export type PlatformMasterMaterialInput = {
 export type PlatformMasterMaterialRow = PlatformMasterMaterialInput & {
   id: string;
   costingKey?: string | null;
+  /** UI-only: liquid ink price entered by user. costPerKgUsd = liquidCostUsd / (solidPercent/100) */
+  liquidCostUsd?: number | null;
 };
 
 export class ApiClient {
   private token: string | null = null;
+  private refreshTokenValue: string | null = null;
 
-  setToken(token: string) {
+  /** Call once on app startup to hydrate tokens from secure storage. */
+  async init(): Promise<void> {
+    this.token = await tokenStore.getAccessToken();
+    this.refreshTokenValue = await tokenStore.getRefreshToken();
+  }
+
+  async setToken(token: string) {
     this.token = token;
-    localStorage.setItem('auth_token', token);
+    await tokenStore.setAccessToken(token);
   }
 
   getToken() {
-    if (!this.token) {
+    // Returns in-memory cache (hydrated via init() or setToken())
+    // Falls back to localStorage synchronously on web for backward compat
+    if (!this.token && !Capacitor.isNativePlatform()) {
       this.token = localStorage.getItem('auth_token');
     }
     return this.token;
   }
 
-  clearToken() {
+  async clearToken() {
     this.token = null;
-    localStorage.removeItem('auth_token');
+    this.refreshTokenValue = null;
+    await tokenStore.clear();
+  }
+
+  async setRefreshToken(token: string) {
+    this.refreshTokenValue = token;
+    await tokenStore.setRefreshToken(token);
+  }
+
+  getRefreshToken() {
+    if (!this.refreshTokenValue && !Capacitor.isNativePlatform()) {
+      this.refreshTokenValue = localStorage.getItem('refresh_token');
+    }
+    return this.refreshTokenValue;
   }
 
   private async request<T>(
@@ -89,25 +144,55 @@ export class ApiClient {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      method,
-      headers,
-      body: payload !== undefined ? JSON.stringify(payload) : undefined,
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}${path}`, {
+        method,
+        headers,
+        body: payload !== undefined ? JSON.stringify(payload) : undefined,
+      });
+    } catch (networkErr) {
+      // BUG-12: typed offline/network error so mobile client can distinguish it
+      const err = new Error('Network request failed — check your connection') as Error & {
+        status?: number;
+        code?: string;
+      };
+      err.status = 0;
+      err.code = 'NETWORK';
+      throw err;
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({
         error: response.statusText,
       }));
-      const message = error.error || `API error: ${response.status}`;
-      const err = new Error(message) as Error & { status?: number; details?: unknown };
+      // Support both legacy `{ error: 'string' }` and new envelope `{ error: { code, message } }`
+      const envelope = error?.error;
+      const message =
+        typeof envelope === 'object' && envelope !== null
+          ? (envelope as { message?: string }).message ?? response.statusText
+          : typeof envelope === 'string'
+            ? envelope
+            : `API error: ${response.status}`;
+      const code =
+        typeof envelope === 'object' && envelope !== null
+          ? (envelope as { code?: string }).code
+          : undefined;
+
+      const err = new Error(message) as Error & {
+        status?: number;
+        code?: string;
+        details?: unknown;
+      };
       err.status = response.status;
-      if (error.unresolvedLayers) err.details = error.unresolvedLayers;
+      if (code) err.code = code;
+      if ((error as { unresolvedLayers?: unknown })?.unresolvedLayers) {
+        err.details = (error as { unresolvedLayers: unknown }).unresolvedLayers;
+      }
       throw err;
     }
 
     // 204 No Content (e.g. DELETE) and empty bodies must not hit response.json()
-    // — that throws on empty input. Parse defensively. (Deep Audit pass-4 P1)
     if (response.status === 204) {
       return undefined as T;
     }
@@ -116,34 +201,47 @@ export class ApiClient {
   }
 
   // Auth
-  register(email: string, password: string, displayName: string, tenantName: string, displayCurrency: string) {
-    return this.request<{
+  async register(email: string, password: string, displayName: string, tenantName: string, displayCurrency: string) {
+    const res = await this.request<{
       token: string;
+      refreshToken: string;
       user: { id: string; email: string; displayName: string; role: 'user' | 'tenant_admin' | 'platform_admin' };
       tenant: { id: string; name: string; displayCurrency: string };
     }>('POST', '/api/v1/auth/register', {
-      email,
-      password,
-      displayName,
-      tenantName,
-      tenantType: 'individual',
-      displayCurrency,
+      email, password, displayName, tenantName, tenantType: 'individual', displayCurrency,
     });
+    await this.setToken(res.token);
+    if (res.refreshToken) await this.setRefreshToken(res.refreshToken);
+    return res;
   }
 
-  login(email: string, password: string) {
-    return this.request<{
+  async login(email: string, password: string) {
+    const res = await this.request<{
       token: string;
+      refreshToken: string;
       user: { id: string; email: string; displayName: string; role: 'user' | 'tenant_admin' | 'platform_admin' };
       tenant: { id: string; name: string; displayCurrency: string };
-    }>('POST', '/api/v1/auth/login', {
-      email,
-      password,
-    });
+    }>('POST', '/api/v1/auth/login', { email, password });
+    await this.setToken(res.token);
+    if (res.refreshToken) await this.setRefreshToken(res.refreshToken);
+    return res;
   }
 
-  refreshToken() {
-    return this.request<{ token: string }>('POST', '/api/v1/auth/refresh');
+  async refreshToken() {
+    const rt = this.getRefreshToken();
+    if (!rt) throw new Error('No refresh token');
+    const res = await this.request<{ token: string; refreshToken: string }>(
+      'POST', '/api/v1/auth/refresh', { refreshToken: rt }
+    );
+    await this.setToken(res.token);
+    if (res.refreshToken) await this.setRefreshToken(res.refreshToken);
+    return res;
+  }
+
+  async logout() {
+    const rt = this.getRefreshToken();
+    await this.request<void>('POST', '/api/v1/auth/logout', { refreshToken: rt ?? undefined });
+    await this.clearToken();
   }
 
   getMe() {
@@ -227,12 +325,24 @@ export class ApiClient {
 
   // Materials
   getMaterials() {
-    return this.request<any[]>('GET', '/api/v1/materials');
+    // Request a high limit to get all materials in one shot — a tenant library
+    // realistically won't exceed a few hundred rows.
+    return this.request<{ items: any[]; total: number; limit: number; offset: number } | any[]>(
+      'GET', '/api/v1/materials?limit=500'
+    ).then(res => {
+      if (res && !Array.isArray(res) && 'items' in res) return res.items;
+      return res as any[];
+    });
   }
 
   // Customers
   getCustomers() {
-    return this.request<any[]>('GET', '/api/v1/customers');
+    return this.request<{ items: any[]; total: number; limit: number; offset: number } | any[]>(
+      'GET', '/api/v1/customers'
+    ).then(res => {
+      if (res && !Array.isArray(res) && 'items' in res) return res.items;
+      return res as any[];
+    });
   }
 
   autocompleteCustomers(q: string) {
@@ -331,7 +441,13 @@ export class ApiClient {
 
   // Estimates
   getEstimates() {
-    return this.request<any[]>('GET', '/api/v1/estimates');
+    return this.request<{ items: any[]; total: number; limit: number; offset: number } | any[]>(
+      'GET', '/api/v1/estimates'
+    ).then(res => {
+      // Support both paginated { items } and legacy bare array
+      if (res && !Array.isArray(res) && 'items' in res) return res.items;
+      return res as any[];
+    });
   }
 
   getDashboardSummary() {
@@ -393,6 +509,24 @@ export class ApiClient {
 
   createTemplate(name: string, estimateId: string) {
     return this.request<any>('POST', '/api/v1/templates', { name, estimateId });
+  }
+
+  createTemplateFromDefinition(data: {
+    name: string;
+    productType: 'roll' | 'sleeve' | 'pouch';
+    productSubtype?: string | null;
+    materialClass: 'PE' | 'Non PE';
+    structureTier: 'Mono' | 'Duplex' | 'Triplex' | 'Quadriplex';
+    printMode: 'Plain' | 'Printed';
+    defaultLayers: Array<{
+      layer_order: number;
+      layer_type: 'substrate' | 'ink' | 'adhesive';
+      materialId?: string | null;
+      default_micron: number;
+    }>;
+    defaultProcesses?: Array<{ process_key: string; enabled: boolean }>;
+  }) {
+    return this.request<any>('POST', '/api/v1/templates', { source: 'fromDefinition', ...data });
   }
 
   getEstimateProposals(estimateId: string) {

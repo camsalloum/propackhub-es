@@ -35,6 +35,32 @@ export async function calculateAndPersistEstimate(
 
   const materialMap = buildEngineMaterialMap(materials);
 
+  // Apply per-layer price overrides: if a layer has unit_cost_snapshot_usd set by the user,
+  // clone that material entry with the overridden price so the engine uses it.
+  const layerPriceOverrides = new Map<string, number>(); // materialId → override price
+  for (const layer of layers) {
+    if (layer.unit_cost_snapshot_usd) {
+      const override = parseFloat(layer.unit_cost_snapshot_usd);
+      if (override > 0) {
+        layerPriceOverrides.set(layer.materialId, override);
+      }
+    }
+  }
+  // Build patched material map: override costPerKgUsd per-layer
+  // Since multiple layers may use the same materialId with different overrides,
+  // we build per-layer virtual IDs (layer.id → material)
+  const patchedMaterialMap = new Map(materialMap);
+  for (const layer of layers) {
+    const override = layerPriceOverrides.get(layer.materialId);
+    if (override != null) {
+      const base = materialMap.get(layer.materialId);
+      if (base) {
+        // Use layer.id as the virtual material key so each layer gets its own price
+        patchedMaterialMap.set(layer.id, { ...base, costPerKgUsd: override });
+      }
+    }
+  }
+
   const processes = await db
     .select()
     .from(schema.processes)
@@ -51,7 +77,7 @@ export async function calculateAndPersistEstimate(
   type SlabRow = (typeof slabs)[number];
 
   const layerRefs = layers.map((l: LayerRow) => ({ materialId: l.materialId }));
-  const derivedPrintingWebClass = derivePrintingWebClass(layerRefs, materialMap);
+  const derivedPrintingWebClass = derivePrintingWebClass(layerRefs, patchedMaterialMap);
 
   const estimateForEngine: EngineEstimate = {
     id: estimate.id,
@@ -61,7 +87,8 @@ export async function calculateAndPersistEstimate(
     status: estimate.status as EngineEstimate['status'],
     layers: layers.map((l: LayerRow) => ({
       id: l.id,
-      materialId: l.materialId,
+      // Use the virtual per-layer material ID if a price override exists, otherwise real ID
+      materialId: layerPriceOverrides.has(l.materialId) ? l.id : l.materialId,
       micron: parseFloat(l.micron),
       position: l.position,
     })),
@@ -99,7 +126,7 @@ export async function calculateAndPersistEstimate(
     updatedAt: estimate.updatedAt,
   };
 
-  const result = calculateEstimate(estimateForEngine, materialMap);
+  const result = calculateEstimate(estimateForEngine, patchedMaterialMap);
   const fxRate = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;
 
   // Convert per‑slab USD prices to display currency and persist
@@ -113,12 +140,18 @@ export async function calculateAndPersistEstimate(
   });
 
   // Persist layer snapshots — material name, cost, stable keys at calculation time
+  // Always snapshot from the real material (for lineage), but record the effective price used
   for (const layer of layers) {
     const mat = materials.find((m: MaterialRow) => m.id === layer.materialId);
+    const override = layerPriceOverrides.get(layer.materialId);
     if (mat) {
+      const effectiveCost = override != null ? String(override) : mat.costPerKgUsd;
       await db
         .update(schema.layers)
-        .set(snapshotsFromMaterial(toMaterialLineageSource(mat)))
+        .set({
+          ...snapshotsFromMaterial(toMaterialLineageSource(mat)),
+          unit_cost_snapshot_usd: effectiveCost,
+        })
         .where(eq(schema.layers.id, layer.id));
     }
   }

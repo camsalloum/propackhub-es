@@ -5,9 +5,11 @@ import { extractTenantFromRequest, extractUserFromRequest, isTenantAdmin } from 
 import { eq, and, asc } from 'drizzle-orm';
 import { ensureTemplatesForTenant, relinkTemplatesForTenant, syncMissingStandardTemplates, pruneDuplicateStandardTemplates, syncTemplateKeysForTenant } from '../db/seed-templates';
 import { quantitiesForSlabTemplateKey } from '../db/seed-slab-templates';
-import { derivePrintingWebClass, stackNeedsSolventMix, resolveTemplateStoreClassification } from '@es/engine';
+import { derivePrintingWebClass, stackNeedsSolventMix, resolveTemplateStoreClassification, tierToStructureType } from '@es/engine';
 import { buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
 import { getMasterDataVersion } from '../db/platform-master-data';
+
+type EstimateRow = typeof schema.estimates.$inferSelect;
 import { buildLayerInsertValues, toMaterialLineageSource } from '../utils/layer-lineage';
 import { deriveSourceTemplateKey, deriveTenantTemplateKey } from '../utils/template-key';
 import {
@@ -41,9 +43,17 @@ const TemplateLayerSchema = z.object({
 
 const UpdateTemplateSchema = z.object({
   name: z.string().min(1).optional(),
+  // Engine costing type — always 'roll' | 'sleeve' | 'pouch'.
+  // 'bag' is a UI family that maps to 'pouch' for costing; TemplateBuilder sends the engine type.
   productType: z.enum(['roll', 'sleeve', 'pouch']).optional(),
+  // UI product subtype (e.g. 'bag_punch_handle', 'pouch_stand_up'); stored alongside productType.
+  productSubtype: z.string().max(64).nullable().optional(),
   materialClass: z.string().nullable().optional(),
   structureType: z.string().nullable().optional(),
+  /** Declared structure tier (Smart Template Builder — Task 3.3) */
+  structureTier: z.enum(['Mono', 'Duplex', 'Triplex', 'Quadriplex']).optional(),
+  /** Declared print mode stored in defaultDimensions (Task 3.3) */
+  printMode: z.enum(['Plain', 'Printed']).optional(),
   displayOrder: z.number().int().optional(),
   defaultDimensions: z.record(z.any()).optional(),
   defaultLayers: z.array(TemplateLayerSchema).optional(),
@@ -58,6 +68,10 @@ const UpdateTemplateSchema = z.object({
 /**
  * GET /api/v1/templates
  * List structure templates for the current tenant.
+ *
+ * Visibility gate (Smart Template Builder — Task 3.2):
+ *   Returns: platform standards ∪ tenant add-ons ∪ caller's own user add-ons.
+ *   Never returns another user's private add-on (createdByUserId set to a different user).
  */
 export async function getTemplatesRoute(
   _fastify: FastifyInstance,
@@ -66,6 +80,7 @@ export async function getTemplatesRoute(
 ) {
   try {
     await request.jwtVerify();
+    const user = extractUserFromRequest(request);
     const tenantId = extractTenantFromRequest(request);
     const db = getDatabase();
     const standardOnly = request.query.standard_only !== 'false';
@@ -84,11 +99,25 @@ export async function getTemplatesRoute(
       conditions.push(eq(schema.structureTemplates.templateKey, templateKeyFilter));
     }
 
-    const templates = await db
+    let templates = await db
       .select()
       .from(schema.structureTemplates)
       .where(and(...conditions))
       .orderBy(schema.structureTemplates.displayOrder);
+
+    // Visibility isolation: when not standard_only, filter out other users' private add-ons.
+    // A row is visible iff:
+    //   (a) isStandard = true  — platform standard
+    //   (b) isStandard = false AND createdByUserId IS NULL  — tenant add-on
+    //   (c) isStandard = false AND createdByUserId = caller's userId  — user's own add-on
+    if (!standardOnly) {
+      templates = templates.filter((t: typeof templates[number]) => {
+        if (t.isStandard) return true;
+        const cbu = (t as any).createdByUserId as string | null | undefined;
+        if (!cbu) return true; // tenant add-on
+        return cbu === user.userId; // user's own add-on
+      });
+    }
 
     return reply.send(templates);
   } catch (error: any) {
@@ -342,7 +371,7 @@ export async function instantiateTemplateRoute(
       materials.map((m: MaterialRow) => [m.id, m])
     );
 
-    const [estimate] = await db
+    const [estimate] = (await db
       .insert(schema.estimates)
       .values({
         tenantId,
@@ -350,6 +379,7 @@ export async function instantiateTemplateRoute(
         refNumber,
         jobName: jobName || template.name,
         productType: template.productType,
+        productSubtype: template.productSubtype ?? undefined,
         printingWebClass,
         dimensions,
         markupPercent: tenant.defaultMarkupPercent || '15.00',
@@ -363,18 +393,30 @@ export async function instantiateTemplateRoute(
         orderQuantityKg: orderQuantityKg != null ? String(orderQuantityKg) : undefined,
         orderQuantityUnit: orderQuantityUnit ?? 'kgs',
       })
-      .returning();
+      .returning()) as EstimateRow[];
+
+    // Use the seed's default_micron hint so estimates open with meaningful values.
+    // Users can still change microns freely — these are just starting points.
+    const DEFAULT_MICRON_BY_TYPE: Record<string, number> = {
+      substrate: 25,
+      ink: 2,
+      adhesive: 3,
+    };
 
     const defaultLayersResolved = (template.defaultLayers as TemplateLayerRef[]) || [];
     let layerPosition = 0;
     for (const layer of defaultLayersResolved) {
       const materialId = resolveLayerMaterialId(layer, materialLookup, validIds)!;
       const mat = materialById.get(materialId);
+      // Prefer the seed's default_micron, fall back to type-based default
+      const micronHint = (layer.default_micron && layer.default_micron > 0)
+        ? layer.default_micron
+        : (DEFAULT_MICRON_BY_TYPE[layer.layer_type ?? 'substrate'] ?? 10);
       await db.insert(schema.layers).values(
         buildLayerInsertValues({
           estimateId: estimate.id,
           materialId,
-          micron: 0,
+          micron: micronHint,
           position: layerPosition,
           material: mat ? toMaterialLineageSource(mat) : null,
         })
@@ -383,24 +425,22 @@ export async function instantiateTemplateRoute(
     }
 
     const defaultProcesses = (template.defaultProcesses as any[]) || [];
-    const processDefaults: Record<string, { costPerHour: number; speedBasis: string; speedValue: number; setupHours: number }> = {
-      extrusion: { costPerHour: 50, speedBasis: 'kg_per_hour', speedValue: 200, setupHours: 2 },
-      printing: { costPerHour: 80, speedBasis: 'm_per_min', speedValue: 100, setupHours: 4 },
-      lamination: { costPerHour: 60, speedBasis: 'm_per_min', speedValue: 80, setupHours: 2 },
-      slitting: { costPerHour: 30, speedBasis: 'm_per_min', speedValue: 150, setupHours: 1 },
-      pouch_making: { costPerHour: 40, speedBasis: 'pcs_per_min', speedValue: 60, setupHours: 1 },
-      seaming: { costPerHour: 35, speedBasis: 'pcs_per_min', speedValue: 50, setupHours: 1 },
-    };
+    // Load process cost/speed defaults from Master Data reference (not hardcoded)
+    const masterRef = await import('../db/platform-master-data').then((m) => m.buildMasterDataReferenceFromDb());
+    const processRefMap = new Map(
+      (masterRef.processRows ?? []).map((p) => [p.code, p])
+    );
+    const fallbackDefaults = { costPerHour: 50, speedBasis: 'kg_per_hour', speedValue: 100, setupHours: 1 };
 
     for (const proc of defaultProcesses) {
-      const defaults = processDefaults[proc.process_key] || { costPerHour: 50, speedBasis: 'kg_per_hour', speedValue: 100, setupHours: 1 };
+      const ref = processRefMap.get(proc.process_key) ?? fallbackDefaults;
       await db.insert(schema.processes).values({
         estimateId: estimate.id,
-        name: proc.process_key.charAt(0).toUpperCase() + proc.process_key.slice(1).replace(/_/g, ' '),
-        costPerHour: defaults.costPerHour.toString(),
-        speedBasis: defaults.speedBasis,
-        speedValue: defaults.speedValue.toString(),
-        setupHours: defaults.setupHours.toString(),
+        name: ref.label ?? (proc.process_key.charAt(0).toUpperCase() + proc.process_key.slice(1).replace(/_/g, ' ')),
+        costPerHour: String(ref.costPerHour ?? fallbackDefaults.costPerHour),
+        speedBasis: ref.speedBasis ?? fallbackDefaults.speedBasis,
+        speedValue: String(ref.speedValue ?? fallbackDefaults.speedValue),
+        setupHours: String(ref.setupHours ?? fallbackDefaults.setupHours),
         enabled: proc.enabled !== false,
       });
     }
@@ -427,116 +467,56 @@ export async function instantiateTemplateRoute(
   }
 }
 
-const CreateTemplateSchema = z.object({
+// Discriminated union: fromEstimate (existing) | fromDefinition (new, no estimateId needed)
+const CreateTemplateFromEstimateSchema = z.object({
+  source: z.literal('fromEstimate').optional(), // backward compat: may be omitted
   name: z.string().min(1),
   estimateId: z.string().uuid(),
 });
 
+const CreateTemplateFromDefinitionSchema = z.object({
+  source: z.literal('fromDefinition'),
+  name: z.string().min(1),
+  productType: z.enum(['roll', 'sleeve', 'pouch']),
+  productSubtype: z.string().max(64).nullable().optional(),
+  materialClass: z.enum(['PE', 'Non PE']),
+  structureTier: z.enum(['Mono', 'Duplex', 'Triplex', 'Quadriplex']),
+  printMode: z.enum(['Plain', 'Printed']),
+  defaultLayers: z.array(TemplateLayerSchema),
+  defaultProcesses: z
+    .array(z.object({ process_key: z.string(), enabled: z.boolean() }))
+    .optional(),
+});
+
+const CreateTemplateSchema = z.discriminatedUnion('source', [
+  CreateTemplateFromDefinitionSchema,
+  // fromEstimate must come second so the discriminator default check works
+]).or(CreateTemplateFromEstimateSchema);
+
 /**
- * POST /api/v1/templates — save estimate as My Template
+ * POST /api/v1/templates — create from estimate OR from a declared definition.
+ *
+ * Task 3.1: discriminated union { source: 'fromDefinition', ... } | { source: 'fromEstimate' | omitted, estimateId }
+ * Task 3.1: ownership assignment per role.
  */
 export async function createTemplateRoute(
   _fastify: FastifyInstance,
-  request: FastifyRequest<{ Body: z.infer<typeof CreateTemplateSchema> }>,
+  request: FastifyRequest<{ Body: unknown }>,
   reply: FastifyReply
 ) {
   try {
     await request.jwtVerify();
+    const user = extractUserFromRequest(request);
     const tenantId = extractTenantFromRequest(request);
-    const { name, estimateId } = CreateTemplateSchema.parse(request.body);
     const db = getDatabase();
+    const body = request.body as any;
 
-    const [estimate] = await db
-      .select()
-      .from(schema.estimates)
-      .where(and(eq(schema.estimates.id, estimateId), eq(schema.estimates.tenantId, tenantId)));
-
-    if (!estimate) {
-      return reply.status(404).send({ error: 'Estimate not found' });
+    // Route to the appropriate handler branch
+    if (body?.source === 'fromDefinition') {
+      return createTemplateFromDefinition(db, user, tenantId, body, reply);
     }
-
-    const layers = await db
-      .select({
-        materialId: schema.layers.materialId,
-        micron: schema.layers.micron,
-        position: schema.layers.position,
-        materialType: schema.materials.type,
-        costingKey: schema.materials.costingKey,
-      })
-      .from(schema.layers)
-      .leftJoin(schema.materials, eq(schema.layers.materialId, schema.materials.id))
-      .where(eq(schema.layers.estimateId, estimateId))
-      .orderBy(asc(schema.layers.position));
-
-    const processes = await db
-      .select()
-      .from(schema.processes)
-      .where(eq(schema.processes.estimateId, estimateId));
-
-    const defaultLayers = layers.map((l: (typeof layers)[number], i: number) => ({
-      layer_order: i + 1,
-      layer_type: (l.materialType || 'substrate') as 'substrate' | 'ink' | 'adhesive',
-      materialId: l.materialId,
-      ref_material_key: l.costingKey || undefined,
-      default_micron: parseFloat(l.micron),
-    }));
-
-    const defaultProcesses = processes.map((p: (typeof processes)[number]) => ({
-      process_key: p.name.toLowerCase().replace(/\s+/g, '_'),
-      enabled: p.enabled,
-    }));
-
-    const tenantMaterials = await db
-      .select()
-      .from(schema.materials)
-      .where(eq(schema.materials.tenantId, tenantId));
-    const materialMap = buildEngineMaterialMap(tenantMaterials);
-    const needsSolvent = stackNeedsSolventMix(
-      layers.map((l: (typeof layers)[number]) => ({ materialId: l.materialId })),
-      materialMap
-    );
-
-    const storedClassification = (
-      (estimate.dimensions as Record<string, unknown> | null)?.templateClassification ?? null
-    ) as { materialClass?: string; structureType?: string } | null;
-
-    const { materialClass, structureType } = resolveTemplateStoreClassification(
-      storedClassification,
-      defaultLayers,
-      tenantMaterials.map((m: (typeof tenantMaterials)[number]) => ({
-        id: m.id,
-        substrateFamily: m.substrateFamily,
-      }))
-    );
-
-    const [template] = await db
-      .insert(schema.structureTemplates)
-      .values({
-        tenantId,
-        name,
-        pebiParentPg: name,
-        productType: estimate.productType,
-        materialClass,
-        structureType,
-        displayOrder: 900,
-        isStandard: false,
-        defaultDimensions: storedClassification ? { templateClassification: storedClassification } : {},
-        defaultLayers: defaultLayers.map((l: (typeof defaultLayers)[number]) => ({ ...l, default_micron: 0 })),
-        defaultProcesses,
-        defaultPrintingWebClass: estimate.printingWebClass,
-        solventMixEnabled: needsSolvent,
-        isActive: true,
-      })
-      .returning();
-
-    const templateKey = deriveTenantTemplateKey(name, template.id);
-    const [withKey] = await db
-      .update(schema.structureTemplates)
-      .set({ templateKey, updatedAt: new Date() })
-      .where(eq(schema.structureTemplates.id, template.id))
-      .returning();
-
-    return reply.status(201).send(withKey ?? { ...template, templateKey });
+    // Default: fromEstimate (backward compat)
+    return createTemplateFromEstimateHandler(db, user, tenantId, body, reply);
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return reply.status(400).send({ error: 'Validation failed', details: error.errors });
@@ -544,6 +524,267 @@ export async function createTemplateRoute(
     console.error('Create template error:', error);
     return reply.status(500).send({ error: 'Failed to create template' });
   }
+}
+
+/** Original path — save an estimate as a My Template. */
+async function createTemplateFromEstimateHandler(
+  db: ReturnType<typeof getDatabase>,
+  user: import('../utils/auth').TokenPayload,
+  tenantId: string,
+  body: unknown,
+  reply: FastifyReply
+) {
+  const parsed = CreateTemplateFromEstimateSchema.parse(body);
+  const { name, estimateId } = parsed;
+
+  const [estimate] = await db
+    .select()
+    .from(schema.estimates)
+    .where(and(eq(schema.estimates.id, estimateId), eq(schema.estimates.tenantId, tenantId)));
+
+  if (!estimate) {
+    return reply.status(404).send({ error: 'Estimate not found' });
+  }
+
+  const layers = await db
+    .select({
+      materialId: schema.layers.materialId,
+      micron: schema.layers.micron,
+      position: schema.layers.position,
+      materialType: schema.materials.type,
+      costingKey: schema.materials.costingKey,
+    })
+    .from(schema.layers)
+    .leftJoin(schema.materials, eq(schema.layers.materialId, schema.materials.id))
+    .where(eq(schema.layers.estimateId, estimateId))
+    .orderBy(asc(schema.layers.position));
+
+  const processes = await db
+    .select()
+    .from(schema.processes)
+    .where(eq(schema.processes.estimateId, estimateId));
+
+  const defaultLayers = layers.map((l: (typeof layers)[number], i: number) => ({
+    layer_order: i + 1,
+    layer_type: (l.materialType || 'substrate') as 'substrate' | 'ink' | 'adhesive',
+    materialId: l.materialId,
+    ref_material_key: l.costingKey || undefined,
+    default_micron: parseFloat(l.micron),
+  }));
+
+  const defaultProcesses = processes.map((p: (typeof processes)[number]) => ({
+    process_key: p.name.toLowerCase().replace(/\s+/g, '_'),
+    enabled: p.enabled,
+  }));
+
+  const tenantMaterials = await db
+    .select()
+    .from(schema.materials)
+    .where(eq(schema.materials.tenantId, tenantId));
+  const materialMap = buildEngineMaterialMap(tenantMaterials);
+  const needsSolvent = stackNeedsSolventMix(
+    layers.map((l: (typeof layers)[number]) => ({ materialId: l.materialId })),
+    materialMap
+  );
+
+  const storedClassification = (
+    (estimate.dimensions as Record<string, unknown> | null)?.templateClassification ?? null
+  ) as { materialClass?: string; structureType?: string } | null;
+
+  const { materialClass, structureType } = resolveTemplateStoreClassification(
+    storedClassification,
+    defaultLayers,
+    tenantMaterials.map((m: (typeof tenantMaterials)[number]) => ({
+      id: m.id,
+      substrateFamily: m.substrateFamily,
+    }))
+  );
+
+  // Ownership: platform_admin → isStandard; tenant_admin → tenant add-on; user → user add-on
+  const { isStandard: ownIsStandard, createdByUserId } = resolveOwnership(user);
+
+  const [template] = await db
+    .insert(schema.structureTemplates)
+    .values({
+      tenantId,
+      name,
+      pebiParentPg: name,
+      productType: estimate.productType,
+      materialClass,
+      structureType,
+      displayOrder: 900,
+      isStandard: ownIsStandard,
+      createdByUserId,
+      defaultDimensions: storedClassification ? { templateClassification: storedClassification } : {},
+      defaultLayers: defaultLayers.map((l: (typeof defaultLayers)[number]) => ({ ...l, default_micron: 0 })),
+      defaultProcesses,
+      defaultPrintingWebClass: estimate.printingWebClass,
+      solventMixEnabled: needsSolvent,
+      isActive: true,
+    })
+    .returning();
+
+  const templateKey = deriveTenantTemplateKey(name, template.id);
+  const [withKey] = await db
+    .update(schema.structureTemplates)
+    .set({ templateKey, updatedAt: new Date() })
+    .where(eq(schema.structureTemplates.id, template.id))
+    .returning();
+
+  return reply.status(201).send(withKey ?? { ...template, templateKey });
+}
+
+/** New path — create from a declared attribute definition (no estimate needed). */
+async function createTemplateFromDefinition(
+  db: ReturnType<typeof getDatabase>,
+  user: import('../utils/auth').TokenPayload,
+  tenantId: string,
+  body: unknown,
+  reply: FastifyReply
+) {
+  const parsed = CreateTemplateFromDefinitionSchema.parse(body);
+  const {
+    name,
+    productType,
+    productSubtype,
+    materialClass,
+    structureTier,
+    printMode,
+    defaultLayers: rawLayers,
+    defaultProcesses,
+  } = parsed;
+
+  // ── Server-side validation (Task 3.1) ──────────────────────────────────────
+  const { substrateFamilyAllowed, TIER_SUBSTRATE_COUNT, TIER_ADHESIVE_COUNT } =
+    await import('@es/engine');
+
+  const subCount = rawLayers.filter((l) => l.layer_type === 'substrate').length;
+  const inkCount  = rawLayers.filter((l) => l.layer_type === 'ink').length;
+  const adhCount  = rawLayers.filter((l) => l.layer_type === 'adhesive').length;
+
+  const expectedSubs = TIER_SUBSTRATE_COUNT[structureTier];
+  const expectedAdh  = TIER_ADHESIVE_COUNT[structureTier];
+
+  if (subCount !== expectedSubs) {
+    return reply.status(400).send({
+      error: `Substrate count mismatch: tier ${structureTier} requires ${expectedSubs} substrates but got ${subCount}`,
+    });
+  }
+  if (adhCount < expectedAdh) {
+    return reply.status(400).send({
+      error: `Adhesive count too low: tier ${structureTier} requires at least ${expectedAdh} adhesive(s) but got ${adhCount}`,
+    });
+  }
+  if (printMode === 'Plain' && inkCount > 0) {
+    return reply.status(400).send({
+      error: 'Ink layers are not allowed when printMode is Plain',
+    });
+  }
+
+  // Validate substrate families against engine rules
+  const tenantMaterials = await db
+    .select()
+    .from(schema.materials)
+    .where(eq(schema.materials.tenantId, tenantId));
+
+  const matById = new Map(tenantMaterials.map((m: (typeof tenantMaterials)[number]) => [m.id, m]));
+  const structureType = tierToStructureType(structureTier);
+
+  for (const layer of rawLayers.filter((l) => l.layer_type === 'substrate' && l.materialId)) {
+    const mat = matById.get(layer.materialId!);
+    if (!mat) continue;
+    if (!substrateFamilyAllowed(mat.substrateFamily || '', { materialClass, structureType, productType })) {
+      return reply.status(400).send({
+        error: `Substrate material "${mat.name}" (family: ${mat.substrateFamily}) is not allowed for materialClass=${materialClass}`,
+      });
+    }
+  }
+
+  // ── Build layer records ───────────────────────────────────────────────────
+  const defaultLayers = rawLayers.map((l, i) => ({
+    layer_order: i + 1,
+    layer_type: l.layer_type,
+    materialId: l.materialId ?? null,
+    ref_material_key: undefined as string | undefined,
+    default_micron: 0,
+  }));
+
+  const materialMap = buildEngineMaterialMap(tenantMaterials);
+  const needsSolvent = stackNeedsSolventMix(
+    defaultLayers.map((l) => ({ materialId: l.materialId })),
+    materialMap
+  );
+
+  const printingWebClass = derivePrintingWebClass(
+    defaultLayers.map((l) => ({ materialId: l.materialId })),
+    materialMap
+  );
+
+  // Resolve materialClass/structureType via engine
+  const resolved = resolveTemplateStoreClassification(
+    { materialClass, structureType },
+    defaultLayers,
+    tenantMaterials.map((m: (typeof tenantMaterials)[number]) => ({
+      id: m.id,
+      substrateFamily: m.substrateFamily,
+    }))
+  );
+
+  // Persist printMode in defaultDimensions jsonb (Task 2.2 / design Option A)
+  const defaultDimensions: Record<string, unknown> = { printMode };
+
+  // Ownership assignment (Task 3.1)
+  const { isStandard: ownIsStandard, createdByUserId } = resolveOwnership(user);
+
+  const [template] = await db
+    .insert(schema.structureTemplates)
+    .values({
+      tenantId,
+      name,
+      pebiParentPg: name,
+      productType,
+      productSubtype: productSubtype ?? null,
+      materialClass: resolved.materialClass,
+      structureType: resolved.structureType,
+      displayOrder: 900,
+      isStandard: ownIsStandard,
+      createdByUserId,
+      defaultDimensions,
+      defaultLayers,
+      defaultProcesses: defaultProcesses || [],
+      defaultPrintingWebClass: printingWebClass,
+      solventMixEnabled: needsSolvent,
+      isActive: true,
+    })
+    .returning();
+
+  const templateKey = deriveTenantTemplateKey(name, template.id);
+  const [withKey] = await db
+    .update(schema.structureTemplates)
+    .set({ templateKey, updatedAt: new Date() })
+    .where(eq(schema.structureTemplates.id, template.id))
+    .returning();
+
+  return reply.status(201).send(withKey ?? { ...template, templateKey });
+}
+
+/**
+ * Determine ownership tier from the JWT role.
+ * platform_admin → isStandard=true (adds to global catalog)
+ * tenant_admin   → isStandard=false, createdByUserId=null (tenant add-on)
+ * user           → isStandard=false, createdByUserId=<userId> (user add-on)
+ */
+function resolveOwnership(user: import('../utils/auth').TokenPayload): {
+  isStandard: boolean;
+  createdByUserId: string | null;
+} {
+  if (user.role === 'platform_admin') {
+    return { isStandard: true, createdByUserId: null };
+  }
+  if (user.role === 'tenant_admin') {
+    return { isStandard: false, createdByUserId: null };
+  }
+  return { isStandard: false, createdByUserId: user.userId };
 }
 
 /**
@@ -586,10 +827,24 @@ export async function updateTemplateRoute(
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (body.name !== undefined) updates.name = body.name;
     if (body.productType !== undefined) updates.productType = body.productType;
+    if (body.productSubtype !== undefined) updates.productSubtype = body.productSubtype;
     if (body.materialClass !== undefined) updates.materialClass = body.materialClass;
     if (body.structureType !== undefined) updates.structureType = body.structureType;
+    // Task 3.3: structureTier → structureType reconciliation
+    if (body.structureTier !== undefined) {
+      updates.structureType = tierToStructureType(body.structureTier);
+    }
     if (body.displayOrder !== undefined) updates.displayOrder = body.displayOrder;
-    if (body.defaultDimensions !== undefined) updates.defaultDimensions = body.defaultDimensions;
+    // Task 3.3: merge printMode into defaultDimensions jsonb
+    if (body.printMode !== undefined || body.defaultDimensions !== undefined) {
+      const existingDims = (existing.defaultDimensions as Record<string, unknown>) || {};
+      const mergedDims = {
+        ...existingDims,
+        ...(body.defaultDimensions || {}),
+        ...(body.printMode !== undefined ? { printMode: body.printMode } : {}),
+      };
+      updates.defaultDimensions = mergedDims;
+    }
     if (body.defaultProcesses !== undefined) updates.defaultProcesses = body.defaultProcesses;
     if (body.defaultPrintingWebClass !== undefined) {
       updates.defaultPrintingWebClass = body.defaultPrintingWebClass;

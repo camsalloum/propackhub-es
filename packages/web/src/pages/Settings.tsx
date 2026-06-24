@@ -26,16 +26,23 @@ const Settings = () => {
   const [displayCurrency, setDisplayCurrency] = useState('AED');
   const [useAutoFx, setUseAutoFx] = useState(true);
   const [exchangeRateUsdToDisplay, setExchangeRateUsdToDisplay] = useState<number>(3.6725);
+  const [fxLastUpdated, setFxLastUpdated] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
   const [brandPrimaryColor, setBrandPrimaryColor] = useState('#0F1F3D');
   const [termsAndConditions, setTermsAndConditions] = useState('');
   const [footerText, setFooterText] = useState('');
   const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [fxRefreshError, setFxRefreshError] = useState<string | null>(null);
   const [teamError, setTeamError] = useState<string | null>(null);
   const [teamLoading, setTeamLoading] = useState(false);
   const [customizeUserId, setCustomizeUserId] = useState<string | null>(null);
   const [customProfile, setCustomProfile] = useState<Record<string, boolean>>({});
   const { setPreviewPreset } = useVisibilityProfile(user?.role);
+
+  /** True when auto-FX is on and rate is older than 24h (stale). */
+  const isFxStale = useAutoFx && fxLastUpdated
+    ? (Date.now() - new Date(fxLastUpdated).getTime()) > 24 * 60 * 60 * 1000
+    : false;
 
   const loadSettings = async () => {
     try {
@@ -45,10 +52,14 @@ const Settings = () => {
       setDisplayCurrency(settings.displayCurrency || 'AED');
       setExchangeRateUsdToDisplay(Number(settings.exchangeRateUsdToDisplay) || 1);
       setUseAutoFx(Boolean(settings.useAutoFx));
+      setFxLastUpdated(settings.exchangeRateUpdatedAt || null);
       setLogoUrl(settings.logo || undefined);
       setBrandPrimaryColor(settings.primaryColor || '#0F1F3D');
       setTermsAndConditions(settings.termsAndConditions || '');
       setFooterText((settings.footerText as string) || (settings.footer as string) || '');
+      // BUG-7: load defaultMarkup + defaultSlabTemplate so Save doesn't overwrite with hardcoded defaults
+      setDefaultMarkup(Number(settings.defaultMarkupPercent) || 15);
+      setDefaultSlabTemplate(settings.defaultSlabTemplate || 'standard');
     } catch (err) {
       setSettingsError(err instanceof Error ? err.message : 'Failed to load settings');
       console.error('Failed to load settings:', err);
@@ -121,12 +132,13 @@ const Settings = () => {
 
   const refreshFx = async () => {
     try {
+      setFxRefreshError(null);
       const resp = await apiClient.refreshFx();
       setExchangeRateUsdToDisplay(Number(resp.exchangeRateUsdToDisplay) || exchangeRateUsdToDisplay);
-      alert('Exchange rate refreshed');
+      setFxLastUpdated(new Date().toISOString());
     } catch (err) {
       console.error('Failed to refresh fx', err);
-      alert('Failed to refresh exchange rate');
+      setFxRefreshError('Failed to fetch exchange rate — check your connection and try again.');
     }
   };
 
@@ -383,6 +395,18 @@ const Settings = () => {
                       </div>
                     </div>
 
+                    {/* PRD §6.10 — stale-rate banner */}
+                    {isFxStale && (
+                      <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                        <span>⚠ Exchange rate is more than 24h old.</span>
+                        <button onClick={refreshFx} className="underline font-medium hover:no-underline">
+                          Refresh now
+                        </button>
+                      </div>
+                    )}
+                    {fxRefreshError && (
+                      <p className="text-sm text-red-600">{fxRefreshError}</p>
+                    )}
                     <div>
                       <label className="block text-sm font-medium text-navy mb-2">1 USD =</label>
                       <div className="flex items-center space-x-2">
@@ -401,7 +425,9 @@ const Settings = () => {
                     </div>
 
                     <p className="text-sm text-mist">
-                      Last updated: 11 Jun 2026, 09:15 UTC (auto)
+                      {fxLastUpdated
+                        ? `Last updated: ${new Date(fxLastUpdated).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })} (${useAutoFx ? 'auto' : 'manual'})`
+                        : 'Rate not yet fetched — click Refresh now'}
                     </p>
                   </div>
                 </div>
@@ -411,7 +437,8 @@ const Settings = () => {
                     <strong>Note:</strong> Estimates snapshot the exchange rate at calculation time.
                     Changing rates here only affects new estimates and re-quotes.
                   </p>
-                  <button className="btn-primary">Save Changes</button>
+                  {/* BUG-6: wire onClick so currency changes are actually persisted */}
+                  <button onClick={() => saveSettings()} className="btn-primary">Save Changes</button>
                 </div>
               </div>
             </div>

@@ -95,17 +95,6 @@ const Layout = () => {
                   </Link>
                 );
               })}
-              {user && (user.role === 'tenant_admin' || user.role === 'platform_admin') && (
-                <Link
-                  to="/platform/master-data"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center space-x-3 px-4 py-3 min-h-[48px] rounded-lg ${isActive('/platform/master-data') ? 'bg-gold/10 text-gold' : 'hover:bg-slate text-ink'
-                    }`}
-                >
-                  <FolderOpen className="w-5 h-5" />
-                  <span className="font-medium">Master Data</span>
-                </Link>
-              )}
             </nav>
             <button
               type="button"
@@ -146,16 +135,6 @@ const Layout = () => {
                 </Link>
               );
             })}
-            {user && (user.role === 'tenant_admin' || user.role === 'platform_admin') && (
-              <Link
-                to="/platform/master-data"
-                className={`flex items-center space-x-3 px-4 py-3 rounded-lg ${isActive('/platform/master-data') ? 'bg-gold/10 text-gold' : 'hover:bg-slate text-ink'
-                  }`}
-              >
-                <FolderOpen className="w-5 h-5" />
-                <span className="font-medium">Master Data</span>
-              </Link>
-            )}
           </nav>
           <div className="p-6 border-t border-border space-y-4">
             <div className="flex items-center space-x-3">

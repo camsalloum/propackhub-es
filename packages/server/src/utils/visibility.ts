@@ -155,6 +155,7 @@ export function stripEstimateRow(row: any, profile: VisibilityProfile): any {
     masterDataVersion: row.masterDataVersion,
     sourceTemplateKey: row.sourceTemplateKey,
     sourceEstimationId: row.sourceEstimationId,
+    productSubtype: row.productSubtype,
   };
 
   if (profile.markupPercent) {

@@ -216,6 +216,14 @@ export function enrichMasterDataReference(ref: MasterDataReference): MasterDataR
     })
     .filter((x): x is ProductSubtypeOption => x != null);
 
+  const processOptions = (ref.processRows ?? [])
+    .filter((p) => p.code)
+    .map((p) => ({
+      label: p.label,
+      code: p.code,
+      description: p.description ?? '',
+    }));
+
   return {
     ...ref,
     productTypeRows: ptRows,
@@ -226,5 +234,6 @@ export function enrichMasterDataReference(ref: MasterDataReference): MasterDataR
     unitOptions: unitOptions.length > 0 ? unitOptions : DEFAULT_UNITS,
     rmTypeOptions: rmTypeOptions.length > 0 ? rmTypeOptions : DEFAULT_RM_TYPES,
     productSubtypeOptions,
+    processOptions,
   };
 }

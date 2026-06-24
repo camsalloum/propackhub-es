@@ -144,10 +144,9 @@ describe('Engine calculator — golden tests', () => {
     };
 
     const result = calculateEstimate(estimate, materials);
-    // PE Plain: gsm = 23, cost/kg = 1.2 USD
-    // cost_m2 = (gsm / 1000) × cost_per_kg × (1 + waste/100)
-    //         = (23 / 1000) × 1.2 × 1.03 = 0.02838 USD/m²
-    expect(result.estimate.layers[0].costPerM2).toBeCloseTo(0.02838, 4);
+    // PE Plain: gsm = 23, cost/kg = 1.2 USD, waste excluded
+    // cost_m2 = (gsm / 1000) × cost_per_kg = (23 / 1000) × 1.2 = 0.0276 USD/m²
+    expect(result.estimate.layers[0].costPerM2).toBeCloseTo(0.0276, 4);
   });
 
   it('should calculate ink GSM (SB 30% solid at 5µ)', () => {
@@ -192,8 +191,9 @@ describe('Engine calculator — golden tests', () => {
     };
 
     const result = calculateEstimate(estimate, materials);
-    // Ink SB: gsm = (solid × micron) / 100 = (30 × 5) / 100 = 1.5 GSM
-    expect(result.estimate.layers[0].gsm).toBeCloseTo(1.5, 1);
+    // New model: user enters dry GSM directly — micron=5 means 5 gsm dry
+    // gsm = micron = 5
+    expect(result.estimate.layers[0].gsm).toBeCloseTo(5, 1);
   });
 
   it('should calculate total GSM and micron for duplex (PET/Ink/PE)', () => {
@@ -253,13 +253,14 @@ describe('Engine calculator — golden tests', () => {
     };
 
     const result = calculateEstimate(estimate, materials);
-    // PET: gsm = 12 × 1.39 = 16.68, total contribution = 16.68
-    // Ink: gsm = (30 × 5) / 100 = 1.5, total contribution = 1.5
-    // PE: gsm = 40 × 0.92 = 36.8, total contribution = 36.8
-    // total_gsm = 16.68 + 1.5 + 36.8 = 54.98 GSM
-    // total_micron = 12 (PET) + 1.5 (Ink GSM as µ) + 40 (PE) = 53.5 µ
-    expect(result.estimate.totalGsm).toBeCloseTo(54.98, 1);
-    expect(result.estimate.totalMicron).toBeCloseTo(53.5, 1);
+    // New model: user enters dry GSM for ink/adhesive directly
+    // PET: gsm = 12 × 1.39 = 16.68
+    // Ink: gsm = micron = 5 (dry gsm entered by user)
+    // PE:  gsm = 40 × 0.92 = 36.8
+    // total_gsm = 16.68 + 5 + 36.8 = 58.48
+    // total_micron = 12 + 5 + 40 = 57 (all values used as-entered)
+    expect(result.estimate.totalGsm).toBeCloseTo(58.48, 1);
+    expect(result.estimate.totalMicron).toBeCloseTo(57.0, 1);
   });
 
   it('should calculate film density', () => {
@@ -448,11 +449,11 @@ describe('Engine calculator — golden tests', () => {
     };
 
     const result = calculateEstimate(estimate, materials);
-    // gsm = 27.6 GSM
-    // cost_m2 = (27.6 / 1000) × 1.2 × 1.03 = 0.03410 USD/m²
+    // gsm = 27.6 GSM, cost/kg = 1.2 USD, waste excluded
+    // cost_m2 = (27.6 / 1000) × 1.2 = 0.03312 USD/m²
     // sqm_per_kg = 36.23
-    // mat_cost_kg = (0.03410 / 27.6) × 1000 = 1.235 USD/kg
-    const expectedMatCostKg = 1.235;
+    // mat_cost_kg = (0.03312 / 27.6) × 1000 = 1.2 USD/kg
+    const expectedMatCostKg = 1.2;
     expect(result.estimate.materialCostPerKg).toBeCloseTo(expectedMatCostKg, 2);
   });
 
@@ -495,10 +496,10 @@ describe('Engine calculator — golden tests', () => {
     };
 
     const result = calculateEstimate(estimate, materials);
-    // mat_cost_kg ≈ 1.235 USD/kg
-    // markup = 1.235 × 15/100 = 0.185 USD/kg
-    // sale_price = 1.235 + 0.185 + 0.2 + 0.1 = 1.72 USD/kg
-    expect(result.estimate.salePricePerKg).toBeCloseTo(1.72, 2);
+    // mat_cost_kg = 1.2 USD/kg (no waste)
+    // markup = 1.2 × 15/100 = 0.18 USD/kg
+    // sale_price = 1.2 + 0.18 + 0.2 + 0.1 = 1.68 USD/kg
+    expect(result.estimate.salePricePerKg).toBeCloseTo(1.68, 2);
   });
 
   it('should compute waste percentage in cost breakdown', () => {

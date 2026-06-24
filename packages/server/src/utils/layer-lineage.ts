@@ -22,14 +22,21 @@ export function buildLayerInsertValues(args: {
   micron: string | number;
   position: number;
   material?: MaterialLineageSource | null;
+  /** Per-layer price override — when set, calculation uses this instead of the library price */
+  unitCostOverrideUsd?: number | null;
 }) {
-  return {
+  const base = {
     estimateId: args.estimateId,
     materialId: args.materialId,
     micron: String(args.micron),
     position: args.position,
     ...(args.material ? snapshotsFromMaterial(args.material) : {}),
   };
+  // If an explicit price override is provided, write it as unit_cost_snapshot_usd
+  if (args.unitCostOverrideUsd != null) {
+    (base as any).unit_cost_snapshot_usd = String(args.unitCostOverrideUsd);
+  }
+  return base;
 }
 
 export function toMaterialLineageSource(m: {

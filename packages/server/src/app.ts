@@ -1,7 +1,11 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import cors from '@fastify/cors';
+import fastifyRateLimit from '@fastify/rate-limit';
+import fastifySwagger from '@fastify/swagger';
+import fastifySwaggerUi from '@fastify/swagger-ui';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
+import { ZodError } from 'zod';
 import { registerAuthRoutes } from './routes/auth';
 import { registerMaterialRoutes } from './routes/materials';
 import { registerEstimateRoutes } from './routes/estimates';
@@ -14,16 +18,33 @@ import { registerPlatformRoutes } from './routes/platform';
 import { registerCategoryRoutes } from './routes/categories';
 import { registerMasterDataRoutes } from './routes/master-data';
 import { registerPlatformMasterDataRoutes } from './routes/platform-master-data';
+import { AppError, errorBody, isFkViolation } from './utils/errors';
+import { getDatabase } from './db';
 
 export type BuildAppOptions = {
   jwtSecret?: string;
-  corsOrigin?: string;
+  corsOrigin?: string | string[];
   logger?: boolean;
 };
 
+// Capacitor native apps use these origins — must be allowed in CORS
+const CAPACITOR_ORIGINS = ['capacitor://localhost', 'https://localhost', 'http://localhost'];
+
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
   const jwtSecret = options.jwtSecret ?? process.env.JWT_SECRET ?? 'dev-secret-key-change-in-production';
-  const corsOrigin = options.corsOrigin ?? process.env.CORS_ORIGIN ?? 'http://localhost:5000';
+
+  // Build allowed-origin list: web dev + any extra from env + capacitor native origins
+  const envOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:5000';
+  const extraOrigins: string[] = Array.isArray(options.corsOrigin)
+    ? options.corsOrigin
+    : options.corsOrigin
+      ? [options.corsOrigin]
+      : [envOrigin];
+
+  const allowedOrigins = Array.from(
+    new Set([...extraOrigins, ...CAPACITOR_ORIGINS])
+  );
+
   const logger = options.logger ?? false;
 
   const fastify = Fastify({
@@ -31,19 +52,72 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   }).withTypeProvider<TypeBoxTypeProvider>();
 
   await fastify.register(cors, {
-    origin: corsOrigin,
+    origin: (origin, cb) => {
+      // Allow requests with no origin (server-to-server, curl) and all allowed origins
+      if (!origin || allowedOrigins.includes(origin)) {
+        cb(null, true);
+      } else {
+        cb(new Error(`CORS: origin ${origin} not allowed`), false);
+      }
+    },
     credentials: true,
   });
 
   await fastify.register(fastifyJwt, {
     secret: jwtSecret,
     sign: {
-      expiresIn: '7d',
+      // Phase 2.3: short-lived access tokens (30 min)
+      // Refresh via POST /auth/refresh with a long-lived refresh token
+      expiresIn: '30m',
     },
   });
 
+  // Phase 2.4: rate limiting — tight on auth endpoints, generous on API
+  await fastify.register(fastifyRateLimit, {
+    global: false, // opt-in per route or prefix
+    max: 200,
+    timeWindow: '1 minute',
+    errorResponseBuilder: (_req, context) =>
+      errorBody('RATE_LIMITED', `Too many requests — try again in ${context.after}`),
+  });
+
+  // Phase 2.5: OpenAPI at /docs
+  await fastify.register(fastifySwagger, {
+    openapi: {
+      info: {
+        title: 'ProPackHub Estimation Studio API',
+        description: 'Costing & estimation API for flexible packaging sales',
+        version: '1.0.0',
+      },
+      servers: [{ url: process.env.ES_PUBLIC_URL || 'http://localhost:5001' }],
+      components: {
+        securitySchemes: {
+          bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+        },
+      },
+      security: [{ bearerAuth: [] }],
+    },
+  });
+
+  await fastify.register(fastifySwaggerUi, {
+    routePrefix: '/docs',
+    uiConfig: { docExpansion: 'list', deepLinking: false },
+  });
+
+  // Liveness probe
   fastify.get('/health', async () => {
     return { status: 'ok', timestamp: new Date().toISOString() };
+  });
+
+  // Readiness probe — checks DB connectivity (Phase 2 §12.6)
+  fastify.get('/health/ready', async (_req, reply) => {
+    try {
+      const db = getDatabase();
+      await db.execute('SELECT 1' as unknown as Parameters<typeof db.execute>[0]);
+      return reply.send({ status: 'ready', timestamp: new Date().toISOString() });
+    } catch (err) {
+      return reply.status(503).send({ status: 'not_ready', error: 'DB unreachable' });
+    }
   });
 
   fastify.get('/api/v1', async () => {
@@ -67,22 +141,63 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   registerMasterDataRoutes(fastify);
   registerPlatformMasterDataRoutes(fastify);
 
+  // -------------------------------------------------------------------------
+  // Central error handler — maps all errors to the standard envelope.
+  // Routes still send their own errors for backwards compat but this catches
+  // anything that bubbles up uncaught.
+  // -------------------------------------------------------------------------
   fastify.setErrorHandler((error, _request, reply) => {
-    fastify.log.error(error);
+    // AppError — fully typed application error
+    if (error instanceof AppError) {
+      return reply.status(error.status).send(errorBody(error.code, error.message, error.details));
+    }
 
-    if (error.statusCode === 401) {
-      return reply.status(401).send({ error: 'Unauthorized' });
+    // Zod validation error
+    if (error instanceof ZodError) {
+      return reply.status(400).send(
+        errorBody('VALIDATION', 'Request validation failed', error.errors)
+      );
+    }
+
+    // JWT errors
+    const jwtCodes = ['FST_JWT_NO_AUTHORIZATION_IN_HEADER', 'FST_JWT_AUTHORIZATION_TOKEN_EXPIRED', 'FST_JWT_AUTHORIZATION_TOKEN_INVALID'];
+    if (error.statusCode === 401 || jwtCodes.includes((error as { code?: string }).code ?? '')) {
+      const isExpired = (error as { code?: string }).code === 'FST_JWT_AUTHORIZATION_TOKEN_EXPIRED'
+        || error.message?.includes('expired');
+      return reply.status(401).send(
+        errorBody(isExpired ? 'AUTH_EXPIRED' : 'AUTH_REQUIRED', error.message || 'Unauthorized')
+      );
+    }
+
+    // Postgres FK violation
+    if (isFkViolation(error)) {
+      return reply.status(409).send(
+        errorBody('FK_IN_USE', 'Resource is referenced and cannot be deleted')
+      );
     }
 
     if (error.statusCode === 403) {
-      return reply.status(403).send({ error: 'Forbidden' });
+      return reply.status(403).send(errorBody('FORBIDDEN', error.message || 'Forbidden'));
+    }
+
+    if (error.statusCode === 404) {
+      return reply.status(404).send(errorBody('NOT_FOUND', error.message || 'Not found'));
+    }
+
+    if (error.statusCode === 409) {
+      return reply.status(409).send(errorBody('CONFLICT', error.message || 'Conflict'));
+    }
+
+    if (error.statusCode === 429) {
+      return reply.status(429).send(errorBody('RATE_LIMITED', 'Too many requests'));
     }
 
     if (error.statusCode === 415) {
-      return reply.status(415).send({ error: 'Content-Type must be application/json' });
+      return reply.status(415).send(errorBody('VALIDATION', 'Content-Type must be application/json'));
     }
 
-    return reply.status(500).send({ error: 'Internal server error' });
+    fastify.log.error(error);
+    return reply.status(500).send(errorBody('INTERNAL', 'Internal server error'));
   });
 
   return fastify;

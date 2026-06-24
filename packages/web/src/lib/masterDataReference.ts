@@ -48,7 +48,29 @@ export interface MasterDataReferenceState {
   rmTypeOptions: RmTypeOption[];
   /** Bag/Pouch subtypes — driven by the product_subtype reference in Master Data. */
   productSubtypeOptions: ProductSubtypeOption[];
+  /** Process definitions — driven by Master Data > Processes. */
+  processOptions: ProcessOption[];
 }
+
+export interface ProcessOption {
+  /** Display label shown in the UI (e.g. "Pouch / Bag Making") */
+  label: string;
+  /** Stable code stored in template defaultProcesses (e.g. "pouch_making") */
+  code: string;
+  /** Short description shown as tooltip/hint */
+  description: string;
+}
+
+/** Default process options — used when Master Data has not yet been seeded. */
+export const DEFAULT_PROCESS_OPTIONS: ProcessOption[] = [
+  { label: 'Extrusion',    code: 'extrusion',    description: 'Blown/cast film production — PE mono structures' },
+  { label: 'Printing',     code: 'printing',     description: 'Flexo / gravure print run' },
+  { label: 'Lamination',   code: 'lamination',   description: 'Solvent or solventless bonding — multilayer stacks' },
+  { label: 'Slitting',     code: 'slitting',     description: 'Reel slitting to finished width' },
+  { label: 'Pouch Making', code: 'pouch_making', description: 'Pouch forming, filling & sealing' },
+  { label: 'Bag Making',   code: 'bag_making',   description: 'Bag forming & sealing (shopping, industrial, courier)' },
+  { label: 'Seaming',      code: 'seaming',      description: 'Side-seal seaming — sleeves' },
+];
 
 export const DEFAULT_RM_TYPE_OPTIONS: RmTypeOption[] = [
   { label: 'Substrate', code: 'substrate' },
@@ -111,6 +133,7 @@ export const DEFAULT_MASTER_REFERENCE: MasterDataReferenceState = {
   ],
   rmTypeOptions: DEFAULT_RM_TYPE_OPTIONS,
   productSubtypeOptions: DEFAULT_PRODUCT_SUBTYPE_OPTIONS,
+  processOptions: DEFAULT_PROCESS_OPTIONS,
 };
 
 export function defaultProductTypeValue(options: ProductTypeOption[] = DEFAULT_MASTER_REFERENCE.productTypeOptions): string {

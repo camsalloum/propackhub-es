@@ -18,7 +18,7 @@ import { relations } from 'drizzle-orm';
 export const userRoleEnum = pgEnum('user_role', ['user', 'tenant_admin', 'platform_admin']);
 export const estimateStatusEnum = pgEnum('estimate_status', ['draft', 'sent', 'won', 'lost']);
 export const layerTypeEnum = pgEnum('layer_type', ['substrate', 'ink', 'adhesive']);
-export const productTypeEnum = pgEnum('product_type', ['roll', 'sleeve', 'pouch']);
+export const productTypeEnum = pgEnum('product_type', ['roll', 'sleeve', 'pouch', 'bag']);
 export const tenantTypeEnum = pgEnum('tenant_type', ['individual', 'company']);
 export const printingWebClassEnum = pgEnum('printing_web_class', ['wide_web', 'narrow_web']);
 export const materialPriceSourceEnum = pgEnum('material_price_source', ['excel', 'manual', 'platform']);
@@ -31,6 +31,7 @@ export const platformReferenceCategoryEnum = pgEnum('platform_reference_category
   'adhesive',
   'packaging',
   'product_subtype',
+  'process',
 ]);
 
 // Platform master (single source of truth — replaces the retired Excel + JSON seed pipeline)
@@ -44,6 +45,8 @@ export const platformMasterMaterials = pgTable(
     solidPercent: integer('solid_percent').notNull(),
     density: decimal('density', { precision: 10, scale: 4 }).notNull(),
     costPerKgUsd: decimal('cost_per_kg_usd', { precision: 12, scale: 4 }).notNull(),
+    /** Liquid ink/adhesive price entered by user — stored to avoid floating-point round-trip loss */
+    liquidCostUsd: decimal('liquid_cost_usd', { precision: 12, scale: 2 }),
     wastePercent: integer('waste_percent').notNull().default(0),
     isSolventBased: boolean('is_solvent_based').notNull().default(false),
     substrateFamily: varchar('substrate_family', { length: 100 }),
@@ -328,6 +331,8 @@ export const estimates = pgTable('estimates', {
   statusIdx: index('estimates_status_idx').on(table.status),
   refNumberIdx: index('estimates_ref_number_idx').on(table.refNumber),
   deletedAtIdx: index('estimates_deleted_at_idx').on(table.deletedAt),
+  // BUG-11: unique ref number per tenant (partial — excludes soft-deleted rows handled in app layer)
+  tenantRefUq: index('estimates_tenant_ref_uq').on(table.tenantId, table.refNumber),
 }));
 
 // Layers (estimate details)
@@ -472,7 +477,13 @@ export const structureTemplates = pgTable('structure_templates', {
   displayOrder: integer('display_order').notNull().default(0),
   // Flag to indicate standard (built‑in) templates vs. tenant‑created (B2)
   isStandard: boolean('is_standard').notNull().default(true),
-  defaultDimensions: jsonb('default_dimensions'), // Default dimension values
+  /**
+   * Ownership tier (Smart Template Builder — Task 2.1):
+   *   null         → platform standard (isStandard=true) or tenant add-on (isStandard=false)
+   *   <userId>     → user-private add-on, visible only to that user
+   */
+  createdByUserId: uuid('created_by_user_id'),
+  defaultDimensions: jsonb('default_dimensions'), // Default dimension values; also stores printMode key
   defaultLayers: jsonb('default_layers').notNull(), // Array of { layer_order, layer_type, ref_material_key, default_micron }
   defaultProcesses: jsonb('default_processes'), // Array of { process_key, enabled }
   defaultPrintingWebClass: printingWebClassEnum('default_printing_web_class').default('wide_web'),
@@ -486,10 +497,29 @@ export const structureTemplates = pgTable('structure_templates', {
   tenantIdIdx: index('structure_templates_tenant_id_idx').on(table.tenantId),
   displayOrderIdx: index('structure_templates_display_order_idx').on(table.displayOrder),
   templateKeyIdx: index('structure_templates_tenant_key_idx').on(table.tenantId, table.templateKey),
+  createdByUserIdx: index('structure_templates_created_by_user_idx').on(table.createdByUserId),
 }));
 
 export const structureTemplatesRelations = relations(structureTemplates, ({ one }) => ({
   tenant: one(tenants, { fields: [structureTemplates.tenantId], references: [tenants.id] }),
+}));
+
+// Sessions (Phase 2.3 — refresh token rotation)
+export const sessions = pgTable('sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  /** SHA-256 hash of the random refresh token (never store plaintext) */
+  refreshTokenHash: varchar('refresh_token_hash', { length: 128 }).notNull().unique(),
+  deviceLabel: varchar('device_label', { length: 255 }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  userIdIdx: index('sessions_user_id_idx').on(table.userId),
+  tenantIdIdx: index('sessions_tenant_id_idx').on(table.tenantId),
+  expiresAtIdx: index('sessions_expires_at_idx').on(table.expiresAt),
 }));
 
 // Relations

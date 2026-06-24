@@ -1,8 +1,9 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { getDatabase, schema } from '../db';
+import type { Database } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
-import { eq, and, desc, sql, isNull, asc } from 'drizzle-orm';
+import { eq, and, desc, sql, isNull, asc, count as drizzleCount } from 'drizzle-orm';
 import { type VisibilityProfile, derivePrintingWebClass } from '@es/engine';
 import { getEffectiveProfile, stripEstimateRow, stripCalculationResult } from '../utils/visibility';
 import { calculateAndPersistEstimate, buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
@@ -13,6 +14,10 @@ import {
   mergeEstimateDimensionsClassification,
   stripConfigureFromTemplateFlag,
 } from '../utils/estimate-classification';
+import { parsePagination, paginate } from '../utils/pagination';
+
+type EstimateRow = typeof schema.estimates.$inferSelect;
+type LayerRow = typeof schema.layers.$inferSelect;
 
 async function getUserVisibilityProfile(db: any, userId: string): Promise<VisibilityProfile> {
   const [userRecord] = await db
@@ -26,7 +31,7 @@ async function getUserVisibilityProfile(db: any, userId: string): Promise<Visibi
 const EstimateCreateSchema = z.object({
   customerId: z.string().uuid().optional(),
   jobName: z.string().min(1),
-  productType: z.enum(['roll', 'sleeve', 'pouch']),
+  productType: z.enum(['roll', 'sleeve', 'pouch', 'bag']),
   productSubtype: z.string().max(64).optional(),
   printingWebClass: z.enum(['wide_web', 'narrow_web']).default('wide_web'),
   dimensions: z.record(z.any()),
@@ -37,6 +42,7 @@ const EstimateCreateSchema = z.object({
     materialId: z.string().uuid(),
     micron: z.number().positive(),
     position: z.number().nonnegative(),
+    unitCostSnapshotUsd: z.number().nonnegative().optional(), // per-layer price override
   })),
   processes: z.array(z.object({
     name: z.string(),
@@ -57,25 +63,50 @@ const EstimateCreateSchema = z.object({
   note: z.string().optional(), // used in activity log
 });
 
-async function generateRefNumber(db: any, tenantId: string): Promise<string> {
+async function generateRefNumber(db: Database, tenantId: string): Promise<string> {
   const year = new Date().getFullYear();
-  const result = await db
-    .select({ count: sql`COUNT(*)` })
-    .from(schema.estimates)
-    .where(
-      and(
-        eq(schema.estimates.tenantId, tenantId),
-        sql`EXTRACT(YEAR FROM ${schema.estimates.createdAt}) = ${year}`
-      )
-    );
+  // BUG-11: retry loop guards against race conditions where two concurrent
+  // requests grab the same COUNT and try to insert the same ref number.
+  // The UNIQUE index on (tenant_id, ref_number) catches the collision;
+  // we re-count and try the next slot (up to 5 attempts).
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const result = await db
+      .select({ count: sql`COUNT(*)` })
+      .from(schema.estimates)
+      .where(
+        and(
+          eq(schema.estimates.tenantId, tenantId),
+          isNull(schema.estimates.deletedAt),
+          sql`EXTRACT(YEAR FROM ${schema.estimates.createdAt}) = ${year}`
+        )
+      );
 
-  const count = (result[0]?.count as number) || 0;
-  return `QT-${year}-${String(count + 1).padStart(5, '0')}`;
+    const count = Number(result[0]?.count ?? 0);
+    // On retry add the attempt offset so we skip already-taken slots
+    const candidate = `QT-${year}-${String(count + 1 + attempt).padStart(5, '0')}`;
+
+    // Check whether this ref already exists (avoids relying solely on insert-catch)
+    const clash = await db
+      .select({ id: schema.estimates.id })
+      .from(schema.estimates)
+      .where(
+        and(
+          eq(schema.estimates.tenantId, tenantId),
+          eq(schema.estimates.refNumber, candidate)
+        )
+      )
+      .limit(1);
+
+    if (clash.length === 0) return candidate;
+    // Clash found — loop and try count+2, count+3 …
+  }
+  // Fallback: timestamp-based ref (should never reach here in practice)
+  return `QT-${year}-${Date.now().toString().slice(-5)}`;
 }
 
 export async function getEstimatesRoute(
   _fastify: FastifyInstance,
-  request: FastifyRequest,
+  request: FastifyRequest<{ Querystring: { limit?: string; offset?: string } }>,
   reply: FastifyReply
 ) {
   try {
@@ -83,14 +114,25 @@ export async function getEstimatesRoute(
     const tenantId = extractTenantFromRequest(request);
     const user = extractUserFromRequest(request);
     const db = getDatabase();
+    const { limit, offset } = parsePagination(request.query);
 
     const profile = await getUserVisibilityProfile(db, user.userId);
+
+    const whereClause = and(eq(schema.estimates.tenantId, tenantId), isNull(schema.estimates.deletedAt));
+
+    // Count total (for pagination metadata)
+    const [{ total }] = await db
+      .select({ total: drizzleCount() })
+      .from(schema.estimates)
+      .where(whereClause);
 
     const estimates = await db
       .select()
       .from(schema.estimates)
-      .where(and(eq(schema.estimates.tenantId, tenantId), isNull(schema.estimates.deletedAt)))
-      .orderBy(desc(schema.estimates.createdAt));
+      .where(whereClause)
+      .orderBy(desc(schema.estimates.createdAt))
+      .limit(limit)
+      .offset(offset);
 
     // Enrich with customer names
     const customers = await db
@@ -104,10 +146,11 @@ export async function getEstimatesRoute(
       customerName: est.customerId ? (customerMap.get(est.customerId) ?? null) : null,
     }));
 
-    return reply.send(visibleEstimates);
-  } catch (error: any) {
-    if (error.statusCode === 401 || error.code === 'FST_JWT_NO_AUTHORIZATION_IN_HEADER') {
-      throw error; // Let Fastify handle auth errors properly
+    return reply.send(paginate(visibleEstimates, Number(total), limit, offset));
+  } catch (error: unknown) {
+    const e = error as { statusCode?: number; code?: string; message?: string };
+    if (e.statusCode === 401 || e.code === 'FST_JWT_NO_AUTHORIZATION_IN_HEADER') {
+      throw error;
     }
     console.error('Get estimates error:', error);
     return reply.status(500).send({ error: 'Failed to fetch estimates' });
@@ -155,7 +198,7 @@ export async function createEstimateRoute(
     );
 
     // Create estimate
-    const [estimate] = await db
+    const [estimate] = (await db
       .insert(schema.estimates)
       .values({
         tenantId,
@@ -176,7 +219,7 @@ export async function createEstimateRoute(
         orderQuantityKg: data.orderQuantityKg != null ? String(data.orderQuantityKg) : undefined,
         orderQuantityUnit: data.orderQuantityUnit ?? 'kgs',
       })
-      .returning();
+      .returning()) as EstimateRow[];
 
     // Create layers
     for (const layer of data.layers) {
@@ -300,14 +343,15 @@ async function getEstimateRoute(
     const { id } = request.params;
     const db = getDatabase();
 
-    // Get estimate
+    // Get estimate (BUG-5: honor soft-delete)
     const [estimate] = await db
       .select()
       .from(schema.estimates)
       .where(
         and(
           eq(schema.estimates.id, id),
-          eq(schema.estimates.tenantId, tenantId)
+          eq(schema.estimates.tenantId, tenantId),
+          isNull(schema.estimates.deletedAt)
         )
       );
 
@@ -353,12 +397,13 @@ async function getEstimateRoute(
     const materialMap = new Map<string, MaterialRow>(allMaterials.map((m: MaterialRow) => [m.id, m]));
     const enrichedLayers = layers.map((l: (typeof layers)[number]) => {
       const mat = materialMap.get(l.materialId);
-      const stale = l.materialStale || !mat;
+      const stale = !mat;
       return {
         ...l,
         materialName: l.materialName || mat?.name || 'Unknown',
         materialType: mat?.type ?? 'substrate',
         materialHoover: mat?.hoover ?? null,
+        materialCostPerKgUsd: mat?.costPerKgUsd ?? '0',
         isSolventBased: mat?.isSolventBased ?? false,
         materialStale: stale,
       };
@@ -394,14 +439,15 @@ async function updateEstimateRoute(
     const { id } = request.params;
     const db = getDatabase();
 
-    // Check estimate exists and belongs to tenant
+    // Check estimate exists and belongs to tenant (BUG-5: honor soft-delete)
     const [existing] = await db
       .select()
       .from(schema.estimates)
       .where(
         and(
           eq(schema.estimates.id, id),
-          eq(schema.estimates.tenantId, tenantId)
+          eq(schema.estimates.tenantId, tenantId),
+          isNull(schema.estimates.deletedAt)
         )
       );
 
@@ -474,104 +520,113 @@ async function updateEstimateRoute(
       updates.solventRatio = String((request.body as any).solventRatio);
     }
 
-    const [updated] = await db
-      .update(schema.estimates)
-      .set(updates)
-      .where(eq(schema.estimates.id, id))
-      .returning();
+    // BUG-1 (full fix): ONE transaction wraps the base-field update + layers + processes + slabs
+    // so the entire PATCH is atomic — no partial state possible.
+    let updated!: EstimateRow;
 
-    // Update layers (delete + re-insert)
-    if (request.body.layers !== undefined) {
-      await db.delete(schema.layers).where(eq(schema.layers.estimateId, id));
-      const tenantMaterials = await db
-        .select()
-        .from(schema.materials)
-        .where(eq(schema.materials.tenantId, tenantId));
-      const materialById = new Map<string, MaterialRow>(
-      tenantMaterials.map((m: MaterialRow) => [m.id, m])
-    );
-      const masterDataVersion = await getMasterDataVersion();
-
-      for (const layer of request.body.layers) {
-        const mat = materialById.get(layer.materialId);
-        await db.insert(schema.layers).values(
-          buildLayerInsertValues({
-            estimateId: id,
-            materialId: layer.materialId,
-            micron: layer.micron,
-            position: layer.position,
-            material: mat ? toMaterialLineageSource(mat) : null,
-          })
-        );
-      }
-
-      const materialMap = buildEngineMaterialMap(tenantMaterials);
-      const derivedPrintingWeb = derivePrintingWebClass(
-        request.body.layers.map((l) => ({ materialId: l.materialId })),
-        materialMap
-      );
-
-      const templateMc = (
-        (existing.dimensions as Record<string, unknown> | null)?.templateClassification as
-          | { materialClass?: string }
-          | undefined
-      )?.materialClass;
-
-      const classificationSnapshot = buildEstimateClassificationSnapshot({
-        jobName: request.body.jobName ?? existing.jobName,
-        productType: request.body.productType ?? existing.productType,
-        materialClass: templateMc ?? null,
-        layers: request.body.layers.map((layer) => {
-          const mat = materialById.get(layer.materialId);
-          return { materialType: mat?.type };
-        }),
-      });
-
-      const mergedDimensions = mergeEstimateDimensionsClassification(
-        (request.body.dimensions ?? existing.dimensions) as Record<string, unknown>,
-        classificationSnapshot
-      );
-
-      await db
+    await db.transaction(async (tx) => {
+      // 1. Apply base-field updates inside the transaction
+      const [txUpdated] = (await tx
         .update(schema.estimates)
-        .set({
-          printingWebClass: derivedPrintingWeb,
-          masterDataVersion,
-          dimensions: mergedDimensions,
-          updatedAt: new Date(),
-        })
-        .where(eq(schema.estimates.id, id));
-    }
+        .set(updates)
+        .where(and(eq(schema.estimates.id, id), eq(schema.estimates.tenantId, tenantId)))
+        .returning()) as EstimateRow[];
+      updated = txUpdated;
 
-    // Update processes (delete + re-insert)
-    if (request.body.processes !== undefined) {
-      await db.delete(schema.processes).where(eq(schema.processes.estimateId, id));
-      for (const process of request.body.processes) {
-        await db.insert(schema.processes).values({
-          estimateId: id,
-          name: process.name,
-          costPerHour: process.costPerHour.toString(),
-          speedBasis: process.speedBasis,
-          speedValue: process.speedValue.toString(),
-          setupHours: process.setupHours.toString(),
-          enabled: process.enabled,
-        });
-      }
-    }
+      // 2. Layers (delete + re-insert)
+      if (request.body.layers !== undefined) {
+        const tenantMaterials = await tx
+          .select()
+          .from(schema.materials)
+          .where(eq(schema.materials.tenantId, tenantId));
+        const materialById = new Map<string, MaterialRow>(
+          tenantMaterials.map((m: MaterialRow) => [m.id, m])
+        );
+        const masterDataVersion = await getMasterDataVersion();
 
-    // Update slabs (delete + re-insert)
-    if (request.body.slabs !== undefined) {
-      await db.delete(schema.slabs).where(eq(schema.slabs.estimateId, id));
-      for (let i = 0; i < request.body.slabs.length; i++) {
-        const slab = request.body.slabs[i];
-        await db.insert(schema.slabs).values({
-          estimateId: id,
-          quantityKg: slab.quantityKg.toString(),
-          pricePerKg: slab.pricePerKg.toString(),
-          sortOrder: i,
+        const materialMap = buildEngineMaterialMap(tenantMaterials);
+        const derivedPrintingWeb = derivePrintingWebClass(
+          request.body.layers.map((l) => ({ materialId: l.materialId })),
+          materialMap
+        );
+
+        const templateMc = (
+          (existing.dimensions as Record<string, unknown> | null)?.templateClassification as
+            | { materialClass?: string }
+            | undefined
+        )?.materialClass;
+
+        const classificationSnapshot = buildEstimateClassificationSnapshot({
+          jobName: request.body.jobName ?? existing.jobName,
+          productType: request.body.productType ?? existing.productType,
+          materialClass: templateMc ?? null,
+          layers: request.body.layers.map((layer) => {
+            const mat = materialById.get(layer.materialId);
+            return { materialType: mat?.type };
+          }),
         });
+
+        const mergedDimensions = mergeEstimateDimensionsClassification(
+          (request.body.dimensions ?? existing.dimensions) as Record<string, unknown>,
+          classificationSnapshot
+        );
+
+        await tx.delete(schema.layers).where(eq(schema.layers.estimateId, id));
+        for (const layer of request.body.layers) {
+          const mat = materialById.get(layer.materialId);
+          await tx.insert(schema.layers).values(
+            buildLayerInsertValues({
+              estimateId: id,
+              materialId: layer.materialId,
+              micron: layer.micron,
+              position: layer.position,
+              material: mat ? toMaterialLineageSource(mat) : null,
+              unitCostOverrideUsd: layer.unitCostSnapshotUsd ?? null,
+            })
+          );
+        }
+        // Second estimate update (derived fields) — still inside the same transaction
+        await tx
+          .update(schema.estimates)
+          .set({
+            printingWebClass: derivedPrintingWeb,
+            masterDataVersion,
+            dimensions: mergedDimensions,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(schema.estimates.id, id), eq(schema.estimates.tenantId, tenantId)));
       }
-    }
+
+      // 3. Processes (delete + re-insert)
+      if (request.body.processes !== undefined) {
+        await tx.delete(schema.processes).where(eq(schema.processes.estimateId, id));
+        for (const process of request.body.processes) {
+          await tx.insert(schema.processes).values({
+            estimateId: id,
+            name: process.name,
+            costPerHour: process.costPerHour.toString(),
+            speedBasis: process.speedBasis,
+            speedValue: process.speedValue.toString(),
+            setupHours: process.setupHours.toString(),
+            enabled: process.enabled,
+          });
+        }
+      }
+
+      // 4. Slabs (delete + re-insert)
+      if (request.body.slabs !== undefined) {
+        await tx.delete(schema.slabs).where(eq(schema.slabs.estimateId, id));
+        for (let i = 0; i < request.body.slabs.length; i++) {
+          const slab = request.body.slabs[i];
+          await tx.insert(schema.slabs).values({
+            estimateId: id,
+            quantityKg: slab.quantityKg.toString(),
+            pricePerKg: slab.pricePerKg.toString(),
+            sortOrder: i,
+          });
+        }
+      }
+    });
 
     // If status changed, insert an activity log for audit trail
     if (updates.status) {
@@ -590,7 +645,15 @@ async function updateEstimateRoute(
       }
     }
 
-    return reply.send(updated);
+    // BUG-3: re-select the final row after all updates (second update may change
+    // printingWebClass, masterDataVersion, dimensions — returning() from the first
+    // update would give the client stale data).
+    const [finalRow] = (await db
+      .select()
+      .from(schema.estimates)
+      .where(and(eq(schema.estimates.id, id), eq(schema.estimates.tenantId, tenantId)))) as EstimateRow[];
+
+    return reply.send(finalRow ?? updated);
   } catch (error: any) {
     console.error('Update estimate error:', error);
     return reply.status(500).send({ error: 'Failed to update estimate' });
@@ -611,7 +674,7 @@ async function deleteEstimateRoute(
     const { id } = request.params;
     const db = getDatabase();
 
-    const [deleted] = await db
+    const [deleted] = (await db
       .update(schema.estimates)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
       .where(
@@ -620,7 +683,7 @@ async function deleteEstimateRoute(
           eq(schema.estimates.tenantId, tenantId)
         )
       )
-      .returning();
+      .returning()) as EstimateRow[];
 
     if (!deleted) {
       return reply.status(404).send({ error: 'Estimate not found' });
@@ -647,14 +710,15 @@ async function requoteEstimateRoute(
     const { id } = request.params;
     const db = getDatabase();
 
-    // Get source estimate
+    // Get source estimate (BUG-5: honor soft-delete)
     const [source] = await db
       .select()
       .from(schema.estimates)
       .where(
         and(
           eq(schema.estimates.id, id),
-          eq(schema.estimates.tenantId, tenantId)
+          eq(schema.estimates.tenantId, tenantId),
+          isNull(schema.estimates.deletedAt)
         )
       );
 
@@ -675,21 +739,8 @@ async function requoteEstimateRoute(
       .where(eq(schema.layers.estimateId, id))
       .orderBy(schema.layers.position);
 
-    // Generate new ref number
-    const now = new Date();
-    const year = now.getFullYear();
-    const count = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(schema.estimates)
-      .where(
-        and(
-          eq(schema.estimates.tenantId, tenantId),
-          sql`EXTRACT(YEAR FROM ${schema.estimates.createdAt}) = ${year}`
-        )
-      );
-
-    const nextNumber = (count[0]?.count || 0) + 1;
-    const newRefNumber = `QT-${year}-${String(nextNumber).padStart(5, '0')}`;
+    // Generate new ref number via shared helper (BUG-11: excludes soft-deleted)
+    const newRefNumber = await generateRefNumber(db, tenantId);
 
     const tenantMaterials = await db
       .select()
@@ -701,7 +752,7 @@ async function requoteEstimateRoute(
     const masterDataVersion = await getMasterDataVersion();
 
     // Create new estimate
-    const [newEstimate] = await db
+    const [newEstimate] = (await db
       .insert(schema.estimates)
       .values({
         tenantId,
@@ -725,7 +776,7 @@ async function requoteEstimateRoute(
         masterDataVersion,
         sourceTemplateKey: source.sourceTemplateKey,
       })
-      .returning();
+      .returning()) as EstimateRow[];
 
     // Copy layers (fresh lineage snapshots from current tenant materials)
     for (const layer of sourceLayers) {
@@ -780,13 +831,13 @@ async function requoteEstimateRoute(
       .where(eq(schema.materials.tenantId, tenantId));
     const materialMap = new Map<string, MaterialRow>(allMaterials.map((m: MaterialRow) => [m.id, m]));
 
-    const priceChanges = sourceLayers.map((layer: (typeof sourceLayers)[number]) => {
+    const priceChanges = sourceLayers.map((layer: LayerRow) => {
       const mat = materialMap.get(layer.materialId);
       const newCostUsd = mat ? parseFloat(mat.costPerKgUsd) : 0;
-      const snapshotCost = layer.costPerKgUsd ? parseFloat(layer.costPerKgUsd) : null;
+      const snapshotCost = layer.unit_cost_snapshot_usd ? parseFloat(layer.unit_cost_snapshot_usd) : null;
       const oldCostPerSqM = Number(layer.costPerM2 || 0);
       const micron = parseFloat(layer.micron);
-      const density = layer.density ? parseFloat(layer.density) : mat ? parseFloat(mat.density) : 1;
+      const density = mat ? parseFloat(mat.density) : 1;
       const gsm = micron * density;
       const oldCostUsd =
         snapshotCost ??
@@ -852,7 +903,7 @@ async function duplicateEstimateRoute(
     const [source] = await db
       .select()
       .from(schema.estimates)
-      .where(and(eq(schema.estimates.id, id), eq(schema.estimates.tenantId, tenantId)));
+      .where(and(eq(schema.estimates.id, id), eq(schema.estimates.tenantId, tenantId), isNull(schema.estimates.deletedAt)));
 
     if (!source) {
       return reply.status(404).send({ error: 'Source estimate not found' });
@@ -892,7 +943,7 @@ async function duplicateEstimateRoute(
     );
     const masterDataVersion = await getMasterDataVersion();
 
-    const [newEstimate] = await db
+    const [newEstimate] = (await db
       .insert(schema.estimates)
       .values({
         tenantId,
@@ -922,7 +973,7 @@ async function duplicateEstimateRoute(
         masterDataVersion,
         sourceTemplateKey: source.sourceTemplateKey,
       })
-      .returning();
+      .returning()) as EstimateRow[];
 
     for (const layer of sourceLayers) {
       const mat = materialById.get(layer.materialId);
@@ -969,8 +1020,9 @@ async function duplicateEstimateRoute(
 }
 
 export async function registerEstimateRoutes(fastify: FastifyInstance) {
-  fastify.get('/api/v1/estimates', async (request, reply) =>
-    getEstimatesRoute(fastify, request, reply)
+  fastify.get<{ Querystring: { limit?: string; offset?: string } }>(
+    '/api/v1/estimates',
+    async (request, reply) => getEstimatesRoute(fastify, request, reply)
   );
 
   fastify.post<{ Body: z.infer<typeof EstimateCreateSchema> }>(

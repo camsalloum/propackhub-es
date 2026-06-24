@@ -107,6 +107,8 @@ export function calculateEstimate(
       const gsm = layer.micron * material.density;
       baseCostPerM2 = (gsm / 1000) * material.costPerKgUsd;
     } else {
+      // New model: layer.micron = dry gsm; costPerKgUsd = dry-equiv cost
+      // cost/m² = (dry_gsm / 1000) × costPerKgUsd_dry_equiv
       baseCostPerM2 = (layer.micron / 1000) * material.costPerKgUsd;
     }
     totalWasteCostPerM2 += baseCostPerM2 * (material.wastePercent / 100);
@@ -161,16 +163,22 @@ function calculateLayer(layer: Layer, material: Material): Layer {
   let costPerM2: number;
 
   if (material.type === 'substrate') {
-    // Substrate: gsm = micron × density
+    // Substrate: user enters micron; gsm = micron × density
     gsm = layer.micron * material.density;
-    // cost_m2 = (gsm / 1000) × cost_per_kg × (1 + waste/100)
-    costPerM2 = (gsm / 1000) * material.costPerKgUsd * (1 + material.wastePercent / 100);
+    // cost/m² = (gsm / 1000) × cost_per_kg
+    costPerM2 = (gsm / 1000) * material.costPerKgUsd;
   } else {
-    // Ink or Adhesive: gsm = (solid × micron) / 100
-    gsm = (material.solidPercent * layer.micron) / 100;
-    // cost_m2 = (micron / 1000) × cost_per_kg × (1 + waste/100)
-    // Note: uses micron, not gsm (Laravel specific)
-    costPerM2 = (layer.micron / 1000) * material.costPerKgUsd * (1 + material.wastePercent / 100);
+    // Ink or Adhesive: user enters DRY GSM (what remains on the film after solvent flash-off).
+    // layer.micron holds the dry gsm value.
+    gsm = layer.micron;
+
+    // costPerKgUsd is the dry-equivalent cost: liquidPrice / (solid% / 100)
+    // That was computed in Raw Materials and stored in the library.
+    // So: cost/m² = (dry_gsm / 1000) × costPerKgUsd_dry_equiv
+    // Example: 2 gsm dry, solidFraction=0.35, liquidPrice=4.60
+    //   costPerKgUsd = 4.60/0.35 = 13.143
+    //   cost/m² = (2/1000) × 13.143 = 0.02629 ✓
+    costPerM2 = (gsm / 1000) * material.costPerKgUsd;
   }
 
   return {
@@ -182,12 +190,9 @@ function calculateLayer(layer: Layer, material: Material): Layer {
 }
 
 /**
- * Calculate total micron per COSTING_NOTES §3:
- * total_micron = Σ substrate_micron + Σ ink/adhesive_gsm
- * (substrate µ + ink/adhesive_gsm treated as thickness equivalent)
- *
- * This mixing of units is intentional: GSM of ink/adhesive layers is used as a
- * thickness equivalent in the total_micron calculation for film_density.
+ * Calculate total micron per new model:
+ * total_micron = Σ substrate_micron + Σ ink/adhesive_dry_gsm
+ * (substrate µ + ink/adhesive dry gsm treated as thickness equivalent for film_density)
  */
 function calculateTotalMicron(layers: Layer[], materials: Map<string, Material>): number {
   return layers.reduce((sum, layer) => {
@@ -198,9 +203,8 @@ function calculateTotalMicron(layers: Layer[], materials: Map<string, Material>)
       // Substrate: add micron directly
       return sum + layer.micron;
     } else {
-      // Ink/Adhesive: sum GSM as thickness equivalent (COSTING_NOTES §3)
-      const gsm = (material.solidPercent * layer.micron) / 100;
-      return sum + gsm;
+      // Ink/Adhesive: user entered dry gsm — use it as thickness equivalent
+      return sum + layer.micron; // layer.micron = dry gsm in new model
     }
   }, 0);
 }
@@ -217,6 +221,7 @@ function calculatePrintingWebWidth(dimensions: EstimateDimensions): number {
       }
       break;
     case 'pouch':
+    case 'bag':
       if (dimensions.openWidthMm && dimensions.numberOfUps && dimensions.extraPrintingTrimMm !== undefined) {
         return (dimensions.openWidthMm * dimensions.numberOfUps) + dimensions.extraPrintingTrimMm;
       }
@@ -281,8 +286,12 @@ function calculateProductMetrics(
       break;
 
     case 'pouch':
+    case 'bag':
+      // Bag and Pouch share the same area-based costing formula:
+      // pieces_per_kg = 1000 / (openWidthMm × openHeightMm × totalGsm × 1e-6)
+      // The distinction (bag vs pouch) is preserved in productType on the estimate
+      // for reporting/filtering; the math is identical.
       if (dimensions.openWidthMm && dimensions.openHeightMm) {
-        // pieces_per_kg = (1000 / (open_width_mm × open_height_mm × total_gsm × 1e-6)) × 1
         result.piecesPerKg = (1000 / (dimensions.openWidthMm * dimensions.openHeightMm * totalGsm * 1e-6)) * 1;
         result.gramsPerPiece = 1000 / result.piecesPerKg;
 
@@ -290,7 +299,7 @@ function calculateProductMetrics(
           result.linearMPerKgWeb = (sqmPerKg / printingWebWidthMm) * 1000;
         }
 
-        // For pouch, linear_m_per_kg_reel uses open_height (Laravel specific)
+        // linear_m_per_kg_reel uses open_height for both bag and pouch
         if (dimensions.openHeightMm > 0) {
           result.linearMPerKgReel = (sqmPerKg / dimensions.openHeightMm) * 1000;
         }

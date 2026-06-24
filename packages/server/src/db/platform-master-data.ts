@@ -28,6 +28,21 @@ const here = dirname(fileURLToPath(import.meta.url));
 
 const PLATFORM_STATE_ID = 1;
 
+/**
+ * Default process definitions — seeded once into platform_reference_items.
+ * Admin can edit labels, costs and speeds via Master Data > Processes.
+ * code is the stable key used in template defaultProcesses and instantiate route.
+ */
+export const DEFAULT_PROCESS_ROWS = [
+  { label: 'Extrusion',    code: 'extrusion',    description: 'Blown/cast film production — PE mono structures',        costPerHour: 50,  speedBasis: 'kg_per_hour', speedValue: 200, setupHours: 2 },
+  { label: 'Printing',     code: 'printing',     description: 'Flexo / gravure print run',                              costPerHour: 80,  speedBasis: 'm_per_min',   speedValue: 100, setupHours: 4 },
+  { label: 'Lamination',   code: 'lamination',   description: 'Solvent or solventless bonding — multilayer stacks',     costPerHour: 60,  speedBasis: 'm_per_min',   speedValue: 80,  setupHours: 2 },
+  { label: 'Slitting',     code: 'slitting',     description: 'Reel slitting to finished width',                        costPerHour: 30,  speedBasis: 'm_per_min',   speedValue: 150, setupHours: 1 },
+  { label: 'Pouch Making', code: 'pouch_making', description: 'Pouch forming, filling & sealing',                       costPerHour: 40,  speedBasis: 'pcs_per_min', speedValue: 60,  setupHours: 1 },
+  { label: 'Bag Making',   code: 'bag_making',   description: 'Bag forming & sealing (shopping, industrial, courier)',  costPerHour: 35,  speedBasis: 'pcs_per_min', speedValue: 50,  setupHours: 1 },
+  { label: 'Seaming',      code: 'seaming',      description: 'Side-seal seaming — sleeves',                            costPerHour: 35,  speedBasis: 'pcs_per_min', speedValue: 50,  setupHours: 1 },
+] as const;
+
 /** Ensure singleton version row exists (id = 1). */
 export async function ensurePlatformMasterState(): Promise<void> {
   const db = getDatabase();
@@ -119,6 +134,7 @@ function rowToMasterMaterial(row: typeof schema.platformMasterMaterials.$inferSe
     solidPercent: row.solidPercent,
     density: Number(row.density),
     costPerKgUsd: Number(row.costPerKgUsd),
+    liquidCostUsd: row.liquidCostUsd != null ? Number(row.liquidCostUsd) : null,
     wastePercent: row.wastePercent,
     isSolventBased: row.isSolventBased,
     substrateFamily: row.substrateFamily,
@@ -146,6 +162,7 @@ export function masterMaterialInputToDbValues(
     substrateGrade: m.substrateGrade ?? null,
     hoover: m.hoover ?? null,
     marketPriceUsd: market.toFixed(2),
+    liquidCostUsd: (m as any).liquidCostUsd != null ? Number((m as any).liquidCostUsd).toFixed(2) : null,
     costingKey: costingKeyForMasterKey(m.key),
     sortOrder: m.sortOrder ?? 0,
     active: true,
@@ -217,22 +234,23 @@ export async function updatePlatformMasterMaterial(
   const existing = await getPlatformMasterMaterialById(id);
   if (!existing) return null;
 
+  const existingMaterial = rowToMasterMaterial(existing);
   const merged: MasterMaterial = {
-    ...existing,
+    ...existingMaterial,
     ...input,
-    key: input.key ?? existing.key,
-    name: input.name ?? existing.name,
-    type: (input.type ?? existing.type) as MasterMaterial['type'],
-    solidPercent: input.solidPercent ?? existing.solidPercent,
-    density: input.density ?? existing.density,
-    costPerKgUsd: input.costPerKgUsd ?? existing.costPerKgUsd,
-    wastePercent: input.wastePercent ?? existing.wastePercent,
-    isSolventBased: input.isSolventBased ?? existing.isSolventBased,
-    substrateFamily: input.substrateFamily !== undefined ? input.substrateFamily : existing.substrateFamily,
-    substrateGrade: input.substrateGrade !== undefined ? input.substrateGrade : existing.substrateGrade,
-    hoover: input.hoover !== undefined ? input.hoover : existing.hoover,
+    key: input.key ?? existingMaterial.key,
+    name: input.name ?? existingMaterial.name,
+    type: (input.type ?? existingMaterial.type) as MasterMaterial['type'],
+    solidPercent: input.solidPercent ?? existingMaterial.solidPercent,
+    density: input.density ?? existingMaterial.density,
+    costPerKgUsd: input.costPerKgUsd ?? existingMaterial.costPerKgUsd,
+    wastePercent: input.wastePercent ?? existingMaterial.wastePercent,
+    isSolventBased: input.isSolventBased ?? existingMaterial.isSolventBased,
+    substrateFamily: input.substrateFamily !== undefined ? input.substrateFamily : existingMaterial.substrateFamily,
+    substrateGrade: input.substrateGrade !== undefined ? input.substrateGrade : existingMaterial.substrateGrade,
+    hoover: input.hoover !== undefined ? input.hoover : existingMaterial.hoover,
     marketPriceUsd:
-      input.marketPriceUsd !== undefined ? input.marketPriceUsd : existing.marketPriceUsd,
+      input.marketPriceUsd !== undefined ? input.marketPriceUsd : existingMaterial.marketPriceUsd,
   };
 
   const values = masterMaterialInputToDbValues({
@@ -434,6 +452,27 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
       parent: ((i.metadata || {}) as { parent?: string }).parent || '',
     }));
 
+  const processRows = items
+    .filter((i: PlatformReferenceItemRow) => i.category === 'process')
+    .map((i: PlatformReferenceItemRow) => {
+      const meta = (i.metadata || {}) as {
+        description?: string;
+        costPerHour?: number;
+        speedBasis?: string;
+        speedValue?: number;
+        setupHours?: number;
+      };
+      return {
+        label: i.label,
+        code: i.code || '',
+        description: meta.description ?? '',
+        costPerHour: meta.costPerHour ?? 50,
+        speedBasis: meta.speedBasis ?? 'kg_per_hour',
+        speedValue: meta.speedValue ?? 100,
+        setupHours: meta.setupHours ?? 1,
+      };
+    });
+
   const printingWebClasses = items
     .filter((i: PlatformReferenceItemRow) => i.category === 'printing_web')
     .map((i: PlatformReferenceItemRow) => {
@@ -457,6 +496,7 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
     adhesive: byCategory('adhesive'),
     printingWebClasses,
     productSubtypeRows,
+    processRows,
   };
 }
 
@@ -683,6 +723,15 @@ export async function ensurePlatformMasterSeeded(): Promise<{ materials: number;
           metadata: { inkSystem: r.inkSystem, solidPercent: r.solidPercent },
         })),
       },
+      // Default processes — seeded once; admin can edit via Master Data > Processes
+      {
+        category: 'process',
+        items: DEFAULT_PROCESS_ROWS.map((p) => ({
+          label: p.label,
+          code: p.code,
+          metadata: { description: p.description, costPerHour: p.costPerHour, speedBasis: p.speedBasis, speedValue: p.speedValue, setupHours: p.setupHours },
+        })),
+      },
     ];
 
     for (const batch of batches) {
@@ -696,4 +745,36 @@ export async function ensurePlatformMasterSeeded(): Promise<{ materials: number;
   await ensurePlatformMasterState();
 
   return { materials: materialsSeeded, reference: referenceSeeded };
+}
+
+/**
+ * Idempotent — seeds default process rows into platform_reference_items when none exist.
+ * Called on startup so existing deployments get processes without a full re-seed.
+ */
+export async function ensureProcessesSeeded(): Promise<number> {
+  const db = getDatabase();
+  const existing = await db
+    .select({ id: schema.platformReferenceItems.id })
+    .from(schema.platformReferenceItems)
+    .where(eq(schema.platformReferenceItems.category, 'process' as RefCategory))
+    .limit(1);
+
+  if (existing.length > 0) return 0;
+
+  await replacePlatformReferenceCategory(
+    'process' as RefCategory,
+    DEFAULT_PROCESS_ROWS.map((p) => ({
+      label: p.label,
+      code: p.code,
+      metadata: {
+        description: p.description,
+        costPerHour: p.costPerHour,
+        speedBasis: p.speedBasis,
+        speedValue: p.speedValue,
+        setupHours: p.setupHours,
+      },
+    }))
+  );
+  console.log(`✓ Seeded ${DEFAULT_PROCESS_ROWS.length} default process definitions`);
+  return DEFAULT_PROCESS_ROWS.length;
 }

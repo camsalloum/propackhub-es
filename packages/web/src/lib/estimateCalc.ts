@@ -31,7 +31,7 @@ export interface ClientCalcInput {
   layers: Array<{ id?: string; materialId: string; micron: number; position: number }>;
   materials: ClientCalcMaterial[];
   processes?: ClientCalcProcess[];
-  productType: 'roll' | 'sleeve' | 'pouch';
+  productType: 'roll' | 'sleeve' | 'pouch' | 'bag';
   dimensions: Record<string, number | undefined>;
   markupPercent: number;
   platesPerKg: number;
@@ -45,13 +45,22 @@ export interface ClientCalcInput {
 }
 
 function toMaterial(m: ClientCalcMaterial): Material {
+  // Normalize type — guard against unexpected casing or aliases
+  const normalizeType = (t: string): Material['type'] => {
+    const lower = (t || '').toLowerCase();
+    if (lower === 'ink' || lower.includes('ink')) return 'ink';
+    if (lower === 'adhesive' || lower.includes('adhesive')) return 'adhesive';
+    return 'substrate';
+  };
+  const density = typeof m.density === 'string' ? parseFloat(m.density) : m.density;
+  const costPerKgUsd = typeof m.costPerKgUsd === 'string' ? parseFloat(m.costPerKgUsd) : m.costPerKgUsd;
   return {
     id: m.id,
     name: m.name,
-    type: m.type as Material['type'],
+    type: normalizeType(m.type),
     solidPercent: m.solidPercent,
-    density: typeof m.density === 'string' ? parseFloat(m.density) : m.density,
-    costPerKgUsd: typeof m.costPerKgUsd === 'string' ? parseFloat(m.costPerKgUsd) : m.costPerKgUsd,
+    density,
+    costPerKgUsd,
     wastePercent: m.wastePercent,
     isSolventBased: m.isSolventBased,
   };

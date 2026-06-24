@@ -33,9 +33,11 @@ const initialState: AuthState = {
 export function useAuth() {
   const [state, setState] = useState<AuthState>(initialState);
 
-  // Check if user is already logged in
+  // Check if user is already logged in; attempt refresh if access token expired
   useEffect(() => {
     const checkAuth = async () => {
+      // Phase 4: hydrate tokens from secure storage (no-op on web, reads Keychain on native)
+      await apiClient.init();
       const token = apiClient.getToken();
       if (token) {
         try {
@@ -47,15 +49,20 @@ export function useAuth() {
             tenant: response.tenant,
             error: null,
           });
-        } catch (error: any) {
-          apiClient.clearToken();
-          setState({
-            isLoading: false,
-            isAuthenticated: false,
-            user: null,
-            tenant: null,
-            error: null,
-          });
+        } catch (error: unknown) {
+          const status = (error as { status?: number }).status;
+          if (status === 401 && apiClient.getRefreshToken()) {
+            try {
+              await apiClient.refreshToken();
+              const me = await apiClient.getMe();
+              setState({ isLoading: false, isAuthenticated: true, user: me.user, tenant: me.tenant, error: null });
+              return;
+            } catch {
+              // Refresh failed — clear all auth state
+            }
+          }
+          await apiClient.clearToken();
+          setState({ isLoading: false, isAuthenticated: false, user: null, tenant: null, error: null });
         }
       } else {
         setState((prev) => ({ ...prev, isLoading: false }));
@@ -75,7 +82,7 @@ export function useAuth() {
     try {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
       const response = await apiClient.register(email, password, displayName, tenantName, displayCurrency);
-      apiClient.setToken(response.token);
+      // token + refreshToken already stored inside apiClient.register()
       setState({
         isLoading: false,
         isAuthenticated: true,
@@ -83,11 +90,11 @@ export function useAuth() {
         tenant: response.tenant,
         error: null,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       setState((prev) => ({
         ...prev,
         isLoading: false,
-        error: error.message || 'Registration failed',
+        error: (error as Error).message || 'Registration failed',
       }));
       throw error;
     }
@@ -97,7 +104,7 @@ export function useAuth() {
     try {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
       const response = await apiClient.login(email, password);
-      apiClient.setToken(response.token);
+      // token + refreshToken already stored inside apiClient.login()
       setState({
         isLoading: false,
         isAuthenticated: true,
@@ -105,18 +112,22 @@ export function useAuth() {
         tenant: response.tenant,
         error: null,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       setState((prev) => ({
         ...prev,
         isLoading: false,
-        error: error.message || 'Login failed',
+        error: (error as Error).message || 'Login failed',
       }));
       throw error;
     }
   };
 
-  const logout = () => {
-    apiClient.clearToken();
+  const logout = async () => {
+    try {
+      await apiClient.logout(); // revokes refresh token server-side + clears secure storage
+    } catch {
+      await apiClient.clearToken();
+    }
     setState(initialState);
     setState((prev) => ({ ...prev, isLoading: false }));
   };

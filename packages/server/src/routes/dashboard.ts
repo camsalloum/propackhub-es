@@ -5,6 +5,8 @@ import { eq, desc } from 'drizzle-orm';
 import { getEffectiveProfile, stripEstimateRow } from '../utils/visibility';
 import { usdToDisplay } from '../utils/currency';
 
+type EstimateRow = typeof schema.estimates.$inferSelect;
+
 async function getUserVisibilityProfile(db: ReturnType<typeof getDatabase>, userId: string) {
   const [userRecord] = await db
     .select({ visibilityProfile: schema.users.visibilityProfile, role: schema.users.role })
@@ -77,14 +79,14 @@ export async function getDashboardSummaryRoute(
     }
 
     const estimatesThisMonth = allEstimates.filter(
-      (e: (typeof allEstimates)[number]) => e.createdAt && new Date(e.createdAt) >= monthStart
+      (e: EstimateRow) => e.createdAt && new Date(e.createdAt) >= monthStart
     ).length;
 
-    const drafts = allEstimates.filter((e: (typeof allEstimates)[number]) => e.status === 'draft').length;
-    const sent = allEstimates.filter((e: (typeof allEstimates)[number]) => e.status === 'sent').length;
-    const won = allEstimates.filter((e: (typeof allEstimates)[number]) => e.status === 'won').length;
+    const drafts = allEstimates.filter((e: EstimateRow) => e.status === 'draft').length;
+    const sent = allEstimates.filter((e: EstimateRow) => e.status === 'sent').length;
+    const won = allEstimates.filter((e: EstimateRow) => e.status === 'won').length;
 
-    const toSummaryRow = (est: (typeof allEstimates)[0]) => {
+    const toSummaryRow = (est: EstimateRow) => {
       const pricing = estimateTotalDisplay(est, firstSlabByEstimate.get(est.id) ?? null);
       const row = stripEstimateRow(est, profile);
       return {
@@ -100,7 +102,7 @@ export async function getDashboardSummaryRoute(
     const recent = allEstimates.slice(0, 5).map(toSummaryRow);
 
     const expiringProposals = allEstimates
-      .filter((e: (typeof allEstimates)[number]) => {
+      .filter((e: EstimateRow) => {
         if (e.status !== 'sent') return false;
         let validUntil = e.validUntil ? new Date(e.validUntil) : null;
         if (!validUntil && e.sentAt) {
@@ -109,7 +111,7 @@ export async function getDashboardSummaryRoute(
         if (!validUntil) return false;
         return validUntil >= now && validUntil <= expiringEnd;
       })
-      .map((e: (typeof allEstimates)[number]) => {
+      .map((e: EstimateRow) => {
         const row = toSummaryRow(e);
         const validUntil = e.validUntil
           ? new Date(e.validUntil)
@@ -121,7 +123,7 @@ export async function getDashboardSummaryRoute(
           : null;
         return { ...row, daysLeft, validUntil: validUntil?.toISOString() ?? null };
       })
-      .sort((a: (typeof allEstimates)[number] & { daysLeft?: number | null }, b: (typeof allEstimates)[number] & { daysLeft?: number | null }) => (a.daysLeft ?? 99) - (b.daysLeft ?? 99));
+      .sort((a: ReturnType<typeof toSummaryRow> & { daysLeft?: number | null }, b: ReturnType<typeof toSummaryRow> & { daysLeft?: number | null }) => (a.daysLeft ?? 99) - (b.daysLeft ?? 99));
 
     return reply.send({
       estimatesThisMonth,

@@ -300,7 +300,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "template_classification_test",
-      "community": 6,
+      "community": 2,
       "norm_label": "template-classification.test.ts"
     },
     {
@@ -370,34 +370,34 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "template_classification_normfamily",
-      "community": 6,
+      "community": 2,
       "norm_label": "normfamily()"
     },
     {
       "label": "substrateFamilyAllowed()",
       "file_type": "code",
       "source_file": "template-classification.ts",
-      "source_location": "L27",
+      "source_location": "L35",
       "_origin": "ast",
       "id": "template_classification_substratefamilyallowed",
-      "community": 6,
+      "community": 2,
       "norm_label": "substratefamilyallowed()"
     },
     {
       "label": "materialAllowedForTemplateLayer()",
       "file_type": "code",
       "source_file": "template-classification.ts",
-      "source_location": "L57",
+      "source_location": "L68",
       "_origin": "ast",
       "id": "template_classification_materialallowedfortemplatelayer",
-      "community": 6,
+      "community": 2,
       "norm_label": "materialallowedfortemplatelayer()"
     },
     {
       "label": "filterMaterialsForTemplateLayer()",
       "file_type": "code",
       "source_file": "template-classification.ts",
-      "source_location": "L67",
+      "source_location": "L78",
       "_origin": "ast",
       "id": "template_classification_filtermaterialsfortemplatelayer",
       "community": 2,
@@ -407,27 +407,27 @@
       "label": "inferMaterialClassFromSubstrateFamilies()",
       "file_type": "code",
       "source_file": "template-classification.ts",
-      "source_location": "L74",
+      "source_location": "L85",
       "_origin": "ast",
       "id": "template_classification_infermaterialclassfromsubstratefamilies",
-      "community": 7,
+      "community": 2,
       "norm_label": "infermaterialclassfromsubstratefamilies()"
     },
     {
       "label": "inferStructureTypeFromSubstrateCount()",
       "file_type": "code",
       "source_file": "template-classification.ts",
-      "source_location": "L86",
+      "source_location": "L97",
       "_origin": "ast",
       "id": "template_classification_inferstructuretypefromsubstratecount",
-      "community": 7,
+      "community": 2,
       "norm_label": "inferstructuretypefromsubstratecount()"
     },
     {
       "label": "TemplateLayerRef",
       "file_type": "code",
       "source_file": "template-classification.ts",
-      "source_location": "L90",
+      "source_location": "L101",
       "_origin": "ast",
       "id": "template_classification_templatelayerref",
       "community": 2,
@@ -437,7 +437,7 @@
       "label": "TemplateMaterialRef",
       "file_type": "code",
       "source_file": "template-classification.ts",
-      "source_location": "L95",
+      "source_location": "L106",
       "_origin": "ast",
       "id": "template_classification_templatematerialref",
       "community": 2,
@@ -447,11 +447,151 @@
       "label": "resolveTemplateStoreClassification()",
       "file_type": "code",
       "source_file": "template-classification.ts",
-      "source_location": "L101",
+      "source_location": "L112",
       "_origin": "ast",
       "id": "template_classification_resolvetemplatestoreclassification",
-      "community": 7,
+      "community": 2,
       "norm_label": "resolvetemplatestoreclassification()"
+    },
+    {
+      "label": "template-scaffolding.test.ts",
+      "file_type": "code",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "template_scaffolding_test",
+      "community": 5,
+      "norm_label": "template-scaffolding.test.ts"
+    },
+    {
+      "label": "tierArb",
+      "file_type": "code",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L154",
+      "_origin": "ast",
+      "id": "template_scaffolding_test_tierarb",
+      "community": 5,
+      "norm_label": "tierarb"
+    },
+    {
+      "label": "printModeArb",
+      "file_type": "code",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L155",
+      "_origin": "ast",
+      "id": "template_scaffolding_test_printmodearb",
+      "community": 5,
+      "norm_label": "printmodearb"
+    },
+    {
+      "label": "template-scaffolding.ts",
+      "file_type": "code",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "template_scaffolding",
+      "community": 5,
+      "norm_label": "template-scaffolding.ts"
+    },
+    {
+      "label": "StructureTier",
+      "file_type": "code",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "template_scaffolding_structuretier",
+      "community": 5,
+      "norm_label": "structuretier"
+    },
+    {
+      "label": "PrintMode",
+      "file_type": "code",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "template_scaffolding_printmode",
+      "community": 5,
+      "norm_label": "printmode"
+    },
+    {
+      "label": "ScaffoldLayerDescriptor",
+      "file_type": "code",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L12",
+      "_origin": "ast",
+      "id": "template_scaffolding_scaffoldlayerdescriptor",
+      "community": 5,
+      "norm_label": "scaffoldlayerdescriptor"
+    },
+    {
+      "label": "TIER_SUBSTRATE_COUNT",
+      "file_type": "code",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "template_scaffolding_tier_substrate_count",
+      "community": 5,
+      "norm_label": "tier_substrate_count"
+    },
+    {
+      "label": "TIER_ADHESIVE_COUNT",
+      "file_type": "code",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L27",
+      "_origin": "ast",
+      "id": "template_scaffolding_tier_adhesive_count",
+      "community": 5,
+      "norm_label": "tier_adhesive_count"
+    },
+    {
+      "label": "scaffoldLayerDescriptors()",
+      "file_type": "code",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L58",
+      "_origin": "ast",
+      "id": "template_scaffolding_scaffoldlayerdescriptors",
+      "community": 5,
+      "norm_label": "scaffoldlayerdescriptors()"
+    },
+    {
+      "label": "countLayersByType()",
+      "file_type": "code",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L86",
+      "_origin": "ast",
+      "id": "template_scaffolding_countlayersbytype",
+      "community": 5,
+      "norm_label": "countlayersbytype()"
+    },
+    {
+      "label": "reconcileTierToSubstrateCount()",
+      "file_type": "code",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L105",
+      "_origin": "ast",
+      "id": "template_scaffolding_reconciletiertosubstratecount",
+      "community": 5,
+      "norm_label": "reconciletiertosubstratecount()"
+    },
+    {
+      "label": "tierToStructureType()",
+      "file_type": "code",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L116",
+      "_origin": "ast",
+      "id": "template_scaffolding_tiertostructuretype",
+      "community": 5,
+      "norm_label": "tiertostructuretype()"
+    },
+    {
+      "label": "structureTypeToDefaultTier()",
+      "file_type": "code",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L124",
+      "_origin": "ast",
+      "id": "template_scaffolding_structuretypetodefaulttier",
+      "community": 5,
+      "norm_label": "structuretypetodefaulttier()"
     },
     {
       "label": "types.ts",
@@ -490,7 +630,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "types_layer",
-      "community": 5,
+      "community": 3,
       "norm_label": "layer"
     },
     {
@@ -500,7 +640,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "types_estimatedimensions",
-      "community": 5,
+      "community": 3,
       "norm_label": "estimatedimensions"
     },
     {
@@ -580,7 +720,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "validator",
-      "community": 5,
+      "community": 3,
       "norm_label": "validator.ts"
     },
     {
@@ -590,7 +730,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "validator_validateestimate",
-      "community": 5,
+      "community": 3,
       "norm_label": "validateestimate()"
     },
     {
@@ -600,7 +740,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "validator_validatedimensions",
-      "community": 5,
+      "community": 3,
       "norm_label": "validatedimensions()"
     },
     {
@@ -610,7 +750,7 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "validator_validatelayers",
-      "community": 5,
+      "community": 3,
       "norm_label": "validatelayers()"
     },
     {
@@ -620,7 +760,7 @@
       "source_location": "L127",
       "_origin": "ast",
       "id": "validator_validatematerial",
-      "community": 5,
+      "community": 3,
       "norm_label": "validatematerial()"
     },
     {
@@ -642,9 +782,9 @@
       "source_file": "calculator.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_test",
-      "target": "calculator",
-      "confidence_score": 1.0
+      "target": "calculator"
     },
     {
       "relation": "imports",
@@ -653,9 +793,9 @@
       "source_file": "calculator.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_test",
-      "target": "calculator_calculateestimate",
-      "confidence_score": 1.0
+      "target": "calculator_calculateestimate"
     },
     {
       "relation": "imports_from",
@@ -664,9 +804,9 @@
       "source_file": "calculator.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_test",
-      "target": "types",
-      "confidence_score": 1.0
+      "target": "types"
     },
     {
       "relation": "imports",
@@ -675,9 +815,9 @@
       "source_file": "calculator.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_test",
-      "target": "types_estimate",
-      "confidence_score": 1.0
+      "target": "types_estimate"
     },
     {
       "relation": "imports",
@@ -686,9 +826,9 @@
       "source_file": "calculator.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_test",
-      "target": "types_material",
-      "confidence_score": 1.0
+      "target": "types_material"
     },
     {
       "relation": "contains",
@@ -696,9 +836,9 @@
       "source_file": "calculator.ts",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "calculator_calculateestimate",
-      "confidence_score": 1.0
+      "target": "calculator_calculateestimate"
     },
     {
       "relation": "contains",
@@ -706,9 +846,9 @@
       "source_file": "calculator.ts",
       "source_location": "L159",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "calculator_calculatelayer",
-      "confidence_score": 1.0
+      "target": "calculator_calculatelayer"
     },
     {
       "relation": "contains",
@@ -716,9 +856,9 @@
       "source_file": "calculator.ts",
       "source_location": "L211",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "calculator_calculateprintingwebwidth",
-      "confidence_score": 1.0
+      "target": "calculator_calculateprintingwebwidth"
     },
     {
       "relation": "contains",
@@ -726,9 +866,9 @@
       "source_file": "calculator.ts",
       "source_location": "L350",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "calculator_calculateprocesscosts",
-      "confidence_score": 1.0
+      "target": "calculator_calculateprocesscosts"
     },
     {
       "relation": "contains",
@@ -736,9 +876,9 @@
       "source_file": "calculator.ts",
       "source_location": "L231",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "calculator_calculateproductmetrics",
-      "confidence_score": 1.0
+      "target": "calculator_calculateproductmetrics"
     },
     {
       "relation": "contains",
@@ -746,9 +886,9 @@
       "source_file": "calculator.ts",
       "source_location": "L403",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "calculator_calculatesaleprice",
-      "confidence_score": 1.0
+      "target": "calculator_calculatesaleprice"
     },
     {
       "relation": "contains",
@@ -756,9 +896,9 @@
       "source_file": "calculator.ts",
       "source_location": "L307",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "calculator_calculatesolventmix",
-      "confidence_score": 1.0
+      "target": "calculator_calculatesolventmix"
     },
     {
       "relation": "contains",
@@ -766,9 +906,9 @@
       "source_file": "calculator.ts",
       "source_location": "L192",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "calculator_calculatetotalmicron",
-      "confidence_score": 1.0
+      "target": "calculator_calculatetotalmicron"
     },
     {
       "relation": "imports_from",
@@ -777,9 +917,9 @@
       "source_file": "calculator.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "types",
-      "confidence_score": 1.0
+      "target": "types"
     },
     {
       "relation": "imports",
@@ -788,9 +928,9 @@
       "source_file": "calculator.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "types_calculationresult",
-      "confidence_score": 1.0
+      "target": "types_calculationresult"
     },
     {
       "relation": "imports",
@@ -799,9 +939,9 @@
       "source_file": "calculator.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "types_estimate",
-      "confidence_score": 1.0
+      "target": "types_estimate"
     },
     {
       "relation": "imports",
@@ -810,9 +950,9 @@
       "source_file": "calculator.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "types_estimatedimensions",
-      "confidence_score": 1.0
+      "target": "types_estimatedimensions"
     },
     {
       "relation": "imports",
@@ -821,9 +961,9 @@
       "source_file": "calculator.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "types_layer",
-      "confidence_score": 1.0
+      "target": "types_layer"
     },
     {
       "relation": "imports",
@@ -832,9 +972,9 @@
       "source_file": "calculator.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "types_material",
-      "confidence_score": 1.0
+      "target": "types_material"
     },
     {
       "relation": "imports",
@@ -843,9 +983,9 @@
       "source_file": "calculator.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "types_missingmaterialserror",
-      "confidence_score": 1.0
+      "target": "types_missingmaterialserror"
     },
     {
       "relation": "imports",
@@ -854,9 +994,9 @@
       "source_file": "calculator.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "types_process",
-      "confidence_score": 1.0
+      "target": "types_process"
     },
     {
       "relation": "imports_from",
@@ -865,9 +1005,9 @@
       "source_file": "calculator.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "validator",
-      "confidence_score": 1.0
+      "target": "validator"
     },
     {
       "relation": "imports",
@@ -876,9 +1016,9 @@
       "source_file": "calculator.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "validator_hassolventbasedlayers",
-      "confidence_score": 1.0
+      "target": "validator_hassolventbasedlayers"
     },
     {
       "relation": "imports_from",
@@ -887,9 +1027,9 @@
       "source_file": "golden.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_test",
-      "target": "calculator",
-      "confidence_score": 1.0
+      "target": "calculator"
     },
     {
       "relation": "re_exports",
@@ -898,9 +1038,9 @@
       "source_file": "index.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "calculator",
-      "confidence_score": 1.0
+      "target": "calculator"
     },
     {
       "relation": "calls",
@@ -909,9 +1049,9 @@
       "source_file": "calculator.ts",
       "source_location": "L48",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_calculateestimate",
-      "target": "calculator_calculateprintingwebwidth",
-      "confidence_score": 1.0
+      "target": "calculator_calculateprintingwebwidth"
     },
     {
       "relation": "calls",
@@ -920,9 +1060,9 @@
       "source_file": "calculator.ts",
       "source_location": "L57",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_calculateestimate",
-      "target": "calculator_calculateprocesscosts",
-      "confidence_score": 1.0
+      "target": "calculator_calculateprocesscosts"
     },
     {
       "relation": "calls",
@@ -931,9 +1071,9 @@
       "source_file": "calculator.ts",
       "source_location": "L51",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_calculateestimate",
-      "target": "calculator_calculateproductmetrics",
-      "confidence_score": 1.0
+      "target": "calculator_calculateproductmetrics"
     },
     {
       "relation": "calls",
@@ -942,9 +1082,9 @@
       "source_file": "calculator.ts",
       "source_location": "L60",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_calculateestimate",
-      "target": "calculator_calculatesaleprice",
-      "confidence_score": 1.0
+      "target": "calculator_calculatesaleprice"
     },
     {
       "relation": "calls",
@@ -953,9 +1093,9 @@
       "source_file": "calculator.ts",
       "source_location": "L54",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_calculateestimate",
-      "target": "calculator_calculatesolventmix",
-      "confidence_score": 1.0
+      "target": "calculator_calculatesolventmix"
     },
     {
       "relation": "calls",
@@ -964,9 +1104,9 @@
       "source_file": "calculator.ts",
       "source_location": "L37",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_calculateestimate",
-      "target": "calculator_calculatetotalmicron",
-      "confidence_score": 1.0
+      "target": "calculator_calculatetotalmicron"
     },
     {
       "relation": "imports",
@@ -975,9 +1115,9 @@
       "source_file": "golden.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_test",
-      "target": "calculator_calculateestimate",
-      "confidence_score": 1.0
+      "target": "calculator_calculateestimate"
     },
     {
       "relation": "re_exports",
@@ -986,9 +1126,9 @@
       "source_file": "index.ts",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "calculator_calculateestimate",
-      "confidence_score": 1.0
+      "target": "calculator_calculateestimate"
     },
     {
       "relation": "calls",
@@ -997,9 +1137,9 @@
       "source_file": "calculator.ts",
       "source_location": "L314",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_calculatesolventmix",
-      "target": "validator_hassolventbasedlayers",
-      "confidence_score": 1.0
+      "target": "validator_hassolventbasedlayers"
     },
     {
       "relation": "contains",
@@ -1007,9 +1147,9 @@
       "source_file": "golden-fixtures.ts",
       "source_location": "L88",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_fixtures",
-      "target": "golden_fixtures_baseestimate",
-      "confidence_score": 1.0
+      "target": "golden_fixtures_baseestimate"
     },
     {
       "relation": "contains",
@@ -1017,9 +1157,9 @@
       "source_file": "golden-fixtures.ts",
       "source_location": "L125",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_fixtures",
-      "target": "golden_fixtures_golden_scenarios",
-      "confidence_score": 1.0
+      "target": "golden_fixtures_golden_scenarios"
     },
     {
       "relation": "contains",
@@ -1027,9 +1167,9 @@
       "source_file": "golden-fixtures.ts",
       "source_location": "L107",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_fixtures",
-      "target": "golden_fixtures_goldenscenario",
-      "confidence_score": 1.0
+      "target": "golden_fixtures_goldenscenario"
     },
     {
       "relation": "contains",
@@ -1037,9 +1177,9 @@
       "source_file": "golden-fixtures.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_fixtures",
-      "target": "golden_fixtures_laravel_reference_materials",
-      "confidence_score": 1.0
+      "target": "golden_fixtures_laravel_reference_materials"
     },
     {
       "relation": "imports_from",
@@ -1048,9 +1188,9 @@
       "source_file": "golden-fixtures.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_fixtures",
-      "target": "types",
-      "confidence_score": 1.0
+      "target": "types"
     },
     {
       "relation": "imports",
@@ -1059,9 +1199,9 @@
       "source_file": "golden-fixtures.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_fixtures",
-      "target": "types_estimate",
-      "confidence_score": 1.0
+      "target": "types_estimate"
     },
     {
       "relation": "imports",
@@ -1070,9 +1210,9 @@
       "source_file": "golden-fixtures.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_fixtures",
-      "target": "types_material",
-      "confidence_score": 1.0
+      "target": "types_material"
     },
     {
       "relation": "imports_from",
@@ -1081,9 +1221,9 @@
       "source_file": "golden.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_test",
-      "target": "golden_fixtures",
-      "confidence_score": 1.0
+      "target": "golden_fixtures"
     },
     {
       "relation": "imports",
@@ -1092,9 +1232,9 @@
       "source_file": "golden.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_test",
-      "target": "golden_fixtures_laravel_reference_materials",
-      "confidence_score": 1.0
+      "target": "golden_fixtures_laravel_reference_materials"
     },
     {
       "relation": "references",
@@ -1103,9 +1243,9 @@
       "source_file": "golden-fixtures.ts",
       "source_location": "L109",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_fixtures_goldenscenario",
-      "target": "types_estimate",
-      "confidence_score": 1.0
+      "target": "types_estimate"
     },
     {
       "relation": "imports",
@@ -1114,9 +1254,9 @@
       "source_file": "golden.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_test",
-      "target": "golden_fixtures_golden_scenarios",
-      "confidence_score": 1.0
+      "target": "golden_fixtures_golden_scenarios"
     },
     {
       "relation": "re_exports",
@@ -1125,9 +1265,9 @@
       "source_file": "index.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "layer_stack",
-      "confidence_score": 1.0
+      "target": "layer_stack"
     },
     {
       "relation": "re_exports",
@@ -1136,8 +1276,19 @@
       "source_file": "index.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "template_classification",
+      "target": "template_classification"
+    },
+    {
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "index.ts",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "index",
+      "target": "template_scaffolding",
       "confidence_score": 1.0
     },
     {
@@ -1147,9 +1298,9 @@
       "source_file": "index.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "types",
-      "confidence_score": 1.0
+      "target": "types"
     },
     {
       "relation": "re_exports",
@@ -1158,9 +1309,9 @@
       "source_file": "index.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "validator",
-      "confidence_score": 1.0
+      "target": "validator"
     },
     {
       "relation": "imports_from",
@@ -1169,9 +1320,9 @@
       "source_file": "layer-stack.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack_test",
-      "target": "layer_stack",
-      "confidence_score": 1.0
+      "target": "layer_stack"
     },
     {
       "relation": "imports",
@@ -1180,9 +1331,9 @@
       "source_file": "layer-stack.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack_test",
-      "target": "layer_stack_deriveprintingwebclass",
-      "confidence_score": 1.0
+      "target": "layer_stack_deriveprintingwebclass"
     },
     {
       "relation": "imports",
@@ -1191,9 +1342,9 @@
       "source_file": "layer-stack.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack_test",
-      "target": "layer_stack_stackneedssolventmix",
-      "confidence_score": 1.0
+      "target": "layer_stack_stackneedssolventmix"
     },
     {
       "relation": "contains",
@@ -1201,9 +1352,9 @@
       "source_file": "layer-stack.test.ts",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack_test",
-      "target": "layer_stack_test_adhesivesb",
-      "confidence_score": 1.0
+      "target": "layer_stack_test_adhesivesb"
     },
     {
       "relation": "contains",
@@ -1211,9 +1362,9 @@
       "source_file": "layer-stack.test.ts",
       "source_location": "L49",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack_test",
-      "target": "layer_stack_test_materials",
-      "confidence_score": 1.0
+      "target": "layer_stack_test_materials"
     },
     {
       "relation": "contains",
@@ -1221,9 +1372,9 @@
       "source_file": "layer-stack.test.ts",
       "source_location": "L38",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack_test",
-      "target": "layer_stack_test_pet",
-      "confidence_score": 1.0
+      "target": "layer_stack_test_pet"
     },
     {
       "relation": "contains",
@@ -1231,9 +1382,9 @@
       "source_file": "layer-stack.test.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack_test",
-      "target": "layer_stack_test_sbink",
-      "confidence_score": 1.0
+      "target": "layer_stack_test_sbink"
     },
     {
       "relation": "contains",
@@ -1241,9 +1392,9 @@
       "source_file": "layer-stack.test.ts",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack_test",
-      "target": "layer_stack_test_uvink",
-      "confidence_score": 1.0
+      "target": "layer_stack_test_uvink"
     },
     {
       "relation": "imports_from",
@@ -1252,9 +1403,9 @@
       "source_file": "layer-stack.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack_test",
-      "target": "types",
-      "confidence_score": 1.0
+      "target": "types"
     },
     {
       "relation": "imports",
@@ -1263,9 +1414,9 @@
       "source_file": "layer-stack.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack_test",
-      "target": "types_material",
-      "confidence_score": 1.0
+      "target": "types_material"
     },
     {
       "relation": "contains",
@@ -1273,9 +1424,9 @@
       "source_file": "layer-stack.ts",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack",
-      "target": "layer_stack_deriveprintingwebclass",
-      "confidence_score": 1.0
+      "target": "layer_stack_deriveprintingwebclass"
     },
     {
       "relation": "contains",
@@ -1283,9 +1434,9 @@
       "source_file": "layer-stack.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack",
-      "target": "layer_stack_getmaterial",
-      "confidence_score": 1.0
+      "target": "layer_stack_getmaterial"
     },
     {
       "relation": "contains",
@@ -1293,9 +1444,9 @@
       "source_file": "layer-stack.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack",
-      "target": "layer_stack_layermaterialref",
-      "confidence_score": 1.0
+      "target": "layer_stack_layermaterialref"
     },
     {
       "relation": "contains",
@@ -1303,9 +1454,9 @@
       "source_file": "layer-stack.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack",
-      "target": "layer_stack_materiallookup",
-      "confidence_score": 1.0
+      "target": "layer_stack_materiallookup"
     },
     {
       "relation": "contains",
@@ -1313,9 +1464,9 @@
       "source_file": "layer-stack.ts",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack",
-      "target": "layer_stack_stackneedssolventmix",
-      "confidence_score": 1.0
+      "target": "layer_stack_stackneedssolventmix"
     },
     {
       "relation": "imports_from",
@@ -1324,9 +1475,9 @@
       "source_file": "layer-stack.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack",
-      "target": "types",
-      "confidence_score": 1.0
+      "target": "types"
     },
     {
       "relation": "imports",
@@ -1335,9 +1486,9 @@
       "source_file": "layer-stack.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack",
-      "target": "types_material",
-      "confidence_score": 1.0
+      "target": "types_material"
     },
     {
       "relation": "imports_from",
@@ -1346,9 +1497,9 @@
       "source_file": "template-classification.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification_test",
-      "target": "template_classification",
-      "confidence_score": 1.0
+      "target": "template_classification"
     },
     {
       "relation": "imports",
@@ -1357,9 +1508,9 @@
       "source_file": "template-classification.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification_test",
-      "target": "template_classification_materialallowedfortemplatelayer",
-      "confidence_score": 1.0
+      "target": "template_classification_materialallowedfortemplatelayer"
     },
     {
       "relation": "imports",
@@ -1368,9 +1519,9 @@
       "source_file": "template-classification.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification_test",
-      "target": "template_classification_resolvetemplatestoreclassification",
-      "confidence_score": 1.0
+      "target": "template_classification_resolvetemplatestoreclassification"
     },
     {
       "relation": "imports",
@@ -1379,9 +1530,9 @@
       "source_file": "template-classification.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification_test",
-      "target": "template_classification_substratefamilyallowed",
-      "confidence_score": 1.0
+      "target": "template_classification_substratefamilyallowed"
     },
     {
       "relation": "contains",
@@ -1389,9 +1540,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification",
-      "target": "template_classification_classifiablematerial",
-      "confidence_score": 1.0
+      "target": "template_classification_classifiablematerial"
     },
     {
       "relation": "contains",
@@ -1399,9 +1550,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L67",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification",
-      "target": "template_classification_filtermaterialsfortemplatelayer",
-      "confidence_score": 1.0
+      "target": "template_classification_filtermaterialsfortemplatelayer"
     },
     {
       "relation": "contains",
@@ -1409,9 +1560,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L74",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification",
-      "target": "template_classification_infermaterialclassfromsubstratefamilies",
-      "confidence_score": 1.0
+      "target": "template_classification_infermaterialclassfromsubstratefamilies"
     },
     {
       "relation": "contains",
@@ -1419,9 +1570,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L86",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification",
-      "target": "template_classification_inferstructuretypefromsubstratecount",
-      "confidence_score": 1.0
+      "target": "template_classification_inferstructuretypefromsubstratecount"
     },
     {
       "relation": "contains",
@@ -1429,9 +1580,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L57",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification",
-      "target": "template_classification_materialallowedfortemplatelayer",
-      "confidence_score": 1.0
+      "target": "template_classification_materialallowedfortemplatelayer"
     },
     {
       "relation": "contains",
@@ -1439,9 +1590,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification",
-      "target": "template_classification_materialclass",
-      "confidence_score": 1.0
+      "target": "template_classification_materialclass"
     },
     {
       "relation": "contains",
@@ -1449,9 +1600,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification",
-      "target": "template_classification_normfamily",
-      "confidence_score": 1.0
+      "target": "template_classification_normfamily"
     },
     {
       "relation": "contains",
@@ -1459,9 +1610,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification",
-      "target": "template_classification_producttypecode",
-      "confidence_score": 1.0
+      "target": "template_classification_producttypecode"
     },
     {
       "relation": "contains",
@@ -1469,9 +1620,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L101",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification",
-      "target": "template_classification_resolvetemplatestoreclassification",
-      "confidence_score": 1.0
+      "target": "template_classification_resolvetemplatestoreclassification"
     },
     {
       "relation": "contains",
@@ -1479,9 +1630,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification",
-      "target": "template_classification_structuretype",
-      "confidence_score": 1.0
+      "target": "template_classification_structuretype"
     },
     {
       "relation": "contains",
@@ -1489,9 +1640,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification",
-      "target": "template_classification_substratefamilyallowed",
-      "confidence_score": 1.0
+      "target": "template_classification_substratefamilyallowed"
     },
     {
       "relation": "contains",
@@ -1499,9 +1650,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification",
-      "target": "template_classification_templateclassification",
-      "confidence_score": 1.0
+      "target": "template_classification_templateclassification"
     },
     {
       "relation": "contains",
@@ -1509,9 +1660,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L90",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification",
-      "target": "template_classification_templatelayerref",
-      "confidence_score": 1.0
+      "target": "template_classification_templatelayerref"
     },
     {
       "relation": "contains",
@@ -1519,9 +1670,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L95",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification",
-      "target": "template_classification_templatematerialref",
-      "confidence_score": 1.0
+      "target": "template_classification_templatematerialref"
     },
     {
       "relation": "imports_from",
@@ -1530,9 +1681,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification",
-      "target": "types",
-      "confidence_score": 1.0
+      "target": "types"
     },
     {
       "relation": "imports",
@@ -1541,8 +1692,19 @@
       "source_file": "template-classification.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification",
-      "target": "types_layertype",
+      "target": "types_layertype"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L113",
+      "weight": 1.0,
+      "source": "template_scaffolding_test",
+      "target": "template_classification",
       "confidence_score": 1.0
     },
     {
@@ -1552,9 +1714,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L31",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification_substratefamilyallowed",
-      "target": "template_classification_normfamily",
-      "confidence_score": 1.0
+      "target": "template_classification_normfamily"
     },
     {
       "relation": "calls",
@@ -1563,7 +1725,18 @@
       "source_file": "template-classification.ts",
       "source_location": "L64",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification_materialallowedfortemplatelayer",
+      "target": "template_classification_substratefamilyallowed"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L113",
+      "weight": 1.0,
+      "source": "template_scaffolding_test",
       "target": "template_classification_substratefamilyallowed",
       "confidence_score": 1.0
     },
@@ -1574,9 +1747,9 @@
       "source_file": "template-classification.ts",
       "source_location": "L110",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification_resolvetemplatestoreclassification",
-      "target": "template_classification_infermaterialclassfromsubstratefamilies",
-      "confidence_score": 1.0
+      "target": "template_classification_infermaterialclassfromsubstratefamilies"
     },
     {
       "relation": "calls",
@@ -1585,8 +1758,238 @@
       "source_file": "template-classification.ts",
       "source_location": "L111",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "template_classification_resolvetemplatestoreclassification",
-      "target": "template_classification_inferstructuretypefromsubstratecount",
+      "target": "template_classification_inferstructuretypefromsubstratecount"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "template_scaffolding_test",
+      "target": "template_scaffolding",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "template_scaffolding_test",
+      "target": "template_scaffolding_countlayersbytype",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "template_scaffolding_test",
+      "target": "template_scaffolding_printmode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "template_scaffolding_test",
+      "target": "template_scaffolding_reconciletiertosubstratecount",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "template_scaffolding_test",
+      "target": "template_scaffolding_scaffoldlayerdescriptors",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "template_scaffolding_test",
+      "target": "template_scaffolding_structuretier",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "template_scaffolding_test",
+      "target": "template_scaffolding_structuretypetodefaulttier",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L155",
+      "weight": 1.0,
+      "source": "template_scaffolding_test",
+      "target": "template_scaffolding_test_printmodearb",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L154",
+      "weight": 1.0,
+      "source": "template_scaffolding_test",
+      "target": "template_scaffolding_test_tierarb",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "template_scaffolding_test",
+      "target": "template_scaffolding_tier_adhesive_count",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "template_scaffolding_test",
+      "target": "template_scaffolding_tier_substrate_count",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "template_scaffolding_test",
+      "target": "template_scaffolding_tiertostructuretype",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L86",
+      "weight": 1.0,
+      "source": "template_scaffolding",
+      "target": "template_scaffolding_countlayersbytype",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "template_scaffolding",
+      "target": "template_scaffolding_printmode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L105",
+      "weight": 1.0,
+      "source": "template_scaffolding",
+      "target": "template_scaffolding_reconciletiertosubstratecount",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "template_scaffolding",
+      "target": "template_scaffolding_scaffoldlayerdescriptor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L58",
+      "weight": 1.0,
+      "source": "template_scaffolding",
+      "target": "template_scaffolding_scaffoldlayerdescriptors",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "template_scaffolding",
+      "target": "template_scaffolding_structuretier",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L124",
+      "weight": 1.0,
+      "source": "template_scaffolding",
+      "target": "template_scaffolding_structuretypetodefaulttier",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L27",
+      "weight": 1.0,
+      "source": "template_scaffolding",
+      "target": "template_scaffolding_tier_adhesive_count",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "template_scaffolding",
+      "target": "template_scaffolding_tier_substrate_count",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "template-scaffolding.ts",
+      "source_location": "L116",
+      "weight": 1.0,
+      "source": "template_scaffolding",
+      "target": "template_scaffolding_tiertostructuretype",
       "confidence_score": 1.0
     },
     {
@@ -1595,9 +1998,9 @@
       "source_file": "types.ts",
       "source_location": "L126",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types",
-      "target": "types_calculationresult",
-      "confidence_score": 1.0
+      "target": "types_calculationresult"
     },
     {
       "relation": "contains",
@@ -1605,9 +2008,9 @@
       "source_file": "types.ts",
       "source_location": "L68",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types",
-      "target": "types_estimate",
-      "confidence_score": 1.0
+      "target": "types_estimate"
     },
     {
       "relation": "contains",
@@ -1615,9 +2018,9 @@
       "source_file": "types.ts",
       "source_location": "L34",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types",
-      "target": "types_estimatedimensions",
-      "confidence_score": 1.0
+      "target": "types_estimatedimensions"
     },
     {
       "relation": "contains",
@@ -1625,9 +2028,9 @@
       "source_file": "types.ts",
       "source_location": "L21",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types",
-      "target": "types_layer",
-      "confidence_score": 1.0
+      "target": "types_layer"
     },
     {
       "relation": "contains",
@@ -1635,9 +2038,9 @@
       "source_file": "types.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types",
-      "target": "types_layertype",
-      "confidence_score": 1.0
+      "target": "types_layertype"
     },
     {
       "relation": "contains",
@@ -1645,9 +2048,9 @@
       "source_file": "types.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types",
-      "target": "types_material",
-      "confidence_score": 1.0
+      "target": "types_material"
     },
     {
       "relation": "contains",
@@ -1655,9 +2058,9 @@
       "source_file": "types.ts",
       "source_location": "L139",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types",
-      "target": "types_missingmaterialserror",
-      "confidence_score": 1.0
+      "target": "types_missingmaterialserror"
     },
     {
       "relation": "contains",
@@ -1665,9 +2068,9 @@
       "source_file": "types.ts",
       "source_location": "L56",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types",
-      "target": "types_process",
-      "confidence_score": 1.0
+      "target": "types_process"
     },
     {
       "relation": "contains",
@@ -1675,9 +2078,9 @@
       "source_file": "types.ts",
       "source_location": "L50",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types",
-      "target": "types_slab",
-      "confidence_score": 1.0
+      "target": "types_slab"
     },
     {
       "relation": "contains",
@@ -1685,9 +2088,9 @@
       "source_file": "types.ts",
       "source_location": "L149",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types",
-      "target": "types_visibilityprofile",
-      "confidence_score": 1.0
+      "target": "types_visibilityprofile"
     },
     {
       "relation": "imports_from",
@@ -1696,9 +2099,9 @@
       "source_file": "validator.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "validator",
-      "target": "types",
-      "confidence_score": 1.0
+      "target": "types"
     },
     {
       "relation": "imports",
@@ -1707,9 +2110,9 @@
       "source_file": "validator.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "validator",
-      "target": "types_material",
-      "confidence_score": 1.0
+      "target": "types_material"
     },
     {
       "relation": "imports",
@@ -1718,9 +2121,9 @@
       "source_file": "validator.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "validator",
-      "target": "types_layer",
-      "confidence_score": 1.0
+      "target": "types_layer"
     },
     {
       "relation": "imports",
@@ -1729,9 +2132,9 @@
       "source_file": "validator.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "validator",
-      "target": "types_estimatedimensions",
-      "confidence_score": 1.0
+      "target": "types_estimatedimensions"
     },
     {
       "relation": "imports",
@@ -1740,9 +2143,9 @@
       "source_file": "validator.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "validator",
-      "target": "types_estimate",
-      "confidence_score": 1.0
+      "target": "types_estimate"
     },
     {
       "relation": "method",
@@ -1750,9 +2153,9 @@
       "source_file": "types.ts",
       "source_location": "L142",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types_missingmaterialserror",
-      "target": "types_missingmaterialserror_constructor",
-      "confidence_score": 1.0
+      "target": "types_missingmaterialserror_constructor"
     },
     {
       "relation": "contains",
@@ -1760,9 +2163,9 @@
       "source_file": "validator.ts",
       "source_location": "L160",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "validator",
-      "target": "validator_hassolventbasedlayers",
-      "confidence_score": 1.0
+      "target": "validator_hassolventbasedlayers"
     },
     {
       "relation": "contains",
@@ -1770,9 +2173,9 @@
       "source_file": "validator.ts",
       "source_location": "L41",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "validator",
-      "target": "validator_validatedimensions",
-      "confidence_score": 1.0
+      "target": "validator_validatedimensions"
     },
     {
       "relation": "contains",
@@ -1780,9 +2183,9 @@
       "source_file": "validator.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "validator",
-      "target": "validator_validateestimate",
-      "confidence_score": 1.0
+      "target": "validator_validateestimate"
     },
     {
       "relation": "contains",
@@ -1790,9 +2193,9 @@
       "source_file": "validator.ts",
       "source_location": "L95",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "validator",
-      "target": "validator_validatelayers",
-      "confidence_score": 1.0
+      "target": "validator_validatelayers"
     },
     {
       "relation": "contains",
@@ -1800,9 +2203,9 @@
       "source_file": "validator.ts",
       "source_location": "L127",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "validator",
-      "target": "validator_validatematerial",
-      "confidence_score": 1.0
+      "target": "validator_validatematerial"
     },
     {
       "relation": "calls",
@@ -1811,9 +2214,9 @@
       "source_file": "validator.ts",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "validator_validateestimate",
-      "target": "validator_validatedimensions",
-      "confidence_score": 1.0
+      "target": "validator_validatedimensions"
     },
     {
       "relation": "calls",
@@ -1822,9 +2225,9 @@
       "source_file": "validator.ts",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "validator_validateestimate",
-      "target": "validator_validatelayers",
-      "confidence_score": 1.0
+      "target": "validator_validatelayers"
     }
   ],
   "hyperedges": []

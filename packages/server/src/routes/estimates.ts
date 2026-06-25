@@ -550,6 +550,12 @@ async function updateEstimateRoute(
     if (data.solventRatio !== undefined) {
       updates.solventRatio = String(data.solventRatio);
     }
+    // Any layer save clears configure-from-template mode in the DB.
+    if (data.layers !== undefined && data.dimensions === undefined) {
+      updates.dimensions = stripConfigureFromTemplateFlag(
+        existing.dimensions as Record<string, unknown> | null
+      );
+    }
 
     // BUG-1 (full fix): ONE transaction wraps the base-field update + layers + processes + slabs
     // so the entire PATCH is atomic — no partial state possible.

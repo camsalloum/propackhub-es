@@ -56,6 +56,11 @@ function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="estimate/choose" element={<TemplatePicker />} />
           <Route path="templates" element={<StandardTemplates />} />
+          <Route path="my-templates" element={<Navigate to="/templates?tab=mine" replace />} />
+          <Route
+            path="templates/new"
+            element={<Navigate to="/templates" replace />}
+          />
           <Route path="estimate/new" element={<EstimateEditor />} />
           <Route path="estimate/:id" element={<EstimateEditor />} />
           <Route path="estimates" element={<EstimatesList />} />

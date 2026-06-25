@@ -2,8 +2,8 @@
 
 > ✅ **2026-06-24 update:** Major session — single source of truth for materials, new ink costing model, Bag as first-class type, template repair, all bugs fixed. Engine 67/67, server 37/37. All changes committed and merged to `main`.
 
-**Last updated:** 2026-06-24
-**Session:** Estimate save + template resume — **user verified OK**; paused for tomorrow
+**Last updated:** 2026-06-25
+**Session:** Templates = structures only; Standard | My tabs restored; convert → estimate in editor
 
 ---
 
@@ -38,7 +38,12 @@
 | Bag = first-class product type (DB enum, engine, Zod, validation) | ✅ |
 | Save & Calculate: dimension errors now offer "save structure only" fallback | ✅ |
 | Estimate Save/PATCH: processes + gsm persist; no-store cache on GET after PATCH | ✅ (2026-06-24) |
-| Template re-use: resume last saved draft (session + API by `sourceTemplateKey`) | ✅ user-verified 2026-06-24 |
+| Template re-use: resume last saved draft (session + API by `sourceTemplateKey`) | ✅ **DB-first 2026-06-25** — click template opens latest draft; `+` for new quote |
+| My Templates card click → estimate editor (linked draft or new quote); not template builder | ✅ superseded — templates always convert to new estimate; drafts in Estimates |
+| New estimate (`?new=1`): card click always creates fresh quote | ✅ superseded — unified `/templates`, no job header on picker |
+| **Templates** page: Standard + My tabs; structure only; click → new estimate | ✅ 2026-06-25 |
+| Save button: PATCH all fields to DB (structure/micron/cost) without requiring Calculate | ✅ 2026-06-25 |
+| Standard Templates vs My Templates: separate pages + `user_only` API filter | ✅ 2026-06-25 |
 | Total GSM format: xx.xx; Value column: xx.x | ✅ |
 | Materials pagination: limit=500 request, limit=1000 server cap, sorted by type+name | ✅ |
 | GIT-SAVE.bat: pushes current branch dynamically | ✅ |
@@ -100,7 +105,7 @@ cost/m² = (dry_gsm / 1000) × costPerKgUsd_dry_equiv
 
 ## Open Items / Next Session
 
-- [x] Estimate save + template resume flow (micron/GSM, Save, return to Templates, OK on resume) — **verified by user 2026-06-24**
+- [x] Estimate save + template resume flow — **permanent fix 2026-06-25** (open latest DB draft on template click)
 - [ ] PWA: disable service worker in dev or fix `undefined` Response in `service-worker.js` (console noise only)
 - [ ] SC-7: cancel doesn’t detect dirty layers; SC-8: cost/kg override `> 0` check (from SAVE_AND_CALCULATE audit)
 - [ ] Verify full estimate save flow for Bag type end-to-end

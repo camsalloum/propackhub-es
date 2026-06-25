@@ -23,17 +23,15 @@ export const CLASS_FILTER_ROWS = {
   ],
 };
 
-export function FilterCell({
+function FilterChip({
   label,
   active,
   disabled,
-  wide,
   onClick,
 }: {
   label: string;
   active: boolean;
   disabled: boolean;
-  wide?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -42,20 +40,33 @@ export function FilterCell({
       onClick={onClick}
       disabled={disabled}
       className={[
-        'px-4 py-2.5 min-h-[44px] rounded-lg text-sm font-medium border transition-all select-none',
-        wide ? 'col-span-full w-full' : '',
+        'px-2.5 py-1 rounded-full text-xs font-medium border whitespace-nowrap transition-colors',
         active
-          ? 'bg-gold text-white border-gold shadow-sm'
+          ? 'bg-gold text-white border-gold'
           : disabled
-            ? 'border-border text-mist/40 bg-white cursor-default'
-            : 'bg-white border-border text-ink hover:border-gold/40',
-      ]
-        .join(' ')
-        .trim()}
+            ? 'border-transparent text-mist/40 cursor-default'
+            : 'bg-white border-border text-ink hover:border-gold/50',
+      ].join(' ')}
     >
       {label}
     </button>
   );
+}
+
+/** @deprecated Use FilterChip internally — kept for graph/tests compat */
+export function FilterCell({
+  label,
+  active,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  disabled: boolean;
+  wide?: boolean;
+  onClick: () => void;
+}) {
+  return <FilterChip label={label} active={active} disabled={disabled} onClick={onClick} />;
 }
 
 interface ClassFilterPanelProps {
@@ -71,7 +82,7 @@ interface ClassFilterPanelProps {
 }
 
 export function ClassFilterPanel({
-  title = 'Filter by structure',
+  title,
   filter,
   isAllActive,
   countLabel,
@@ -82,49 +93,54 @@ export function ClassFilterPanel({
   countWithFilter,
 }: ClassFilterPanelProps) {
   return (
-    <div className="card mb-6">
-      <h2 className="text-sm font-semibold text-navy mb-3">{title}</h2>
-      <div className="space-y-2">
-        <FilterCell label="All" active={isAllActive} disabled={false} wide onClick={onReset} />
-        <div className="grid grid-cols-2 gap-2">
-          {CLASS_FILTER_ROWS.material.map(({ label, value }) => (
-            <FilterCell
-              key={value}
-              label={label}
-              active={filter.materialClass === value}
-              disabled={
-                !isAllActive &&
-                filter.materialClass !== value &&
-                countWithFilter({ materialClass: value }) === 0
-              }
-              onClick={() => onToggleMaterial(value)}
-            />
-          ))}
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {CLASS_FILTER_ROWS.print.map(({ label, value }) => (
-            <FilterCell
-              key={label}
-              label={label}
-              active={filter.isPrinted === value}
-              disabled={countWithFilter({ isPrinted: value }) === 0}
-              onClick={() => onTogglePrinted(value)}
-            />
-          ))}
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {CLASS_FILTER_ROWS.structure.map(({ label, value }) => (
-            <FilterCell
-              key={value}
-              label={label}
-              active={filter.structure === value}
-              disabled={countWithFilter({ structure: value }) === 0}
-              onClick={() => onToggleStructure(value)}
-            />
-          ))}
-        </div>
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+        {title ? (
+          <span className="text-xs font-medium text-mist shrink-0 mr-0.5">{title}</span>
+        ) : null}
+        <FilterChip label="All" active={isAllActive} disabled={false} onClick={onReset} />
+        <span className="text-border select-none hidden sm:inline" aria-hidden>
+          |
+        </span>
+        {CLASS_FILTER_ROWS.material.map(({ label, value }) => (
+          <FilterChip
+            key={value}
+            label={label}
+            active={filter.materialClass === value}
+            disabled={
+              !isAllActive &&
+              filter.materialClass !== value &&
+              countWithFilter({ materialClass: value }) === 0
+            }
+            onClick={() => onToggleMaterial(value)}
+          />
+        ))}
+        <span className="text-border select-none hidden sm:inline" aria-hidden>
+          |
+        </span>
+        {CLASS_FILTER_ROWS.print.map(({ label, value }) => (
+          <FilterChip
+            key={label}
+            label={label}
+            active={filter.isPrinted === value}
+            disabled={countWithFilter({ isPrinted: value }) === 0}
+            onClick={() => onTogglePrinted(value)}
+          />
+        ))}
+        <span className="text-border select-none hidden sm:inline" aria-hidden>
+          |
+        </span>
+        {CLASS_FILTER_ROWS.structure.map(({ label, value }) => (
+          <FilterChip
+            key={value}
+            label={label}
+            active={filter.structure === value}
+            disabled={countWithFilter({ structure: value }) === 0}
+            onClick={() => onToggleStructure(value)}
+          />
+        ))}
       </div>
-      <p className="text-xs text-mist mt-3">{countLabel}</p>
+      <p className="text-xs text-mist shrink-0 sm:pl-2">{countLabel}</p>
     </div>
   );
 }

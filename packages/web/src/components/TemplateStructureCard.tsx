@@ -8,34 +8,43 @@ export interface TemplateCardLayer {
   micron: number;
 }
 
+/**
+ * Structure library card — no whole-card click.
+ * Templates hold layer stack only (no customer). User picks an explicit action.
+ */
 export function TemplateStructureCard({
   name,
   layers,
   layerCount,
-  instantiating,
-  allowEdit,
-  onUse,
-  onEdit,
+  busy,
+  showEditStructure,
+  showSaveToMyTemplates,
+  showDelete,
+  onCreateEstimate,
+  onEditStructure,
+  onSaveToMyTemplates,
   onDelete,
   deleting,
 }: {
   name: string;
-  /** unused — kept for API compat */ metaLine?: string;
-  /** unused — kept for API compat */ templateKey?: string | null;
-  /** unused — kept for API compat */ badge?: string;
-  /** unused — kept for API compat */ templateKeyTitle?: string;
+  metaLine?: string;
+  templateKey?: string | null;
+  badge?: string;
+  templateKeyTitle?: string;
   layers: TemplateCardLayer[];
   layerCount: number;
-  instantiating?: boolean;
-  allowEdit?: boolean;
-  onUse: () => void;
-  onEdit?: () => void;
+  busy?: boolean;
+  showEditStructure?: boolean;
+  showSaveToMyTemplates?: boolean;
+  showDelete?: boolean;
+  onCreateEstimate: () => void;
+  onEditStructure?: () => void;
+  onSaveToMyTemplates?: () => void;
   onDelete?: () => void;
   deleting?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-white hover:border-gold/40 hover:shadow-sm transition-all overflow-hidden">
-      {/* Colored laminate bar */}
+    <div className="rounded-xl border border-border bg-white overflow-hidden flex flex-col h-full">
       {layerCount > 0 && (
         <LaminateVisualizer
           layers={layers}
@@ -43,46 +52,59 @@ export function TemplateStructureCard({
           height={32}
           orientation="horizontal"
           labelMode="number"
-          className="w-full"
+          className="w-full pointer-events-none"
         />
       )}
 
-      {/* Name row + actions */}
-      <div className="flex items-center gap-2 px-3 py-2">
+      <div className="px-3 pt-2.5 pb-2 flex-1 min-w-0">
+        <h4 className="text-sm font-semibold text-navy truncate">{name}</h4>
+        <p className="text-xs text-mist mt-0.5">Structure only — no customer</p>
+      </div>
+
+      <div className="px-3 pb-3 pt-2 border-t border-border/80 space-y-2">
         <button
           type="button"
-          className="flex-1 min-w-0 text-left rounded active:bg-slate/40"
-          disabled={instantiating}
-          onClick={onUse}
+          className="btn-primary w-full text-sm py-2"
+          disabled={busy}
+          onClick={onCreateEstimate}
         >
-          <h4 className="text-sm font-semibold text-navy truncate">{name}</h4>
+          {busy ? 'Creating estimate…' : 'Create estimate'}
         </button>
 
-        {allowEdit && (
-          <div className="flex shrink-0 gap-0.5">
-            {onEdit && (
-              <button
-                type="button"
-                className="p-1.5 rounded text-mist hover:text-navy hover:bg-slate/80 flex items-center justify-center"
-                onClick={onEdit}
-                aria-label="Edit template"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-            )}
-            {onDelete && (
-              <button
-                type="button"
-                className="p-1.5 rounded text-mist hover:text-red-600 hover:bg-red-50 flex items-center justify-center"
-                disabled={deleting}
-                onClick={onDelete}
-                aria-label="Delete template"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-1.5">
+          {showEditStructure && onEditStructure && (
+            <button
+              type="button"
+              className="btn-secondary text-xs flex-1 min-w-[7rem] inline-flex items-center justify-center gap-1 py-2"
+              disabled={busy}
+              onClick={onEditStructure}
+            >
+              <Pencil className="w-3 h-3" />
+              Edit structure
+            </button>
+          )}
+          {showSaveToMyTemplates && onSaveToMyTemplates && (
+            <button
+              type="button"
+              className="btn-secondary text-xs flex-1 min-w-[7rem] py-2"
+              disabled={busy}
+              onClick={onSaveToMyTemplates}
+            >
+              Save to My Templates
+            </button>
+          )}
+          {showDelete && onDelete && (
+            <button
+              type="button"
+              className="p-2 rounded text-mist hover:text-red-600 hover:bg-red-50 shrink-0"
+              disabled={deleting || busy}
+              onClick={onDelete}
+              aria-label="Delete structure"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

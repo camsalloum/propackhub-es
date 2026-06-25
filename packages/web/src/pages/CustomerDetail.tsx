@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, RefreshCw, Copy } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import LaminateVisualizer from '../components/LaminateVisualizer';
+import { estimateStatusBadgeClass, estimateStatusLabel } from '../lib/estimateStatus';
 import { SkeletonTableRows } from '../components/Skeleton';
 
 export default function CustomerDetail() {
@@ -145,7 +146,7 @@ export default function CustomerDetail() {
             </div>
 
             <button
-              onClick={() => navigate(`/templates?new=1&customer=${id}`)}
+              onClick={() => navigate(`/templates?customer=${id}`)}
               className="btn-primary w-full mt-6"
             >
               + New estimate
@@ -171,7 +172,9 @@ export default function CustomerDetail() {
                         <p className="font-mono font-semibold text-navy">{est.refNumber}</p>
                         <p className="text-sm text-mist">{est.jobName}</p>
                       </div>
-                      <span className={`badge badge-${est.status}`}>{est.status}</span>
+                      <span className={`badge ${estimateStatusBadgeClass(est.status)}`}>
+                        {estimateStatusLabel(est.status)}
+                      </span>
                     </div>
 
                     <div className="flex items-start gap-4 mb-4">

@@ -12,17 +12,11 @@ import {
   type TemplateStructureTier,
 } from '../lib/templateCatalog';
 
-const statusBadge = (status: string) => {
-  const map: Record<string, string> = {
-    draft: 'badge-draft',
-    sent: 'badge-sent',
-    won: 'badge-won',
-    lost: 'badge-lost',
-  };
-  return map[status] || 'badge-draft';
-};
-
-const STATUS_OPTIONS = ['all', 'draft', 'sent', 'won', 'lost'] as const;
+import {
+  ESTIMATE_STATUS_FILTERS,
+  estimateStatusBadgeClass,
+  estimateStatusLabel,
+} from '../lib/estimateStatus';
 
 const EstimatesList = () => {
   const navigate = useNavigate();
@@ -31,7 +25,7 @@ const EstimatesList = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_OPTIONS)[number]>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [classFilter, setClassFilter] = useState<ClassFilter>(EMPTY_CLASS_FILTER);
   const [requotingId, setRequotingId] = useState<string | null>(null);
 
@@ -79,7 +73,10 @@ const EstimatesList = () => {
         !customerFilter.trim() ||
         (e.customerName || '').toLowerCase().includes(customerFilter.trim().toLowerCase());
 
-      const matchesStatus = statusFilter === 'all' || e.status === statusFilter;
+      const matchesStatus =
+        statusFilter === 'all' ||
+        e.status === statusFilter ||
+        (statusFilter === 'draft' && e.status === 'sent');
 
       const matchesClass =
         isAllClassFiltersActive || matchesEstimateClassFilter(e, classFilter);
@@ -142,7 +139,7 @@ const EstimatesList = () => {
           <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Estimates</h1>
           <p className="text-sm text-mist mt-1">Search past quotes, filter by structure, re-quote with new prices.</p>
         </div>
-        <Link to="/templates?new=1" className="btn-primary text-center w-full sm:w-auto">
+        <Link to="/templates" className="btn-primary text-center w-full sm:w-auto">
           New estimate
         </Link>
       </div>
@@ -170,24 +167,24 @@ const EstimatesList = () => {
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        {STATUS_OPTIONS.map((s) => (
+        {ESTIMATE_STATUS_FILTERS.map((opt) => (
           <button
-            key={s}
+            key={opt.value}
             type="button"
-            onClick={() => setStatusFilter(s)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium border capitalize ${
-              statusFilter === s
+            onClick={() => setStatusFilter(opt.value)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${
+              statusFilter === opt.value
                 ? 'bg-gold text-white border-gold'
                 : 'bg-white border-border text-ink hover:border-gold/40'
             }`}
           >
-            {s === 'all' ? 'All statuses' : s}
+            {opt.label}
           </button>
         ))}
       </div>
 
       <ClassFilterPanel
-        title="Filter by structure"
+        title="Filter:"
         filter={classFilter}
         isAllActive={isAllClassFiltersActive}
         countLabel={
@@ -205,7 +202,7 @@ const EstimatesList = () => {
       {estimates.length === 0 ? (
         <div className="card text-center py-12">
           <p className="text-mist mb-4">No estimates yet</p>
-          <Link to="/templates?new=1" className="btn-primary inline-flex">
+          <Link to="/templates" className="btn-primary inline-flex">
             Create your first quote
           </Link>
         </div>
@@ -236,7 +233,9 @@ const EstimatesList = () => {
                     <p className="font-medium truncate">{e.jobName || 'Untitled'}</p>
                     <p className="text-sm text-mist truncate">{e.customerName || 'No customer'}</p>
                   </div>
-                  <span className={`badge shrink-0 ${statusBadge(e.status)}`}>{e.status}</span>
+                  <span className={`badge shrink-0 ${estimateStatusBadgeClass(e.status)}`}>
+                    {estimateStatusLabel(e.status)}
+                  </span>
                 </div>
                 <p className="mt-2 text-gold font-display font-semibold">
                   {e.salePricePerKg
@@ -285,7 +284,9 @@ const EstimatesList = () => {
                       <td className="py-4 px-4">{e.jobName || '—'}</td>
                       <td className="py-4 px-4">{e.customerName || '—'}</td>
                       <td className="py-4 px-4">
-                        <span className={`badge ${statusBadge(e.status)}`}>{e.status}</span>
+                        <span className={`badge ${estimateStatusBadgeClass(e.status)}`}>
+                          {estimateStatusLabel(e.status)}
+                        </span>
                       </td>
                       <td className="py-4 px-4">
                         {e.salePricePerKg

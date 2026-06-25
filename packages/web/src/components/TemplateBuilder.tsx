@@ -307,7 +307,7 @@ export function TemplateBuilder({
   );
 
   const [layers, setLayers] = useState<BuilderLayer[]>(() => {
-    if (mode === 'edit' && template?.defaultLayers?.length) {
+    if (template?.defaultLayers?.length) {
       return template.defaultLayers.map((l) => ({
         clientId: genId(),
         layer_type: l.layer_type,
@@ -321,10 +321,9 @@ export function TemplateBuilder({
   // ── Processes ────────────────────────────────────────────────────────────
   const [processes, setProcesses] = useState<Array<{ process_key: string; enabled: boolean }>>(
     () => {
-      if (mode === 'edit' && template?.defaultProcesses?.length) {
+      if (template?.defaultProcesses?.length) {
         return template.defaultProcesses.map((p) => ({ ...p }));
       }
-      // create mode: derive sensible defaults from declared attributes
       return deriveDefaultProcesses(initTier, initPrintMode, initFamily, initMaterialClass, processOptions);
     }
   );
@@ -554,7 +553,7 @@ export function TemplateBuilder({
         layer_order: i + 1,
         layer_type: l.layer_type,
         materialId: l.materialId,
-        default_micron: 0,
+        default_micron: l.default_micron > 0 ? l.default_micron : 0,
       }));
 
       let saved: TemplateForEdit;

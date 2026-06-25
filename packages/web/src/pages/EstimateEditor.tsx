@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Save, Download, ArrowLeft, Layers, Calculator, DollarSign, Loader2, X } from 'lucide-react';
 import LayerCard from '../components/LayerCard';
 import BottomSheet from '../components/BottomSheet';
 import LaminateVisualizer from '../components/LaminateVisualizer';
+import { JobHeaderFields } from '../components/JobHeaderFields';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { usdToDisplay, displayToUsd } from '../lib/currency';
@@ -11,11 +12,13 @@ import { runClientCalculation, effectiveMarginPercent } from '../lib/estimateCal
 import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
 import {
   dimensionsForSave,
+  estimateNeedsConfiguration,
   normalizeProcessesForSave,
   productTypeForSave,
   validateConfiguredEstimate,
 } from '../lib/estimateConfigure';
 import { setWorkingEstimateForTemplate } from '../lib/estimateSession';
+import { estimateStatusLabel } from '../lib/estimateStatus';
 import { groupMaterialsForPicker, type CategoryNode } from '../lib/materialTaxonomy';
 import { derivePrintingWebClass, stackNeedsSolventMix, materialAllowedForTemplateLayer } from '@es/engine';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
@@ -98,6 +101,7 @@ const EstimateEditor = () => {
   // Layer table column visibility — reserved for future optional columns
   const [jobName, setJobName] = useState('New estimate');
   const [customerId, setCustomerId] = useState<string>('');
+  const [customerDraftName, setCustomerDraftName] = useState('');
   const [markupPercent, setMarkupPercent] = useState(15);
   const [platesPerKg, setPlatesPerKg] = useState(0);
   const [deliveryPerKg, setDeliveryPerKg] = useState(0);
@@ -118,7 +122,6 @@ const EstimateEditor = () => {
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
 
   const location = useLocation();
-  const templateNavConfigureRef = useRef(false);
   const locationState = location.state as {
     returnTo?: string;
     configureFromTemplate?: boolean;
@@ -258,10 +261,6 @@ const EstimateEditor = () => {
     setLayerSheetOpen(true);
   };
 
-  useEffect(() => {
-    templateNavConfigureRef.current = Boolean(locationState?.configureFromTemplate);
-  }, [id, locationState?.configureFromTemplate]);
-
   const productTypeOptions = masterReference.productTypeOptions ?? DEFAULT_PRODUCT_TYPE_OPTIONS;
   const unitOptions = masterReference.unitOptions ?? DEFAULT_UNIT_OPTIONS;
 
@@ -357,6 +356,11 @@ const EstimateEditor = () => {
   }, [id]);
 
   useEffect(() => {
+    const fromUrl = searchParams.get('customer')?.trim();
+    if (fromUrl && !customerId) setCustomerId(fromUrl);
+  }, [searchParams, customerId]);
+
+  useEffect(() => {
     if (masterDataVersion === 0) return;
     loadBaseData();
   }, [masterDataVersion, loadBaseData]);
@@ -449,9 +453,9 @@ const EstimateEditor = () => {
         setOrderQuantityUnit(normalizeUnitValue(data.orderQuantityUnit, unitOptions));
       }
       if (data.processes) setProcessesState(normalizeProcessesForSave(data.processes));
-      const fromTemplate =
-        Boolean(data.dimensions?.configureFromTemplate) ||
-        (templateNavConfigureRef.current && Boolean(locationState?.configureFromTemplate));
+      const fromTemplate = estimateNeedsConfiguration(
+        data.dimensions as Record<string, unknown> | null | undefined
+      );
       if (fromTemplate) {
         setNeedsConfiguration(true);
         setActiveSection('structure');
@@ -534,10 +538,11 @@ const EstimateEditor = () => {
     }
   };
 
-  const buildSavePayload = useCallback(() => {
+  const buildSavePayload = useCallback((customerIdOverride?: string) => {
+    const linkedCustomer = customerIdOverride ?? customerId;
     const payload: Record<string, unknown> = {
       jobName,
-      customerId: customerId || undefined,
+      customerId: linkedCustomer || undefined,
       productType: productTypeForSave(estimate?.productType, productType, productTypeOptions),
       productSubtype: productSubtype ?? undefined,
       dimensions: dimensionsForSave(dimensions as Record<string, unknown>),
@@ -569,6 +574,21 @@ const EstimateEditor = () => {
     }
     return payload;
   }, [jobName, customerId, estimate?.productType, productType, productTypeOptions, productSubtype, needsSolventMix, dimensions, markupPercent, platesPerKg, deliveryPerKg, solventCostPerKgUsd, solventRatio, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
+
+  /** Link estimate to a customer row — create customer record if user typed a new name. */
+  const ensureCustomerForSave = async (): Promise<string | undefined> => {
+    if (customerId?.trim()) return customerId;
+    const name = customerDraftName.trim();
+    if (!name) return undefined;
+    const customers = await apiClient.getCustomers();
+    const match = (customers || []).find(
+      (c: { companyName?: string }) => c.companyName?.toLowerCase() === name.toLowerCase()
+    );
+    const id = match?.id ?? (await apiClient.createCustomer({ companyName: name })).id;
+    setCustomerId(id);
+    setCustomerDraftName('');
+    return id;
+  };
 
   const slabQuantitiesKey = slabsState.map((s) => s.quantityKg).join(',');
   const layerInputsKey = layers.map((l) => `${l.materialId}:${l.micron}:${l.costPerKgUsd}`).join('|');
@@ -655,88 +675,90 @@ const EstimateEditor = () => {
     );
   }, [clientCalcResult, estimate?.exchangeRateUsdToDisplay]);
 
-  const persistEstimate = async (andCalculate: boolean) => {
-    if (saving) return;
+  const persistEstimate = async (): Promise<boolean> => {
+    if (saving) return false;
     if (layers.length === 0) {
       alert('Add at least one layer before saving.');
-      return;
+      return false;
     }
     if (layers.some((l) => !l.materialId)) {
       alert('Select a material for every layer before saving.');
-      return;
+      return false;
     }
 
+    setSaving(true);
+    setSaveNotice(null);
+    try {
+      const linkedCustomerId = await ensureCustomerForSave();
+      const payload = buildSavePayload(linkedCustomerId);
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        localStorage.setItem(`offlineDraft:${estimate?.id || 'new'}`, JSON.stringify(payload));
+        alert('Offline — draft saved locally');
+        return false;
+      }
+      if (estimate?.id) {
+        await apiClient.updateEstimate(estimate.id, payload);
+        const templateKey = estimate.sourceTemplateKey?.trim();
+        if (templateKey) {
+          setWorkingEstimateForTemplate(templateKey, estimate.id);
+        }
+        setNeedsConfiguration(false);
+        await fetchEstimate(estimate.id, { silent: true });
+        setSaveNotice('Changes saved.');
+        return true;
+      }
+      const saved = await apiClient.createEstimate(payload);
+      const templateKey = saved?.sourceTemplateKey?.trim();
+      if (templateKey && saved?.id) {
+        setWorkingEstimateForTemplate(templateKey, saved.id);
+      }
+      navigate(`/estimate/${saved.id}`, { replace: true });
+      setSaveNotice('Changes saved.');
+      return true;
+    } catch (err: any) {
+      console.error('Save failed:', err);
+      alert(`Save failed: ${err.message || 'Unknown error'}`);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCalculate = async () => {
+    if (!estimate?.id || calculating) return;
     const validationError = validateConfiguredEstimate({
       layers,
       productType,
       dimensions: dimensions as Record<string, unknown>,
     });
-    const willCalculate = andCalculate && !validationError;
-
-    setSaving(true);
+    if (validationError) {
+      alert(validationError);
+      if (
+        validationError.includes('Structure') ||
+        validationError.includes('thickness') ||
+        validationError.includes('µ') ||
+        validationError.includes('layer')
+      ) {
+        setActiveSection('structure');
+      } else {
+        setActiveSection('structure');
+      }
+      return;
+    }
+    setCalculating(true);
     setSaveNotice(null);
     try {
-      const payload = buildSavePayload();
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        localStorage.setItem(`offlineDraft:${estimate?.id || 'new'}`, JSON.stringify(payload));
-        alert('Offline — draft saved locally');
-        return;
-      }
-      if (estimate?.id) {
-        await apiClient.updateEstimate(estimate.id, payload);
-        templateNavConfigureRef.current = false;
-        const templateKey = estimate.sourceTemplateKey?.trim();
-        if (templateKey) {
-          setWorkingEstimateForTemplate(templateKey, estimate.id);
-        }
-        navigate(`/estimate/${estimate.id}`, {
-          replace: true,
-          state: returnTo !== '/estimates' ? { returnTo } : undefined,
-        });
-        await fetchEstimate(estimate.id, { silent: true });
-        setNeedsConfiguration(false);
-        setSaveNotice('Changes saved.');
-      } else {
-        const saved = await apiClient.createEstimate(payload);
-        const templateKey = saved?.sourceTemplateKey?.trim();
-        if (templateKey && saved?.id) {
-          setWorkingEstimateForTemplate(templateKey, saved.id);
-        }
-        navigate(`/estimate/${saved.id}`, { replace: true });
-      }
-
-      if (andCalculate && validationError) {
-        if (
-          validationError.includes('Structure') ||
-          validationError.includes('thickness') ||
-          validationError.includes('µ') ||
-          validationError.includes('layer')
-        ) {
-          setActiveSection('structure');
-        }
-        setSaveNotice(`Saved as draft. ${validationError}`);
-        return;
-      }
-
-      if (willCalculate && estimate?.id) {
-        setCalculating(true);
-        try {
-          const result = await apiClient.calculateEstimate(estimate.id);
-          applyCalculationResult(estimate, result);
-          await fetchEstimate(estimate.id, { silent: true });
-          setSaveNotice('Saved and calculated.');
-        } catch (calcErr) {
-          const msg = calcErr instanceof Error ? calcErr.message : 'Calculate failed';
-          setSaveNotice(`Saved, but calculate failed: ${msg}`);
-        } finally {
-          setCalculating(false);
-        }
-      }
-    } catch (err: any) {
-      console.error('Save failed:', err);
-      alert(`Save failed: ${err.message || 'Unknown error'}`);
+      const saved = await persistEstimate();
+      if (!saved) return;
+      const result = await apiClient.calculateEstimate(estimate.id);
+      applyCalculationResult(estimate, result);
+      await fetchEstimate(estimate.id, { silent: true });
+      setSaveNotice('Calculated.');
+    } catch (calcErr) {
+      const msg = calcErr instanceof Error ? calcErr.message : 'Calculate failed';
+      setSaveNotice(`Calculate failed: ${msg}`);
     } finally {
-      setSaving(false);
+      setCalculating(false);
     }
   };
 
@@ -751,8 +773,7 @@ const EstimateEditor = () => {
     navigate(returnTo);
   };
 
-  const handleSaveDraft = () => persistEstimate(false);
-  const handleSaveAndCalculate = () => persistEstimate(true);
+  const handleSave = () => void persistEstimate();
 
   const handleRequote = async () => {
     if (!estimate?.id) return;
@@ -782,11 +803,16 @@ const EstimateEditor = () => {
       alert('Save the estimate before creating a template.');
       return;
     }
-    const name = prompt('Template name:', jobName || estimate.jobName);
+    const name = prompt('Name for My Templates (reusable structure):', jobName || estimate.jobName);
     if (!name?.trim()) return;
     try {
       await apiClient.createTemplate(name.trim(), estimate.id);
-      alert(`Template "${name.trim()}" saved to your account. Use it when starting a new estimate from the estimate editor.`);
+      const open = window.confirm(
+        `Structure "${name.trim()}" saved to My Templates.\n\nOpen My Templates now?`
+      );
+      if (open) {
+        navigate('/my-templates');
+      }
     } catch (err) {
       alert('Failed to save template: ' + (err instanceof Error ? err.message : 'Unknown'));
     }
@@ -809,18 +835,12 @@ const EstimateEditor = () => {
     }
   };
 
-  const changeStatus = async (newStatus: 'sent' | 'won' | 'lost') => {
+  const changeStatus = async (newStatus: 'won' | 'lost') => {
     if (!estimate?.id) { alert('Save the estimate before changing status'); return; }
     try {
       await apiClient.updateEstimate(estimate.id, { status: newStatus });
       await fetchEstimate(estimate.id);
-      if (newStatus === 'sent') {
-        alert('Marked sent. Proposal PDF saved to history when generation succeeded.');
-      } else {
-        alert(`Status changed to ${newStatus}`);
-      }
-    }
-    catch (err) { alert('Failed to change status'); }
+    } catch (err) { alert('Failed to change status'); }
   };
 
   if (loading) return <div className="p-8">Loading estimate...</div>;
@@ -946,18 +966,49 @@ const EstimateEditor = () => {
             <X className="w-4 h-4" />
             <span>Cancel</span>
           </button>
-          <button onClick={handleSaveDraft} disabled={saving} className="btn-secondary inline-flex items-center space-x-2">
+          <button onClick={handleSave} disabled={saving} className="btn-primary inline-flex items-center space-x-2">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>{saving ? 'Saving...' : 'Save'}</span>
           </button>
-          <button onClick={handleSaveAndCalculate} disabled={saving || calculating} className="btn-primary inline-flex items-center space-x-2">
+          <button onClick={handleCalculate} disabled={saving || calculating} className="btn-secondary inline-flex items-center space-x-2">
             {calculating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calculator className="w-4 h-4" />}
-            <span>{calculating ? 'Calculating...' : 'Save & Calculate'}</span>
+            <span>{calculating ? 'Calculating...' : 'Calculate'}</span>
           </button>
-          <button onClick={downloadProposalPdf} className="btn-secondary inline-flex items-center space-x-2">
+          <button onClick={downloadProposalPdf} className="btn-secondary inline-flex items-center space-x-2" title="Download PDF to share by email, WhatsApp, etc.">
             <Download className="w-4 h-4" /><span>PDF</span>
           </button>
         </div>
+      </div>
+
+      <div className="card mb-6 py-3 px-4 sm:px-5">
+        <h3 className="text-sm font-semibold text-navy mb-1">Job details</h3>
+        <p className="text-xs text-mist mb-3">
+          Estimate <span className="font-mono text-ink">{estimate?.refNumber || 'draft'}</span> — pick
+          an existing customer, click <strong className="text-ink">+ Add customer</strong> for a new
+          one, then Save. The quote appears under{' '}
+          <Link to="/estimates" className="text-gold hover:underline">
+            Estimates
+          </Link>{' '}
+          and on that customer&apos;s page.
+        </p>
+        <JobHeaderFields
+          customerId={customerId}
+          onCustomerChange={(id) => {
+            setCustomerId(id);
+            setCustomerDraftName('');
+          }}
+          onCustomerDraftChange={setCustomerDraftName}
+          jobName={jobName}
+          onJobNameChange={setJobName}
+          productType={productType}
+          onProductTypeChange={setProductType}
+          productTypeOptions={productTypeOptions}
+          orderQuantity={orderQuantity}
+          onOrderQuantityChange={setOrderQuantity}
+          orderQuantityUnit={orderQuantityUnit}
+          onOrderQuantityUnitChange={setOrderQuantityUnit}
+          unitOptions={unitOptions}
+        />
       </div>
 
       <div className="lg:flex lg:space-x-6">
@@ -1630,7 +1681,7 @@ const EstimateEditor = () => {
                         )}
                       </div>
                       <p className="text-xs text-mist pt-1">
-                        {clientCalcResult ? 'Live engine preview' : 'Save & Calculate to refresh'}
+                        {clientCalcResult ? 'Live engine preview' : 'Calculate to refresh pricing'}
                       </p>
                     </div>
                   );
@@ -1639,20 +1690,39 @@ const EstimateEditor = () => {
             )}
 
             <div className="space-y-2">
-              <button onClick={handleSaveAndCalculate} className="btn-primary w-full">Save & Calculate</button>
-              <button onClick={handleSaveAsTemplate} className="btn-secondary w-full">Save as Template</button>
-              <button onClick={downloadProposalPdf} className="btn-secondary w-full">Generate Proposal PDF</button>
+              <button onClick={handleSave} disabled={saving} className="btn-primary w-full">
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+              <button onClick={handleCalculate} disabled={saving || calculating} className="btn-secondary w-full">
+                {calculating ? 'Calculating...' : 'Calculate'}
+              </button>
+              <button onClick={handleSaveAsTemplate} className="btn-secondary w-full">
+                Save structure to My Templates
+              </button>
               <button onClick={handleRequote} className="text-sm text-mist hover:text-ink w-full text-center py-2">Duplicate for re-quote</button>
             </div>
 
             <div className="card">
-              <h4 className="font-display font-semibold text-navy mb-3">Status</h4>
+              <h4 className="font-display font-semibold text-navy mb-2">Send to customer</h4>
+              <p className="text-xs text-mist mb-3">
+                Save and Calculate, then download the PDF. Share it by email, WhatsApp, or any
+                channel you use — the app does not send on your behalf.
+              </p>
+              <button onClick={downloadProposalPdf} className="btn-primary w-full">
+                Download proposal PDF
+              </button>
+
+              <h4 className="font-display font-semibold text-navy mt-5 mb-2">Outcome (optional)</h4>
+              <p className="text-xs text-mist mb-2">
+                Track if the customer accepted or declined — only if you use this for reporting.
+              </p>
               <div className="flex space-x-2">
-                <button onClick={() => changeStatus('sent')} className="btn-secondary flex-1">Mark Sent</button>
                 <button onClick={() => changeStatus('won')} className="btn-success flex-1">Mark Won</button>
                 <button onClick={() => changeStatus('lost')} className="btn-danger flex-1">Mark Lost</button>
               </div>
-              <div className="mt-3 text-sm text-mist">Current: <strong>{estimate?.status || 'draft'}</strong></div>
+              <div className="mt-3 text-sm text-mist">
+                Current: <strong>{estimateStatusLabel(estimate?.status)}</strong>
+              </div>
             </div>
 
             {proposals.length > 0 && (
@@ -1705,7 +1775,7 @@ const EstimateEditor = () => {
               {estimate?.displayCurrency || 'USD'} {displaySalePrice.toFixed(2)}/kg
             </p>
           </div>
-          <button onClick={handleSaveAndCalculate} disabled={saving} className="btn-primary px-4 py-2 text-sm min-h-[48px]">
+          <button onClick={handleSave} disabled={saving} className="btn-primary px-4 py-2 text-sm min-h-[48px]">
             {saving ? 'Saving...' : 'Save'}
           </button>
         </div>

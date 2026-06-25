@@ -11,6 +11,7 @@ const fieldClass = 'input input-compact w-full min-w-0';
 export function JobHeaderFields({
   customerId,
   onCustomerChange,
+  onCustomerDraftChange,
   jobName,
   onJobNameChange,
   jobNamePlaceholder = 'e.g. Chips duplex laminate',
@@ -26,6 +27,7 @@ export function JobHeaderFields({
 }: {
   customerId: string;
   onCustomerChange: (id: string) => void;
+  onCustomerDraftChange?: (companyName: string) => void;
   jobName?: string;
   onJobNameChange?: (name: string) => void;
   jobNamePlaceholder?: string;
@@ -54,7 +56,12 @@ export function JobHeaderFields({
     <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
       <div className="min-w-0">
         <label className="block text-xs font-medium text-navy mb-1">Customer name</label>
-        <CustomerAutocomplete value={customerId} onChange={onCustomerChange} compact />
+        <CustomerAutocomplete
+          value={customerId}
+          onChange={onCustomerChange}
+          onDraftChange={onCustomerDraftChange}
+          compact
+        />
       </div>
 
       {showJobName && onJobNameChange != null ? (

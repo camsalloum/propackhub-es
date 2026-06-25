@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Search, Plus, ArrowLeft } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { SkeletonCard } from '../components/Skeleton';
 import { ClassFilterPanel, EMPTY_CLASS_FILTER } from '../components/ClassFilterPanel';
-import { JobHeaderFields } from '../components/JobHeaderFields';
 import { TemplateStructureCard } from '../components/TemplateStructureCard';
 import { TemplateBuilder } from '../components/TemplateBuilder';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
@@ -18,14 +17,6 @@ import {
   type TemplateStructureTier,
 } from '../lib/templateCatalog';
 import {
-  defaultProductTypeValue,
-  defaultUnitValue,
-  normalizeProductType,
-  normalizeUnitValue,
-} from '../lib/masterDataReference';
-import {
-  clearWorkingEstimateForTemplate,
-  getWorkingEstimateForTemplate,
   setWorkingEstimateForTemplate,
 } from '../lib/estimateSession';
 
@@ -52,6 +43,7 @@ interface StructureTemplate {
   defaultProcesses?: { process_key: string; enabled: boolean }[];
   defaultPrintingWebClass?: 'wide_web' | 'narrow_web';
   isStandard?: boolean;
+  createdByUserId?: string | null;
 }
 
 interface MaterialOption {
@@ -150,20 +142,24 @@ function visualizerLayers(template: StructureTemplate, materials: MaterialOption
 const StandardTemplates = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const isNewQuoteFlow = searchParams.get('new') === '1';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pickerTab: 'standard' | 'mine' =
+    searchParams.get('tab') === 'mine' ? 'mine' : 'standard';
+  const customerFromUrl = searchParams.get('customer')?.trim() || '';
   const { reference: masterRef } = useMasterDataReference();
-  const productTypeOptions = masterRef.productTypeOptions;
-  const unitOptions = masterRef.unitOptions;
   const isAdmin = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
+
+  const canEditStandardTemplate = isAdmin;
+  const canDeleteStandardTemplate = isAdmin;
+
+  const canManageMyTemplate = (template: StructureTemplate) => {
+    if (template.isStandard) return false;
+    if (!template.createdByUserId) return isAdmin;
+    return template.createdByUserId === user?.id;
+  };
 
   const [classFilter, setClassFilter] = useState<ClassFilter>(EMPTY_CLASS_FILTER);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCustomer, setSelectedCustomer] = useState('');
-  const [jobName, setJobName] = useState('');
-  const [productType, setProductType] = useState<string>(() => defaultProductTypeValue());
-  const [orderQuantity, setOrderQuantity] = useState(10000);
-  const [orderQuantityUnit, setOrderQuantityUnit] = useState(() => defaultUnitValue());
   const [standardTemplates, setStandardTemplates] = useState<StructureTemplate[]>([]);
   const [myTemplates, setMyTemplates] = useState<StructureTemplate[]>([]);
   const [materials, setMaterials] = useState<MaterialOption[]>([]);
@@ -181,13 +177,11 @@ const StandardTemplates = () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const [standard, my, mats] = await Promise.all([
+      const [mats, standard, my] = await Promise.all([
+        apiClient.getMaterials(),
         apiClient.getTemplates(true),
         apiClient.getMyTemplates(),
-        apiClient.getMaterials(),
       ]);
-      setStandardTemplates(standard || []);
-      setMyTemplates((my || []).filter((t: StructureTemplate) => !t.isStandard));
       setMaterials(
         (mats || []).map((m: any) => ({
           id: m.id,
@@ -197,6 +191,8 @@ const StandardTemplates = () => {
           isSolventBased: m.isSolventBased,
         }))
       );
+      setStandardTemplates(standard || []);
+      setMyTemplates(my || []);
     } catch (err) {
       console.error(err);
       setLoadError('Could not load templates. Check that the API server is running.');
@@ -210,22 +206,18 @@ const StandardTemplates = () => {
   }, [loadData]);
 
   useEffect(() => {
-    setProductType((prev) => normalizeProductType(prev, productTypeOptions));
-    setOrderQuantityUnit((prev) => normalizeUnitValue(prev, unitOptions));
-  }, [productTypeOptions, unitOptions]);
+    if (searchParams.get('new') !== '1') return;
+    const next = new URLSearchParams(searchParams);
+    next.delete('new');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
-  useEffect(() => {
-    const customer = searchParams.get('customer');
-    if (customer) setSelectedCustomer(customer);
-    const job = searchParams.get('jobName');
-    if (job) setJobName(job);
-    const pt = searchParams.get('productType') || searchParams.get('type');
-    if (pt) setProductType(normalizeProductType(pt, productTypeOptions));
-    const qty = searchParams.get('orderQuantity');
-    if (qty && !Number.isNaN(Number(qty))) setOrderQuantity(Number(qty));
-    const unit = searchParams.get('orderQuantityUnit');
-    if (unit) setOrderQuantityUnit(normalizeUnitValue(unit, unitOptions));
-  }, [searchParams, productTypeOptions, unitOptions]);
+  const setPickerTab = (tab: 'standard' | 'mine') => {
+    const next = new URLSearchParams(searchParams);
+    if (tab === 'mine') next.set('tab', 'mine');
+    else next.delete('tab');
+    setSearchParams(next, { replace: true });
+  };
 
   useEffect(() => {
     if (!editing) return;
@@ -270,23 +262,21 @@ const StandardTemplates = () => {
     return deduped.sort((a, b) => (a.displayOrder ?? 99) - (b.displayOrder ?? 99));
   }, [standardTemplates]);
 
-  const allCatalogTemplates = useMemo(
-    () => [...uniqueStandard, ...myTemplates],
-    [uniqueStandard, myTemplates]
+  const showMyGrid = pickerTab === 'mine';
+
+  const countWithFilter = useCallback(
+    (partial: Partial<ClassFilter>) => {
+      const test = { ...classFilter, ...partial };
+      const pool = showMyGrid ? myTemplates : uniqueStandard;
+      return pool.filter((t) => matchesClassFilter(catalogInput(t), test)).length;
+    },
+    [classFilter, showMyGrid, myTemplates, uniqueStandard]
   );
 
   const isAllFiltersActive =
     classFilter.materialClass === null &&
     classFilter.isPrinted === null &&
     classFilter.structure === null;
-
-  const countWithFilter = useCallback(
-    (partial: Partial<ClassFilter>) => {
-      const test = { ...classFilter, ...partial };
-      return allCatalogTemplates.filter((t) => matchesClassFilter(catalogInput(t), test)).length;
-    },
-    [allCatalogTemplates, classFilter]
-  );
 
   const filteredStandard = useMemo(() => {
     return uniqueStandard.filter((t) => {
@@ -298,10 +288,9 @@ const StandardTemplates = () => {
         (t.templateKey || '').toLowerCase().includes(q);
       const matchesClass =
         isAllFiltersActive || matchesClassFilter(catalogInput(t), classFilter);
-      const matchesProductType = !isNewQuoteFlow || t.productType === productType;
-      return matchesSearch && matchesClass && matchesProductType;
+      return matchesSearch && matchesClass;
     });
-  }, [uniqueStandard, searchTerm, classFilter, isAllFiltersActive, isNewQuoteFlow, productType]);
+  }, [uniqueStandard, searchTerm, classFilter, isAllFiltersActive]);
 
   const toggleMaterialClass = (value: 'PE' | 'Non PE') =>
     setClassFilter((f) => ({ ...f, materialClass: f.materialClass === value ? null : value }));
@@ -319,17 +308,67 @@ const StandardTemplates = () => {
         (t.templateKey || '').toLowerCase().includes(q);
       const matchesClass =
         isAllFiltersActive || matchesClassFilter(catalogInput(t), classFilter);
-      const matchesProductType = !isNewQuoteFlow || t.productType === productType;
-      return matchesSearch && matchesClass && matchesProductType;
+      // Personal templates: always list all — job-header product type is a hint, not a gate.
+      return matchesSearch && matchesClass;
     });
-  }, [myTemplates, searchTerm, classFilter, isAllFiltersActive, isNewQuoteFlow, productType]);
+  }, [myTemplates, searchTerm, classFilter, isAllFiltersActive]);
+
+  const activeTemplates = showMyGrid ? filteredMy : filteredStandard;
 
   const _editingClassification = editing ? getTemplateClassification(catalogInput(editing)) : null;
   void _editingClassification;
 
-  const renderTemplateCard = (template: StructureTemplate, opts: { allowEdit: boolean; badge?: string }) => {
+  /** Templates = structure only. Always instantiate a new estimate; customer/dims/qty filled in editor. */
+  const createEstimateFromStructure = async (template: StructureTemplate) => {
+    setInstantiating(template.id);
+    setInstantiateError(null);
+    try {
+      const templateKey = template.templateKey?.trim() || null;
+      const created = await apiClient.instantiateTemplate(template.id, {
+        customerId: customerFromUrl || undefined,
+        jobName: template.name,
+      });
+      if (!created?.id) {
+        throw new Error('Could not create estimate — server returned no id');
+      }
+      if (templateKey) {
+        setWorkingEstimateForTemplate(templateKey, created.id);
+      }
+      const estimatePath = customerFromUrl
+        ? `/estimate/${created.id}?customer=${encodeURIComponent(customerFromUrl)}`
+        : `/estimate/${created.id}`;
+      navigate(estimatePath, {
+        state: {
+          returnTo: '/estimates',
+          configureFromTemplate: true,
+          fromStructureTemplate: true,
+        },
+      });
+    } catch (err) {
+      const e = err as Error & { status?: number; details?: unknown };
+      if (e.status === 409) {
+        const unresolvedLayers = Array.isArray(e.details) ? e.details : [];
+        setInstantiateError({
+          message: `${unresolvedLayers.length || 'Some'} layer${unresolvedLayers.length !== 1 ? 's' : ''} in this template could not be resolved to materials in your library.`,
+          unresolvedCount: unresolvedLayers.length,
+        });
+      } else {
+        setInstantiateError({
+          message: e.message || 'Failed to create estimate from template',
+          unresolvedCount: 0,
+        });
+      }
+    } finally {
+      setInstantiating(null);
+    }
+  };
+
+  const renderTemplateCard = (template: StructureTemplate, opts: { badge?: string }) => {
     const layers = visualizerLayers(template, materials);
     const layerCount = layers.length;
+    const isMine = showMyGrid || !template.isStandard;
+    const canEdit = isMine ? canManageMyTemplate(template) : canEditStandardTemplate;
+    const canDelete = isMine ? canManageMyTemplate(template) : canDeleteStandardTemplate;
 
     return (
       <TemplateStructureCard
@@ -337,138 +376,29 @@ const StandardTemplates = () => {
         name={template.name}
         metaLine={cardMetaLine(template, masterRef.productTypeOptions)}
         templateKey={template.templateKey}
-        templateKeyTitle={
-          template.isStandard
-            ? 'Stable template_key for API / MES lookup'
-            : 'Tenant-local key — not in PEBI catalog'
-        }
         badge={opts.badge}
         layers={layers}
         layerCount={layerCount}
-        instantiating={instantiating === template.id}
-        allowEdit={opts.allowEdit}
-        onUse={() => handleUseTemplate(template)}
-        onEdit={() => openEdit(template)}
-        onDelete={() => handleDelete(template)}
+        busy={instantiating === template.id}
+        showEditStructure={canEdit}
+        showSaveToMyTemplates={!showMyGrid && Boolean(template.isStandard)}
+        showDelete={canDelete && isMine}
+        onCreateEstimate={() => createEstimateFromStructure(template)}
+        onEditStructure={canEdit ? () => openEdit(template) : undefined}
+        onSaveToMyTemplates={
+          !showMyGrid && template.isStandard
+            ? () => openForkAsMyTemplate(template)
+            : undefined
+        }
+        onDelete={canDelete && isMine ? () => handleDelete(template) : undefined}
         deleting={deleting === template.id}
       />
     );
   };
 
-  const handleUseTemplate = async (template: StructureTemplate) => {
-    setInstantiating(template.id);
-    setInstantiateError(null);
-    try {
-      const templateKey = template.templateKey?.trim() || null;
-      const returnState = {
-        returnTo: isNewQuoteFlow ? '/estimates' : '/templates',
-      };
-
-      const tryOpenDraft = async (draft: { id: string; jobName?: string; refNumber?: string }) => {
-        setWorkingEstimateForTemplate(templateKey!, draft.id);
-        navigate(`/estimate/${draft.id}`, { state: returnState });
-      };
-
-      const promptResumeDraft = (
-        draft: { id: string; jobName?: string; refNumber?: string },
-        headline: string
-      ): boolean => {
-        const ref = draft.refNumber || draft.id.slice(0, 8);
-        return window.confirm(
-          `${headline}\n\n` +
-            `${draft.jobName || template.name} (${ref})\n\n` +
-            `OK = open it (your saved changes)\n` +
-            `Cancel = start a brand-new quote`
-        );
-      };
-
-      let startFresh = false;
-
-      if (templateKey) {
-        const workingId = getWorkingEstimateForTemplate(templateKey);
-        if (workingId) {
-          try {
-            const working = await apiClient.getEstimate(workingId);
-            if (
-              working?.status === 'draft' &&
-              working.sourceTemplateKey === templateKey
-            ) {
-              if (
-                promptResumeDraft(
-                  working,
-                  `Continue your last saved quote for "${template.name}"?`
-                )
-              ) {
-                await tryOpenDraft(working);
-                return;
-              }
-              clearWorkingEstimateForTemplate(templateKey);
-              startFresh = true;
-            } else {
-              clearWorkingEstimateForTemplate(templateKey);
-            }
-          } catch {
-            clearWorkingEstimateForTemplate(templateKey);
-          }
-        }
-
-        if (!startFresh && !workingId) {
-          try {
-            const latest = await apiClient.getLatestDraftForTemplate(templateKey);
-            if (latest?.id) {
-              if (
-                promptResumeDraft(
-                  latest,
-                  `You have a saved draft for "${template.name}".`
-                )
-              ) {
-                await tryOpenDraft(latest);
-                return;
-              }
-            }
-          } catch {
-            // Fall through to create a new estimate.
-          }
-        }
-      }
-
-      if (templateKey) {
-        clearWorkingEstimateForTemplate(templateKey);
-      }
-
-      const created = await apiClient.instantiateTemplate(template.id, {
-        customerId: selectedCustomer || undefined,
-        jobName: jobName.trim() || template.name,
-        orderQuantityKg: orderQuantity,
-        orderQuantityUnit,
-      });
-      if (templateKey && created?.id) {
-        setWorkingEstimateForTemplate(templateKey, created.id);
-      }
-      navigate(`/estimate/${created.id}`, {
-        state: {
-          ...returnState,
-          configureFromTemplate: true,
-        },
-      });
-    } catch (err) {
-      const e = err as Error & { status?: number; details?: unknown };
-      if (e.status === 409) {
-        // Phase 5.4: visible unresolved-layer banner instead of alert
-        const unresolvedLayers = Array.isArray(e.details) ? e.details : [];
-        setInstantiateError({
-          message: `${unresolvedLayers.length || 'Some'} layer${unresolvedLayers.length !== 1 ? 's' : ''} in this template could not be resolved to materials in your library.`,
-          unresolvedCount: unresolvedLayers.length,
-        });
-      } else {
-        setInstantiateError({ message: e.message || 'Failed to create estimate from template', unresolvedCount: 0 });
-      }
-    } finally {
-      setInstantiating(null);
-    }
-  };
-
   const handleDelete = async (template: StructureTemplate) => {
+    if (template.isStandard && !canDeleteStandardTemplate) return;
+    if (!template.isStandard && !canManageMyTemplate(template)) return;
     const label = template.isStandard ? 'deactivate' : 'delete';
     if (!confirm(`${template.isStandard ? 'Deactivate' : 'Delete'} template "${template.name}"?`)) return;
     setDeleting(template.id);
@@ -483,7 +413,8 @@ const StandardTemplates = () => {
   };
 
   const openEdit = (template: StructureTemplate) => {
-    if (template.isStandard && !isAdmin) return;
+    if (template.isStandard && !canEditStandardTemplate) return;
+    if (!template.isStandard && !canManageMyTemplate(template)) return;
     // Use unified TemplateBuilder for edit (Task 4.1 — replaces old inline modal)
     setBuilderMode('edit');
     setBuilderTemplate(template);
@@ -494,10 +425,21 @@ const StandardTemplates = () => {
     setBuilderTemplate(null);
   };
 
+  /** Fork a standard structure into My Templates (no customer, no estimate). */
+  const openForkAsMyTemplate = (source: StructureTemplate) => {
+    setBuilderMode('create');
+    setBuilderTemplate({
+      ...source,
+      name: `${source.name} (my copy)`,
+      isStandard: false,
+    });
+  };
+
   const handleBuilderSaved = async (_saved: unknown) => {
     setBuilderMode(null);
     setBuilderTemplate(null);
     await loadData();
+    setPickerTab('mine');
   };
 
   const handleBuilderClose = () => {
@@ -519,68 +461,52 @@ const StandardTemplates = () => {
   void handleSaveEdit;
 
   return (
-    <div className={`w-full ${isNewQuoteFlow ? 'pb-24 md:pb-0' : 'pb-24 lg:pb-8'}`}>
+    <div className="w-full pb-24 lg:pb-8">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-        <div className="flex items-start gap-3 min-w-0">
-          {isNewQuoteFlow && (
-            <Link
-              to="/estimates"
-              className="btn-secondary inline-flex items-center gap-2 shrink-0 mt-0.5"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Cancel
-            </Link>
-          )}
-          <div className="min-w-0">
-            <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">
-              {isNewQuoteFlow ? 'New estimate' : 'Standard Templates'}
-            </h1>
-            <p className="text-mist mt-1 text-sm">
-              {isNewQuoteFlow
-                ? 'Fill in the job header, then pick a structure below.'
-                : isAdmin
-                  ? 'Platform standard stacks — pick a card to start a quote'
-                  : 'Pick a standard stack to start your quote'}
-            </p>
-          </div>
+        <div className="min-w-0">
+          <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Templates</h1>
+          <p className="text-mist mt-1 text-sm max-w-3xl">
+            Blueprints for layer stacks — <strong className="text-ink font-medium">never</strong> tied to
+            a customer. Use the buttons on each card:
+          </p>
+          <ul className="text-xs text-mist mt-2 space-y-1 max-w-3xl list-disc pl-4">
+            <li>
+              <strong className="text-ink">Create estimate</strong> → customer quote (fill customer in
+              the estimate editor, then Save → appears under{' '}
+              <Link to="/estimates" className="text-gold hover:underline">
+                Estimates
+              </Link>
+              )
+            </li>
+            <li>
+              <strong className="text-ink">Edit structure</strong> or{' '}
+              <strong className="text-ink">New structure</strong> → your My Templates blueprint (no
+              customer)
+            </li>
+            <li>
+              <strong className="text-ink">Save to My Templates</strong> (standard cards) → copy platform
+              default into your personal library
+            </li>
+          </ul>
         </div>
-        {!isNewQuoteFlow && (
-          <div className="flex gap-2 shrink-0">
-            <Link to="/templates?new=1" className="btn-secondary inline-flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              New estimate
-            </Link>
-            {/* Task 4.4: New template button — opens TemplateBuilder in create mode */}
-            <button
-              type="button"
-              className="btn-primary inline-flex items-center gap-2"
-              onClick={openCreate}
-            >
-              <Plus className="w-4 h-4" />
-              New template
-            </button>
-          </div>
-        )}
+        <div className="flex gap-2 shrink-0">
+          <button
+            type="button"
+            className="btn-secondary inline-flex items-center gap-2"
+            onClick={() => setPickerTab('mine')}
+          >
+            My Templates
+          </button>
+          <button
+            type="button"
+            className="btn-primary inline-flex items-center gap-2"
+            onClick={openCreate}
+          >
+            <Plus className="w-4 h-4" />
+            New structure
+          </button>
+        </div>
       </div>
-
-      {isNewQuoteFlow && (
-        <div className="card mb-4 py-3 px-4 sm:px-5">
-          <JobHeaderFields
-            customerId={selectedCustomer}
-            onCustomerChange={setSelectedCustomer}
-            jobName={jobName}
-            onJobNameChange={setJobName}
-            productType={productType}
-            onProductTypeChange={setProductType}
-            productTypeOptions={productTypeOptions}
-            orderQuantity={orderQuantity}
-            onOrderQuantityChange={setOrderQuantity}
-            orderQuantityUnit={orderQuantityUnit}
-            onOrderQuantityUnitChange={setOrderQuantityUnit}
-            unitOptions={unitOptions}
-          />
-        </div>
-      )}
 
       <div className="mb-6">
         <div className="relative">
@@ -596,12 +522,13 @@ const StandardTemplates = () => {
       </div>
 
       <ClassFilterPanel
+        title="Filter:"
         filter={classFilter}
         isAllActive={isAllFiltersActive}
         countLabel={
           isAllFiltersActive
-            ? `${filteredStandard.length + filteredMy.length} structure${filteredStandard.length + filteredMy.length === 1 ? '' : 's'}`
-            : `${filteredStandard.length + filteredMy.length} matching`
+            ? `${activeTemplates.length} structure${activeTemplates.length === 1 ? '' : 's'}`
+            : `${activeTemplates.length} matching`
         }
         onReset={() => setClassFilter(EMPTY_CLASS_FILTER)}
         onToggleMaterial={toggleMaterialClass}
@@ -609,6 +536,40 @@ const StandardTemplates = () => {
         onToggleStructure={toggleStructure}
         countWithFilter={countWithFilter}
       />
+
+      <div className="flex gap-2 mb-6 border-b border-border">
+        <button
+          type="button"
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            pickerTab === 'standard'
+              ? 'border-gold text-gold'
+              : 'border-transparent text-mist hover:text-ink'
+          }`}
+          onClick={() => setPickerTab('standard')}
+        >
+          Standard Templates
+        </button>
+        <button
+          type="button"
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            pickerTab === 'mine'
+              ? 'border-gold text-gold'
+              : 'border-transparent text-mist hover:text-ink'
+          }`}
+          onClick={() => setPickerTab('mine')}
+        >
+          My Templates
+          {myTemplates.length > 0 ? (
+            <span className="ml-1.5 text-xs font-normal text-mist">({myTemplates.length})</span>
+          ) : null}
+        </button>
+      </div>
+
+      <p className="text-xs text-mist -mt-4 mb-4">
+        {pickerTab === 'mine'
+          ? 'Personal structures — edit or delete here. Create estimate when you have a customer.'
+          : 'Platform defaults — copy to My Templates to customize, or create estimate directly.'}
+      </p>
 
       {/* Phase 5.4: unresolved-layer banner shown when instantiate returns 409 */}
       {instantiateError && (
@@ -636,35 +597,45 @@ const StandardTemplates = () => {
             Retry
           </button>
         </div>
-      ) : filteredStandard.length === 0 ? (
-        <div className="card text-center py-10">
-          <h3 className="text-lg font-display font-semibold text-navy mb-2">No templates in this category</h3>
-          <p className="text-mist text-sm">Try another filter or clear the search.</p>
+      ) : activeTemplates.length === 0 ? (
+        <div className="card text-center py-10 px-6 max-w-xl mx-auto">
+          <h3 className="text-lg font-display font-semibold text-navy mb-2">
+            {showMyGrid ? 'No personal templates yet' : 'No templates in this category'}
+          </h3>
+          {showMyGrid ? (
+            <div className="text-mist text-sm space-y-3 text-left">
+              <p>
+                <strong className="text-ink">My Templates</strong> stores reusable{' '}
+                <em>structures</em> (layer stack + materials), not saved quotes.
+              </p>
+              <p>
+                Open a saved quote from the{' '}
+                <Link to="/estimates" className="text-gold hover:underline">
+                  Estimates
+                </Link>{' '}
+                list — templates do not store customer-specific quotes.
+              </p>
+              <p>
+                To add a structure here: open an estimate →{' '}
+                <strong className="text-ink">Save structure to My Templates</strong>, or use{' '}
+                <strong className="text-ink">New template</strong> above.
+              </p>
+            </div>
+          ) : (
+            <p className="text-mist text-sm">Try another filter or clear the search.</p>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-          {filteredStandard.map((template) =>
-            renderTemplateCard(template, { allowEdit: isAdmin })
+          {activeTemplates.map((template) =>
+            renderTemplateCard(template, {
+              badge: showMyGrid ? 'My template' : undefined,
+            })
           )}
         </div>
       )}
 
-      {filteredMy.length > 0 && (
-        <div className="mt-10 pt-8 border-t border-border">
-          <h2 className="text-lg font-display font-semibold text-navy mb-1">My Templates</h2>
-          <p className="text-sm text-mist mb-4">
-            Saved from your estimates — tenant-local only, not in the PEBI standard catalog. Each gets an
-            auto-generated <span className="font-mono text-xs">template_key</span> for API use.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-            {filteredMy.map((template) =>
-              renderTemplateCard(template, { allowEdit: true, badge: 'My template' })
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Unified TemplateBuilder modal — create + edit (Task 4.1, replaces old inline editing modal) */}
+      {/* Unified TemplateBuilder modal — create + edit (My Templates only) */}
       {builderMode && (
         <TemplateBuilder
           mode={builderMode}

@@ -2,7 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest, isTenantAdmin } from '../utils/auth';
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, and, asc, desc } from 'drizzle-orm';
 import { ensureTemplatesForTenant, relinkTemplatesForTenant, syncMissingStandardTemplates, pruneDuplicateStandardTemplates, syncTemplateKeysForTenant } from '../db/seed-templates';
 import { quantitiesForSlabTemplateKey } from '../db/seed-slab-templates';
 import { derivePrintingWebClass, stackNeedsSolventMix, resolveTemplateStoreClassification, tierToStructureType } from '@es/engine';
@@ -30,6 +30,41 @@ async function prepareTemplatesForTenant(tenantId: string): Promise<void> {
   await pruneDuplicateStandardTemplates(tenantId);
   await syncTemplateKeysForTenant(tenantId);
   await relinkTemplatesForTenant(tenantId);
+}
+
+type TemplateRow = typeof schema.structureTemplates.$inferSelect;
+
+/** Standard catalog rows — tenant / platform admin only. */
+function canManageStandardTemplate(user: import('../utils/auth').TokenPayload): boolean {
+  return isTenantAdmin(user.role);
+}
+
+/** Personal My Template — owner only (not other users or admins). */
+function canDeleteMyTemplate(
+  user: import('../utils/auth').TokenPayload,
+  template: TemplateRow
+): boolean {
+  if (template.isStandard) return false;
+  const ownerId = template.createdByUserId;
+  if (!ownerId) return isTenantAdmin(user.role);
+  return ownerId === user.userId;
+}
+
+function canEditMyTemplate(
+  user: import('../utils/auth').TokenPayload,
+  template: TemplateRow
+): boolean {
+  return canDeleteMyTemplate(user, template);
+}
+
+function canViewTemplate(
+  user: import('../utils/auth').TokenPayload,
+  template: TemplateRow
+): boolean {
+  if (template.isStandard) return true;
+  const ownerId = template.createdByUserId;
+  if (!ownerId) return true;
+  return ownerId === user.userId || isTenantAdmin(user.role);
 }
 
 const TemplateLayerSchema = z.object({
@@ -75,7 +110,9 @@ const UpdateTemplateSchema = z.object({
  */
 export async function getTemplatesRoute(
   _fastify: FastifyInstance,
-  request: FastifyRequest<{ Querystring: { standard_only?: string; template_key?: string } }>,
+  request: FastifyRequest<{
+    Querystring: { standard_only?: string; template_key?: string; user_only?: string };
+  }>,
   reply: FastifyReply
 ) {
   try {
@@ -83,7 +120,8 @@ export async function getTemplatesRoute(
     const user = extractUserFromRequest(request);
     const tenantId = extractTenantFromRequest(request);
     const db = getDatabase();
-    const standardOnly = request.query.standard_only !== 'false';
+    const userOnly = request.query.user_only === 'true';
+    const standardOnly = !userOnly && request.query.standard_only !== 'false';
     const templateKeyFilter = request.query.template_key?.trim();
 
     await prepareTemplatesForTenant(tenantId);
@@ -92,7 +130,10 @@ export async function getTemplatesRoute(
       eq(schema.structureTemplates.tenantId, tenantId),
       eq(schema.structureTemplates.isActive, true),
     ];
-    if (standardOnly) {
+    if (userOnly) {
+      conditions.push(eq(schema.structureTemplates.isStandard, false));
+      conditions.push(eq(schema.structureTemplates.createdByUserId, user.userId));
+    } else if (standardOnly) {
       conditions.push(eq(schema.structureTemplates.isStandard, true));
     }
     if (templateKeyFilter) {
@@ -103,19 +144,19 @@ export async function getTemplatesRoute(
       .select()
       .from(schema.structureTemplates)
       .where(and(...conditions))
-      .orderBy(schema.structureTemplates.displayOrder);
+      .orderBy(
+        userOnly
+          ? desc(schema.structureTemplates.updatedAt)
+          : schema.structureTemplates.displayOrder
+      );
 
-    // Visibility isolation: when not standard_only, filter out other users' private add-ons.
-    // A row is visible iff:
-    //   (a) isStandard = true  — platform standard
-    //   (b) isStandard = false AND createdByUserId IS NULL  — tenant add-on
-    //   (c) isStandard = false AND createdByUserId = caller's userId  — user's own add-on
-    if (!standardOnly) {
+    // Visibility isolation when listing mixed (non-standard_only, non-user_only).
+    if (!standardOnly && !userOnly) {
       templates = templates.filter((t: typeof templates[number]) => {
         if (t.isStandard) return true;
-        const cbu = (t as any).createdByUserId as string | null | undefined;
+        const cbu = (t as { createdByUserId?: string | null }).createdByUserId;
         if (!cbu) return true; // tenant add-on
-        return cbu === user.userId; // user's own add-on
+        return cbu === user.userId;
       });
     }
 
@@ -136,6 +177,7 @@ export async function getTemplateByIdRoute(
 ) {
   try {
     await request.jwtVerify();
+    const user = extractUserFromRequest(request);
     const tenantId = extractTenantFromRequest(request);
     const { id } = request.params;
     const db = getDatabase();
@@ -154,6 +196,10 @@ export async function getTemplateByIdRoute(
 
     if (!template) {
       return reply.status(404).send({ error: 'Template not found' });
+    }
+
+    if (!canViewTemplate(user, template)) {
+      return reply.status(403).send({ error: 'Not allowed to view this template' });
     }
 
     return reply.send(template);
@@ -600,8 +646,14 @@ async function createTemplateFromEstimateHandler(
     }))
   );
 
-  // Ownership: platform_admin → isStandard; tenant_admin → tenant add-on; user → user add-on
-  const { isStandard: ownIsStandard, createdByUserId } = resolveOwnership(user);
+  // Save as Template is always a personal My Template for whoever clicked it.
+  const { isStandard: ownIsStandard, createdByUserId } = resolveMyTemplateOwnership(user);
+
+  const defaultDimensions: Record<string, unknown> = {
+    ...(storedClassification ? { templateClassification: storedClassification } : {}),
+    /** Links My Template back to the estimate it was saved from (resume on card click). */
+    sourceEstimateId: estimateId,
+  };
 
   const [template] = await db
     .insert(schema.structureTemplates)
@@ -615,8 +667,8 @@ async function createTemplateFromEstimateHandler(
       displayOrder: 900,
       isStandard: ownIsStandard,
       createdByUserId,
-      defaultDimensions: storedClassification ? { templateClassification: storedClassification } : {},
-      defaultLayers: defaultLayers.map((l: (typeof defaultLayers)[number]) => ({ ...l, default_micron: 0 })),
+      defaultDimensions,
+      defaultLayers: defaultLayers,
       defaultProcesses,
       defaultPrintingWebClass: estimate.printingWebClass,
       solventMixEnabled: needsSolvent,
@@ -630,6 +682,12 @@ async function createTemplateFromEstimateHandler(
     .set({ templateKey, updatedAt: new Date() })
     .where(eq(schema.structureTemplates.id, template.id))
     .returning();
+
+  // Point the source estimate at this structure so draft resume works by template_key.
+  await db
+    .update(schema.estimates)
+    .set({ sourceTemplateKey: templateKey, updatedAt: new Date() })
+    .where(and(eq(schema.estimates.id, estimateId), eq(schema.estimates.tenantId, tenantId)));
 
   return reply.status(201).send(withKey ?? { ...template, templateKey });
 }
@@ -733,8 +791,8 @@ async function createTemplateFromDefinition(
   // Persist printMode in defaultDimensions jsonb (Task 2.2 / design Option A)
   const defaultDimensions: Record<string, unknown> = { printMode };
 
-  // Ownership assignment (Task 3.1)
-  const { isStandard: ownIsStandard, createdByUserId } = resolveOwnership(user);
+  // My Templates builder — personal to the current user.
+  const { isStandard: ownIsStandard, createdByUserId } = resolveMyTemplateOwnership(user);
 
   const [template] = await db
     .insert(schema.structureTemplates)
@@ -769,7 +827,17 @@ async function createTemplateFromDefinition(
 }
 
 /**
- * Determine ownership tier from the JWT role.
+ * Personal My Template — always owned by the current user (Save as Template / My Templates builder).
+ */
+function resolveMyTemplateOwnership(user: import('../utils/auth').TokenPayload): {
+  isStandard: false;
+  createdByUserId: string;
+} {
+  return { isStandard: false, createdByUserId: user.userId };
+}
+
+/**
+ * Determine ownership tier from the JWT role (admin catalog / tenant add-on flows).
  * platform_admin → isStandard=true (adds to global catalog)
  * tenant_admin   → isStandard=false, createdByUserId=null (tenant add-on)
  * user           → isStandard=false, createdByUserId=<userId> (user add-on)
@@ -823,6 +891,9 @@ export async function updateTemplateRoute(
     if (existing.isStandard && !isTenantAdmin(user.role)) {
       return reply.status(403).send({ error: 'Only admins can edit standard templates' });
     }
+    if (!existing.isStandard && !canEditMyTemplate(user, existing)) {
+      return reply.status(403).send({ error: 'Not allowed to edit this template' });
+    }
 
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (body.name !== undefined) updates.name = body.name;
@@ -874,7 +945,7 @@ export async function updateTemplateRoute(
 
 /**
  * DELETE /api/v1/templates/:id
- * Standard → soft-deactivate (admin). My Templates → hard delete (any tenant user).
+ * Standard → soft-deactivate (tenant / platform admin only). My Templates → hard delete (owner only).
  */
 export async function deleteTemplateRoute(
   _fastify: FastifyInstance,
@@ -903,7 +974,7 @@ export async function deleteTemplateRoute(
     }
 
     if (existing.isStandard) {
-      if (!isTenantAdmin(user.role)) {
+      if (!canManageStandardTemplate(user)) {
         return reply.status(403).send({ error: 'Only admins can delete standard templates' });
       }
       await db
@@ -911,6 +982,10 @@ export async function deleteTemplateRoute(
         .set({ isActive: false, updatedAt: new Date() })
         .where(eq(schema.structureTemplates.id, id));
       return reply.send({ ok: true, deactivated: true });
+    }
+
+    if (!canDeleteMyTemplate(user, existing)) {
+      return reply.status(403).send({ error: 'Not allowed to delete this template' });
     }
 
     await db.delete(schema.structureTemplates).where(eq(schema.structureTemplates.id, id));
@@ -922,7 +997,7 @@ export async function deleteTemplateRoute(
 }
 
 export async function registerTemplateRoutes(fastify: FastifyInstance) {
-  fastify.get<{ Querystring: { standard_only?: string; template_key?: string } }>(
+  fastify.get<{ Querystring: { standard_only?: string; template_key?: string; user_only?: string } }>(
     '/api/v1/templates',
     async (request, reply) => getTemplatesRoute(fastify, request, reply)
   );

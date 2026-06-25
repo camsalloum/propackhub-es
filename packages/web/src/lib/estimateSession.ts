@@ -1,18 +1,18 @@
-/** Session pointer: which estimate the user last saved for a given template. */
+/** Last saved estimate for a standard template (localStorage survives browser restarts). */
 
 const key = (templateKey: string) => `es:workingEstimate:${templateKey}`;
 
 export function setWorkingEstimateForTemplate(templateKey: string, estimateId: string) {
-  if (typeof sessionStorage === 'undefined') return;
-  sessionStorage.setItem(key(templateKey), estimateId);
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(key(templateKey), estimateId);
 }
 
 export function getWorkingEstimateForTemplate(templateKey: string): string | null {
-  if (typeof sessionStorage === 'undefined') return null;
-  return sessionStorage.getItem(key(templateKey));
+  if (typeof localStorage === 'undefined') return null;
+  return localStorage.getItem(key(templateKey));
 }
 
 export function clearWorkingEstimateForTemplate(templateKey: string) {
-  if (typeof sessionStorage === 'undefined') return;
-  sessionStorage.removeItem(key(templateKey));
+  if (typeof localStorage === 'undefined') return;
+  localStorage.removeItem(key(templateKey));
 }

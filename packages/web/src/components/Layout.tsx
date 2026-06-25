@@ -23,7 +23,7 @@ const Layout = () => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Estimates', href: '/estimates', icon: FileText },
-    { name: 'Standard Templates', href: '/templates', icon: LayoutTemplate },
+    { name: 'Templates', href: '/templates', icon: LayoutTemplate },
     { name: 'Customers', href: '/customers', icon: Users },
     { name: 'Raw Materials', href: '/library', icon: FolderOpen },
     { name: 'Settings', href: '/settings', icon: SettingsIcon },
@@ -35,10 +35,7 @@ const Layout = () => {
   const isEstimateEditor =
     location.pathname.startsWith('/estimate/') && !location.pathname.startsWith('/estimate/choose');
 
-  const isNewQuotePicker =
-    location.pathname === '/templates' && new URLSearchParams(location.search).get('new') === '1';
-
-  const hideMobileBottomNav = isEstimateEditor || isNewQuotePicker;
+  const hideMobileBottomNav = isEstimateEditor;
 
   const handleLogout = () => {
     logout();
@@ -48,7 +45,7 @@ const Layout = () => {
   const bottomNav = [
     { name: 'Home', href: '/dashboard', icon: Home },
     { name: 'Quotes', href: '/estimates', icon: FileText },
-    { name: 'New', href: '/templates?new=1', icon: PlusCircle, accent: true },
+    { name: 'New', href: '/templates', icon: PlusCircle, accent: true },
     { name: 'Customers', href: '/customers', icon: Users },
     { name: 'More', href: '#menu', icon: Menu },
   ];

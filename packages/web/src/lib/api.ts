@@ -517,10 +517,6 @@ export class ApiClient {
     return this.request<any[]>('GET', '/api/v1/settings/slab-templates');
   }
 
-  getMyTemplates() {
-    return this.request<any[]>('GET', '/api/v1/templates?standard_only=false');
-  }
-
   createTemplate(name: string, estimateId: string) {
     return this.request<any>('POST', '/api/v1/templates', { name, estimateId });
   }
@@ -618,8 +614,15 @@ export class ApiClient {
 
   // Templates
   getTemplates(standardOnly = true) {
-    const qs = standardOnly ? '' : '?standard_only=false';
-    return this.request<any[]>('GET', `/api/v1/templates${qs}`);
+    const qs = new URLSearchParams();
+    if (!standardOnly) qs.set('standard_only', 'false');
+    const query = qs.toString();
+    return this.request<any[]>('GET', `/api/v1/templates${query ? `?${query}` : ''}`);
+  }
+
+  /** Current user's saved templates only (not platform standards). */
+  getMyTemplates() {
+    return this.request<any[]>('GET', '/api/v1/templates?user_only=true');
   }
 
   getTemplate(id: string) {

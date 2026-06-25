@@ -1050,3 +1050,14 @@ npm run update-materials
 **Fix:** `sessionStorage` key `es:workingEstimate:{sourceTemplateKey}` set on save + instantiate. Templates page checks session first (“Continue your last saved quote?”). API `GET /estimates?sourceTemplateKey=&status=draft&limit=1` orders by `updatedAt` desc when filtering by template. Declining session resume skips second draft prompt and starts fresh.
 
 **User verified (end of session):** Save + resume flow OK. Dev console: `service-worker.js` “Failed to convert value to 'Response'” = PWA worker on localhost:5000 (not save-related); `searchAnalyzer.js` = browser extension.
+
+### 2026-06-25 — Permanent save model (template ≠ estimate)
+
+**Root cause (2-day struggle):** Templates are **blueprints**; estimates are **saved documents**. Every “Use template” click called `POST instantiate` → **new** estimate with seed µ defaults — even after Save succeeded on a different estimate. Dialogs + `sessionStorage` did not survive browser restarts. User saw “old values” because they were opening a **new** quote, not the saved one.
+
+**Permanent rules (updated 2026-06-25):**
+1. **Templates** (`/templates`) — **Standard | My Templates** tabs. Structures only: layers, materials, default µ. **No** customer, dimensions, or order qty on this page.
+2. **Card click** on any template → `POST instantiate` → **new** estimate → editor. User fills customer, job name, dimensions, order qty there, then **Save**.
+3. **Estimates** (`/estimates` + customer quote history) — saved customer-specific quotes (QT-…). Reopen drafts here, not from Templates.
+4. **Save as Template** (in editor) → copies structure to My Templates tab. Does not move the quote.
+5. **Pencil** on template card → edit structure blueprint only (TemplateBuilder).

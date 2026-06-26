@@ -25,6 +25,7 @@ function row(partial: Partial<DbMaterial> & Pick<DbMaterial, 'id' | 'type' | 'na
     platformSyncedAt: null,
     externalId: null,
     externalSource: null,
+    laminationRecipe: null,
     itemClass: null,
     createdAt: new Date(),
     updatedAt: new Date(),

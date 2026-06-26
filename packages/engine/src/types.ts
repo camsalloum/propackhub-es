@@ -1,7 +1,10 @@
 // Core types for the Estimation Studio engine
 // Based on Laravel legacy structure and PRD requirements
 
-export type LayerType = 'substrate' | 'ink' | 'adhesive';
+import type { LaminationRecipe } from './lamination-recipe';
+import type { InkPrintingProcess } from './ink-printing';
+
+export type LayerType = 'substrate' | 'ink' | 'adhesive' | 'solvent';
 
 export interface Material {
   id: string;
@@ -16,6 +19,9 @@ export interface Material {
   substrateGrade?: string | null; // e.g. BOPP Transparent, PET Metalized HB
   hoover?: string | null; // Description / grade notes
   marketPriceUsd?: number | null; // Market reference price
+  /** GP/MP/HP lamination formula (binder + hardener + EA parts). */
+  laminationRecipe?: LaminationRecipe | null;
+  laminationTier?: string | null;
 }
 
 export interface Layer {
@@ -83,9 +89,17 @@ export interface Estimate {
   processes: Process[];
   slabs: Slab[];
 
-  // Solvent mix config (for SB ink/adhesive)
-  solventCostPerKgUsd?: number; // Cost of solvent in USD (default: 2.0)
-  solventRatio?: number; // Ratio (0-1) (default: 0.5)
+  // Solvent mix config (for SB ink/adhesive — dry GSM model)
+  solventMaterialId?: string; // Library solvent row (default: Solvent Common)
+  solventCostPerKgUsd?: number; // Resolved $/kg (from library or quote snapshot)
+  solventRatio?: number; // Legacy; ink makeup uses inkPrintingProcess + inkSolventRatio
+  /** On-press ink makeup: flexo (less EA) vs rotogravure (more EA). Null → infer PE→flexo. */
+  inkPrintingProcess?: InkPrintingProcess | null;
+  /** Override dry-ink÷ratio; null → from inkPrintingProcess (flexo 1.5, roto 1.0). */
+  inkSolventRatio?: number;
+  cleaningSolventKgPerJob?: number; // EA kg per job for press cleaning (default 20)
+  /** Per-layer recipe overrides keyed by layer id (estimate-only, option B). */
+  laminationRecipeOverrides?: Record<string, LaminationRecipe>;
 
   // Currency
   displayCurrencyCode: string;
@@ -98,7 +112,11 @@ export interface Estimate {
 
   // Calculated fields (output)
   totalGsm?: number;
+  /** Physical construction thickness (µm) — Option C (substrate µ + ink/adh gsm÷ρ). */
   totalMicron?: number;
+  /** Substrate film gauge only (µm) — sum of substrate layer microns. */
+  substrateGaugeMicron?: number;
+  /** Composite structure density (g/cm³) = totalGsm / totalMicron. */
   filmDensity?: number;
   sqmPerKg?: number;
   piecesPerKg?: number;
@@ -106,15 +124,27 @@ export interface Estimate {
   linearMPerKgWeb?: number;
   linearMPerKgReel?: number;
 
-  // Cost breakdown
+  // Cost breakdown (RM = layers + solvents)
   materialCostPerKg?: number;
+  layerRmCostPerKg?: number;
+  layerRmCostPerM2?: number;
+  rmCostPerM2?: number;
   markupAmountPerKg?: number;
   operationCostPerKg?: number;
   salePricePerKg?: number;
 
   // Solvent mix (when SB ink/adhesive present)
   solventMixCostPerKg?: number;
+  solventMixCostPerM2?: number;
+  laminationSolventCostPerKg?: number;
+  laminationSolventCostPerM2?: number;
+  inkMakeupSolventCostPerKg?: number;
+  inkMakeupSolventCostPerM2?: number;
+  cleaningSolventCostPerKg?: number;
+  cleaningSolventCostPerM2?: number;
   solventMixRatio?: number;
+  inkPrintingProcessResolved?: InkPrintingProcess;
+  inkSolventRatioResolved?: number;
 
   // Order quantities
   orderQuantityKg: number;

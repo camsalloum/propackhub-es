@@ -97,10 +97,16 @@ export function buildTemplateMaterialLookup(materials: TemplateLookupMaterial[])
     }
 
     if (mat.type === 'adhesive') {
-      if (n.includes('adhesive') && n.includes('sb')) {
+      if (mat.costingKey === 'adhesive-sb') {
         set('adhesive-sb', mat.id);
       }
-      if (n === 'solvent base' || family === 'solvent base') {
+      if (n.includes('adhesive') && n.includes('sb') && mat.costingKey === 'adhesive-sb') {
+        set('adhesive-sb', mat.id);
+      }
+      if (n === 'solvent base gp' || grade === 'gp') {
+        set('adhesive-sb', mat.id);
+      }
+      if (n === 'solvent base' && grade !== 'mp' && grade !== 'hp') {
         set('adhesive-sb', mat.id);
         set('solvent-base', mat.id);
       }

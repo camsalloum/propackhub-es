@@ -3,6 +3,9 @@
  * Material costs from master-materials-seed.json (tenant library copy).
  */
 import type { Estimate, Material } from './types';
+import { DEFAULT_LAMINATION_RECIPES, deriveBinderConcentrateStats } from './lamination-recipe';
+
+const hpBinder = deriveBinderConcentrateStats(DEFAULT_LAMINATION_RECIPES.HP);
 
 export const LARAVEL_REFERENCE_MATERIALS = new Map<string, Material>([
   [
@@ -37,14 +40,15 @@ export const LARAVEL_REFERENCE_MATERIALS = new Map<string, Material>([
     'adhesive-sb',
     {
       id: 'adhesive-sb',
-      name: 'Adhesive SB (Solvent Based)',
+      name: 'Solvent Base HP',
       type: 'adhesive',
-      solidPercent: 100,
-      density: 1.0,
-      // 100% solid: dry-equiv = liquid price = 6.5
-      costPerKgUsd: 6.5,
+      solidPercent: hpBinder.solidPercent,
+      density: 1.1,
+      costPerKgUsd: hpBinder.costPerKgUsd,
       wastePercent: 8,
       isSolventBased: true,
+      laminationRecipe: DEFAULT_LAMINATION_RECIPES.HP,
+      laminationTier: 'HP',
     },
   ],
   [
@@ -99,8 +103,9 @@ const baseEstimate = (): Omit<Estimate, 'layers' | 'dimensions'> => ({
   orderQuantityKg: 2000,
   displayCurrencyCode: 'USD',
   exchangeRateUsdToDisplay: 1,
-  solventCostPerKgUsd: 2.0,
-  solventRatio: 0.5,
+  solventCostPerKgUsd: 1.54,
+  cleaningSolventKgPerJob: 20,
+  solventRatio: 1.0,
   processes: [],
   slabs: [],
   createdAt: new Date('2026-01-01'),
@@ -154,14 +159,14 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       // adh cost/m²  = (3/1.0)/1000 × 6.5 = 0.0195
       // pet cost/m²  = (16.56/1000) × 2.8 = 0.04637
       // ldpe cost/m² = (46/1000) × 2.1   = 0.09660
-      // solvent: sb_gsm=5, cost/m² = (5/0.5)×(2/1000) = 0.020
-      // materialCost = (0.2425+0.020)/67.56×1000 = 3.888
+      // adh cost/m² = (3/1000) × binder solid $/kg (HP recipe)
+      // solvent: lamination EA + ink makeup (flexo, LDPE in stack) + cleaning
       totalGsm: 67.56,
-      totalMicron: 67.0,
-      filmDensity: 1.0082,
-      materialCostPerKg: 3.888,
-      solventMixCostPerKg: 0.2960,
-      salePricePerKg: 4.698,
+      totalMicron: 66.73,
+      filmDensity: 1.0125,
+      materialCostPerKg: 3.707,
+      solventMixCostPerKg: 0.145,
+      salePricePerKg: 4.493,
       piecesPerKg: 30.86,
       linearMPerKgWeb: 9.22,
       linearMPerKgReel: 18.54,
@@ -189,7 +194,7 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
     expected: {
       // UV 100% solid: cost/m² = (2/1.0)/1000 × 15 = 0.030 (same as before)
       // totalGsm = 16.56 + 2 + 46 = 64.56
-      // totalMicron = 12 + 2 + 50 = 64
+      // substrateGauge = 62 ; construction µ = 64
       totalGsm: 64.56,
       totalMicron: 64.0,
       filmDensity: 1.0088,
@@ -222,14 +227,13 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       // totalGsm = 36.8 + 3 = 39.8 ; totalMicron = 40 + 3 = 43
       // ink cost/m² = (3/0.3)/1000 × 12 = 0.12
       // ldpe cost/m² = (36.8/1000) × 2.1 = 0.07728
-      // solvent: sb_gsm=3, cost/m² = (3/0.5)×(2/1000) = 0.012
-      // materialCost = (0.07728+0.12+0.012)/39.8×1000 = 5.249
+      // solvent: ink makeup flexo (3gsm÷1.5) + cleaning 20kg@1.54/2000kg
       totalGsm: 39.8,
       totalMicron: 43.0,
       filmDensity: 0.9256,
-      materialCostPerKg: 5.258,
-      solventMixCostPerKg: 0.3015,
-      salePricePerKg: 6.277,
+      materialCostPerKg: 5.050,
+      solventMixCostPerKg: 0.093,
+      salePricePerKg: 6.037,
       piecesPerKg: 209.4,
       linearMPerKgWeb: 31.09,
       linearMPerKgReel: 62.81,
@@ -271,13 +275,12 @@ export const GOLDEN_SCENARIOS: GoldenScenario[] = [
       // ink cost/m² = (2/0.3)/1000×12 = 0.08
       // pet cost/m² = (16.56/1000)×2.8 = 0.04637
       // ldpe cost/m² = (36.8/1000)×2.1 = 0.07728
-      // solvent: sb_gsm=2, cost/m²=(2/0.5)×(2/1000)=0.008
-      // matCost = (0.04637+0.08+0.07728+0.008)/55.36×1000 = 3.832
+      // solvent: ink makeup flexo (2gsm÷1.5) + cleaning @1000kg order
       totalGsm: 55.36,
       totalMicron: 54.0,
       filmDensity: 1.0252,
-      materialCostPerKg: 3.823,
-      salePricePerKg: 4.799,
+      materialCostPerKg: 3.747,
+      salePricePerKg: 4.710,
       operationCostPerKg: 0.175,
       linearMPerKgWeb: 11.25,
     },

@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Save, Download, ArrowLeft, Layers, Calculator, DollarSign, Loader2, X } from 'lucide-react';
+import { Save, Download, ArrowLeft, Layers, Calculator, DollarSign, Loader2, X, Check, Plus, Minus } from 'lucide-react';
 import LayerCard from '../components/LayerCard';
 import BottomSheet from '../components/BottomSheet';
 import LaminateVisualizer from '../components/LaminateVisualizer';
 import { JobHeaderFields } from '../components/JobHeaderFields';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
-import { usdToDisplay, displayToUsd } from '../lib/currency';
+import { usdToDisplay, usdToDisplayPrecise, displayToUsd } from '../lib/currency';
 import { runClientCalculation, effectiveMarginPercent } from '../lib/estimateCalc';
 import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
 import {
@@ -20,7 +20,8 @@ import {
 import { setWorkingEstimateForTemplate } from '../lib/estimateSession';
 import { estimateStatusLabel } from '../lib/estimateStatus';
 import { groupMaterialsForPicker, type CategoryNode } from '../lib/materialTaxonomy';
-import { derivePrintingWebClass, stackNeedsSolventMix, materialAllowedForTemplateLayer } from '@es/engine';
+import { derivePrintingWebClass, stackNeedsSolventMix, stackHasSbInk, defaultInkPrintingProcess, inkSolventRatioForProcess, materialAllowedForTemplateLayer, DEFAULT_CLEANING_SOLVENT_KG_PER_JOB, type LaminationRecipe, type InkPrintingProcess } from '@es/engine';
+import LaminationFormulaModal from '../components/LaminationFormulaModal';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
 import {
   DEFAULT_MASTER_REFERENCE,
@@ -28,6 +29,11 @@ import {
   normalizeProductType,
   normalizeUnitValue,
 } from '../lib/masterDataReference';
+import {
+  findDefaultSolventMaterialId,
+  listSolventMaterials,
+  resolveSolventCostPerKgUsd,
+} from '../lib/solvent';
 import {
   dimensionFieldsFor,
   subtypesForFamily,
@@ -42,6 +48,8 @@ interface MaterialItem {
   id: string; name: string; type: string; solidPercent: number;
   density: string; costPerKgUsd: string; wastePercent: number; isSolventBased: boolean;
   hoover?: string | null; substrateFamily?: string | null; subcategoryId?: string | null;
+  platformMasterKey?: string | null;
+  laminationRecipe?: LaminationRecipe | null;
 }
 
 interface LayerItem {
@@ -93,6 +101,8 @@ const EstimateEditor = () => {
   const [orderQuantityUnit, setOrderQuantityUnit] = useState(() => defaultUnitValue());
   const [processesState, setProcessesState] = useState<any[]>([]);
   const { reference: masterReference, version: masterDataVersion } = useMasterDataReference();
+  const defaultCleaningKg =
+    masterReference.costingDefaults?.cleaningSolventKgPerJob ?? DEFAULT_CLEANING_SOLVENT_KG_PER_JOB;
 
   // UI state
   const [activeSection, setActiveSection] = useState<'structure' | 'dimensions' | 'slabs' | 'markup'>('structure');
@@ -105,8 +115,13 @@ const EstimateEditor = () => {
   const [markupPercent, setMarkupPercent] = useState(15);
   const [platesPerKg, setPlatesPerKg] = useState(0);
   const [deliveryPerKg, setDeliveryPerKg] = useState(0);
-  const [solventCostPerKgUsd, setSolventCostPerKgUsd] = useState(2.0);
-  const [solventRatio, setSolventRatio] = useState(0.5);
+  const [solventMaterialId, setSolventMaterialId] = useState<string | null>(null);
+  const [solventCostOverrideUsd, setSolventCostOverrideUsd] = useState<number | null>(null);
+  const [cleaningSolventKgPerJob, setCleaningSolventKgPerJob] = useState(defaultCleaningKg);
+  const [inkPrintingProcess, setInkPrintingProcess] = useState<InkPrintingProcess | null>(null);
+  const [inkSolventRatioOverride, setInkSolventRatioOverride] = useState<number | null>(null);
+  const [laminationRecipeOverrides, setLaminationRecipeOverrides] = useState<Record<string, LaminationRecipe>>({});
+  const [formulaModalLayerId, setFormulaModalLayerId] = useState<string | null>(null);
   const [productSubtype, setProductSubtype] = useState<string | null>(null);
   const [dimensions, setDimensions] = useState<DimensionState>({
     reelWidthMm: 800, cutoffMm: 600, numberOfUps: 1,
@@ -120,6 +135,7 @@ const EstimateEditor = () => {
   const [mobileStackOpen, setMobileStackOpen] = useState(false);
   const [needsConfiguration, setNeedsConfiguration] = useState(false);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
+  const [solventDetailsExpanded, setSolventDetailsExpanded] = useState(false);
 
   const location = useLocation();
   const locationState = location.state as {
@@ -188,6 +204,8 @@ const EstimateEditor = () => {
         costPerKgUsd: parseFloat(m.costPerKgUsd) || 0,
         wastePercent: m.wastePercent,
         isSolventBased: m.isSolventBased,
+        substrateFamily: m.substrateFamily ?? null,
+        laminationRecipe: m.laminationRecipe ?? null,
       })),
     [materials]
   );
@@ -206,6 +224,56 @@ const EstimateEditor = () => {
     () => stackNeedsSolventMix(layerMaterialRefs, engineMaterials),
     [layerMaterialRefs, engineMaterials]
   );
+
+  const hasSbInk = useMemo(
+    () => stackHasSbInk(layerMaterialRefs, engineMaterials),
+    [layerMaterialRefs, engineMaterials]
+  );
+
+  const inferredInkPrintingProcess = useMemo(
+    () => defaultInkPrintingProcess(layerMaterialRefs, engineMaterials),
+    [layerMaterialRefs, engineMaterials]
+  );
+
+  const effectiveInkPrintingProcess = inkPrintingProcess ?? inferredInkPrintingProcess;
+  const processDefaultInkRatio = inkSolventRatioForProcess(effectiveInkPrintingProcess);
+  const effectiveInkSolventRatio = inkSolventRatioOverride ?? processDefaultInkRatio;
+
+  const inkMakeupRatioTooltip =
+    'Makeup solvent = dilution needed before printing. Dividing by 1.5 means every 1.5 gsm of ink needs 1 gsm of solvent. Dividing by 1.0 means 1 gsm of ink needs 1 gsm of solvent, more dilution.';
+
+  /** Estimators / admins — not sales-only profiles. */
+  const canConfigureSolvent = can('solventMixCost') || can('markupPercent');
+
+  const solventMaterialOptions = useMemo(() => listSolventMaterials(materials), [materials]);
+
+  const resolvedSolventCostPerKgUsd = useMemo(() => {
+    if (solventCostOverrideUsd != null && Number.isFinite(solventCostOverrideUsd)) {
+      return solventCostOverrideUsd;
+    }
+    return resolveSolventCostPerKgUsd(materials, { solventMaterialId });
+  }, [materials, solventMaterialId, solventCostOverrideUsd]);
+
+  const formulaModalLayer = layers.find((l) => l.id === formulaModalLayerId) ?? null;
+  const formulaModalRecipe = useMemo(() => {
+    if (!formulaModalLayer) return null;
+    const override = laminationRecipeOverrides[formulaModalLayer.id];
+    if (override) return override;
+    const mat = materials.find((m) => m.id === formulaModalLayer.materialId);
+    return mat?.laminationRecipe ?? null;
+  }, [formulaModalLayer, laminationRecipeOverrides, materials]);
+
+  useEffect(() => {
+    if (!id && !estimate?.cleaningSolventKgPerJob) {
+      setCleaningSolventKgPerJob(defaultCleaningKg);
+    }
+  }, [id, defaultCleaningKg, estimate?.cleaningSolventKgPerJob]);
+
+  useEffect(() => {
+    if (!needsSolventMix || solventMaterialOptions.length === 0) return;
+    if (solventMaterialId && solventMaterialOptions.some((m) => m.id === solventMaterialId)) return;
+    setSolventMaterialId(findDefaultSolventMaterialId(materials));
+  }, [needsSolventMix, solventMaterialId, solventMaterialOptions, materials]);
 
   const densityForMaterial = (materialId: string) => {
     const mat = materials.find((m) => m.id === materialId);
@@ -402,7 +470,7 @@ const EstimateEditor = () => {
         gsm: parseFloat(l.gsm) || 0,
         // Prefer the saved per-layer override (unit_cost_snapshot_usd) over the live library price
         costPerKgUsd: parseFloat(l.unit_cost_snapshot_usd || l.unitCostSnapshotUsd) || parseFloat(l.materialCostPerKgUsd) || 0,
-        isSolventBased: l.materialIsSolventBased || false, position: l.position || 0,
+        isSolventBased: Boolean(l.isSolventBased ?? l.materialIsSolventBased), position: l.position || 0,
         hoover: l.materialHoover || null,
         platformMasterKeySnapshot: l.platformMasterKeySnapshot ?? l.platform_master_key_snapshot ?? null,
         costingKeySnapshot: l.costingKeySnapshot ?? l.costing_key_snapshot ?? null,
@@ -446,8 +514,57 @@ const EstimateEditor = () => {
       setMarkupPercent(parseFloat(data.markupPercent) || 15);
       setPlatesPerKg(parseFloat(data.platesPerKg) || 0);
       setDeliveryPerKg(parseFloat(data.deliveryPerKg) || 0);
-      if (data.solventCostPerKgUsd) setSolventCostPerKgUsd(parseFloat(data.solventCostPerKgUsd));
-      if (data.solventRatio) setSolventRatio(parseFloat(data.solventRatio));
+      if (data.solventMaterialId) {
+        setSolventMaterialId(data.solventMaterialId);
+      } else {
+        const loadedLayerRefs = (data.layers || [])
+          .filter((l: { materialId?: string }) => l.materialId)
+          .map((l: { materialId: string }) => ({ materialId: l.materialId }));
+        const matMap = new Map(
+          materials.map((m) => [
+            m.id,
+            {
+              id: m.id,
+              name: m.name,
+              type: m.type as 'substrate' | 'ink' | 'adhesive',
+              solidPercent: m.solidPercent,
+              density: parseFloat(m.density) || 0.9,
+              costPerKgUsd: parseFloat(m.costPerKgUsd) || 0,
+              wastePercent: m.wastePercent,
+              isSolventBased: m.isSolventBased,
+            },
+          ])
+        );
+        if (stackNeedsSolventMix(loadedLayerRefs, matMap)) {
+          setSolventMaterialId(findDefaultSolventMaterialId(materials));
+        }
+      }
+      if (data.solventCostPerKgUsd != null) {
+        setSolventCostOverrideUsd(parseFloat(data.solventCostPerKgUsd));
+      } else {
+        setSolventCostOverrideUsd(null);
+      }
+      if (data.cleaningSolventKgPerJob != null) {
+        setCleaningSolventKgPerJob(parseFloat(data.cleaningSolventKgPerJob));
+      } else {
+        setCleaningSolventKgPerJob(defaultCleaningKg);
+      }
+      if (data.laminationRecipeOverrides && typeof data.laminationRecipeOverrides === 'object') {
+        setLaminationRecipeOverrides(data.laminationRecipeOverrides as Record<string, LaminationRecipe>);
+      } else {
+        setLaminationRecipeOverrides({});
+      }
+      if (data.inkPrintingProcess === 'flexo' || data.inkPrintingProcess === 'rotogravure') {
+        setInkPrintingProcess(data.inkPrintingProcess);
+      } else {
+        setInkPrintingProcess(null);
+      }
+      if (data.solventRatio != null) {
+        const ratio = parseFloat(data.solventRatio);
+        setInkSolventRatioOverride(Number.isFinite(ratio) && ratio > 0 ? ratio : null);
+      } else {
+        setInkSolventRatioOverride(null);
+      }
       if (data.orderQuantityKg) setOrderQuantity(parseFloat(data.orderQuantityKg));
       if (data.orderQuantityUnit) {
         setOrderQuantityUnit(normalizeUnitValue(data.orderQuantityUnit, unitOptions));
@@ -549,8 +666,13 @@ const EstimateEditor = () => {
       markupPercent,
       platesPerKg,
       deliveryPerKg,
-      solventCostPerKgUsd: needsSolventMix ? solventCostPerKgUsd : undefined,
-      solventRatio: needsSolventMix ? solventRatio : undefined,
+      solventMaterialId: needsSolventMix ? solventMaterialId ?? undefined : undefined,
+      solventCostPerKgUsd: needsSolventMix ? resolvedSolventCostPerKgUsd : undefined,
+      laminationRecipeOverrides:
+        Object.keys(laminationRecipeOverrides).length > 0 ? laminationRecipeOverrides : undefined,
+      cleaningSolventKgPerJob: needsSolventMix ? cleaningSolventKgPerJob : undefined,
+      inkPrintingProcess: hasSbInk ? effectiveInkPrintingProcess : undefined,
+      solventRatio: hasSbInk ? effectiveInkSolventRatio : undefined,
       orderQuantityKg: orderQuantity,
       orderQuantityUnit,
       layers: layers.map((l, i) => ({
@@ -573,7 +695,7 @@ const EstimateEditor = () => {
       }));
     }
     return payload;
-  }, [jobName, customerId, estimate?.productType, productType, productTypeOptions, productSubtype, needsSolventMix, dimensions, markupPercent, platesPerKg, deliveryPerKg, solventCostPerKgUsd, solventRatio, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
+  }, [jobName, customerId, estimate?.productType, productType, productTypeOptions, productSubtype, needsSolventMix, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, markupPercent, platesPerKg, deliveryPerKg, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   /** Link estimate to a customer row — create customer record if user typed a new name. */
   const ensureCustomerForSave = async (): Promise<string | undefined> => {
@@ -625,8 +747,11 @@ const EstimateEditor = () => {
         orderQuantityKg: orderQuantity,
         displayCurrency: estimate?.displayCurrency || 'USD',
         exchangeRateUsdToDisplay: parseFloat(estimate?.exchangeRateUsdToDisplay) || 1,
-        solventCostPerKgUsd,
-        solventRatio,
+        solventCostPerKgUsd: resolvedSolventCostPerKgUsd,
+        laminationRecipeOverrides,
+        cleaningSolventKgPerJob,
+        inkPrintingProcess: hasSbInk ? effectiveInkPrintingProcess : undefined,
+        inkSolventRatio: hasSbInk ? effectiveInkSolventRatio : undefined,
       });
     } catch {
       return null;
@@ -635,8 +760,81 @@ const EstimateEditor = () => {
     loading, materials, layerInputsKey, productType, dimensions,
     markupPercent, platesPerKg, deliveryPerKg, slabQuantitiesKey,
     estimate?.displayCurrency, estimate?.exchangeRateUsdToDisplay,
-    solventCostPerKgUsd, solventRatio, layers.length,
+    solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob,
+    hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, layers.length,
   ]);
+
+  const solventCostLines = useMemo(() => {
+    const e = clientCalcResult?.estimate;
+    if (!e || !needsSolventMix) return [];
+    const lines: Array<{ key: string; label: string; perKgUsd: number; perM2Usd: number }> = [];
+    const inkKg = e.inkMakeupSolventCostPerKg ?? 0;
+    const inkM2 = e.inkMakeupSolventCostPerM2 ?? 0;
+    if (inkKg > 0 || inkM2 > 0) {
+      const proc = e.inkPrintingProcessResolved === 'rotogravure' ? 'roto' : 'flexo';
+      lines.push({ key: 'ink-makeup', label: `Ink makeup (${proc})`, perKgUsd: inkKg, perM2Usd: inkM2 });
+    }
+    const lamKg = e.laminationSolventCostPerKg ?? 0;
+    const lamM2 = e.laminationSolventCostPerM2 ?? 0;
+    if (lamKg > 0 || lamM2 > 0) {
+      lines.push({ key: 'lamination', label: 'Lamination EA', perKgUsd: lamKg, perM2Usd: lamM2 });
+    }
+    const cleanKg = e.cleaningSolventCostPerKg ?? 0;
+    const cleanM2 = e.cleaningSolventCostPerM2 ?? 0;
+    if (cleanKg > 0 || cleanM2 > 0) {
+      lines.push({ key: 'cleaning', label: 'Press cleaning', perKgUsd: cleanKg, perM2Usd: cleanM2 });
+    }
+    return lines;
+  }, [clientCalcResult, needsSolventMix]);
+
+  const solventTotalPerKgUsd = useMemo(() => {
+    if (clientCalcResult?.estimate.solventMixCostPerKg != null) {
+      return clientCalcResult.estimate.solventMixCostPerKg;
+    }
+    return solventCostLines.reduce((sum, line) => sum + line.perKgUsd, 0);
+  }, [solventCostLines, clientCalcResult]);
+
+  const solventTotalPerM2Usd = useMemo(() => {
+    if (clientCalcResult?.estimate.solventMixCostPerM2 != null) {
+      return clientCalcResult.estimate.solventMixCostPerM2;
+    }
+    return solventCostLines.reduce((sum, line) => sum + line.perM2Usd, 0);
+  }, [solventCostLines, clientCalcResult]);
+
+  const rmTotals = useMemo(() => {
+    const e = clientCalcResult?.estimate;
+    if (!e) return null;
+    const layerPerM2 =
+      e.layerRmCostPerM2 ??
+      e.layers?.reduce((sum, layer) => sum + (layer.costPerM2 ?? 0), 0) ??
+      0;
+    const solventPerM2 = e.solventMixCostPerM2 ?? solventTotalPerM2Usd;
+    const rmPerKg = e.materialCostPerKg ?? 0;
+    const rmPerM2 = e.rmCostPerM2 ?? layerPerM2 + solventPerM2;
+    return { rmPerKg, rmPerM2, layerPerM2, solventPerM2 };
+  }, [clientCalcResult, solventTotalPerM2Usd]);
+
+  const structureMetrics = useMemo(() => {
+    const e = clientCalcResult?.estimate;
+    const fallbackGsm = layers.reduce((s, l) => s + (l.gsm || 0), 0);
+    const fallbackSubstrateGauge = layers
+      .filter((l) => l.materialType === 'substrate')
+      .reduce((s, l) => s + l.micron, 0);
+    if (!e) {
+      return {
+        totalGsm: fallbackGsm,
+        substrateGaugeMicron: fallbackSubstrateGauge,
+        totalConstructionMicron: null as number | null,
+        structureDensity: null as number | null,
+      };
+    }
+    return {
+      totalGsm: e.totalGsm ?? fallbackGsm,
+      substrateGaugeMicron: e.substrateGaugeMicron ?? fallbackSubstrateGauge,
+      totalConstructionMicron: e.totalMicron ?? null,
+      structureDensity: e.filmDensity ?? null,
+    };
+  }, [clientCalcResult, layers]);
 
   useEffect(() => {
     if (!clientCalcResult) return;
@@ -650,6 +848,8 @@ const EstimateEditor = () => {
       materialCostPerKg: clientCalcResult.estimate.materialCostPerKg,
       totalGsm: clientCalcResult.estimate.totalGsm,
       totalMicron: clientCalcResult.estimate.totalMicron,
+      substrateGaugeMicron: clientCalcResult.estimate.substrateGaugeMicron,
+      filmDensity: clientCalcResult.estimate.filmDensity,
     }));
     setLayers((prev) =>
       prev.map((l, i) => {
@@ -886,12 +1086,131 @@ const EstimateEditor = () => {
   void ((dimensions as any)?.templateClassification);
 
   const displaySlabs = slabsState.length > 0 ? slabsState : [{ quantityKg: 1000, pricePerKgUsd: 0, pricePerKg: 0, total: 0 }, { quantityKg: 2000, pricePerKgUsd: 0, pricePerKg: 0, total: 0 }, { quantityKg: 5000, pricePerKgUsd: 0, pricePerKg: 0, total: 0 }];
-  const totalMicron = layers.reduce((s, l) => s + l.micron, 0);
-  const totalGsm = layers.reduce((s, l) => s + l.gsm, 0);
-  const density = totalMicron > 0 ? (totalGsm / totalMicron).toFixed(2) : '0';
+  const totalGsm = structureMetrics.totalGsm;
+  const totalConstructionMicron = structureMetrics.totalConstructionMicron;
+  const structureDensity =
+    structureMetrics.structureDensity != null
+      ? structureMetrics.structureDensity.toFixed(3)
+      : '—';
   const printWebWidth = (dimensions.reelWidthMm * dimensions.numberOfUps) + dimensions.extraPrintingTrimMm;
   const fxRate = parseFloat(estimate?.exchangeRateUsdToDisplay) || 1;
   const displaySalePrice = estimate?.salePriceDisplay ?? usdToDisplay(Number(estimate?.salePricePerKg) || 0, fxRate);
+  const solventTableColSpan = structureLocked ? 8 : 9;
+
+  const solventConfigBar = canConfigureSolvent && (hasSbInk || needsSolventMix) ? (
+    <div
+      id="solvent-costing"
+      className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm"
+    >
+      {hasSbInk && (
+        <>
+          <span className="text-xs text-mist shrink-0">Print</span>
+          <div className="inline-flex rounded overflow-hidden border border-border shrink-0 bg-white">
+            {(['flexo', 'rotogravure'] as const).map((method) => {
+              const selected = effectiveInkPrintingProcess === method;
+              const label = method === 'flexo' ? 'Flexo' : 'Roto';
+              return (
+                <button
+                  key={method}
+                  type="button"
+                  title={method === 'flexo' ? 'Flexo' : 'Rotogravure'}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium ${
+                    selected ? 'bg-navy text-white' : 'bg-white text-navy hover:bg-slate'
+                  }`}
+                  onClick={() => setInkPrintingProcess(method)}
+                >
+                  {selected && <Check className="w-3 h-3" aria-hidden />}
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <label
+            className="inline-flex items-center gap-0.5 shrink-0 cursor-help"
+            title={inkMakeupRatioTooltip}
+          >
+            <span className="text-xs font-mono text-mist">÷</span>
+            <input
+              type="number"
+              min="0.01"
+              step="0.1"
+              aria-label="Ink makeup solvent ratio"
+              title={inkMakeupRatioTooltip}
+              className="input py-1 px-1.5 w-14 text-xs font-mono text-center bg-white"
+              value={effectiveInkSolventRatio}
+              onChange={(e) => {
+                const v = parseFloat(e.target.value);
+                setInkSolventRatioOverride(Number.isFinite(v) && v > 0 ? v : null);
+              }}
+            />
+          </label>
+          {needsSolventMix && <span className="hidden sm:inline text-amber-300">|</span>}
+        </>
+      )}
+      {needsSolventMix && (
+        <>
+          <select
+            className="input py-1 px-2 text-xs w-28 sm:w-36 shrink-0 bg-white"
+            aria-label="Solvent"
+            value={solventMaterialId ?? ''}
+            onChange={(e) => {
+              setSolventMaterialId(e.target.value || null);
+              setSolventCostOverrideUsd(null);
+            }}
+          >
+            {solventMaterialOptions.length === 0 && <option value="">No solvent</option>}
+            {solventMaterialOptions.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+          <label className="inline-flex items-center gap-1 shrink-0">
+            <span className="text-xs text-mist">$/kg</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              aria-label="Solvent per kg"
+              className="input py-1 px-2 w-16 text-xs font-mono bg-white"
+              value={usdToDisplay(resolvedSolventCostPerKgUsd, fxRate).toFixed(2)}
+              onChange={(e) => {
+                const displayVal = parseFloat(e.target.value) || 0;
+                setSolventCostOverrideUsd(fxRate > 0 ? displayVal / fxRate : displayVal);
+              }}
+            />
+          </label>
+          <label className="inline-flex items-center gap-1 shrink-0">
+            <span className="text-xs text-mist">Clean</span>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              aria-label="Cleaning kg per job"
+              className="input py-1 px-2 w-14 text-xs font-mono bg-white"
+              value={cleaningSolventKgPerJob}
+              onChange={(e) => setCleaningSolventKgPerJob(Number(e.target.value) || 0)}
+            />
+            <span className="text-xs text-mist">kg</span>
+          </label>
+        </>
+      )}
+    </div>
+  ) : null;
+
+  const visualizerLayers = useMemo(
+    () =>
+      layers.map((l) => ({
+        id: l.id,
+        type: l.materialType,
+        material: l.materialName,
+        micron: l.micron,
+        gsm: l.gsm,
+      })),
+    [layers]
+  );
+
+  const stackProfileHeight = Math.min(280, Math.max(150, visualizerLayers.length * 56));
 
   return (
     <div className="w-full pb-24 md:pb-0">
@@ -1011,7 +1330,7 @@ const EstimateEditor = () => {
         />
       </div>
 
-      <div className="lg:flex lg:space-x-6">
+      <div className="lg:flex lg:items-start lg:gap-6">
         {/* Left panel — full width, no max-width cap so table expands */}
         <div className="lg:flex-1 min-w-0">
           {/* Navigation tabs */}
@@ -1029,9 +1348,8 @@ const EstimateEditor = () => {
 
           {/* Structure section */}
           {activeSection === 'structure' && (
-            <div className="card space-y-6">
-              {/* structureLocked: from a template — only µ editable. Admins retain full edit. */}
-              <div>
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(240px,28%)] gap-6 items-start">
+              <div className="card min-w-0">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-display font-semibold text-navy">{stackLabel}</h3>
                 </div>
@@ -1043,12 +1361,18 @@ const EstimateEditor = () => {
                     onClick={() => setMobileStackOpen((v) => !v)}
                     className="w-full flex items-center justify-between p-3 bg-slate rounded-lg text-sm font-medium text-navy"
                   >
-                    <span>Laminate preview</span>
+                    <span>Layer build-up</span>
                     <span>{mobileStackOpen ? '▲' : '▼'}</span>
                   </button>
                   {mobileStackOpen && (
-                    <div className="flex justify-center py-2">
-                      <LaminateVisualizer layers={layers.map(l => ({ id: l.id, type: l.materialType, material: l.materialName, micron: l.micron, gsm: l.gsm }))} width={220} height={120} />
+                    <div className="py-2 px-1">
+                      <LaminateVisualizer
+                        layers={visualizerLayers}
+                        width={280}
+                        height={stackProfileHeight}
+                        labelMode="composition"
+                        className="mx-auto w-full max-w-[280px]"
+                      />
                     </div>
                   )}
                   {layers.map((layer, idx) => (
@@ -1059,6 +1383,13 @@ const EstimateEditor = () => {
                       layer={{ ...layer, type: layer.materialType, material: layer.materialName, costPerKg: can('materialCostPerKg') ? layer.costPerKgUsd : undefined }}
                       showCost={can('materialCostPerKg')}
                       onEdit={structureLocked ? undefined : () => openLayerEdit(layer.id)}
+                      showFormula={canConfigureSolvent && layer.materialType === 'adhesive' && layer.isSolventBased}
+                      formulaOverridden={!!laminationRecipeOverrides[layer.id]}
+                      onFormula={
+                        canConfigureSolvent && layer.materialType === 'adhesive' && layer.isSolventBased
+                          ? () => setFormulaModalLayerId(layer.id)
+                          : undefined
+                      }
                       onRemove={structureLocked ? undefined : () => setLayers((prev) => prev.filter((l) => l.id !== layer.id))}
                       onMoveUp={structureLocked ? undefined : () => moveLayer(idx, -1)}
                       onMoveDown={structureLocked ? undefined : () => moveLayer(idx, 1)}
@@ -1084,6 +1415,42 @@ const EstimateEditor = () => {
                     >
                       + Add layer
                     </button>
+                  )}
+                  {needsSolventMix && (
+                    <div className="border border-amber-200 rounded-lg overflow-hidden bg-amber-50/60">
+                      {solventConfigBar && (
+                        <div className="px-3 py-2.5 border-b border-amber-200/70">
+                          {solventConfigBar}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        className="w-full flex items-center justify-between px-3 py-2.5 text-sm"
+                        onClick={() => setSolventDetailsExpanded((v) => !v)}
+                      >
+                        <span className="inline-flex items-center gap-2 font-medium text-navy">
+                          {solventDetailsExpanded ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                          Solvents
+                        </span>
+                        <span className="font-mono text-xs font-semibold text-navy">
+                          {usdToDisplayPrecise(solventTotalPerKgUsd, fxRate).toFixed(4)}/kg ·{' '}
+                          {usdToDisplayPrecise(solventTotalPerM2Usd, fxRate).toFixed(4)}/m²
+                        </span>
+                      </button>
+                      {solventDetailsExpanded && (
+                        <div className="divide-y divide-amber-200/60 bg-amber-50/40 text-sm">
+                          {solventCostLines.map((line) => (
+                            <div key={line.key} className="flex justify-between px-3 py-2 pl-8 text-mist">
+                              <span>{line.label}</span>
+                              <span className="font-mono text-navy">
+                                {usdToDisplayPrecise(line.perKgUsd, fxRate).toFixed(4)}/kg ·{' '}
+                                {usdToDisplayPrecise(line.perM2Usd, fxRate).toFixed(4)}/m²
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -1306,10 +1673,7 @@ const EstimateEditor = () => {
                               const calcLayer = clientCalcResult?.estimate.layers[idx];
                               const c = calcLayer?.costPerM2;
                               if (c == null || c <= 0) return <span className="text-mist">—</span>;
-                              // Apply FX rate without rounding to 2dp — Cost/M² needs 4dp precision
-                              const rate = fxRate > 0 ? fxRate : 1;
-                              const display = c * rate;
-                              return display.toFixed(4);
+                              return usdToDisplayPrecise(c, fxRate).toFixed(4);
                             })()}
                           </td>
                           {!structureLocked && (
@@ -1332,24 +1696,115 @@ const EstimateEditor = () => {
                                   aria-label="Move layer down"
                                 >▼</button>
                                 <button onClick={() => setLayers((prev) => prev.filter((l) => l.id !== layer.id))} className="text-sm text-mist hover:text-danger">Remove</button>
+                                {canConfigureSolvent && layer.materialType === 'adhesive' && layer.isSolventBased && (
+                                  <button
+                                    type="button"
+                                    className="text-xs text-blue-700 hover:text-blue-900 whitespace-nowrap"
+                                    onClick={() => setFormulaModalLayerId(layer.id)}
+                                  >
+                                    {laminationRecipeOverrides[layer.id] ? 'Formula*' : 'Formula'}
+                                  </button>
+                                )}
                               </div>
                             </td>
                           )}
                         </tr>
                       ))}
+                      {needsSolventMix && (
+                        <>
+                          {solventConfigBar && (
+                            <tr className="border-b border-amber-200/80 bg-amber-50/60">
+                              <td colSpan={solventTableColSpan} className="py-2.5 px-4">
+                                {solventConfigBar}
+                              </td>
+                            </tr>
+                          )}
+                          <tr className="border-b border-border bg-amber-50/50">
+                            <td className="py-3 px-3" />
+                            <td className="py-3 px-4">
+                              <span className="text-xs px-2 py-1 rounded-md bg-amber-100 text-amber-900">Solvent</span>
+                            </td>
+                            <td className="py-3 px-3 text-center text-mist text-sm">—</td>
+                            <td className="py-3 px-3">
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1.5 text-sm font-medium text-navy hover:text-gold"
+                                onClick={() => setSolventDetailsExpanded((v) => !v)}
+                                aria-expanded={solventDetailsExpanded}
+                              >
+                                {solventDetailsExpanded ? (
+                                  <Minus className="w-4 h-4 shrink-0" aria-hidden />
+                                ) : (
+                                  <Plus className="w-4 h-4 shrink-0" aria-hidden />
+                                )}
+                                Solvents
+                              </button>
+                            </td>
+                            <td className="py-3 px-3 text-center text-mist text-xs">—</td>
+                            <td className="py-3 px-3 text-center text-mist">—</td>
+                            <td className="py-3 px-3 font-mono text-sm text-center font-semibold text-navy">
+                              {usdToDisplayPrecise(solventTotalPerKgUsd, fxRate).toFixed(4)}
+                            </td>
+                            <td className="py-3 px-3 font-mono text-sm text-center font-semibold text-navy">
+                              {usdToDisplayPrecise(solventTotalPerM2Usd, fxRate).toFixed(4)}
+                            </td>
+                            {!structureLocked && <td className="py-3 px-3" />}
+                          </tr>
+                          {solventDetailsExpanded &&
+                            solventCostLines.map((line) => (
+                              <tr key={line.key} className="border-b border-border bg-slate/30">
+                                <td className="py-2 px-3" />
+                                <td className="py-2 px-3" />
+                                <td className="py-2 px-3" />
+                                <td className="py-2 px-4 pl-10 text-sm text-mist">{line.label}</td>
+                                <td className="py-2 px-3 text-center text-mist text-xs">—</td>
+                                <td className="py-2 px-3 text-center text-mist">—</td>
+                                <td className="py-2 px-3 font-mono text-sm text-center">
+                                  {usdToDisplayPrecise(line.perKgUsd, fxRate).toFixed(4)}
+                                </td>
+                                <td className="py-2 px-3 font-mono text-sm text-center">
+                                  {usdToDisplayPrecise(line.perM2Usd, fxRate).toFixed(4)}
+                                </td>
+                                {!structureLocked && <td className="py-2 px-3" />}
+                              </tr>
+                            ))}
+                        </>
+                      )}
                     </tbody>
                     <tfoot>
                       <tr className="border-t-2 border-border bg-slate/40">
-                        <td colSpan={4} className="py-3 px-3 text-sm font-semibold text-navy text-right">Total GSM</td>
-                        <td className="py-3 px-3 text-center">
-                          {/* µ/GSM col — empty in footer */}
+                        <td colSpan={4} className="py-4 px-3 text-sm font-bold text-navy text-right">
+                          Total
                         </td>
-                        <td className="py-3 px-3 text-center">
-                          <span className="font-mono font-bold text-navy">{totalGsm.toFixed(2)}</span>
+                        <td
+                          className="py-4 px-3 text-center"
+                          title="Total structure (µ) — substrate µ + ink/adhesive dry gsm ÷ density."
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="font-mono text-sm font-bold text-navy w-20 text-center tabular-nums">
+                              {totalConstructionMicron != null && totalConstructionMicron > 0
+                                ? totalConstructionMicron.toFixed(2)
+                                : '—'}
+                            </span>
+                            <span className="font-mono text-sm font-bold text-navy w-6 text-left">
+                              µ
+                            </span>
+                          </div>
                         </td>
-                        <td />{/* Cost/Kg */}
-                        <td />{/* Cost/M² */}
-                        {!structureLocked && <td />}
+                        <td className="py-4 px-3 font-mono text-sm text-center font-bold text-navy tabular-nums">
+                          {totalGsm.toFixed(2)}
+                        </td>
+                        <td className="py-4 px-3 font-mono text-sm text-center font-bold text-navy tabular-nums">
+                          {rmTotals
+                            ? usdToDisplayPrecise(rmTotals.rmPerKg, fxRate).toFixed(4)
+                            : '—'}
+                        </td>
+                        <td className="py-4 px-3 font-mono text-sm text-center font-bold text-navy tabular-nums">
+                          {rmTotals
+                            ? usdToDisplayPrecise(rmTotals.rmPerM2, fxRate).toFixed(4)
+                            : '—'}
+                        </td>
+                        {!structureLocked && <td className="py-4 px-3" />}
                       </tr>
                     </tfoot>
                   </table>
@@ -1376,16 +1831,6 @@ const EstimateEditor = () => {
                   </div>
                 )}
 
-                {/* Solvent mix (admin only, wide web) */}
-                {can('solventMixCost') && needsSolventMix && (
-                  <div className="mt-6 p-4 border border-border rounded-lg">
-                    <h4 className="font-display font-semibold text-navy mb-3">Solvent Mix</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div><label className="block text-sm font-medium text-navy mb-2">Solvent-mix $/kg</label><input type="number" value={solventCostPerKgUsd} onChange={(e) => setSolventCostPerKgUsd(Number(e.target.value))} step="0.1" className="input w-full" /></div>
-                      <div><label className="block text-sm font-medium text-navy mb-2">Ink-to-solvent ratio</label><input type="number" value={solventRatio} onChange={(e) => setSolventRatio(Number(e.target.value))} step="0.1" className="input w-full" /></div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* ── Dimensions ───────────────────────────────────────────────── */}
@@ -1490,16 +1935,8 @@ const EstimateEditor = () => {
                       <p className="font-mono font-semibold text-gold">{printWebWidth} mm</p>
                     </div>
                     <div>
-                      <p className="text-xs text-mist">Total µ</p>
-                      <p className="font-mono font-semibold">{totalMicron}</p>
-                    </div>
-                    <div>
                       <p className="text-xs text-mist">Total GSM</p>
                       <p className="font-mono font-semibold">{totalGsm.toFixed(1)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-mist">Density (g/cm³)</p>
-                      <p className="font-mono font-semibold">{density}</p>
                     </div>
                     {totalGsm > 0 && (
                       <div>
@@ -1514,16 +1951,8 @@ const EstimateEditor = () => {
                 {(productFamily === 'pouch' || productFamily === 'bag') && totalGsm > 0 && (
                   <div className="mt-4 p-3 bg-slate rounded-lg flex items-center gap-6 text-sm flex-wrap">
                     <div>
-                      <p className="text-xs text-mist">Total µ</p>
-                      <p className="font-mono font-semibold">{totalMicron}</p>
-                    </div>
-                    <div>
                       <p className="text-xs text-mist">Total GSM</p>
                       <p className="font-mono font-semibold">{totalGsm.toFixed(1)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-mist">Density (g/cm³)</p>
-                      <p className="font-mono font-semibold">{density}</p>
                     </div>
                     {totalGsm > 0 && (
                       <div>
@@ -1534,6 +1963,53 @@ const EstimateEditor = () => {
                   </div>
                 )}
               </div>
+
+              {/* Stack profile — aligned with table, desktop only */}
+              <aside className="hidden lg:flex flex-col gap-4 lg:sticky lg:top-8 min-w-0">
+                <div className="card">
+                  <h3 className="font-display font-semibold text-navy mb-0.5">Layer build-up</h3>
+                  <p className="text-xs text-mist mb-3">Mass share by layer (GSM)</p>
+                  <LaminateVisualizer
+                    layers={visualizerLayers}
+                    width={260}
+                    height={stackProfileHeight}
+                    labelMode="composition"
+                    className="w-full max-w-[280px] mx-auto"
+                  />
+                </div>
+                {can('filmDensity') && (
+                  <div className="card">
+                    <h3 className="font-display font-semibold text-navy mb-3">Web properties</h3>
+                    <dl className="space-y-2.5 text-sm">
+                      <div className="flex justify-between gap-3">
+                        <dt
+                          className="text-mist cursor-help border-b border-dotted border-mist/50"
+                          title="Total GSM ÷ total structure µ"
+                        >
+                          Density
+                        </dt>
+                        <dd className="font-mono font-semibold text-navy tabular-nums">
+                          {structureDensity} g/cm³
+                        </dd>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-mist">Total GSM</dt>
+                        <dd className="font-mono font-semibold text-navy tabular-nums">
+                          {totalGsm.toFixed(2)}
+                        </dd>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-mist">Structure µ</dt>
+                        <dd className="font-mono font-semibold text-navy tabular-nums">
+                          {totalConstructionMicron != null && totalConstructionMicron > 0
+                            ? totalConstructionMicron.toFixed(2)
+                            : '—'}
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+                )}
+              </aside>
             </div>
           )}
 
@@ -1579,25 +2055,9 @@ const EstimateEditor = () => {
           )}
         </div>
 
-        {/* Right panel - sticky sidebar */}
-        <div className="lg:w-56 lg:flex-shrink-0 mt-8 lg:mt-0">
-          <div className="sticky top-8 space-y-6">
-            <div className="card">
-              <h3 className="font-display font-semibold text-navy mb-4">{stackLabel}</h3>
-              <div className="flex items-center justify-center">
-                <LaminateVisualizer layers={layers.map(l => ({ id: l.id, type: l.materialType, material: l.materialName, micron: l.micron, gsm: l.gsm }))} width={180} height={150} />
-              </div>
-            </div>
-
-            <div className="card">
-              <h3 className="font-display font-semibold text-navy mb-4">Totals</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between"><span className="text-mist">Total GSM</span><span className="font-mono font-semibold">{totalGsm.toFixed(1)}</span></div>
-                <div className="flex justify-between"><span className="text-mist">Total µ</span><span className="font-mono font-semibold">{totalMicron}</span></div>
-                {can('filmDensity') && <div className="flex justify-between"><span className="text-mist">Film density</span><span className="font-mono font-semibold">{density}</span></div>}
-              </div>
-            </div>
-
+        {/* Right panel — pricing & breakdown */}
+        <div className="lg:w-72 lg:flex-shrink-0 mt-8 lg:mt-0">
+          <div className="lg:sticky lg:top-8 space-y-6">
             <div className="card bg-gold/5 border-gold/20">
               <h3 className="font-display font-semibold text-navy mb-2">Selling Price</h3>
               <div className="text-3xl font-display font-bold text-gold-accessible mb-2">{estimate?.displayCurrency || 'USD'} {displaySalePrice.toFixed(2)} /kg</div>
@@ -1620,16 +2080,28 @@ const EstimateEditor = () => {
                   const wasteAdjPct = Math.max(0, 100 - matPct - mkupPct - procPct);
 
                   const matCostUsd = clientCalcResult?.estimate.materialCostPerKg ?? Number(estimate?.materialCostPerKg) ?? 0;
+                  const rmPerM2Usd = rmTotals?.rmPerM2 ?? clientCalcResult?.estimate.rmCostPerM2 ?? 0;
                   const saleUsd = clientCalcResult?.estimate.salePricePerKg ?? Number(estimate?.salePricePerKg) ?? 0;
+                  const salePerM2Usd = clientCalcResult?.estimate.sqmPerKg
+                    ? saleUsd / clientCalcResult.estimate.sqmPerKg
+                    : totalGsm > 0
+                      ? (saleUsd * totalGsm) / 1000
+                      : 0;
                   const effMargin = effectiveMarginPercent(matCostUsd, markupPercent, saleUsd);
 
                   return (
                     <div className="space-y-3">
-                      {/* Cost line items (admin) */}
                       {can('rmCostPerKg') && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-mist">RM cost/kg</span>
-                          <span className="font-mono font-semibold">{estimate?.displayCurrency || 'USD'} {usdToDisplay(matCostUsd, fxRate).toFixed(2)}</span>
+                        <div className="flex justify-between text-sm font-semibold border-b border-border pb-2">
+                          <span className="text-navy">Total RM</span>
+                          <span className="font-mono text-navy text-right">
+                            <span className="block">{estimate?.displayCurrency || 'USD'} {usdToDisplayPrecise(matCostUsd, fxRate).toFixed(4)}/kg</span>
+                            {(can('costPerSqm') || can('rmCostPerKg')) && rmPerM2Usd > 0 && (
+                              <span className="block text-xs font-normal text-mist mt-0.5">
+                                {estimate?.displayCurrency || 'USD'} {usdToDisplayPrecise(rmPerM2Usd, fxRate).toFixed(4)}/m²
+                              </span>
+                            )}
+                          </span>
                         </div>
                       )}
                       {can('markupAmount') && (
@@ -1841,6 +2313,18 @@ const EstimateEditor = () => {
             <p className="text-sm text-mist">
               GSM: {editingLayer.gsm.toFixed(1)} · Type: {LAYER_TYPE_LABELS[editingLayer.materialType] || editingLayer.materialType}
             </p>
+            {canConfigureSolvent && editingLayer.materialType === 'adhesive' && editingLayer.isSolventBased && (
+              <button
+                type="button"
+                className="btn-secondary w-full min-h-[48px]"
+                onClick={() => {
+                  setLayerSheetOpen(false);
+                  setFormulaModalLayerId(editingLayer.id);
+                }}
+              >
+                {laminationRecipeOverrides[editingLayer.id] ? 'Edit formula*' : 'Edit lamination formula'}
+              </button>
+            )}
           </div>
         )}
       </BottomSheet>
@@ -1863,6 +2347,21 @@ const EstimateEditor = () => {
           ))}
         </div>
       </BottomSheet>
+
+      <LaminationFormulaModal
+        open={formulaModalLayerId != null}
+        title={
+          formulaModalLayer
+            ? `Lamination formula — ${formulaModalLayer.materialName}`
+            : 'Lamination formula'
+        }
+        recipe={formulaModalRecipe}
+        onClose={() => setFormulaModalLayerId(null)}
+        onSave={(recipe) => {
+          if (!formulaModalLayerId) return;
+          setLaminationRecipeOverrides((prev) => ({ ...prev, [formulaModalLayerId]: recipe }));
+        }}
+      />
     </div>
   );
 };

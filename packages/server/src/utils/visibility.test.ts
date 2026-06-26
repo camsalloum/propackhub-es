@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_SALES_REP_PROFILE, DEFAULT_ADMIN_PROFILE } from './visibility';
+import { DEFAULT_SALES_REP_PROFILE, DEFAULT_ADMIN_PROFILE, getEffectiveProfile } from './visibility';
 
 describe('Visibility profiles', () => {
   it('DEFAULT_SALES_REP_PROFILE matches PRD §6.8 defaults', () => {
@@ -31,5 +31,11 @@ describe('Visibility profiles', () => {
     Object.values(DEFAULT_ADMIN_PROFILE).forEach((value) => {
       expect(value).toBe(true);
     });
+  });
+
+  it('getEffectiveProfile merges stored partial profile with role defaults', () => {
+    const merged = getEffectiveProfile('tenant_admin', { markupPercent: false });
+    expect(merged.markupPercent).toBe(false);
+    expect(merged.solventMixCost).toBe(true);
   });
 });

@@ -235,5 +235,6 @@ export function enrichMasterDataReference(ref: MasterDataReference): MasterDataR
     rmTypeOptions: rmTypeOptions.length > 0 ? rmTypeOptions : DEFAULT_RM_TYPES,
     productSubtypeOptions,
     processOptions,
+    costingDefaults: ref.costingDefaults ?? { cleaningSolventKgPerJob: 20 },
   };
 }

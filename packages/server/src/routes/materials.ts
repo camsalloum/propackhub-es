@@ -27,7 +27,7 @@ function normalizeMaterialPrices<T extends { costPerKgUsd?: number; marketPriceU
 
 const MaterialSchema = z.object({
   name: z.string().min(1),
-  type: z.enum(['substrate', 'ink', 'adhesive']),
+  type: z.enum(['substrate', 'ink', 'adhesive', 'solvent']),
   solidPercent: z.number().min(0).max(100),
   density: z.number().positive(),
   costPerKgUsd: z.number().nonnegative(),

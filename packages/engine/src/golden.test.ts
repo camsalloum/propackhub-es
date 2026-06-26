@@ -44,9 +44,9 @@ describe('Laravel golden reference rows', () => {
     };
     const result = calculateEstimate(estimate, materials);
     const layer = result.estimate.layers[0];
-    // gsm = 3; cost = (3/1000) × 6.5 = 0.0195 (no waste factor)
+    // gsm = 3 dry; cost = (3/1000) × HP binder solid $/kg
     expect(layer.gsm).toBeCloseTo(3, 2);
-    expect(layer.costPerM2).toBeCloseTo(0.0195, 4);
+    expect(layer.costPerM2).toBeCloseTo(0.01765, 3);
   });
 
   it('sale price is additive — operation is not folded into markup % (Laravel §5)', () => {

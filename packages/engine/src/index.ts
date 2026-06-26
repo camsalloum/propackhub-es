@@ -7,6 +7,10 @@ export * from './validator';
 export * from './layer-stack';
 export * from './template-classification';
 export * from './template-scaffolding';
+export * from './lamination-recipe';
+export * from './solvent-costing';
+export * from './ink-printing';
+export * from './structure-metrics';
 
 // Re-export for convenience
 export { calculateEstimate } from './calculator';

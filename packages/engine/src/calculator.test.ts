@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { calculateEstimate } from './calculator';
 import { Estimate, Material } from './types';
+import { DEFAULT_LAMINATION_RECIPES } from './lamination-recipe';
+import { LARAVEL_REFERENCE_MATERIALS } from './golden-fixtures';
 
 /**
  * Golden tests — validate engine against Laravel costing formulas
@@ -258,9 +260,10 @@ describe('Engine calculator — golden tests', () => {
     // Ink: gsm = micron = 5 (dry gsm entered by user)
     // PE:  gsm = 40 × 0.92 = 36.8
     // total_gsm = 16.68 + 5 + 36.8 = 58.48
-    // total_micron = 12 + 5 + 40 = 57 (all values used as-entered)
+    // total_micron = 12 + 5/1 + 40 = 57 (physical construction)
     expect(result.estimate.totalGsm).toBeCloseTo(58.48, 1);
     expect(result.estimate.totalMicron).toBeCloseTo(57.0, 1);
+    expect(result.estimate.substrateGaugeMicron).toBeCloseTo(52, 1);
   });
 
   it('should calculate film density', () => {
@@ -707,36 +710,24 @@ describe('Engine calculator — golden tests', () => {
     expect(result.estimate.linearMPerKgReel).toBeCloseTo(72.46, 1);
   });
 
-  it('solvent ratio affects solvent mix cost (A1 fix)', () => {
-    // Test that changing solventRatio changes solventMixCostPerKg
-    const estimate: Estimate = {
+  it('lamination recipe EA parts affect solvent cost', () => {
+    const materials = new Map(LARAVEL_REFERENCE_MATERIALS);
+    const base: Estimate = {
       id: 'test-13',
       tenantId: 'tenant-1',
-      jobName: 'Test solvent ratio',
+      jobName: 'Test lamination recipe',
       status: 'draft',
       layers: [
-        {
-          id: 'layer-1',
-          materialId: 'ink-sb',
-          micron: 2,
-          position: 0,
-          gsm: 0,
-          costPerM2: 0,
-          material: undefined,
-        },
+        { id: 'layer-adh', materialId: 'adhesive-sb', micron: 3, position: 0 },
+        { id: 'layer-ink', materialId: 'ink-sb', micron: 2, position: 1 },
       ],
       slabs: [],
       markupPercent: 15,
       platesPerKg: 0,
       deliveryPerKg: 0,
-      orderQuantityKg: 1000,
-      displayCurrency: 'USD',
-      salePricePerKg: 0,
-      materialCostPerKg: 0,
-      totalGsm: 0,
-      totalMicron: 0,
-      filmDensity: 0,
-      sqmPerKg: 0,
+      orderQuantityKg: 2000,
+      displayCurrencyCode: 'USD',
+      exchangeRateUsdToDisplay: 1,
       dimensions: {
         productType: 'roll',
         reelWidthMm: 800,
@@ -747,23 +738,70 @@ describe('Engine calculator — golden tests', () => {
         printingWebClass: 'wide_web',
       },
       processes: [],
-      solventCostPerKgUsd: 2.0,
-      solventRatio: 0.5,
+      solventCostPerKgUsd: 1.54,
+      cleaningSolventKgPerJob: 20,
     };
 
-    // With ratio 0.5: solventMixCostPerKg should be higher (smaller denominator)
-    const result1 = calculateEstimate(estimate, materials);
-    const costWithRatio05 = result1.estimate.solventMixCostPerKg;
+    const defaultResult = calculateEstimate(base, materials);
+    const highEaRecipe = structuredClone(DEFAULT_LAMINATION_RECIPES.HP);
+    const solvent = highEaRecipe.components.find((c) => c.role === 'solvent');
+    if (solvent) solvent.parts = 150;
 
-    // With ratio 0.8: solventMixCostPerKg should be lower (larger denominator)
-    const estimate2 = { ...estimate, solventRatio: 0.8 };
-    const result2 = calculateEstimate(estimate2, materials);
-    const costWithRatio08 = result2.estimate.solventMixCostPerKg;
+    const overrideResult = calculateEstimate(
+      {
+        ...base,
+        laminationRecipeOverrides: { 'layer-adh': highEaRecipe },
+      },
+      materials
+    );
 
-    // Verify ratio affects cost
-    expect(costWithRatio05).toBeGreaterThan(0);
-    expect(costWithRatio08).toBeGreaterThan(0);
-    expect(costWithRatio05).toBeGreaterThan(costWithRatio08);
+    expect(defaultResult.estimate.laminationSolventCostPerKg ?? 0).toBeGreaterThan(0);
+    expect(overrideResult.estimate.laminationSolventCostPerKg ?? 0).toBeGreaterThan(
+      defaultResult.estimate.laminationSolventCostPerKg ?? 0
+    );
+  });
+
+  it('rotogravure ink makeup costs more than flexo for same SB ink GSM', () => {
+    const materials = new Map(LARAVEL_REFERENCE_MATERIALS);
+    const base: Estimate = {
+      id: 'test-ink-makeup',
+      tenantId: 'tenant-1',
+      jobName: 'Ink makeup',
+      status: 'draft',
+      layers: [
+        { id: 'layer-pet', materialId: 'pet-transparent', micron: 12, position: 0 },
+        { id: 'layer-ink', materialId: 'ink-sb', micron: 2, position: 1 },
+      ],
+      slabs: [],
+      markupPercent: 15,
+      platesPerKg: 0,
+      deliveryPerKg: 0,
+      orderQuantityKg: 2000,
+      displayCurrencyCode: 'USD',
+      exchangeRateUsdToDisplay: 1,
+      dimensions: {
+        productType: 'roll',
+        reelWidthMm: 800,
+        cutoffMm: 600,
+        piecesPerCut: 1,
+        numberOfUps: 2,
+        extraPrintingTrimMm: 10,
+        printingWebClass: 'wide_web',
+      },
+      processes: [],
+      solventCostPerKgUsd: 1.54,
+      cleaningSolventKgPerJob: 20,
+    };
+
+    const roto = calculateEstimate(base, materials);
+    const flexo = calculateEstimate({ ...base, inkPrintingProcess: 'flexo' }, materials);
+
+    expect(roto.estimate.inkMakeupSolventCostPerKg ?? 0).toBeGreaterThan(
+      flexo.estimate.inkMakeupSolventCostPerKg ?? 0
+    );
+    expect(roto.estimate.solventMixCostPerKg ?? 0).toBeGreaterThan(
+      flexo.estimate.solventMixCostPerKg ?? 0
+    );
   });
 
   it('throws when layer material is missing from map', () => {

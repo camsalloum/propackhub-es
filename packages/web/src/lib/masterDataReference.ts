@@ -50,6 +50,9 @@ export interface MasterDataReferenceState {
   productSubtypeOptions: ProductSubtypeOption[];
   /** Process definitions — driven by Master Data > Processes. */
   processOptions: ProcessOption[];
+  costingDefaults?: {
+    cleaningSolventKgPerJob?: number;
+  };
 }
 
 export interface ProcessOption {
@@ -76,6 +79,7 @@ export const DEFAULT_RM_TYPE_OPTIONS: RmTypeOption[] = [
   { label: 'Substrate', code: 'substrate' },
   { label: 'Ink & Coating', code: 'ink' },
   { label: 'Adhesive', code: 'adhesive' },
+  { label: 'Solvent', code: 'solvent' },
   { label: 'Packaging', code: 'packaging' },
 ];
 
@@ -134,6 +138,7 @@ export const DEFAULT_MASTER_REFERENCE: MasterDataReferenceState = {
   rmTypeOptions: DEFAULT_RM_TYPE_OPTIONS,
   productSubtypeOptions: DEFAULT_PRODUCT_SUBTYPE_OPTIONS,
   processOptions: DEFAULT_PROCESS_OPTIONS,
+  costingDefaults: { cleaningSolventKgPerJob: 20 },
 };
 
 export function defaultProductTypeValue(options: ProductTypeOption[] = DEFAULT_MASTER_REFERENCE.productTypeOptions): string {

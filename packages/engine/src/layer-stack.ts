@@ -22,6 +22,17 @@ export function derivePrintingWebClass(
   return hasUvInk ? 'narrow_web' : 'wide_web';
 }
 
+/** True when any SB ink layer is in the stack (on-press makeup + cleaning). */
+export function stackHasSbInk(
+  layers: LayerMaterialRef[],
+  materials: MaterialLookup
+): boolean {
+  return layers.some((layer) => {
+    const material = getMaterial(materials, layer.materialId);
+    return material?.type === 'ink' && Boolean(material.isSolventBased);
+  });
+}
+
 /** Solvent mix applies when SB ink or SB adhesive is present in the stack. */
 export function stackNeedsSolventMix(
   layers: LayerMaterialRef[],

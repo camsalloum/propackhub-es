@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { initializeDatabase, closeDatabase } from './db';
 import { seedDefaultAdmin } from './db/seed-admin';
-import { ensurePlatformMasterSeeded, ensureProcessesSeeded } from './db/platform-master-data';
+import { ensurePlatformMasterSeeded, ensureProcessesSeeded, ensureSolventCatalogSeeded, ensureLaminationAdhesivesSeeded } from './db/platform-master-data';
 import { buildApp } from './app';
 
 const PORT = parseInt(process.env.PORT || '5001');
@@ -14,6 +14,8 @@ async function start() {
     await initializeDatabase();
     await ensurePlatformMasterSeeded();
     await ensureProcessesSeeded();
+    await ensureSolventCatalogSeeded();
+    await ensureLaminationAdhesivesSeeded();
     await seedDefaultAdmin();
     await fastify.listen({ port: PORT, host: HOST });
 

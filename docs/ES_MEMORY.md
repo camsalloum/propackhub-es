@@ -53,9 +53,18 @@
 
 ### Adhesive
 
-- **Adhesive SB** for lamination (duplex default + Alu insert)
-- **Solvent Base** optional row for solvent math
-- **Solvent-Mix:** global cost/kg + GSM ratio — when stack has SB ink and/or SB adhesive
+- **Adhesive SB** for lamination (duplex default + Alu insert) — **GP / MP / HP** master rows with `laminationRecipe`
+- **Solvent costing:** (1) **ink makeup** — flexo/roto on SB ink (PE→flexo ÷1.5, else roto ÷1.0); (2) **lamination EA** from recipe per SB adhesive; (3) **cleaning** kg/job when SB ink present
+
+### Solvent catalog (RM type `solvent`)
+
+| Name | Density | Solid % | Notes |
+|------|---------|---------|-------|
+| Ethyl Acetate, Ethanol, IPA, MEK, Toluene | per seed | 0 | Individual solvents |
+| Normal Propanol, Normal Propyl Acetate, Methoxy Propanol, Ethoxy Propanol | per seed | 0 | Added 2026-06-25 |
+| **Solvent Common** | avg density | 0 | Default on estimate; **auto-avg** $/kg + density on master save |
+
+Estimate UI: compact Print/EA/Clean bar under layer table; **Solvents** expandable row (+ detail) with Cost/kg and Cost/m²; **Total RM** footer; solvent dropdown, editable $/kg, cleaning kg/job, **Formula** per SB adhesive (Option B). Master Data → Solvent tab: default cleaning kg/job.
 
 ### Microns
 
@@ -1061,3 +1070,45 @@ npm run update-materials
 3. **Estimates** (`/estimates` + customer quote history) — saved customer-specific quotes (QT-…). Reopen drafts here, not from Templates.
 4. **Save as Template** (in editor) → copies structure to My Templates tab. Does not move the quote.
 5. **Pencil** on template card → edit structure blueprint only (TemplateBuilder).
+
+### 2026-06-25 — Solvent catalog + dry-GSM solvent mix
+
+- **Raw Materials → Solvent tab:** 9 named solvents + **Solvent Common** (average $/kg and density). Market-style seed prices; solid% = 0.
+- **Not a laminate layer** — `type: solvent` in DB; excluded from layer add dropdown.
+- **Estimate editor:** solvent dropdown (default Solvent Common), ink-to-solvent ratio (default **1.0** = 1:1), $/kg read-only from library; `solvent_material_id` on estimate.
+- **Engine:** `sum_dry_gsm` of SB ink/adhesive layers ÷ ratio × solvent $/kg / 1000. Defaults: ratio 1.0, cost from Solvent Common ($1.54/kg).
+- **PRD §7.3** updated for dry GSM ink/adhesive model (replaces liquid µ × solid%).
+- **Migration:** `drizzle/0004_solvent_materials.sql`; startup `ensureSolventCatalogSeeded()` for existing DBs.
+
+### 2026-06-25 — Lamination recipe costing (Option B)
+
+- **Adhesive master:** GP / MP / HP rows with `laminationRecipe` JSON (binder concentrate on layer; EA priced separately). Template ref `adhesive-sb` maps to GP default.
+- **Engine:** EA from recipe parts; cleaning 20 kg EA/job when SB ink present (allocated per order kg). Ink-to-solvent ratio superseded for adhesive.
+- **Estimate:** `laminationRecipeOverrides` per layer id; editable solvent $/kg; cleaning kg/job.
+- **Migration:** `drizzle/0005_lamination_recipes.sql`.
+
+### 2026-06-25 — Ink phase 2 + solvent UI polish (session end handoff)
+
+**Ink makeup (SB only, separate from lamination EA and cleaning):**
+- `ink-printing.ts`: PE substrate in stack → **flexo** (ratio **1.5**); else **rotogravure** (ratio **1.0**). Formula: `makeup_solvent_gsm = sum(sb_ink_dry_gsm) / ratio`.
+- Estimate field: `ink_printing_process` (`flexo` | `rotogravure`), migration **0006**.
+- UI: compact bar under layer table (Print Flexo/Roto, EA select, $/kg, Clean kg). Dev-only hint via `import.meta.env.DEV`.
+
+**Structure table — Solvents row:**
+- Last data row before footer; **+** expands detail (ink makeup, lamination EA, cleaning).
+- Columns match layers: **Cost/kg** and **Cost/m²** from engine (not UI GSM conversion).
+- Footer **Total RM** row: sum layers + solvents per kg and per m².
+
+**Engine output (calculator):**
+- `layerRmCostPerKg` / `layerRmCostPerM2` — layers only.
+- `solventMixCostPerKg` / `solventMixCostPerM2` — all solvent lines.
+- `rmCostPerM2` — full RM per m²; `materialCostPerKg` — full RM per kg (pricing input).
+
+**Fixes same session:**
+- `getEffectiveProfile` merges stored profile with role defaults (`solventMixCost` was missing on old admin profiles → UI hidden).
+- Layer load: `isSolventBased` from API field `isSolventBased` (was wrong key).
+- Service worker: prod-only registration.
+- `template-scaffolding` re-export for TemplateBuilder.
+- `canConfigureSolvent` TDZ: must be `can('solventMixCost') || can('markupPercent')`.
+
+**Tomorrow:** verify save/reload of solvent fields; align PRD/ES_MEMORY ink-makeup text; optional UX tweaks.

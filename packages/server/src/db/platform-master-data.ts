@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { eq, asc, sql, or } from 'drizzle-orm';
+import { eq, asc, sql, or, and } from 'drizzle-orm';
 import { getDatabase, schema } from './index';
 import type { MasterMaterial, MasterDataReference } from './master-materials-io';
 import {
@@ -13,6 +13,7 @@ import { roundUsd } from '../utils/usd';
 import { syncMaterialsForTenant } from './seed-materials';
 import { relinkTemplatesForTenant } from './seed-templates';
 import { syncCustomRmTypeCategories } from './seed-categories';
+import { applySolventCommonAverage, SOLVENT_COMMON_KEY, computeSolventCommonAverage } from '../utils/solvent-common';
 import {
   appendMasterAuditEntries,
   materialAuditSnapshot,
@@ -118,6 +119,7 @@ function assertUniqueReferenceCodes(
 function placeholderCost(type: string, family: string | null): number {
   if (type === 'ink') return 12;
   if (type === 'adhesive') return 8;
+  if (type === 'solvent') return 1.54;
   if (family === 'Packaging') return 2.5;
   return 0;
 }
@@ -141,6 +143,7 @@ function rowToMasterMaterial(row: typeof schema.platformMasterMaterials.$inferSe
     substrateGrade: row.substrateGrade,
     hoover: row.hoover,
     marketPriceUsd: row.marketPriceUsd != null ? Number(row.marketPriceUsd) : null,
+    laminationRecipe: (row.laminationRecipe as MasterMaterial['laminationRecipe']) ?? null,
   };
 }
 
@@ -152,7 +155,7 @@ export function masterMaterialInputToDbValues(
   return {
     key: m.key,
     name: m.name,
-    type: m.type as 'substrate' | 'ink' | 'adhesive',
+    type: m.type as 'substrate' | 'ink' | 'adhesive' | 'solvent',
     solidPercent: m.solidPercent,
     density: m.density.toString(),
     costPerKgUsd: cost.toFixed(2),
@@ -168,6 +171,7 @@ export function masterMaterialInputToDbValues(
     active: true,
     externalId: m.externalId ?? null,
     externalSource: m.externalSource ?? null,
+    laminationRecipe: m.laminationRecipe ?? null,
     updatedAt: new Date(),
   };
 }
@@ -283,7 +287,53 @@ export async function updatePlatformMasterMaterial(
     ],
     actor
   );
+  if (row.type === 'solvent' && row.key !== SOLVENT_COMMON_KEY) {
+    await refreshSolventCommonRow(actor);
+  }
   return rowToMasterMaterial(row);
+}
+
+async function refreshSolventCommonRow(actor?: AuditActor): Promise<void> {
+  const db = getDatabase();
+  const rows = await db
+    .select()
+    .from(schema.platformMasterMaterials)
+    .where(eq(schema.platformMasterMaterials.active, true));
+  const materials = rows.map((r) => rowToMasterMaterial(r));
+  const avg = computeSolventCommonAverage(materials);
+  const common = rows.find((r) => r.key === SOLVENT_COMMON_KEY);
+  if (!avg || !common) return;
+
+  const values = masterMaterialInputToDbValues({
+    ...rowToMasterMaterial(common),
+    costPerKgUsd: avg.costPerKgUsd,
+    density: avg.density,
+    marketPriceUsd: avg.costPerKgUsd,
+    hoover: 'Average of all solvents (price + density)',
+  });
+
+  const [updated] = await db
+    .update(schema.platformMasterMaterials)
+    .set(values)
+    .where(eq(schema.platformMasterMaterials.id, common.id))
+    .returning();
+
+  if (updated) {
+    const version = await incrementMasterDataVersion();
+    await appendMasterAuditEntries(
+      version,
+      [
+        {
+          entityType: 'material',
+          entityKey: updated.key,
+          action: 'update',
+          beforeJson: materialAuditSnapshot(common),
+          afterJson: materialAuditSnapshot(updated),
+        },
+      ],
+      actor
+    );
+  }
 }
 
 export async function deletePlatformMasterMaterial(id: string, actor?: AuditActor): Promise<boolean> {
@@ -320,7 +370,8 @@ export async function replacePlatformMasterMaterials(
   actor?: AuditActor
 ): Promise<MasterMaterial[]> {
   const db = getDatabase();
-  const incomingKeys = new Set(materials.map((m) => m.key));
+  const normalized = applySolventCommonAverage(materials);
+  const incomingKeys = new Set(normalized.map((m) => m.key));
   const auditEntries: Parameters<typeof appendMasterAuditEntries>[1] = [];
 
   const existing = await db.select().from(schema.platformMasterMaterials);
@@ -341,8 +392,8 @@ export async function replacePlatformMasterMaterials(
   }
 
   const out: MasterMaterial[] = [];
-  for (let i = 0; i < materials.length; i++) {
-    const m = materials[i];
+  for (let i = 0; i < normalized.length; i++) {
+    const m = normalized[i];
     const values = masterMaterialInputToDbValues({ ...m, sortOrder: i });
     const match = existing.find((r: PlatformMasterMaterialRow) => r.key === m.key);
     if (match) {
@@ -442,7 +493,18 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
 
   const rmTypeRows = items
     .filter((i: PlatformReferenceItemRow) => i.category === 'rm_type')
-    .map((i: PlatformReferenceItemRow) => ({ label: i.label, code: i.code?.trim() || deriveRmTypeCode(i.label) }));
+    .map((i: PlatformReferenceItemRow) => ({
+      label: i.label,
+      code: i.code?.trim() || deriveRmTypeCode(i.label),
+      metadata: (i.metadata || {}) as Record<string, unknown>,
+    }));
+
+  const solventRmMeta = rmTypeRows.find((r) => r.code === 'solvent')?.metadata ?? {};
+  const jsonRef = loadReferenceFromJson();
+  const cleaningFromMeta =
+    typeof solventRmMeta.cleaningSolventKgPerJob === 'number'
+      ? solventRmMeta.cleaningSolventKgPerJob
+      : jsonRef.costingDefaults?.cleaningSolventKgPerJob ?? 20;
 
   const productSubtypeRows = items
     .filter((i: PlatformReferenceItemRow) => i.category === 'product_subtype')
@@ -490,13 +552,16 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
     productTypeRows,
     units: byCategory('unit'),
     rmTypes: rmTypeRows.map((r: { label: string; code: string }) => r.label),
-    rmTypeRows,
+    rmTypeRows: rmTypeRows.map(({ metadata: _m, ...r }) => r),
     packaging: byCategory('packaging'),
     inkCoating: byCategory('ink_coating'),
     adhesive: byCategory('adhesive'),
     printingWebClasses,
     productSubtypeRows,
     processRows,
+    costingDefaults: {
+      cleaningSolventKgPerJob: cleaningFromMeta,
+    },
   };
 }
 
@@ -711,7 +776,14 @@ export async function ensurePlatformMasterSeeded(): Promise<{ materials: number;
         ),
       },
       { category: 'unit', items: ref.units.map((l) => ({ label: l })) },
-      { category: 'rm_type', items: ref.rmTypes.map((l) => ({ label: l })) },
+      { category: 'rm_type', items: ref.rmTypes.map((l) => ({
+        label: l,
+        code: l.trim().toLowerCase() === 'solvent' ? 'solvent' : undefined,
+        metadata:
+          l.trim().toLowerCase() === 'solvent'
+            ? { cleaningSolventKgPerJob: ref.costingDefaults?.cleaningSolventKgPerJob ?? 20 }
+            : undefined,
+      })) },
       { category: 'packaging', items: ref.packaging.map((l) => ({ label: l })) },
       { category: 'ink_coating', items: ref.inkCoating.map((l) => ({ label: l })) },
       { category: 'adhesive', items: ref.adhesive.map((l) => ({ label: l })) },
@@ -777,4 +849,190 @@ export async function ensureProcessesSeeded(): Promise<number> {
   );
   console.log(`✓ Seeded ${DEFAULT_PROCESS_ROWS.length} default process definitions`);
   return DEFAULT_PROCESS_ROWS.length;
+}
+
+/**
+ * Idempotent — inserts solvent catalog rows + Solvent RM type for existing deployments.
+ */
+export async function ensureSolventCatalogSeeded(): Promise<{ materials: number; rmType: boolean }> {
+  const db = getDatabase();
+  const seed = loadSeedMaterialsFromJson().filter((m) => m.type === 'solvent');
+  const existingRows = await db
+    .select({ key: schema.platformMasterMaterials.key })
+    .from(schema.platformMasterMaterials);
+  const existingKeys = new Set(existingRows.map((r) => r.key));
+
+  let materialsAdded = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const m = seed[i]!;
+    if (existingKeys.has(m.key)) continue;
+    await db
+      .insert(schema.platformMasterMaterials)
+      .values(masterMaterialInputToDbValues({ ...m, sortOrder: 900 + i }));
+    materialsAdded++;
+  }
+
+  let rmTypeAdded = false;
+  const [solventRm] = await db
+    .select({ id: schema.platformReferenceItems.id })
+    .from(schema.platformReferenceItems)
+    .where(
+      and(
+        eq(schema.platformReferenceItems.category, 'rm_type' as RefCategory),
+        eq(schema.platformReferenceItems.code, 'solvent')
+      )
+    )
+    .limit(1);
+
+  if (!solventRm) {
+    const rmRows = await db
+      .select()
+      .from(schema.platformReferenceItems)
+      .where(eq(schema.platformReferenceItems.category, 'rm_type' as RefCategory))
+      .orderBy(asc(schema.platformReferenceItems.sortOrder));
+    const items = [
+      ...rmRows.map((r) => ({
+        label: r.label,
+        code: r.code ?? undefined,
+        metadata: (r.metadata as Record<string, unknown> | null) ?? undefined,
+      })),
+      { label: 'Solvent', code: 'solvent', metadata: { cleaningSolventKgPerJob: 20 } },
+    ];
+    await replacePlatformReferenceCategory('rm_type' as RefCategory, items);
+    rmTypeAdded = true;
+  }
+
+  if (materialsAdded > 0) {
+    await incrementMasterDataVersion();
+    const materials = await listPlatformMasterMaterials();
+    const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);
+    for (const t of tenants) {
+      await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
+    }
+    console.log(`✓ Seeded ${materialsAdded} solvent materials and synced tenants`);
+  }
+
+  if (rmTypeAdded) {
+    console.log('✓ Added Solvent RM type to platform reference');
+  }
+
+  return { materials: materialsAdded, rmType: rmTypeAdded };
+}
+
+const LAMINATION_ADHESIVE_KEYS = ['adhesive-sb-gp', 'adhesive-sb-mp', 'adhesive-sb-hp'] as const;
+const RETIRED_ADHESIVE_KEYS = ['adhesive-sb'] as const;
+
+/**
+ * Idempotent — upserts GP/MP/HP lamination adhesives from seed JSON; retires legacy adhesive-sb row.
+ */
+export async function ensureLaminationAdhesivesSeeded(): Promise<{ upserted: number; retired: number }> {
+  const db = getDatabase();
+  const seed = loadSeedMaterialsFromJson().filter(
+    (m) => m.type === 'adhesive' && (LAMINATION_ADHESIVE_KEYS as readonly string[]).includes(m.key)
+  );
+  const existing = await db.select().from(schema.platformMasterMaterials);
+  const byKey = new Map(existing.map((r) => [r.key, r]));
+
+  let upserted = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const m = seed[i]!;
+    const values = masterMaterialInputToDbValues({ ...m, sortOrder: 800 + i });
+    const match = byKey.get(m.key);
+    if (match) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set(values)
+        .where(eq(schema.platformMasterMaterials.id, match.id));
+    } else {
+      await db.insert(schema.platformMasterMaterials).values(values);
+    }
+    upserted++;
+  }
+
+  let retired = 0;
+  for (const key of RETIRED_ADHESIVE_KEYS) {
+    const row = byKey.get(key);
+    if (row?.active) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set({ active: false, updatedAt: new Date() })
+        .where(eq(schema.platformMasterMaterials.id, row.id));
+      retired++;
+    }
+  }
+
+  const mono = byKey.get('adhesive-mono-component');
+  if (mono && (mono.solidPercent !== 100 || mono.isSolventBased)) {
+    await db
+      .update(schema.platformMasterMaterials)
+      .set({
+        solidPercent: 100,
+        isSolventBased: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.platformMasterMaterials.id, mono.id));
+  }
+
+  if (upserted > 0 || retired > 0) {
+    await incrementMasterDataVersion();
+    const materials = await listPlatformMasterMaterials();
+    const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);
+    for (const t of tenants) {
+      await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
+    }
+    console.log(`✓ Lamination adhesives: ${upserted} upserted, ${retired} retired, tenants synced`);
+  }
+
+  return { upserted, retired };
+}
+
+/** Persist platform default cleaning EA kg/job (Master Data → Solvent tab). */
+export async function updateCostingDefaults(
+  cleaningSolventKgPerJob: number,
+  actor?: AuditActor
+): Promise<{ cleaningSolventKgPerJob: number }> {
+  const db = getDatabase();
+  const rows = await db
+    .select()
+    .from(schema.platformReferenceItems)
+    .where(
+      and(
+        eq(schema.platformReferenceItems.category, 'rm_type' as RefCategory),
+        eq(schema.platformReferenceItems.active, true)
+      )
+    );
+
+  const solventRow = rows.find(
+    (r) => r.code === 'solvent' || r.label.trim().toLowerCase() === 'solvent'
+  );
+  if (!solventRow) {
+    throw new Error('Solvent RM type not found in platform reference');
+  }
+
+  const metadata = {
+    ...((solventRow.metadata || {}) as Record<string, unknown>),
+    cleaningSolventKgPerJob,
+  };
+
+  await db
+    .update(schema.platformReferenceItems)
+    .set({ metadata, updatedAt: new Date() })
+    .where(eq(schema.platformReferenceItems.id, solventRow.id));
+
+  const version = await incrementMasterDataVersion();
+  await appendMasterAuditEntries(
+    version,
+    [
+      {
+        entityType: 'reference_item',
+        entityKey: referenceEntityKey('rm_type', solventRow.label),
+        action: 'update',
+        beforeJson: referenceItemAuditSnapshot(solventRow),
+        afterJson: referenceItemAuditSnapshot({ ...solventRow, metadata }),
+      },
+    ],
+    actor
+  );
+
+  return { cleaningSolventKgPerJob };
 }

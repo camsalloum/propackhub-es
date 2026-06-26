@@ -126,13 +126,15 @@ function getDefaultProfile(role: string): VisibilityProfile {
 }
 
 export function getEffectiveProfile(role: string, storedProfile?: unknown): VisibilityProfile {
+  const base = getDefaultProfile(role);
   const customProfile = parseVisibilityProfile(storedProfile);
 
-  if (customProfile) {
-    return customProfile;
+  if (!customProfile) {
+    return base;
   }
 
-  return getDefaultProfile(role);
+  // Merge so newer keys (e.g. solventMixCost) inherit role defaults when absent from saved JSON.
+  return { ...base, ...customProfile };
 }
 
 export function stripEstimateRow(row: any, profile: VisibilityProfile): any {
@@ -179,9 +181,16 @@ export function stripEstimateRow(row: any, profile: VisibilityProfile): any {
   }
 
   if (profile.solventMixCost) {
+    visible.solventMaterialId = row.solventMaterialId;
     visible.solventCostPerKgUsd = row.solventCostPerKgUsd;
     visible.solventRatio = row.solventRatio;
+    visible.laminationRecipeOverrides = row.laminationRecipeOverrides;
+    visible.cleaningSolventKgPerJob = row.cleaningSolventKgPerJob;
+    visible.inkPrintingProcess = row.inkPrintingProcess;
   }
+
+  visible.orderQuantityKg = row.orderQuantityKg;
+  visible.orderQuantityUnit = row.orderQuantityUnit;
 
   if (profile.costBreakdown) {
     visible.costBreakdown = row.costBreakdown ?? null;
@@ -245,7 +254,17 @@ export function stripCalculationResult(result: CalculationResult, profile: Visib
 
   if (!profile.solventMixCost) {
     delete estimate.solventMixCostPerKg;
+    delete estimate.solventMixCostPerM2;
     delete estimate.solventMixRatio;
+    delete estimate.layerRmCostPerKg;
+    delete estimate.layerRmCostPerM2;
+    delete estimate.rmCostPerM2;
+    delete estimate.laminationSolventCostPerKg;
+    delete estimate.laminationSolventCostPerM2;
+    delete estimate.inkMakeupSolventCostPerKg;
+    delete estimate.inkMakeupSolventCostPerM2;
+    delete estimate.cleaningSolventCostPerKg;
+    delete estimate.cleaningSolventCostPerM2;
   }
 
   const stripped: any = {

@@ -2,17 +2,16 @@ import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { and, asc, eq } from 'drizzle-orm';
-import { calculateEstimate, type Estimate as EngineEstimate } from '@es/engine';
 import { schema } from '../db';
-import { buildEngineMaterialMap } from '../utils/material-map';
 import { usdToDisplay, slabsUsdToDisplay } from '../utils/currency';
 import { getEffectiveProfile } from '../utils/visibility';
 import type { VisibilityProfile } from '@es/engine';
 import { renderBrandedPdfKitProposal } from '../utils/pdf-proposal-kit';
+import { calculateEstimateFromRows } from '../utils/estimate-engine-input';
 
 type Db = ReturnType<typeof import('../db').getDatabase>;
 
-type ProposalLayerRow = { materialId: string; micron: string };
+type ProposalLayerRow = { id: string; materialId: string; micron: string };
 type ProposalProcessRow = typeof schema.processes.$inferSelect;
 type ProposalSlabRow = typeof schema.slabs.$inferSelect;
 
@@ -75,8 +74,10 @@ export async function buildProposalPdfBuffer(
 
   const layers = await db
     .select({
+      id: schema.layers.id,
       materialId: schema.layers.materialId,
       micron: schema.layers.micron,
+      position: schema.layers.position,
     })
     .from(schema.layers)
     .where(eq(schema.layers.estimateId, estimateId))
@@ -98,57 +99,15 @@ export async function buildProposalPdfBuffer(
     .where(eq(schema.slabs.estimateId, estimateId))
     .orderBy(asc(schema.slabs.sortOrder), asc(schema.slabs.quantityKg));
 
-  const materialMap = buildEngineMaterialMap(materials);
-
-  const estimateForEngine: EngineEstimate = {
-    id: estimate.id,
+  const result = calculateEstimateFromRows({
+    estimate,
     tenantId,
-    customerId: estimate.customerId || undefined,
-    jobName: estimate.jobName,
-    status: 'draft',
-    layers: layers.map((l: ProposalLayerRow, i: number) => ({
-      id: `layer-${i}`,
-      materialId: l.materialId,
-      micron: parseFloat(l.micron),
-      position: i,
-    })),
-    dimensions: {
-      productType: estimate.productType,
-      printingWebClass: estimate.printingWebClass,
-      ...(estimate.dimensions as object),
-    },
-    markupPercent: parseFloat(estimate.markupPercent),
-    platesPerKg: parseFloat(estimate.platesPerKg),
-    deliveryPerKg: parseFloat(estimate.deliveryPerKg),
-    processes: processes.map((p: ProposalProcessRow) => ({
-      id: p.id,
-      name: p.name,
-      costPerHour: parseFloat(p.costPerHour),
-      speedBasis: p.speedBasis as 'kg_per_hour' | 'm_per_min' | 'pcs_per_min',
-      speedValue: parseFloat(p.speedValue),
-      setupHours: parseFloat(p.setupHours),
-      enabled: p.enabled,
-    })),
-    slabs: slabs.map((s: ProposalSlabRow) => ({
-      quantityKg: parseFloat(s.quantityKg),
-      pricePerKg: parseFloat(s.pricePerKg),
-    })),
-    displayCurrencyCode: estimate.displayCurrency,
-    exchangeRateUsdToDisplay: parseFloat(estimate.exchangeRateUsdToDisplay),
-    orderQuantityKg: estimate.orderQuantityKg
-      ? parseFloat(estimate.orderQuantityKg)
-      : slabs[0]?.quantityKg
-        ? parseFloat(slabs[0].quantityKg)
-        : 1000,
-    solventCostPerKgUsd: estimate.solventCostPerKgUsd
-      ? parseFloat(estimate.solventCostPerKgUsd)
-      : undefined,
-    solventRatio: estimate.solventRatio ? parseFloat(estimate.solventRatio) : undefined,
-    createdAt: estimate.createdAt,
-    updatedAt: estimate.updatedAt,
-  };
+    layers,
+    materials,
+    processes,
+    slabs,
+  });
 
-  const result = calculateEstimate(estimateForEngine, materialMap);
   const fxRate = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;
   const saleDisplay = usdToDisplay(
     result.estimate.salePricePerKg || parseFloat(estimate.salePricePerKg || '0'),

@@ -2,8 +2,10 @@ import {
   calculateEstimate,
   derivePrintingWebClass,
   stackNeedsSolventMix,
+  DEFAULT_CLEANING_SOLVENT_KG_PER_JOB,
   type Estimate,
   type Material,
+  type LaminationRecipe,
 } from '@es/engine';
 
 export interface ClientCalcMaterial {
@@ -15,6 +17,7 @@ export interface ClientCalcMaterial {
   costPerKgUsd: number | string;
   wastePercent: number;
   isSolventBased?: boolean;
+  laminationRecipe?: LaminationRecipe | null;
 }
 
 export interface ClientCalcProcess {
@@ -40,16 +43,19 @@ export interface ClientCalcInput {
   displayCurrency: string;
   exchangeRateUsdToDisplay: number;
   solventCostPerKgUsd?: number;
-  solventRatio?: number;
+  laminationRecipeOverrides?: Record<string, LaminationRecipe>;
+  cleaningSolventKgPerJob?: number;
+  inkPrintingProcess?: 'flexo' | 'rotogravure' | null;
+  inkSolventRatio?: number;
   orderQuantityKg?: number;
 }
 
 function toMaterial(m: ClientCalcMaterial): Material {
-  // Normalize type — guard against unexpected casing or aliases
   const normalizeType = (t: string): Material['type'] => {
     const lower = (t || '').toLowerCase();
     if (lower === 'ink' || lower.includes('ink')) return 'ink';
     if (lower === 'adhesive' || lower.includes('adhesive')) return 'adhesive';
+    if (lower === 'solvent') return 'solvent';
     return 'substrate';
   };
   const density = typeof m.density === 'string' ? parseFloat(m.density) : m.density;
@@ -63,6 +69,8 @@ function toMaterial(m: ClientCalcMaterial): Material {
     costPerKgUsd,
     wastePercent: m.wastePercent,
     isSolventBased: m.isSolventBased,
+    laminationRecipe: m.laminationRecipe ?? null,
+    laminationTier: m.laminationRecipe?.tier ?? null,
   };
 }
 
@@ -115,7 +123,10 @@ export function runClientCalculation(input: ClientCalcInput) {
     exchangeRateUsdToDisplay: input.exchangeRateUsdToDisplay,
     orderQuantityKg: orderQty,
     solventCostPerKgUsd: needsSolvent ? input.solventCostPerKgUsd : undefined,
-    solventRatio: needsSolvent ? input.solventRatio : undefined,
+    laminationRecipeOverrides: input.laminationRecipeOverrides,
+    cleaningSolventKgPerJob: input.cleaningSolventKgPerJob ?? DEFAULT_CLEANING_SOLVENT_KG_PER_JOB,
+    inkPrintingProcess: input.inkPrintingProcess ?? undefined,
+    inkSolventRatio: input.inkSolventRatio,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

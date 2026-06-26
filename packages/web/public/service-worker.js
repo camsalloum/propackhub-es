@@ -1,4 +1,14 @@
-const CACHE_NAME = 'es-static-v2';
+const CACHE_NAME = 'es-static-v3';
+
+function isSkippableRequest(url, request) {
+  if (url.pathname.startsWith('/api/')) return true;
+  if (request.mode === 'navigate') return true;
+  // Vite dev / source maps — never cache in SW (prod builds use /assets/)
+  if (url.pathname.startsWith('/@')) return true;
+  if (url.pathname.startsWith('/src/')) return true;
+  if (url.pathname.includes('node_modules')) return true;
+  return false;
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -23,38 +33,34 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
   if (url.origin !== self.location.origin) return;
+  if (isSkippableRequest(url, request)) return;
 
-  // Skip API calls — let them go through to the dev server proxy
-  if (url.pathname.startsWith('/api/')) {
-    return;
-  }
-
-  // Skip navigation in dev — causes issues with dev server proxy/HMR
-  // In dev, Vite handles SPA routing directly
-  if (request.mode === 'navigate') {
-    return;
-  }
-
-  // Vite build assets (/assets/*.js, *.css) — stale-while-revalidate
   event.respondWith(
     caches.match(request).then((cached) => {
       const networkFetch = fetch(request)
         .then((resp) => {
-          // Only cache successful responses
-          if (!resp || resp.status !== 200 || resp.type !== 'basic') {
-            return resp;
-          }
-          const clone = resp.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, clone).catch(() => {
-              // Silently ignore cache write errors
+          if (resp && resp.status === 200 && resp.type === 'basic') {
+            const clone = resp.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, clone).catch(() => {});
             });
-          });
+          }
           return resp;
         })
         .catch(() => cached);
 
-      return cached || networkFetch;
+      if (cached) {
+        void networkFetch.catch(() => {});
+        return cached;
+      }
+
+      return networkFetch.then((resp) => {
+        if (resp) return resp;
+        return new Response('Network unavailable', {
+          status: 503,
+          statusText: 'Service Unavailable',
+        });
+      });
     })
   );
 });

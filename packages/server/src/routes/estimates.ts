@@ -28,6 +28,20 @@ async function getUserVisibilityProfile(db: any, userId: string): Promise<Visibi
   return getEffectiveProfile(userRecord?.role, userRecord?.visibilityProfile);
 }
 
+const LaminationRecipeComponentSchema = z.object({
+  role: z.enum(['adhesive', 'hardener', 'solvent', 'other']),
+  name: z.string(),
+  parts: z.number().positive(),
+  solidPercent: z.number().min(0).max(100),
+  pricePerKgUsd: z.number().optional(),
+  solventKey: z.string().optional(),
+});
+
+const LaminationRecipeSchema = z.object({
+  tier: z.enum(['GP', 'MP', 'HP', 'HP_SF', 'CUSTOM']),
+  components: z.array(LaminationRecipeComponentSchema).min(1),
+});
+
 const EstimateCreateSchema = z.object({
   customerId: z.string().uuid().optional(),
   jobName: z.string().min(1),
@@ -59,8 +73,12 @@ const EstimateCreateSchema = z.object({
   })).default([]),
   orderQuantityKg: z.coerce.number().positive().optional(),
   orderQuantityUnit: z.string().max(32).optional(),
+  solventMaterialId: z.string().uuid().optional(),
   solventCostPerKgUsd: z.coerce.number().nonnegative().optional(),
   solventRatio: z.coerce.number().positive().optional(),
+  laminationRecipeOverrides: z.record(z.string(), LaminationRecipeSchema).optional(),
+  cleaningSolventKgPerJob: z.coerce.number().nonnegative().optional(),
+  inkPrintingProcess: z.enum(['flexo', 'rotogravure']).optional().nullable(),
   status: z.enum(['draft', 'sent', 'won', 'lost']).optional(),
   notes: z.string().optional(),
   note: z.string().optional(), // used in activity log
@@ -239,8 +257,13 @@ export async function createEstimateRoute(
         masterDataVersion,
         orderQuantityKg: data.orderQuantityKg != null ? String(data.orderQuantityKg) : undefined,
         orderQuantityUnit: data.orderQuantityUnit ?? 'kgs',
+        solventMaterialId: data.solventMaterialId,
         solventCostPerKgUsd: data.solventCostPerKgUsd != null ? String(data.solventCostPerKgUsd) : undefined,
         solventRatio: data.solventRatio != null ? String(data.solventRatio) : undefined,
+        laminationRecipeOverrides: data.laminationRecipeOverrides ?? undefined,
+        cleaningSolventKgPerJob:
+          data.cleaningSolventKgPerJob != null ? String(data.cleaningSolventKgPerJob) : undefined,
+        inkPrintingProcess: data.inkPrintingProcess ?? undefined,
       })
       .returning()) as EstimateRow[];
 
@@ -544,11 +567,23 @@ async function updateEstimateRoute(
     if (data.orderQuantityUnit !== undefined) {
       updates.orderQuantityUnit = data.orderQuantityUnit;
     }
+    if (data.solventMaterialId !== undefined) {
+      updates.solventMaterialId = data.solventMaterialId || null;
+    }
     if (data.solventCostPerKgUsd !== undefined) {
       updates.solventCostPerKgUsd = String(data.solventCostPerKgUsd);
     }
     if (data.solventRatio !== undefined) {
       updates.solventRatio = String(data.solventRatio);
+    }
+    if (data.laminationRecipeOverrides !== undefined) {
+      updates.laminationRecipeOverrides = data.laminationRecipeOverrides;
+    }
+    if (data.cleaningSolventKgPerJob !== undefined) {
+      updates.cleaningSolventKgPerJob = String(data.cleaningSolventKgPerJob);
+    }
+    if (data.inkPrintingProcess !== undefined) {
+      updates.inkPrintingProcess = data.inkPrintingProcess;
     }
     // Any layer save clears configure-from-template mode in the DB.
     if (data.layers !== undefined && data.dimensions === undefined) {
@@ -811,8 +846,12 @@ async function requoteEstimateRoute(
         // PRD §7.5: re-quote always uses current tenant currency/rate, not frozen source rate
         displayCurrency: tenant?.displayCurrency || source.displayCurrency,
         exchangeRateUsdToDisplay: tenant?.exchangeRateUsdToDisplay || source.exchangeRateUsdToDisplay,
+        solventMaterialId: source.solventMaterialId,
         solventCostPerKgUsd: source.solventCostPerKgUsd,
         solventRatio: source.solventRatio,
+        laminationRecipeOverrides: source.laminationRecipeOverrides,
+        cleaningSolventKgPerJob: source.cleaningSolventKgPerJob,
+        inkPrintingProcess: source.inkPrintingProcess,
         orderQuantityKg: source.orderQuantityKg,
         sourceEstimationId: id,
         masterDataVersion,
@@ -1002,8 +1041,12 @@ async function duplicateEstimateRoute(
         // Duplicate keeps frozen prices but uses current tenant currency/FX for display
         displayCurrency: tenant?.displayCurrency || source.displayCurrency,
         exchangeRateUsdToDisplay: tenant?.exchangeRateUsdToDisplay || source.exchangeRateUsdToDisplay,
+        solventMaterialId: source.solventMaterialId,
         solventCostPerKgUsd: source.solventCostPerKgUsd,
         solventRatio: source.solventRatio,
+        laminationRecipeOverrides: source.laminationRecipeOverrides,
+        cleaningSolventKgPerJob: source.cleaningSolventKgPerJob,
+        inkPrintingProcess: source.inkPrintingProcess,
         orderQuantityKg: source.orderQuantityKg,
         orderQuantityUnit: source.orderQuantityUnit,
         totalGsm: source.totalGsm,

@@ -61,6 +61,9 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
             (((ref as { processOptions?: import('../lib/masterDataReference').ProcessOption[] }).processOptions) ?? []).length > 0
               ? (ref as { processOptions?: import('../lib/masterDataReference').ProcessOption[] }).processOptions!
               : DEFAULT_MASTER_REFERENCE.processOptions,
+          costingDefaults:
+            (ref as { costingDefaults?: MasterDataReferenceState['costingDefaults'] }).costingDefaults ??
+            DEFAULT_MASTER_REFERENCE.costingDefaults,
         });
       } catch {
         if (!cancelled) setReference(DEFAULT_MASTER_REFERENCE);

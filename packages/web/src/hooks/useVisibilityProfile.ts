@@ -51,8 +51,12 @@ export function useVisibilityProfile(userRole?: string) {
   const effectiveProfile = useMemo(() => {
     if (previewPreset === 'sales_rep') return SALES_REP_PROFILE;
     if (previewPreset === 'admin') return ADMIN_PROFILE;
-    return profile ?? SALES_REP_PROFILE;
-  }, [profile, previewPreset]);
+    const base =
+      userRole === 'tenant_admin' || userRole === 'platform_admin'
+        ? ADMIN_PROFILE
+        : SALES_REP_PROFILE;
+    return profile ? { ...base, ...profile } : base;
+  }, [profile, previewPreset, userRole]);
 
   const can = useCallback(
     (key: keyof VisibilityProfile) => Boolean(effectiveProfile[key]),

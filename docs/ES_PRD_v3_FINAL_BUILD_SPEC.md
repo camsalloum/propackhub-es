@@ -878,35 +878,63 @@ See [`ES_MEMORY.md`](./ES_MEMORY.md), [`legacy-laravel/COSTING_NOTES.md`](./lega
 
 ### 7.3 Formulas (port from Laravel — **not** PEBI §9.2)
 
-**Per layer `i`:**
+**Per layer `i` (dry GSM model — V1):**
 
 ```
 // Substrate (layer_type = substrate)
 gsm[i]     = micron[i] × density[i]
-cost_m2[i] = (gsm[i] / 1000) × cost_per_kg[i] × (1 + waste_pct[i]/100)
+cost_m2[i] = (gsm[i] / 1000) × cost_per_kg[i]
 
 // Ink or Adhesive (layer_type = ink | adhesive)
-gsm[i]     = (solid_percent[i] × micron[i]) / 100
-cost_m2[i] = (micron[i] / 1000) × cost_per_kg[i] × (1 + waste_pct[i]/100)
+// User enters DRY gsm on the layer (solids remaining on film after flash-off).
+// layer.micron stores dry gsm. Library cost_per_kg is dry-equivalent:
+//   cost_per_kg_dry = liquid_price / (solid_percent / 100)
+gsm[i]     = dry_gsm entered by user
+cost_m2[i] = (dry_gsm / 1000) × cost_per_kg_dry
 ```
 
 **Structure totals:**
 
 ```
 total_gsm     = Σ gsm[i]
-total_micron  = Σ substrate_micron + Σ ink/adhesive_gsm   // Laravel total-micron rule
-total_cost_m2 = Σ cost_m2[i] + solvent_mix_cost_m2        // see below
-mat_cost_kg     = (total_cost_m2 / total_gsm) × 1000
+total_micron  = Σ substrate_micron + Σ ink/adhesive_dry_gsm
+total_cost_m2 = Σ cost_m2[i] + solvent_mix_cost_m2
+mat_cost_kg   = (total_cost_m2 / total_gsm) × 1000
 ```
 
-**Solvent-mix block** (auto when stack contains **Ink SB** and/or **Adhesive SB**; hidden for UV-only):
+**Solvent-mix block** (auto when stack contains SB ink and/or SB adhesive; hidden for UV-only ink):
+
+Solvents are **not laminate layers**. They live in Raw Materials → **Solvent** tab (`layer_type = solvent`). Default selection: **Solvent Common** (average $/kg and density of catalog solvents — recalculated when master solvents are saved).
+
+**SB adhesive (lamination):** Master stores **binder concentrate** ($/kg solid on layer row). **Ethyl acetate** is priced separately from the recipe:
 
 ```
-sum_gsm = Σ gsm where ink_system=SB + Σ gsm where material_name="Solvent Base" + Σ gsm where adhesive_system=SB (optional — match Laravel ink focus first)
-solvent_mix_cost_m2 = (sum_gsm / gsm_ratio_denominator) × (solvent_mix.cost_per_kg / 1000)
+mix_solid% = Σ(parts × solid%) / Σ(parts)
+wet_gsm = dry_gsm / mix_solid%
+ea_gsm = wet_gsm × (ea_parts / total_parts)
+lamination_solvent_cost_m2 = (ea_gsm / 1000) × solvent_$/kg
 ```
 
-Engine sets `solvent_mix_enabled = any(layer.ink_system === 'SB' || layer.adhesive_system === 'SB')`.
+- Default recipes: **GP / MP / HP** on master adhesive rows (`laminationRecipe` JSON).
+- **Per-quote override (Option B):** `laminationRecipeOverrides` keyed by layer id.
+- `selected_solvent` = estimate `solvent_material_id` → tenant library (default **Solvent Common**); `solvent_cost_per_kg_usd` overridable on quote.
+
+**Press cleaning (SB ink jobs):**
+
+```
+cleaning_solvent_cost_per_kg = (cleaning_kg_per_job × solvent_$/kg) / order_kg
+```
+
+- Default **20 kg EA/job** — editable in Master Data → Solvent tab and per estimate.
+- Allocated only when stack contains **SB ink**.
+
+```
+solvent_mix_cost_per_kg = lamination_solvent_cost_per_kg + cleaning_solvent_cost_per_kg
+```
+
+Legacy `solvent_ratio` / dry-GSM ÷ ratio model is **retired** for adhesive costing (column kept for backward compatibility).
+
+Engine sets `solvent_mix_enabled = stackNeedsSolventMix(layers)` (SB ink or SB adhesive present).
 
 **Operations** (admin-configured; still included in sale price for all users):
 

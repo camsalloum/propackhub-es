@@ -15,7 +15,7 @@ function mapMasterToDbRow(tenantId: string, material: MasterMaterial) {
   return {
     tenantId,
     name: material.name,
-    type: material.type as 'substrate' | 'ink' | 'adhesive',
+    type: material.type as 'substrate' | 'ink' | 'adhesive' | 'solvent',
     solidPercent: material.solidPercent,
     density: material.density.toString(),
     costPerKgUsd: roundUsd(material.costPerKgUsd).toFixed(2),
@@ -31,11 +31,14 @@ function mapMasterToDbRow(tenantId: string, material: MasterMaterial) {
     itemClass: itemClassForMasterMaterial(material),
     priceSource: 'platform' as const,
     isTenantOnly: false,
+    laminationRecipe: material.laminationRecipe ?? null,
   };
 }
 
 const LEGACY_ADHESIVE_NAMES: Record<string, string[]> = {
-  'adhesive-sb': ['Adhesive SB (Solvent Based)', 'Solvent Base'],
+  'adhesive-sb-gp': ['Adhesive SB (Solvent Based)', 'Solvent Base', 'Solvent Base GP'],
+  'adhesive-sb-mp': ['Solvent Base MP'],
+  'adhesive-sb-hp': ['Solvent Base HP'],
   'adhesive-wb': ['Adhesive WB (Water Based)', 'Solvent Less'],
   'adhesive-mono-component': ['Mono Component'],
 };
@@ -76,7 +79,7 @@ export function findOrphanSubstrateRows(
     if (row.type === 'substrate') {
       return !sourceKeys.has(sourceKey(row));
     }
-    if (row.type === 'ink' || row.type === 'adhesive') {
+    if (row.type === 'ink' || row.type === 'adhesive' || row.type === 'solvent') {
       return !sourceKeys.has(sourceKey(row));
     }
     return false;
@@ -235,6 +238,10 @@ export async function syncMaterialsForTenant(
         platformSyncedAt: new Date(),
         updatedAt: new Date(),
       };
+
+      if (material.laminationRecipe !== undefined) {
+        patch.laminationRecipe = material.laminationRecipe ?? null;
+      }
 
       // Single source of truth: platform master always overwrites tenant prices.
       // Temporary overrides live only in estimate layer unit_cost_snapshot_usd, not in the library.

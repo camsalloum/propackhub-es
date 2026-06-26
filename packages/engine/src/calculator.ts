@@ -2,7 +2,12 @@ import {
   Estimate, Layer, Material, CalculationResult,
   EstimateDimensions, Process, MissingMaterialsError,
 } from './types';
-import { hasSolventBasedLayers } from './validator';
+import { calculateSolventCosts } from './solvent-costing';
+import {
+  calculateSubstrateGaugeMicron,
+  calculateTotalConstructionMicron,
+  calculateStructureDensity,
+} from './structure-metrics';
 
 /**
  * Main calculation engine - mirrors Laravel costing formulas
@@ -34,15 +39,16 @@ export function calculateEstimate(
 
   // Step 2: Calculate totals
   const totalGsm = layersWithCalc.reduce((sum, layer) => sum + (layer.gsm || 0), 0);
-  const totalMicron = calculateTotalMicron(layersWithCalc, materials);
+  const substrateGaugeMicron = calculateSubstrateGaugeMicron(layersWithCalc, materials);
+  const totalMicron = calculateTotalConstructionMicron(layersWithCalc, materials);
   const totalCostM2 = layersWithCalc.reduce((sum, layer) => sum + (layer.costPerM2 || 0), 0);
 
-  // Step 3: Calculate film density and conversion factors
-  const filmDensity = totalMicron > 0 ? totalGsm / totalMicron : 0;
+  // Step 3: Structure density and conversion factors
+  const filmDensity = calculateStructureDensity(totalGsm, totalMicron);
   const sqmPerKg = totalGsm > 0 ? 1000 / totalGsm : 0;
 
-  // Step 4: Calculate material cost per kg
-  const materialCostPerKg = totalGsm > 0 ? (totalCostM2 / totalGsm) * 1000 : 0;
+  // Step 4: Calculate layer RM cost per kg (layers only — before solvent)
+  const layerRmCostPerKg = totalGsm > 0 ? (totalCostM2 / totalGsm) * 1000 : 0;
 
   // Step 5: Calculate printing web width if dimensions available
   const printingWebWidthMm = calculatePrintingWebWidth(estimate.dimensions);
@@ -50,20 +56,21 @@ export function calculateEstimate(
   // Step 6: Calculate product-specific metrics
   const productMetrics = calculateProductMetrics(estimate.dimensions, totalGsm, filmDensity, printingWebWidthMm);
 
-  // Step 7: Calculate solvent mix if needed
-  const solventMix = calculateSolventMix(estimate, layersWithCalc, materials, totalGsm);
-
-  // Solvent cost expressed per‑kg. Guard against totalGsm === 0 — `x / 0 * 1000` is
-  // NaN/Infinity in JS, which would propagate into salePricePerKg and get persisted
-  // as "NaN", breaking Save & Calculate for any estimate whose layers have 0 µ.
-  const solventCostPerKg = totalGsm > 0 ? ((solventMix.costPerM2 || 0) / totalGsm) * 1000 : 0;
+  // Step 7: Solvent — lamination EA (recipes) + press cleaning (SB ink)
+  const solventDetail = calculateSolventCosts(
+    estimate,
+    layersWithCalc,
+    materials,
+    totalGsm
+  );
+  const solventCostPerKg = solventDetail.totalCostPerKg;
 
   // Step 8: Calculate operation costs from processes
   const processResults = calculateProcessCosts(estimate.processes, estimate.orderQuantityKg, productMetrics);
 
   // Step 9: Calculate sale price per kg (Laravel additive formula)
   const salePricePerKg = calculateSalePrice(
-    materialCostPerKg + solventCostPerKg,
+    layerRmCostPerKg + solventCostPerKg,
     estimate.markupPercent,
     estimate.platesPerKg,
     estimate.deliveryPerKg,
@@ -81,7 +88,7 @@ export function calculateEstimate(
     );
 
     const slabSalePricePerKg = calculateSalePrice(
-      materialCostPerKg + solventCostPerKg,
+      layerRmCostPerKg + solventCostPerKg,
       estimate.markupPercent,
       estimate.platesPerKg,
       estimate.deliveryPerKg,
@@ -96,7 +103,8 @@ export function calculateEstimate(
   });
 
   // Step 11: Calculate cost breakdown percentages
-  const materialCost = materialCostPerKg + solventCostPerKg;
+  const materialCost = layerRmCostPerKg + solventCostPerKg;
+  const rmCostPerM2 = totalCostM2 + solventDetail.totalCostPerM2;
   const markupAmount = materialCost * (estimate.markupPercent / 100);
   const totalCost = materialCost + markupAmount + estimate.platesPerKg +
     estimate.deliveryPerKg + processResults.operationCostPerKg;
@@ -133,14 +141,27 @@ export function calculateEstimate(
     layers: layersWithCalc,
     totalGsm,
     totalMicron,
+    substrateGaugeMicron,
     filmDensity,
     sqmPerKg,
     materialCostPerKg: materialCost,
+    layerRmCostPerKg,
+    layerRmCostPerM2: totalCostM2,
+    rmCostPerM2,
     markupAmountPerKg: markupAmount,
     operationCostPerKg: processResults.operationCostPerKg,
     salePricePerKg,
     solventMixCostPerKg: solventCostPerKg,
-    solventMixRatio: solventMix.ratio,
+    solventMixCostPerM2: solventDetail.totalCostPerM2,
+    laminationSolventCostPerKg: solventDetail.laminationCostPerKg,
+    laminationSolventCostPerM2: solventDetail.laminationCostPerM2,
+    inkMakeupSolventCostPerKg: solventDetail.inkMakeupCostPerKg,
+    inkMakeupSolventCostPerM2: solventDetail.inkMakeupCostPerM2,
+    cleaningSolventCostPerKg: solventDetail.cleaningCostPerKg,
+    cleaningSolventCostPerM2: solventDetail.cleaningCostPerM2,
+    solventMixRatio: solventDetail.inkSolventRatio,
+    inkPrintingProcessResolved: solventDetail.inkPrintingProcess,
+    inkSolventRatioResolved: solventDetail.inkSolventRatio,
     // Product metrics
     piecesPerKg: productMetrics.piecesPerKg,
     gramsPerPiece: productMetrics.gramsPerPiece,
@@ -192,26 +213,6 @@ function calculateLayer(layer: Layer, material: Material): Layer {
     costPerM2,
     material
   };
-}
-
-/**
- * Calculate total micron per new model:
- * total_micron = Σ substrate_micron + Σ ink/adhesive_dry_gsm
- * (substrate µ + ink/adhesive dry gsm treated as thickness equivalent for film_density)
- */
-function calculateTotalMicron(layers: Layer[], materials: Map<string, Material>): number {
-  return layers.reduce((sum, layer) => {
-    const material = materials.get(layer.materialId);
-    if (!material) return sum;
-
-    if (material.type === 'substrate') {
-      // Substrate: add micron directly
-      return sum + layer.micron;
-    } else {
-      // Ink/Adhesive: user entered dry gsm — use it as thickness equivalent
-      return sum + layer.micron; // layer.micron = dry gsm in new model
-    }
-  }, 0);
 }
 
 /**
@@ -316,49 +317,6 @@ function calculateProductMetrics(
 }
 
 /**
- * Calculate solvent mix cost (when SB ink/adhesive present)
- */
-function calculateSolventMix(
-  estimate: Estimate,
-  layers: Layer[],
-  materials: Map<string, Material>,
-  totalGsm: number
-) {
-  // Check if we need solvent mix
-  const needsSolventMix = hasSolventBasedLayers(estimate.layers, materials);
-
-  if (!needsSolventMix || totalGsm === 0) {
-    return { costPerM2: 0, ratio: 0 };
-  }
-
-  // Sum GSM of solvent-based layers
-  let solventBasedGsm = 0;
-  layers.forEach(layer => {
-    const material = materials.get(layer.materialId);
-    if (material) {
-      // Use isSolventBased field if available, otherwise fallback to name check
-      const isSB = material.isSolventBased !== undefined
-        ? material.isSolventBased
-        : material.name.includes('SB');
-
-      if ((material.type === 'ink' || material.type === 'adhesive') && isSB) {
-        solventBasedGsm += layer.gsm || 0;
-      }
-    }
-  });
-
-  // Get solvent mix cost from estimate or use default
-  const solventCostPerKg = estimate.solventCostPerKgUsd || 2.0;
-  const solventRatio = estimate.solventRatio || 0.5;
-
-  // PRD §7.3: cost_m2_solvent = (sum_gsm / gsm_ratio_denominator) × (cost_per_kg / 1000)
-  // solventRatio is the gsm_ratio_denominator (ink-to-solvent ratio)
-  const costPerM2 = (solventBasedGsm / solventRatio) * (solventCostPerKg / 1000);
-
-  return { costPerM2, ratio: solventRatio };
-}
-
-/**
  * Calculate process costs
  */
 function calculateProcessCosts(
@@ -391,7 +349,7 @@ function calculateProcessCosts(
 
     const setupCost = process.costPerHour * process.setupHours;
     const runCost = process.costPerHour * runHours;
-    const totalCost = Math.round(setupCost + runCost);
+    const totalCost = setupCost + runCost;
     totalProcessCost += totalCost;
 
     return {

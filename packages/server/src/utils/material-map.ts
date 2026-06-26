@@ -1,5 +1,6 @@
 import type { Material } from '@es/engine';
 import type { materials } from '../db/schema';
+import type { LaminationRecipe } from '@es/engine';
 
 export type MaterialRow = typeof materials.$inferSelect;
 
@@ -17,6 +18,8 @@ export function toEngineMaterial(m: MaterialRow): Material {
     substrateGrade: m.substrateGrade,
     hoover: m.hoover,
     marketPriceUsd: m.marketPriceUsd ? parseFloat(m.marketPriceUsd) : null,
+    laminationRecipe: (m.laminationRecipe as LaminationRecipe | null) ?? null,
+    laminationTier: (m.laminationRecipe as LaminationRecipe | null)?.tier ?? null,
   };
 }
 

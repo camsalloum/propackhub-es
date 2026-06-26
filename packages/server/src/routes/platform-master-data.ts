@@ -7,6 +7,7 @@ import {
   updatePlatformMasterMaterial,
   deletePlatformMasterMaterial,
   replacePlatformMasterMaterials,
+  updateCostingDefaults,
   buildMasterDataReferenceFromDb,
   replacePlatformReferenceCategory,
   syncPlatformMasterToAllTenants,
@@ -43,7 +44,7 @@ function auditActorFromRequest(request: FastifyRequest): AuditActor {
 const MaterialBodySchema = z.object({
   key: z.string().min(1).max(128),
   name: z.string().min(1).max(255),
-  type: z.enum(['substrate', 'ink', 'adhesive']),
+  type: z.enum(['substrate', 'ink', 'adhesive', 'solvent']),
   solidPercent: z.number().int().min(0).max(100),
   density: z.number().positive(),
   costPerKgUsd: z.number().min(0),
@@ -56,6 +57,7 @@ const MaterialBodySchema = z.object({
   sortOrder: z.number().int().optional(),
   externalId: z.string().max(128).nullable().optional(),
   externalSource: z.string().max(64).nullable().optional(),
+  laminationRecipe: z.record(z.unknown()).nullable().optional(),
 });
 
 const ReferenceCategorySchema = z.enum([
@@ -105,6 +107,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
           sortOrder: r.sortOrder,
           externalId: r.externalId,
           externalSource: r.externalSource,
+          laminationRecipe: r.laminationRecipe ?? null,
         }))
       );
     } catch (error) {
@@ -236,6 +239,25 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
       return reply.status(500).send({ error: 'Failed to save reference list' });
     }
   });
+
+  fastify.patch<{ Body: { cleaningSolventKgPerJob: number } }>(
+    '/api/v1/platform/master-data/costing-defaults',
+    async (request, reply) => {
+      try {
+        await request.jwtVerify();
+        if (!requireMasterDataAdmin(request, reply)) return;
+        const cleaningSolventKgPerJob = z.coerce
+          .number()
+          .nonnegative()
+          .parse(request.body.cleaningSolventKgPerJob);
+        const result = await updateCostingDefaults(cleaningSolventKgPerJob, auditActorFromRequest(request));
+        return reply.send(result);
+      } catch (error) {
+        console.error('Update costing defaults error:', error);
+        return reply.status(500).send({ error: 'Failed to update costing defaults' });
+      }
+    }
+  );
 
   fastify.post('/api/v1/platform/master-data/sync-tenants', async (request, reply) => {
     try {

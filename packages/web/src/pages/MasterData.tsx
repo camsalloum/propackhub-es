@@ -10,6 +10,8 @@ import {
   type PlatformMasterMaterialInput,
 } from '../lib/api';
 import { DEFAULT_PRODUCT_SUBTYPE_OPTIONS } from '../lib/masterDataReference';
+import LaminationFormulaModal from '../components/LaminationFormulaModal';
+import { deriveBinderConcentrateStats, type LaminationRecipe } from '@es/engine';
 
 type MaterialTab = string; // now dynamic — any rm_type code can be a material tab
 type RefTab = 'product_type' | 'product_subtype' | 'unit' | 'rm_type' | 'process';
@@ -33,19 +35,22 @@ const STANDARD_MATERIAL_TABS = [
   { id: 'substrate', label: 'Substrates' },
   { id: 'ink', label: 'Ink & Coating' },
   { id: 'adhesive', label: 'Adhesive' },
+  { id: 'solvent', label: 'Solvent' },
   { id: 'packaging', label: 'Packaging' },
 ];
 
 /** Map an RM type to the DB type field used for new rows */
-function dbTypeForRmCode(code: string): 'substrate' | 'ink' | 'adhesive' {
+function dbTypeForRmCode(code: string): 'substrate' | 'ink' | 'adhesive' | 'solvent' {
   if (code === 'ink') return 'ink';
   if (code === 'adhesive') return 'adhesive';
+  if (code === 'solvent') return 'solvent';
   return 'substrate'; // custom types map to substrate with substrateFamily = label
 }
 
 /** Default substrateFamily for a new row of a given RM type code */
 function defaultFamilyForRmCode(code: string, label: string): string {
   if (code === 'packaging') return PACKAGING_FAMILY;
+  if (code === 'solvent') return 'Solvent';
   if (code === 'substrate') return 'BOPP';
   if (code === 'ink') return 'Ink & Coating';
   if (code === 'adhesive') return 'Adhesive';
@@ -73,7 +78,7 @@ function filterMaterialsForTab(
   }
   if (tabCode === 'substrate') {
     const customFamilies = allRmTabs
-      .filter((t) => !['substrate', 'ink', 'adhesive', 'packaging'].includes(t.id))
+      .filter((t) => !['substrate', 'ink', 'adhesive', 'packaging', 'solvent'].includes(t.id))
       .map((t) => t.label);
     return rows.filter(
       (m) => m.type === 'substrate' && m.substrateFamily !== PACKAGING_FAMILY && !customFamilies.includes(m.substrateFamily ?? '')
@@ -81,6 +86,9 @@ function filterMaterialsForTab(
   }
   if (tabCode === 'ink' || tabCode === 'adhesive') {
     return rows.filter((m) => m.type === tabCode);
+  }
+  if (tabCode === 'solvent') {
+    return rows.filter((m) => m.type === 'solvent');
   }
   // Custom RM type: match by substrateFamily = tab label
   return rows.filter((m) => m.type === 'substrate' && m.substrateFamily === tabLabel);
@@ -96,9 +104,9 @@ function newMaterialRow(tabCode: string, tabLabel: string): PlatformMasterMateri
     key: '',
     name: `New ${tabLabel.toLowerCase()}`,
     type: dbType,
-    solidPercent: 100,
-    density: 0.91,
-    costPerKgUsd: defaultCost,
+    solidPercent: tabCode === 'solvent' ? 0 : 100,
+    density: tabCode === 'solvent' ? 0.85 : 0.91,
+    costPerKgUsd: tabCode === 'solvent' ? 1.54 : defaultCost,
     liquidCostUsd: defaultCost,
     wastePercent: 0,
     isSolventBased: tabCode === 'ink' || tabCode === 'adhesive',
@@ -125,6 +133,11 @@ const MasterData = () => {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [formulaMaterialId, setFormulaMaterialId] = useState<string | null>(null);
+  const [cleaningDefaultKg, setCleaningDefaultKg] = useState(20);
+
+  const formulaMaterial = materials.find((m) => m.id === formulaMaterialId) ?? null;
+  const formulaRecipe = (formulaMaterial?.laminationRecipe as LaminationRecipe | null) ?? null;
 
   const isMaterialTab = (t: Tab): boolean => !REF_TAB_IDS.has(t);
 
@@ -196,6 +209,10 @@ const MasterData = () => {
       .filter((r) => r.label.trim() && !STANDARD_CODES.has((r.code || r.label).toLowerCase()))
       .map((r) => ({ id: (r.code || slugKey(r.label)).toLowerCase(), label: r.label }));
     setRmTypeTabs([...STANDARD_MATERIAL_TABS, ...customRmTabs]);
+    setCleaningDefaultKg(
+      (ref as { costingDefaults?: { cleaningSolventKgPerJob?: number } }).costingDefaults
+        ?.cleaningSolventKgPerJob ?? 20
+    );
     if (!isMaterialTab(tab)) {
       setRefItems(map[tab] ?? []);
     }
@@ -304,6 +321,9 @@ const MasterData = () => {
         ({ id: _id, costingKey: _ck, ...rest }) => rest as PlatformMasterMaterialInput
       );
       const result = await apiClient.updateMasterMaterials(merged);
+      if (tab === 'solvent') {
+        await apiClient.updateCostingDefaults(cleaningDefaultKg);
+      }
       await loadMaterials();
       syncToast(result.sync);
     } catch (err) {
@@ -550,6 +570,24 @@ const MasterData = () => {
 
       {isMaterialTab(tab) ? (
         <div className="card overflow-hidden">
+          {tab === 'solvent' && canEdit && (
+            <div className="px-3 py-3 border-b border-border bg-amber-50/50 grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-mist mb-1">
+                  Default cleaning EA (kg/job)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  className="input w-full font-mono"
+                  value={cleaningDefaultKg}
+                  onChange={(e) => setCleaningDefaultKg(Number(e.target.value) || 0)}
+                />
+                <p className="text-xs text-mist mt-1">New estimates default to this when SB ink is in the stack.</p>
+              </div>
+            </div>
+          )}
           <div className="flex justify-between items-center px-3 py-2 border-b border-border bg-slate/30">
             <span className="text-sm text-mist">{visibleMaterials.length} row(s)</span>
             {canEdit && (
@@ -598,6 +636,9 @@ const MasterData = () => {
                         title={row.name}
                         disabled={!canEdit}
                         onChange={(e) => updateMaterialRow(row.id, { name: e.target.value })}
+                        onDoubleClick={() => {
+                          if (tab === 'adhesive' && row.isSolventBased) setFormulaMaterialId(row.id);
+                        }}
                       />
                     </td>
                     <td>
@@ -680,6 +721,15 @@ const MasterData = () => {
                       />
                     </td>
                     <td className="text-center">
+                      {tab === 'adhesive' && row.isSolventBased && canEdit && (
+                        <button
+                          type="button"
+                          className="text-xs text-blue-700 hover:text-blue-900 mr-1"
+                          onClick={() => setFormulaMaterialId(row.id)}
+                        >
+                          Formula
+                        </button>
+                      )}
                       {canEdit && (
                         <button
                           type="button"
@@ -956,6 +1006,22 @@ const MasterData = () => {
           </div>
         </div>
       )}
+      <LaminationFormulaModal
+        open={formulaMaterialId != null}
+        title={formulaMaterial ? `Master formula — ${formulaMaterial.name}` : 'Master formula'}
+        recipe={formulaRecipe}
+        onClose={() => setFormulaMaterialId(null)}
+        onSave={(recipe) => {
+          if (!formulaMaterialId) return;
+          const stats = deriveBinderConcentrateStats(recipe);
+          updateMaterialRow(formulaMaterialId, {
+            laminationRecipe: recipe,
+            solidPercent: stats.solidPercent,
+            costPerKgUsd: stats.costPerKgUsd,
+            liquidCostUsd: stats.liquidCostUsd,
+          });
+        }}
+      />
     </div>
   );
 };

@@ -78,8 +78,8 @@ estimate.markupPercent = price * fxRate; // never — keep engine inputs USD
   processes: Process[];         // machine/operation costs
   slabs: Slab[];                // quantity breakpoints (quantityKg, pricePerKg seed)
   orderQuantityKg: number;      // primary order size in kg
-  solventCostPerKgUsd?: number; // default 2.0
-  solventRatio?: number;        // default 0.5 — ratio of solvent to ink
+  solventCostPerKgUsd?: number; // default 1.54 (Solvent Common)
+  solventRatio?: number;        // default 1.0 — dry ink/adhesive gsm ÷ ratio = solvent gsm
   displayCurrencyCode: string;  // informational only — engine ignores
   exchangeRateUsdToDisplay: number; // informational only — engine ignores
 }

@@ -10,7 +10,7 @@ import type { RmTypeOption } from '../lib/masterDataReference';
 interface Material {
   id: string;
   name: string;
-  type: 'substrate' | 'ink' | 'adhesive';
+  type: 'substrate' | 'ink' | 'adhesive' | 'solvent';
   solidPercent: number;
   density: number;
   wastePercent: number;
@@ -35,10 +35,11 @@ function formKindForCode(code: string): MaterialFormKind {
   if (code === 'ink') return 'ink';
   if (code === 'adhesive') return 'adhesive';
   if (code === 'packaging') return 'packaging';
+  if (code === 'solvent') return 'solvent';
   return 'custom';
 }
 
-type MaterialFormKind = 'substrate' | 'ink' | 'adhesive' | 'packaging' | 'custom';
+type MaterialFormKind = 'substrate' | 'ink' | 'adhesive' | 'packaging' | 'solvent' | 'custom';
 
 /**
  * Determine the displayed material "kind" for a row.
@@ -83,6 +84,7 @@ function materialMatchesRmType(
   const code = rmType.code;
   if (code === 'ink') return material.type === 'ink';
   if (code === 'adhesive') return material.type === 'adhesive';
+  if (code === 'solvent') return material.type === 'solvent';
   if (code === 'packaging') {
     return material.type === 'substrate' && material.substrateFamily === 'Packaging';
   }
@@ -149,6 +151,16 @@ function blankMaterialForRmType(rmType: RmTypeOption): Material {
   }
   if (rmType.code === 'packaging') {
     return { ...base, type: 'substrate', substrateFamily: 'Packaging', density: 1 };
+  }
+  if (rmType.code === 'solvent') {
+    return {
+      ...base,
+      type: 'solvent',
+      solidPercent: 0,
+      density: 0.85,
+      substrateFamily: 'Solvent',
+      costPerKgUsd: 1.54,
+    };
   }
   if (rmType.code === 'substrate') {
     return { ...base, type: 'substrate' };
@@ -290,6 +302,7 @@ const Library = () => {
     const kind = editingFormKind;
     const isSubstrate = kind === 'substrate';
     const isPackaging = kind === 'packaging';
+    const isSolvent = kind === 'solvent';
     const isCustom = kind === 'custom';
     const family = editingMaterial.substrateFamily?.trim().toUpperCase() || null;
     const grade = editingMaterial.substrateGrade?.trim() || null;
@@ -311,9 +324,11 @@ const Library = () => {
     }
 
     // Resolve DB type and family for custom RM types
-    let dbType: 'substrate' | 'ink' | 'adhesive' = editingMaterial.type;
+    let dbType: 'substrate' | 'ink' | 'adhesive' | 'solvent' = editingMaterial.type;
     let dbFamily = isPackaging
       ? 'Packaging'
+      : isSolvent
+      ? 'Solvent'
       : isSubstrate
       ? family
       : isCustom
@@ -324,11 +339,15 @@ const Library = () => {
       dbType = 'substrate';
       dbFamily = rmType?.label ?? editingMaterial.substrateFamily;
     }
+    if (isSolvent) {
+      dbType = 'solvent';
+      dbFamily = 'Solvent';
+    }
 
     const payload = {
       name,
       type: dbType,
-      solidPercent: editingMaterial.solidPercent,
+      solidPercent: isSolvent ? 0 : editingMaterial.solidPercent,
       density: editingMaterial.density,
       wastePercent: editingMaterial.wastePercent ?? 0,
       costPerKgUsd: roundUsd(editingMaterial.costPerKgUsd),
@@ -463,6 +482,7 @@ const Library = () => {
       case 'substrate': return 'bg-blue-100 text-blue-800';
       case 'ink': return 'bg-purple-100 text-purple-800';
       case 'adhesive': return 'bg-green-100 text-green-800';
+      case 'solvent': return 'bg-amber-100 text-amber-900';
       case 'packaging': return 'bg-teal-100 text-teal-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -557,6 +577,7 @@ const Library = () => {
                     ? rt.code === 'substrate' ? 'bg-blue-100 text-blue-800'
                       : rt.code === 'ink' ? 'bg-purple-100 text-purple-800'
                       : rt.code === 'adhesive' ? 'bg-green-100 text-green-800'
+                      : rt.code === 'solvent' ? 'bg-amber-100 text-amber-900'
                       : rt.code === 'packaging' ? 'bg-teal-100 text-teal-800'
                       : 'bg-gold/15 text-gold'
                     : 'bg-slate text-ink hover:bg-border'

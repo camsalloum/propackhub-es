@@ -17,7 +17,7 @@ import { relations } from 'drizzle-orm';
 // Enums
 export const userRoleEnum = pgEnum('user_role', ['user', 'tenant_admin', 'platform_admin']);
 export const estimateStatusEnum = pgEnum('estimate_status', ['draft', 'sent', 'won', 'lost']);
-export const layerTypeEnum = pgEnum('layer_type', ['substrate', 'ink', 'adhesive']);
+export const layerTypeEnum = pgEnum('layer_type', ['substrate', 'ink', 'adhesive', 'solvent']);
 export const productTypeEnum = pgEnum('product_type', ['roll', 'sleeve', 'pouch', 'bag']);
 export const tenantTypeEnum = pgEnum('tenant_type', ['individual', 'company']);
 export const printingWebClassEnum = pgEnum('printing_web_class', ['wide_web', 'narrow_web']);
@@ -59,6 +59,8 @@ export const platformMasterMaterials = pgTable(
     /** Optional PEBI/MES/Oracle item ID — admin-editable; never overwritten by sync (MES Phase E) */
     externalId: varchar('external_id', { length: 128 }),
     externalSource: varchar('external_source', { length: 64 }),
+    /** GP/MP/HP lamination formula (binder + hardener + EA parts). */
+    laminationRecipe: jsonb('lamination_recipe'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
@@ -240,6 +242,7 @@ export const materials = pgTable('materials', {
   platformSyncedAt: timestamp('platform_synced_at', { withTimezone: true }),
   externalId: varchar('external_id', { length: 128 }),
   externalSource: varchar('external_source', { length: 64 }),
+  laminationRecipe: jsonb('lamination_recipe'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
@@ -293,8 +296,14 @@ export const estimates = pgTable('estimates', {
   exchangeRateUsdToDisplay: decimal('exchange_rate_usd_to_display', { precision: 10, scale: 6 }).notNull(),
 
   // Solvent mix config (for SB ink/adhesive)
+  solventMaterialId: uuid('solvent_material_id').references(() => materials.id, { onDelete: 'set null' }),
   solventCostPerKgUsd: decimal('solvent_cost_per_kg_usd', { precision: 12, scale: 4 }),
   solventRatio: decimal('solvent_ratio', { precision: 5, scale: 4 }),
+  /** Per-layer lamination recipe overrides keyed by layer id (estimate snapshot). */
+  laminationRecipeOverrides: jsonb('lamination_recipe_overrides'),
+  cleaningSolventKgPerJob: decimal('cleaning_solvent_kg_per_job', { precision: 12, scale: 4 }).default('20'),
+  /** flexo | rotogravure — on-press SB ink makeup; null = infer from stack (PE→flexo). */
+  inkPrintingProcess: varchar('ink_printing_process', { length: 16 }),
   orderQuantityKg: decimal('order_quantity_kg', { precision: 12, scale: 2 }),
   orderQuantityUnit: varchar('order_quantity_unit', { length: 32 }).default('kgs'),
 

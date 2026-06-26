@@ -16,6 +16,9 @@ interface LayerCardProps {
   total: number;
   showCost?: boolean;
   onEdit?: () => void;
+  onFormula?: () => void;
+  showFormula?: boolean;
+  formulaOverridden?: boolean;
   onRemove?: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
@@ -33,6 +36,9 @@ const LayerCard = ({
   total,
   showCost = false,
   onEdit,
+  onFormula,
+  showFormula = false,
+  formulaOverridden = false,
   onRemove,
   onMoveUp,
   onMoveDown,
@@ -164,6 +170,17 @@ const LayerCard = ({
               ↓
             </button>
           </div>
+
+          {showFormula && onFormula && (
+            <button
+              type="button"
+              onClick={onFormula}
+              className="shrink-0 px-2 h-11 flex items-center justify-center rounded-lg bg-amber-50 text-amber-900 text-xs font-medium"
+              aria-label="Edit lamination formula"
+            >
+              {formulaOverridden ? 'Formula*' : 'Formula'}
+            </button>
+          )}
 
           <button
             type="button"

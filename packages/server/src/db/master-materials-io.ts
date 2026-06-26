@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 export interface MasterMaterial {
   key: string;
   name: string;
-  type: 'substrate' | 'ink' | 'adhesive';
+  type: 'substrate' | 'ink' | 'adhesive' | 'solvent';
   solidPercent: number;
   density: number;
   costPerKgUsd: number;
@@ -24,6 +24,8 @@ export interface MasterMaterial {
   substrateGrade: string | null;
   hoover: string | null;
   marketPriceUsd: number | null;
+  /** GP/MP/HP lamination formula (binder + hardener + EA parts). */
+  laminationRecipe?: Record<string, unknown> | null;
 }
 
 export interface ProductTypeRow {
@@ -48,6 +50,7 @@ export interface MasterDataReference {
   packaging: string[];
   inkCoating: string[];
   adhesive: string[];
+  solvent?: string[];
   printingWebClasses: PrintingWebRow[];
   /** Bag/Pouch subtypes managed in Master Data (code e.g. pouch_stand_up; parent = product-type code). */
   productSubtypeRows?: Array<{ label: string; code: string; parent?: string }>;
@@ -64,9 +67,13 @@ export interface MasterDataReference {
     speedValue?: number;
     setupHours?: number;
   }>;
+  costingDefaults?: {
+    cleaningSolventKgPerJob?: number;
+  };
 }
 
 export const PACKAGING_FAMILY = 'Packaging';
+export const SOLVENT_FAMILY = 'Solvent';
 
 /** Template ref_material_key → master seed `key`. */
 export const TEMPLATE_REF_TO_MASTER_KEY: Record<string, string> = {
@@ -81,10 +88,14 @@ export const TEMPLATE_REF_TO_MASTER_KEY: Record<string, string> = {
   'alu-foil': 'aluminium-foil',
   'ink-sb': 'ink-sb',
   'ink-uv': 'ink-uv',
-  'adhesive-sb': 'adhesive-sb',
+  'adhesive-sb': 'adhesive-sb-gp',
+  'adhesive-sb-gp': 'adhesive-sb-gp',
+  'adhesive-sb-mp': 'adhesive-sb-mp',
+  'adhesive-sb-hp': 'adhesive-sb-hp',
   'adhesive-wb': 'adhesive-wb',
   'adhesive-mono-component': 'adhesive-mono-component',
   'solvent-base': 'adhesive-sb',
+  'solvent-common': 'solvent-common',
 };
 
 /** DB costingKey for a platform master row (template alias, e.g. ldpe-shrink on PE Shrink). */
@@ -124,6 +135,7 @@ export function normalizeReferenceShape(ref: Partial<MasterDataReference>): Mast
     printingWebClasses: ref.printingWebClasses ?? [],
     productSubtypeRows: ref.productSubtypeRows ?? [],
     processRows: ref.processRows ?? [],
+    costingDefaults: ref.costingDefaults ?? { cleaningSolventKgPerJob: 20 },
   };
 }
 

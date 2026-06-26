@@ -29,6 +29,7 @@
     "Substrate",
     "Ink & Coating",
     "Adhesive",
+    "Solvent",
     "Packaging"
   ],
   "packaging": [
@@ -56,6 +57,18 @@
     "Solvent Less",
     "Mono Component"
   ],
+  "solvent": [
+    "Ethyl Acetate",
+    "Ethanol",
+    "IPA",
+    "MEK",
+    "Toluene",
+    "Normal Propanol",
+    "Normal Propyl Acetate",
+    "Methoxy Propanol",
+    "Ethoxy Propanol",
+    "Solvent Common"
+  ],
   "printingWebClasses": [
     {
       "label": "Wide Web",
@@ -69,5 +82,8 @@
       "inkSystem": "Ink UV",
       "solidPercent": 100
     }
-  ]
+  ],
+  "costingDefaults": {
+    "cleaningSolventKgPerJob": 20
+  }
 }

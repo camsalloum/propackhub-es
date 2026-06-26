@@ -59,7 +59,7 @@ export type PlatformReferenceItemInput = {
 export type PlatformMasterMaterialInput = {
   key: string;
   name: string;
-  type: 'substrate' | 'ink' | 'adhesive';
+  type: 'substrate' | 'ink' | 'adhesive' | 'solvent';
   solidPercent: number;
   density: number;
   costPerKgUsd: number;
@@ -74,6 +74,7 @@ export type PlatformMasterMaterialInput = {
   sortOrder?: number;
   externalId?: string | null;
   externalSource?: string | null;
+  laminationRecipe?: Record<string, unknown> | null;
 };
 
 export type PlatformMasterMaterialRow = PlatformMasterMaterialInput & {
@@ -272,6 +273,14 @@ export class ApiClient {
       'PUT',
       '/api/v1/platform/master-data/materials',
       materials
+    );
+  }
+
+  updateCostingDefaults(cleaningSolventKgPerJob: number) {
+    return this.request<{ cleaningSolventKgPerJob: number }>(
+      'PATCH',
+      '/api/v1/platform/master-data/costing-defaults',
+      { cleaningSolventKgPerJob }
     );
   }
 

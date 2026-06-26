@@ -3,6 +3,13 @@ export function usdToDisplay(usd: number, exchangeRateUsdToDisplay: number): num
   return roundUsd(usd * rate);
 }
 
+/** FX conversion without 2dp rounding — use for RM cost/kg, cost/m², and other fine-grained costing. */
+export function usdToDisplayPrecise(usd: number, exchangeRateUsdToDisplay: number): number {
+  const rate = exchangeRateUsdToDisplay > 0 ? exchangeRateUsdToDisplay : 1;
+  if (!Number.isFinite(usd)) return 0;
+  return usd * rate;
+}
+
 /** Convert a display-currency value back to USD. */
 export function displayToUsd(display: number, exchangeRateUsdToDisplay: number): number {
   const rate = exchangeRateUsdToDisplay > 0 ? exchangeRateUsdToDisplay : 1;

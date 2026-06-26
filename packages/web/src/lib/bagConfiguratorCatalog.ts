@@ -121,6 +121,7 @@ export const BAG_CONFIGURATOR_CATALOG: Record<BagConfiguratorType, BagConfigurat
       field('W', 'Width (W)', 'openWidthMm', 'mm', 500, 'Bag width flat'),
       field('H', 'Height (H)', 'openHeightMm', 'mm', 650, 'Total height'),
       field('G', 'Bottom gusset (G)', 'bottomGussetMm', 'mm', 180, 'Depth for bulky product'),
+      field('F', 'Top fold (F)', 'bagTopFoldMm', 'mm', 50, 'Perforation / seal zone at top'),
       field('NC', 'Neck cut (NC)', 'bagNeckCutMm', 'mm', 60, 'Top opening cutout'),
       field('VH', 'Vent holes (Ø)', 'bagVentHoleMm', 'mm', 6, '0 = none'),
     ],
@@ -200,29 +201,39 @@ export function bagFieldValuesFromDimensions(
 ): Record<string, number> {
   const vals: Record<string, number> = {};
   for (const f of config.fields) {
-    vals[f.id] = effectiveBagFieldValue(f, dimensions[f.dimensionKey]);
+    const stored = dimensions[f.dimensionKey];
+    vals[f.id] = stored != null && Number.isFinite(stored) ? stored : f.defaultVal;
   }
   return vals;
 }
 
-/** Body dimensions must be > 0 for schematic + costing; 0 is treated as unset (template placeholders). */
-function effectiveBagFieldValue(f: BagConfiguratorField, stored: number | undefined): number {
-  if (stored != null && Number.isFinite(stored)) {
-    if ((f.id === 'W' || f.id === 'H' || f.id === 'L') && stored <= 0) return f.defaultVal;
-    // Tiny gusset values are usually stale placeholders (e.g. piecesPerCut leakage), not real specs.
-    if ((f.id === 'G' || f.id === 'SG') && stored > 0 && stored < 5 && f.defaultVal >= 5) return f.defaultVal;
-    return stored;
+/** One-time / subtype-change seeding only — never use while displaying user edits. */
+export function seedBagDimensionPatch(
+  configType: BagConfiguratorType,
+  dimensions: Record<string, number | undefined>
+): Record<string, number> {
+  const config = BAG_CONFIGURATOR_CATALOG[configType];
+  const patch: Record<string, number> = {};
+  for (const f of config.fields) {
+    const prevVal = dimensions[f.dimensionKey];
+    const bodyDim = f.id === 'W' || f.id === 'H' || f.id === 'L';
+    const gussetDim = f.id === 'G' || f.id === 'SG';
+    const shouldReplace =
+      prevVal == null ||
+      !Number.isFinite(prevVal) ||
+      (bodyDim && (prevVal ?? 0) <= 0) ||
+      (gussetDim && prevVal != null && prevVal > 0 && prevVal < 5 && f.defaultVal >= 5) ||
+      (f.dimensionKey.startsWith('bag') && prevVal == null);
+    if (shouldReplace) patch[f.dimensionKey] = f.defaultVal;
   }
-  return f.defaultVal;
+  return patch;
 }
 
 export function bagDefaultsPatchForSubtype(
   configType: BagConfiguratorType,
   dimensions: Record<string, number | undefined>
 ): Record<string, number> {
-  const config = BAG_CONFIGURATOR_CATALOG[configType];
-  const vals = bagFieldValuesFromDimensions(config, dimensions);
-  return dimensionsPatchFromBagFields(config, vals);
+  return seedBagDimensionPatch(configType, dimensions);
 }
 
 export function dimensionsPatchFromBagFields(

@@ -8,8 +8,8 @@ import StructureGradeSelect from '../components/StructureGradeSelect';
 import { JobHeaderFields } from '../components/JobHeaderFields';
 import { BagConfigurator } from '../components/BagConfigurator';
 import {
-  bagDefaultsPatchForSubtype,
   configuratorTypeForBagSubtype,
+  seedBagDimensionPatch,
 } from '../lib/bagConfiguratorCatalog';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -395,24 +395,9 @@ const EstimateEditor = () => {
   useEffect(() => {
     if (!bagConfiguratorActive || !bagConfiguratorType) return;
     setDimensions((prev) => {
-      const patch = bagDefaultsPatchForSubtype(bagConfiguratorType, prev);
-      let changed = false;
-      const next = { ...prev };
-      for (const [key, value] of Object.entries(patch)) {
-        const prevVal = next[key];
-        const bodyKey = key === 'openWidthMm' || key === 'openHeightMm';
-        const shouldReplace =
-          prevVal == null ||
-          !Number.isFinite(prevVal) ||
-          (bodyKey && prevVal <= 0) ||
-          ((key === 'bottomGussetMm' || key === 'sideGussetMm') &&
-            (prevVal == null || (prevVal > 0 && prevVal < 5)));
-        if (shouldReplace || (key.startsWith('bag') && prevVal == null)) {
-          next[key] = value;
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
+      const patch = seedBagDimensionPatch(bagConfiguratorType, prev);
+      if (Object.keys(patch).length === 0) return prev;
+      return { ...prev, ...patch };
     });
   }, [bagConfiguratorActive, bagConfiguratorType, productSubtype]);
 
@@ -1489,7 +1474,7 @@ const EstimateEditor = () => {
             if (productFamily === 'bag' && nextBagType) {
               setDimensions((prev) => ({
                 ...prev,
-                ...bagDefaultsPatchForSubtype(nextBagType, prev),
+                ...seedBagDimensionPatch(nextBagType, prev),
               }));
             }
           }}
@@ -1511,7 +1496,6 @@ const EstimateEditor = () => {
                 productSubtype={productSubtype}
                 dimensions={dimensions}
                 onDimensionsChange={(patch) => setDimensions((prev) => ({ ...prev, ...patch }))}
-                disabled={structureLocked}
               />
             ) : undefined
           }

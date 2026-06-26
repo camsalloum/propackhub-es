@@ -306,49 +306,50 @@ function DrawDiaper({ d, vw, vh }: { d: BagDrawDims; vw: number; vh: number }) {
       <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl="W" />
       <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl="H" />
       {G > 0 && <DimV y1={yG} y2={y1} xB={x1} off={C.dimOff} lbl="G" left={false} />}
+      {F > 0 && <DimV y1={y0} y2={yF} xB={x0} off={C.dimOff + C.dimStep} lbl="F" />}
     </>
   );
 }
 
 function DrawIndustrial({ d, vw, vh }: { d: BagDrawDims; vw: number; vh: number }) {
-  const { W, H, G } = d;
-  const t = mkT(W, H, vw, vh);
-  const x0 = t.px(0);
-  const x1 = t.px(W);
+  const { W, H, SG } = d;
+  const totalW = W + SG * 2;
+  const t = mkT(totalW, H, vw, vh);
+  const dW = t.sc(W);
+  const dSG = t.sc(SG);
+  const x = t.px(SG);
+  const x0 = x;
+  const x1 = x + dW;
   const y0 = t.py(0);
   const y1 = t.py(H);
-  const bW = x1 - x0;
-  const yG = G > 0 ? t.py(H - G / 2) : y1;
-  const gOff = G > 0 ? Math.min(t.sc(G / 2) * 0.5, t.sc(W * 0.12)) : 0;
+  const bodyW = x1 - x0;
   return (
     <>
       <g>
-        <rect x={x0} y={y0} width={bW} height={y1 - y0} fill={C.bagFill} stroke={C.bagStroke} strokeWidth={2} />
+        <rect x={x0} y={y0} width={bodyW} height={y1 - y0} fill={C.bagFill} stroke={C.bagStroke} strokeWidth={2} />
+        {dSG > 0 && (
+          <>
+            <rect x={t.px(0)} y={y0} width={dSG} height={y1 - y0} fill={C.bagGusset} opacity={0.55} />
+            <rect x={x1} y={y0} width={dSG} height={y1 - y0} fill={C.bagGusset} opacity={0.55} />
+            <line x1={x0} y1={y0} x2={x0} y2={y1} stroke={C.bagStroke} strokeWidth={1} strokeDasharray={C.gussetDash} />
+            <line x1={x1} y1={y0} x2={x1} y2={y1} stroke={C.bagStroke} strokeWidth={1} strokeDasharray={C.gussetDash} />
+          </>
+        )}
         <rect
-          x={x0 + bW * 0.5 - t.sc(W * 0.08)}
-          y={y0 + t.sc(H * 0.08)}
-          width={t.sc(W * 0.16)}
-          height={t.sc(H * 0.06)}
+          x={x0 + bodyW * 0.35}
+          y={y0 - t.sc(H * 0.04)}
+          width={bodyW * 0.3}
+          height={t.sc(H * 0.04)}
           fill="#d4e8f8"
           stroke={C.bagStroke}
           strokeWidth={1}
           rx={2}
         />
-        <line x1={x0 + 6} y1={y0 + 8} x2={x1 - 6} y2={y0 + 8} stroke={C.bagStroke} strokeWidth={1} strokeDasharray="4,4" />
-        <line x1={x0 + 6} y1={y1 - 8} x2={x1 - 6} y2={y1 - 8} stroke={C.bagStroke} strokeWidth={1} strokeDasharray="4,4" />
-        {G > 0 && (
-          <>
-            <path d={`M${x0},${y1} L${x0 + gOff},${yG} L${x1 - gOff},${yG} L${x1},${y1}Z`} fill={C.bagGusset} />
-            <line x1={x0} y1={y1} x2={x1} y2={yG} stroke={C.bagStroke} strokeWidth={1} strokeDasharray={C.gussetDash} />
-            <line x1={x0} y1={y1} x2={x0 + gOff} y2={yG} stroke={C.bagStroke} strokeWidth={C.sw} />
-            <line x1={x1} y1={y1} x2={x1 - gOff} y2={yG} stroke={C.bagStroke} strokeWidth={C.sw} />
-          </>
-        )}
-        <rect x={x0} y={y0} width={bW} height={y1 - y0} fill="none" stroke={C.bagStroke} strokeWidth={2} />
+        <rect x={x0} y={y0} width={bodyW} height={y1 - y0} fill="none" stroke={C.bagStroke} strokeWidth={2} />
       </g>
       <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl="W" />
-      <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl="L" />
-      {G > 0 && <DimV y1={yG} y2={y1} xB={x1} off={C.dimOff} lbl="G" left={false} />}
+      <DimV y1={y0} y2={y1} xB={t.px(0)} off={C.dimOff} lbl="L" />
+      {dSG > 0 && <DimH x1={t.px(0)} x2={x0} yB={y0} off={C.dimOff} lbl="SG" above={false} />}
     </>
   );
 }

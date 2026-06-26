@@ -1121,3 +1121,13 @@ npm run update-materials
 - **Icon overflow:** Template-locked ink controls in dedicated **4%** column — vertical `+▲▼✕` stack, outside $/m². Unlocked actions column 10% horizontal.
 - **GSM:** Grade dropdown in table already gated (`substrate` only). Fixed mobile bottom-sheet material + micron handlers; legacy `getTemplateLayers` scaffold.
 - **Layer access:** Removed `canEditLayerFamilyGrade` template gate — substrate/adhesive family & grade dropdowns work on template quotes; only add/remove/reorder stays ink-only.
+
+### 2026-06-26 — Bag visual configurator (Job details)
+
+- **UX:** When Product type = Bag + subtype, `BagConfigurator` replaces spec-row dimension fields. Layout: mm **input row** → **2D SVG** (Bolt-style, 9 subtypes) → status (face area, flat sheet). Integrated via `JobHeaderFields.bagDimensionsPanel`.
+- **Data:** `bagConfiguratorCatalog.ts` maps `bag_*` subtypes → schematic types + `dimensions` keys. `seedBagDimensionPatch` seeds empty/invalid placeholders only (not on every read).
+- **Excluded:** Film thickness µm and GSM on bag panel — from Structure web totals only.
+- **Fixes:** Template lock no longer disables bag inputs; removed `effectiveBagFieldValue` snap-back; local draft on inputs.
+- **References:** `mes_packaging_configurator_v2.html` (legacy); user Bolt 2D HTML; R3F 3D bottom-gusset mockup (reviewed, not integrated).
+- **Next session:** Polish 2D all subtypes; add optional 3D toggle (bottom-gusset first, lazy Three.js, shared inputs).
+

@@ -1,61 +1,73 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BagSchematic } from './BagSchematic';
 import {
   BAG_CONFIGURATOR_CATALOG,
   bagFieldValuesFromDimensions,
   configuratorTypeForBagSubtype,
-  dimensionsPatchFromBagFields,
   type BagConfiguratorField,
   type BagConfiguratorConfig,
 } from '../lib/bagConfiguratorCatalog';
-import {
-  BAG_SVG_VH,
-  BAG_SVG_VW,
-  bagFieldsWithoutAnchors,
-  computeBagDimAnchors,
-} from '../lib/bagSchematicLayout';
+import { bagDrawDimsFromFields, bagFaceAreaCm2, bagFlatSheetLabel } from '../lib/bagDrawDims';
 
-const fieldClass = 'input input-compact w-full min-w-0 text-center tabular-nums';
-const labelClass = 'block text-xs font-medium text-navy mb-1 text-center truncate px-0.5';
-
-function BagDimField({
+function BagInputField({
   field,
   value,
   onChange,
   disabled,
-  compact = false,
 }: {
   field: BagConfiguratorField;
   value: number;
   onChange: (fieldId: string, value: number) => void;
   disabled?: boolean;
-  compact?: boolean;
 }) {
+  const [draft, setDraft] = useState(() => (Number.isFinite(value) ? String(value) : ''));
+
+  useEffect(() => {
+    setDraft(Number.isFinite(value) ? String(value) : '');
+  }, [value]);
+
   return (
-    <div className={compact ? 'min-w-[7.5rem]' : 'min-w-0'}>
-      <label className={labelClass} title={field.hint}>
-        {field.label} ({field.unit})
+    <div className="flex flex-col gap-1 min-w-[6.5rem] shrink-0">
+      <label
+        htmlFor={`bag-${field.id}`}
+        className="text-[11px] font-semibold text-navy/80 tracking-wide select-none truncate"
+        title={field.hint}
+      >
+        {field.label}
       </label>
-      <input
-        type="number"
-        inputMode="decimal"
-        min={0}
-        step={0.1}
-        disabled={disabled}
-        className={fieldClass}
-        value={Number.isFinite(value) ? value : ''}
-        onChange={(e) => {
-          const n = parseFloat(e.target.value);
-          if (Number.isFinite(n)) onChange(field.id, n);
-        }}
-      />
+      <div className="flex border border-slate rounded-md overflow-hidden bg-white focus-within:border-gold focus-within:ring-2 focus-within:ring-gold/20 transition-shadow">
+        <input
+          id={`bag-${field.id}`}
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step={0.1}
+          disabled={disabled}
+          className="border-none outline-none w-[4.75rem] px-2 py-1.5 text-sm font-medium text-navy tabular-nums bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+          value={draft}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            const n = parseFloat(e.target.value);
+            if (Number.isFinite(n)) onChange(field.id, n);
+          }}
+          onBlur={() => {
+            const n = parseFloat(draft);
+            if (!Number.isFinite(n)) {
+              setDraft(Number.isFinite(value) ? String(value) : '');
+            }
+          }}
+        />
+        <span className="bg-slate/40 border-l border-slate px-2 py-1.5 text-[11px] font-semibold text-mist flex items-center">
+          {field.unit}
+        </span>
+      </div>
     </div>
   );
 }
 
 /**
- * Bag dimensions UI — replaces the spec-row width/height/gusset fields when a bag subtype is selected.
- * Film thickness / GSM come from Structure web totals, not here.
+ * Bag dimensions — replaces spec-row width/height/gusset when a bag subtype is selected.
+ * Layout: input row → live schematic → status. Gauge/GSM from Structure totals only.
  */
 export function BagConfigurator({
   productSubtype,
@@ -76,99 +88,57 @@ export function BagConfigurator({
     [config, dimensions]
   );
 
-  const fieldById = useMemo(() => {
-    const map = new Map<string, BagConfiguratorField>();
-    config?.fields.forEach((f) => map.set(f.id, f));
-    return map;
-  }, [config]);
-
-  const anchors = useMemo(
-    () => (configType ? computeBagDimAnchors(configType, fieldVals) : []),
-    [configType, fieldVals]
-  );
-
-  const anchoredIds = useMemo(() => new Set(anchors.map((a) => a.fieldId)), [anchors]);
-
-  const fallbackFieldIds = useMemo(
-    () =>
-      config
-        ? bagFieldsWithoutAnchors(
-            config.fields.map((f) => f.id),
-            anchoredIds
-          )
-        : [],
-    [config, configType, anchoredIds]
-  );
+  const drawDims = useMemo(() => bagDrawDimsFromFields(fieldVals), [fieldVals]);
 
   const handleFieldChange = useCallback(
     (fieldId: string, value: number) => {
       if (!config) return;
-      const nextVals = { ...fieldVals, [fieldId]: value };
-      onDimensionsChange(dimensionsPatchFromBagFields(config, nextVals));
+      const fieldDef = config.fields.find((f) => f.id === fieldId);
+      if (!fieldDef) return;
+      onDimensionsChange({ [fieldDef.dimensionKey]: value });
     },
-    [config, fieldVals, onDimensionsChange]
+    [config, onDimensionsChange]
   );
 
   if (!config || !configType) return null;
 
   return (
-    <div className="w-full">
-      <p className="text-xs text-mist mb-2 text-center sm:text-left">
-        {config.desc}
-        <span className="text-mist/80"> — Gauge &amp; GSM from Structure totals.</span>
-      </p>
-
-      <div
-        className="relative w-full max-w-3xl mx-auto rounded-lg border border-slate bg-white overflow-visible"
-        style={{ aspectRatio: `${BAG_SVG_VW} / ${BAG_SVG_VH}`, minHeight: '280px' }}
-      >
-        <BagSchematic type={configType} vals={fieldVals} />
-
-        {/* Full-size inputs positioned on the schematic at dimension anchors */}
-        <div className="absolute inset-0">
-          {anchors.map((anchor) => {
-            const field = fieldById.get(anchor.fieldId);
-            if (!field) return null;
-            const leftPct = (anchor.x / BAG_SVG_VW) * 100;
-            const topPct = (anchor.y / BAG_SVG_VH) * 100;
-            return (
-              <div
-                key={anchor.fieldId}
-                className="absolute z-10 w-[8.5rem] -translate-x-1/2 -translate-y-1/2"
-                style={{ left: `${leftPct}%`, top: `${topPct}%` }}
-              >
-                <div className="rounded-md border border-slate bg-white/95 px-1.5 py-1 shadow-sm">
-                  <BagDimField
-                    field={field}
-                    value={fieldVals[anchor.fieldId]}
-                    onChange={handleFieldChange}
-                    disabled={disabled}
-                    compact
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+    <div className="w-full rounded-lg border border-slate bg-white overflow-hidden shadow-sm">
+      {/* Dimension inputs — replaces old Job details width/height/gusset columns */}
+      <div className="flex flex-wrap items-end gap-x-3 gap-y-3 px-4 py-3 border-b border-slate bg-slate/25">
+        {config.fields.map((f) => (
+          <BagInputField
+            key={f.id}
+            field={f}
+            value={fieldVals[f.id]}
+            onChange={handleFieldChange}
+            disabled={disabled}
+          />
+        ))}
       </div>
 
-      {fallbackFieldIds.length > 0 && (
-        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-3 gap-y-2 max-w-3xl mx-auto">
-          {fallbackFieldIds.map((id) => {
-            const field = fieldById.get(id);
-            if (!field) return null;
-            return (
-              <BagDimField
-                key={id}
-                field={field}
-                value={fieldVals[id]}
-                onChange={handleFieldChange}
-                disabled={disabled}
-              />
-            );
-          })}
-        </div>
-      )}
+      {/* Live schematic */}
+      <div className="bg-[#f8f9fb] min-h-[360px]">
+        <BagSchematic type={configType} vals={fieldVals} />
+      </div>
+
+      {/* Status */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-4 py-2 border-t border-slate bg-slate/25 text-[11px] text-mist">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden />
+          <span className="font-semibold text-navy/70">Live</span>
+        </span>
+        <span>
+          <span className="font-semibold text-navy/70">Type:</span> {config.label}
+        </span>
+        <span>
+          <span className="font-semibold text-navy/70">Face area:</span> {bagFaceAreaCm2(drawDims)}
+        </span>
+        <span>
+          <span className="font-semibold text-navy/70">Flat sheet:</span> {bagFlatSheetLabel(drawDims, configType)}
+        </span>
+        <span className="text-mist/90 ml-auto">Film gauge &amp; GSM from Structure web totals</span>
+      </div>
     </div>
   );
 }

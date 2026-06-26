@@ -80,3 +80,39 @@ for (const ai of PLATFORMS) {
 
 touchMarker(marker);
 log(`updated UI UX Pro Max: ${repoRoot}`);
+
+patchCodexDescription(repoRoot);
+refreshAutoInvoke(repoRoot);
+
+function patchCodexDescription(root) {
+  const codexSkill = join(root, '.codex', 'skills', 'ui-ux-pro-max', 'SKILL.md');
+  if (!existsSync(codexSkill)) return;
+  let body = readFileSync(codexSkill, 'utf8');
+  const trigger =
+    'Use when building, designing, creating, implementing, reviewing, fixing, or improving UI/UX, interfaces, layouts, components, dashboards, landing pages, forms, styling, or accessibility.';
+  if (!body.includes('Use when building')) {
+    body = body.replace(
+      /^description: UI\/UX design intelligence with searchable database\s*$/m,
+      `description: UI/UX design intelligence with searchable database. ${trigger}`
+    );
+    writeFileSync(codexSkill, body);
+  }
+}
+
+function refreshAutoInvoke(root) {
+  const hubAssets = join(root, '..', '..', 'platform', 'ai-skills');
+  if (!existsSync(hubAssets)) return;
+  const copies = [
+    ['ui-ux-pro-max-auto.cursor.mdc', join(root, '.cursor', 'rules', 'ui-ux-pro-max-auto.mdc')],
+    ['ui-ux.instructions.md', join(root, '.github', 'instructions', 'ui-ux.instructions.md')],
+    ['ui-ux.codex.md', join(root, '.codex', 'ui-ux-auto.md')],
+    ['ui-ux.kiro.md', join(root, '.kiro', 'steering', 'ui-ux-auto.md')],
+  ];
+  for (const [src, dest] of copies) {
+    const from = join(hubAssets, src);
+    if (existsSync(from)) {
+      mkdirSync(dirname(dest), { recursive: true });
+      writeFileSync(dest, readFileSync(from, 'utf8'));
+    }
+  }
+}

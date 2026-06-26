@@ -1,7 +1,7 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-06-25 (solvent cost/m² display fix)
-**Session focus:** Fix solvent Cost/m² showing 0.0000 in structure table
+**Last updated:** 2026-06-25 (template ink editing + fullscreen TemplateBuilder)
+**Session focus:** Ink/coating on standard templates; TemplateBuilder fullscreen
 
 ---
 
@@ -11,7 +11,13 @@
 
 | Area | Status |
 |------|--------|
-| **Solvent Cost/m² display** | ✅ `usdToDisplayPrecise` — solvent + Total RM m² no longer zeroed by 2dp `roundUsd` |
+| **Template estimates — ink & coating** | ✅ Standard-template quotes stay locked for substrate/adhesive; user can add/remove/reorder ink & coating (e.g. varnish on top layer); family/grade editable for ink only |
+| **TemplateBuilder** | ✅ Edit/create modal is full-screen (header + scroll body + sticky footer) |
+| **Table alignment** | ✅ Family/Grade left + wider Family col; GSM/$ right-aligned; compact `cell-input` in cells |
+| **Build-up legend** | ✅ 32px stack bar; labels evenly spaced; diagonal leaders to thin bands — no overlap |
+| **Structure panel sync** | ✅ Table sets row height; build-up stretches to match; stack fills panel height |
+| **FilmStackVisualizer** | ✅ White/light ink layers; µ scale left |
+| **Structure UX** | ✅ One table (layers + solvents + $/kg + $/m² + Total); Film Structure + Layer build-up top row; **Selling Price / Cost Breakdown below** (no right sidebar) |
 | **Lamination EA** — GP/MP/HP recipes + per-quote `laminationRecipeOverrides` | ✅ (prior session; still active) |
 | **Estimate editor — compact solvent bar** | ✅ One row under layer table: Print Flexo/Roto, EA picker, $/kg, Clean kg |
 | **Structure table — Solvents row** | ✅ Last row before footer; **+** expands ink makeup / lamination / cleaning with Cost/kg + Cost/m² |

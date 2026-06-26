@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Save, Download, ArrowLeft, Layers, Calculator, DollarSign, Loader2, X, Check, Plus, Minus } from 'lucide-react';
 import LayerCard from '../components/LayerCard';
 import BottomSheet from '../components/BottomSheet';
-import LaminateVisualizer from '../components/LaminateVisualizer';
+import FilmStackVisualizer from '../components/FilmStackVisualizer';
+import StructureGradeSelect from '../components/StructureGradeSelect';
 import { JobHeaderFields } from '../components/JobHeaderFields';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -136,6 +137,8 @@ const EstimateEditor = () => {
   const [needsConfiguration, setNeedsConfiguration] = useState(false);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [solventDetailsExpanded, setSolventDetailsExpanded] = useState(false);
+  const structureTableRef = useRef<HTMLDivElement>(null);
+  const [structureTableHeight, setStructureTableHeight] = useState<number | null>(null);
 
   const location = useLocation();
   const locationState = location.state as {
@@ -280,10 +283,11 @@ const EstimateEditor = () => {
     return mat?.density ? parseFloat(mat.density) : 0.9;
   };
 
-  const moveLayer = (index: number, direction: -1 | 1) => {
+  const moveLayer = (index: number, direction: -1 | 1, templateLocked = false) => {
     const next = index + direction;
     if (next < 0 || next >= layers.length) return;
     setLayers((prev) => {
+      if (templateLocked && prev[index]?.materialType !== 'ink') return prev;
       const copy = [...prev];
       const [item] = copy.splice(index, 1);
       copy.splice(next, 0, item);
@@ -302,6 +306,7 @@ const EstimateEditor = () => {
   };
 
   const addLayerOfType = (type: 'substrate' | 'ink' | 'adhesive', materialId?: string) => {
+    if (estimate?.sourceTemplateKey && type !== 'ink') return;
     const defaultMat = materialId
       ? materials.find((m) => m.id === materialId)
       : materials.find((m) => m.type === type);
@@ -836,6 +841,22 @@ const EstimateEditor = () => {
     };
   }, [clientCalcResult, layers]);
 
+  const visualizerLayers = useMemo(
+    () =>
+      layers.map((l) => {
+        const mat = materials.find((m) => m.id === l.materialId);
+        return {
+          id: l.id,
+          type: l.materialType,
+          material: l.materialName,
+          micron: l.micron,
+          gsm: l.gsm,
+          family: mat?.substrateFamily ?? null,
+        };
+      }),
+    [layers, materials]
+  );
+
   useEffect(() => {
     if (!clientCalcResult) return;
     const fx = parseFloat(estimate?.exchangeRateUsdToDisplay) || 1;
@@ -874,6 +895,25 @@ const EstimateEditor = () => {
       })
     );
   }, [clientCalcResult, estimate?.exchangeRateUsdToDisplay]);
+
+  useEffect(() => {
+    const el = structureTableRef.current;
+    if (!el) return;
+    const measure = () => {
+      const h = Math.round(el.getBoundingClientRect().height);
+      if (h > 0) setStructureTableHeight(h);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [
+    layers.length,
+    needsSolventMix,
+    solventDetailsExpanded,
+    estimate?.sourceTemplateKey,
+    activeSection,
+  ]);
 
   const persistEstimate = async (): Promise<boolean> => {
     if (saving) return false;
@@ -1061,10 +1101,17 @@ const EstimateEditor = () => {
   if (!estimate) return <div className="p-8">Estimate not found</div>;
 
   // ── Component-scope derived flags ────────────────────────────────────────
-  // structureLocked: estimate was created from a standard template → structure is fixed.
-  // Everyone including admins is locked — structure changes belong in the Templates page.
-  // Only µ (thickness) and dimensions are user-editable in the estimation view.
+  // structureLocked: estimate from a standard template — substrate/adhesive stack is fixed.
+  // Ink & coating (e.g. varnish) may still be added, removed, reordered, and graded per job.
   const structureLocked = Boolean(estimate?.sourceTemplateKey);
+  const canEditLayerStructure = (layer: { materialType: string }) =>
+    !structureLocked || layer.materialType === 'ink';
+  const showStructureCosts = can('materialCostPerKg');
+  const structureColCount = 6 + (showStructureCosts ? 2 : 0) + 1;
+  const substrateLayerCount = layers.filter((l) => l.materialType === 'substrate').length;
+  const adhesiveLayerCount = layers.filter((l) => l.materialType === 'adhesive').length;
+  const maxSubstrates = 4;
+  const maxAdhesives = 3;
 
   /** Round to at most `d` decimal places, stripping trailing zeros. */
   const fmt = (n: number, d = 4): string => {
@@ -1092,11 +1139,13 @@ const EstimateEditor = () => {
     structureMetrics.structureDensity != null
       ? structureMetrics.structureDensity.toFixed(3)
       : '—';
+  const yieldSqmPerKg =
+    clientCalcResult?.estimate.sqmPerKg ?? (totalGsm > 0 ? 1000 / totalGsm : null);
+  const showWebTotals =
+    can('filmDensity') || can('rmCostPerKg') || (yieldSqmPerKg != null && totalGsm > 0);
   const printWebWidth = (dimensions.reelWidthMm * dimensions.numberOfUps) + dimensions.extraPrintingTrimMm;
   const fxRate = parseFloat(estimate?.exchangeRateUsdToDisplay) || 1;
   const displaySalePrice = estimate?.salePriceDisplay ?? usdToDisplay(Number(estimate?.salePricePerKg) || 0, fxRate);
-  const solventTableColSpan = structureLocked ? 8 : 9;
-
   const solventConfigBar = canConfigureSolvent && (hasSbInk || needsSolventMix) ? (
     <div
       id="solvent-costing"
@@ -1197,20 +1246,6 @@ const EstimateEditor = () => {
       )}
     </div>
   ) : null;
-
-  const visualizerLayers = useMemo(
-    () =>
-      layers.map((l) => ({
-        id: l.id,
-        type: l.materialType,
-        material: l.materialName,
-        micron: l.micron,
-        gsm: l.gsm,
-      })),
-    [layers]
-  );
-
-  const stackProfileHeight = Math.min(280, Math.max(150, visualizerLayers.length * 56));
 
   return (
     <div className="w-full pb-24 md:pb-0">
@@ -1330,9 +1365,8 @@ const EstimateEditor = () => {
         />
       </div>
 
-      <div className="lg:flex lg:items-start lg:gap-6">
-        {/* Left panel — full width, no max-width cap so table expands */}
-        <div className="lg:flex-1 min-w-0">
+      <div className="min-w-0 max-w-full overflow-x-hidden">
+        <div>
           {/* Navigation tabs */}
           <div className="flex space-x-2 mb-6 overflow-x-auto">
             <button onClick={() => setActiveSection('structure')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap ${activeSection === 'structure' ? 'bg-gold/10 text-gold' : 'hover:bg-slate text-ink'}`}>
@@ -1348,12 +1382,20 @@ const EstimateEditor = () => {
 
           {/* Structure section */}
           {activeSection === 'structure' && (
-            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(240px,28%)] gap-6 items-start">
-              <div className="card min-w-0">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-display font-semibold text-navy">{stackLabel}</h3>
+            <div className="space-y-6">
+              <div className="card p-0 overflow-hidden shadow-md">
+                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] border-b border-border bg-white">
+                  <div className="px-5 py-3.5 lg:border-r border-border">
+                    <h3 className="text-lg font-display font-semibold text-navy tracking-tight">{stackLabel}</h3>
+                    <p className="text-xs text-mist mt-0.5">Layers, grades &amp; RM costs</p>
+                  </div>
+                  <div className="px-5 py-3.5 hidden lg:block border-l border-border bg-slate/20">
+                    <h3 className="text-lg font-display font-semibold text-navy tracking-tight">Layer build-up</h3>
+                    <p className="text-xs text-mist mt-0.5">Cross-section · up to 4 films, 3 adhesives, unlimited ink &amp; coating</p>
+                  </div>
                 </div>
-
+                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
+                  <div className="min-w-0 lg:border-r border-border">
                 {/* Mobile cards + bottom sheets (PRD §5.8) */}
                 <div className="space-y-3 md:hidden pb-24">
                   <button
@@ -1365,13 +1407,16 @@ const EstimateEditor = () => {
                     <span>{mobileStackOpen ? '▲' : '▼'}</span>
                   </button>
                   {mobileStackOpen && (
-                    <div className="py-2 px-1">
-                      <LaminateVisualizer
+                    <div className="py-2">
+                      <FilmStackVisualizer
                         layers={visualizerLayers}
-                        width={280}
-                        height={stackProfileHeight}
-                        labelMode="composition"
-                        className="mx-auto w-full max-w-[280px]"
+                        webWidthMm={
+                          printWebWidth > 0
+                            ? printWebWidth
+                            : dimensions.reelWidthMm > 0
+                              ? dimensions.reelWidthMm
+                              : null
+                        }
                       />
                     </div>
                   )}
@@ -1382,7 +1427,7 @@ const EstimateEditor = () => {
                       total={layers.length}
                       layer={{ ...layer, type: layer.materialType, material: layer.materialName, costPerKg: can('materialCostPerKg') ? layer.costPerKgUsd : undefined }}
                       showCost={can('materialCostPerKg')}
-                      onEdit={structureLocked ? undefined : () => openLayerEdit(layer.id)}
+                      onEdit={canEditLayerStructure(layer) ? () => openLayerEdit(layer.id) : undefined}
                       showFormula={canConfigureSolvent && layer.materialType === 'adhesive' && layer.isSolventBased}
                       formulaOverridden={!!laminationRecipeOverrides[layer.id]}
                       onFormula={
@@ -1390,16 +1435,21 @@ const EstimateEditor = () => {
                           ? () => setFormulaModalLayerId(layer.id)
                           : undefined
                       }
-                      onRemove={structureLocked ? undefined : () => setLayers((prev) => prev.filter((l) => l.id !== layer.id))}
-                      onMoveUp={structureLocked ? undefined : () => moveLayer(idx, -1)}
-                      onMoveDown={structureLocked ? undefined : () => moveLayer(idx, 1)}
-                      onDragStart={structureLocked ? undefined : (i) => setDragFromIndex(i)}
+                      onRemove={canEditLayerStructure(layer) ? () => setLayers((prev) => prev.filter((l) => l.id !== layer.id)) : undefined}
+                      onMoveUp={canEditLayerStructure(layer) ? () => moveLayer(idx, -1, structureLocked) : undefined}
+                      onMoveDown={canEditLayerStructure(layer) ? () => moveLayer(idx, 1, structureLocked) : undefined}
+                      onDragStart={canEditLayerStructure(layer) ? (i) => setDragFromIndex(i) : undefined}
                       onDragEnter={(i) => {
-                        if (!structureLocked && dragFromIndex !== null) setDragHoverIndex(i);
+                        if (dragFromIndex !== null && canEditLayerStructure(layers[dragFromIndex])) {
+                          setDragHoverIndex(i);
+                        }
                       }}
                       onDragEnd={() => {
-                        if (!structureLocked && dragFromIndex !== null && dragHoverIndex !== null) {
-                          reorderLayers(dragFromIndex, dragHoverIndex);
+                        if (dragFromIndex !== null && dragHoverIndex !== null) {
+                          const dragged = layers[dragFromIndex];
+                          if (!structureLocked || dragged?.materialType === 'ink') {
+                            reorderLayers(dragFromIndex, dragHoverIndex);
+                          }
                         }
                         setDragFromIndex(null);
                         setDragHoverIndex(null);
@@ -1407,19 +1457,17 @@ const EstimateEditor = () => {
                       isDragging={dragFromIndex === idx}
                     />
                   ))}
-                  {!structureLocked && (
-                    <button
-                      type="button"
-                      onClick={() => setAddLayerSheetOpen(true)}
-                      className="w-full min-h-[48px] py-3 border-2 border-dashed border-border rounded-xl font-display font-semibold text-navy"
-                    >
-                      + Add layer
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setAddLayerSheetOpen(true)}
+                    className="w-full min-h-[48px] py-3 border-2 border-dashed border-border rounded-xl font-display font-semibold text-navy"
+                  >
+                    {structureLocked ? '+ Add ink & coating' : '+ Add layer'}
+                  </button>
                   {needsSolventMix && (
                     <div className="border border-amber-200 rounded-lg overflow-hidden bg-amber-50/60">
                       {solventConfigBar && (
-                        <div className="px-3 py-2.5 border-b border-amber-200/70">
+                        <div className="px-3 py-2.5 border-b border-amber-200/70 overflow-x-hidden">
                           {solventConfigBar}
                         </div>
                       )}
@@ -1432,12 +1480,14 @@ const EstimateEditor = () => {
                           {solventDetailsExpanded ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                           Solvents
                         </span>
-                        <span className="font-mono text-xs font-semibold text-navy">
-                          {usdToDisplayPrecise(solventTotalPerKgUsd, fxRate).toFixed(4)}/kg ·{' '}
-                          {usdToDisplayPrecise(solventTotalPerM2Usd, fxRate).toFixed(4)}/m²
-                        </span>
+                        {showStructureCosts && (
+                          <span className="font-mono text-xs font-semibold text-navy">
+                            {usdToDisplayPrecise(solventTotalPerKgUsd, fxRate).toFixed(4)}/kg ·{' '}
+                            {usdToDisplayPrecise(solventTotalPerM2Usd, fxRate).toFixed(4)}/m²
+                          </span>
+                        )}
                       </button>
-                      {solventDetailsExpanded && (
+                      {solventDetailsExpanded && showStructureCosts && (
                         <div className="divide-y divide-amber-200/60 bg-amber-50/40 text-sm">
                           {solventCostLines.map((line) => (
                             <div key={line.key} className="flex justify-between px-3 py-2 pl-8 text-mist">
@@ -1454,42 +1504,59 @@ const EstimateEditor = () => {
                   )}
                 </div>
 
-                {/* Desktop table */}
-                <div className="hidden md:block">
-                  {/* Column picker — optional columns */}
-                  {/* Column picker removed — Cost/Kg and Cost/M² are always visible */}
-
-                  <div className="overflow-x-auto">
-                  <table className="w-full min-w-[600px]">
+                {/* Desktop structure table — single unified table */}
+                <div ref={structureTableRef} className="hidden md:block overflow-x-hidden p-4">
+                  <table className="w-full table-fixed text-sm">
+                    <colgroup>
+                      <col style={{ width: '4%' }} />
+                      <col style={{ width: showStructureCosts ? '7%' : '9%' }} />
+                      <col style={{ width: showStructureCosts ? '14%' : '15%' }} />
+                      <col style={{ width: showStructureCosts ? '22%' : '26%' }} />
+                      <col style={{ width: '10%' }} />
+                      <col style={{ width: '7%' }} />
+                      {showStructureCosts && <col style={{ width: '10%' }} />}
+                      {showStructureCosts && <col style={{ width: '10%' }} />}
+                      <col style={{ width: '9%' }} />
+                    </colgroup>
                     <thead>
                       <tr className="border-b border-border">
-                        <th className="text-center py-3 px-3 text-sm font-medium text-mist w-10">#</th>
-                        <th className="text-center py-3 px-3 text-sm font-medium text-mist">Type</th>
-                        <th className="text-center py-3 px-3 text-sm font-medium text-mist">Family</th>
-                        <th className="text-center py-3 px-3 text-sm font-medium text-mist">Grade Name</th>
-                        <th className="text-center py-3 px-3 text-sm font-medium text-mist w-32">Value<br/><span className="font-normal text-xs">µ / gsm</span></th>
-                        <th className="text-center py-3 px-3 text-sm font-medium text-mist w-24">Total GSM</th>
-                        <th className="text-center py-3 px-3 text-sm font-medium text-mist w-28">
-                          Cost / Kg<br/><span className="font-normal text-xs">({estimate?.displayCurrency || 'USD'})</span>
+                        <th className="text-center py-2.5 px-1 text-xs font-medium text-mist">#</th>
+                        <th className="text-center py-2.5 px-1 text-xs font-medium text-mist">Type</th>
+                        <th className="text-left py-2.5 px-2 text-xs font-medium text-mist">Family</th>
+                        <th className="text-left py-2.5 px-2 text-xs font-medium text-mist">Grade</th>
+                        <th className="text-center py-2.5 px-1 text-xs font-medium text-mist">
+                          Value <span className="font-normal text-mist/80">µ/gsm</span>
                         </th>
-                        <th className="text-center py-3 px-3 text-sm font-medium text-mist w-28">
-                          Cost / M²<br/><span className="font-normal text-xs">({estimate?.displayCurrency || 'USD'})</span>
-                        </th>
-                        {!structureLocked && <th className="py-3 px-3 w-20"></th>}
+                        <th className="text-right py-2.5 px-2 text-xs font-medium text-mist">GSM</th>
+                        {showStructureCosts && (
+                          <>
+                            <th className="text-right py-2.5 px-2 text-[10px] font-medium text-mist leading-tight">
+                              $/kg
+                            </th>
+                            <th className="text-right py-2.5 px-2 text-[10px] font-medium text-mist leading-tight">
+                              $/m²
+                            </th>
+                          </>
+                        )}
+                        <th className="py-2.5 px-1" />
                       </tr>
                     </thead>
                     <tbody>
                       {layers.map((layer, idx) => (
                         <tr key={layer.id} className="border-b border-border last:border-0 hover:bg-slate/50">
-                          <td className="py-4 px-4 text-sm text-mist text-center">{idx + 1}</td>
-                          <td className="py-4 px-4">
+                          <td className="py-2.5 px-2 text-xs text-mist text-center">{idx + 1}</td>
+                          <td className="py-2.5 px-2 min-w-0">
                             <span className={`text-xs px-2 py-1 rounded-md ${layer.materialType === 'substrate' ? 'bg-blue-100 text-blue-800' : layer.materialType === 'ink' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>{LAYER_TYPE_LABELS[layer.materialType] || layer.materialType}</span>
                           </td>
-                          <td className="py-4 px-4">
+                          <td className="py-2 px-2 min-w-0 text-left align-middle">
                             {/* Family dropdown — filtered by template classification (PE → PE only, Non PE → no PE) */}
                             {(() => {
                               const currentMat = materials.find(m => m.id === layer.materialId);
                               const currentFamily = currentMat?.substrateFamily ?? null;
+
+                              if (structureLocked && layer.materialType !== 'ink') {
+                                return <span className="text-sm text-mist truncate">{currentFamily || '—'}</span>;
+                              }
 
                               if (layer.materialType !== 'substrate') {
                                 // Ink/adhesive: show family dropdown (Solvent Based, UV-LED, etc.)
@@ -1505,7 +1572,8 @@ const EstimateEditor = () => {
 
                                 return (
                                   <select
-                                    className="input w-full text-sm"
+                                    className="cell-input w-full text-xs text-left truncate"
+                                    title={currentFamily ?? ''}
                                     value={currentFamily ?? ''}
                                     onChange={(e) => {
                                       const newFamily = e.target.value;
@@ -1538,7 +1606,8 @@ const EstimateEditor = () => {
 
                               return (
                                 <select
-                                  className="input w-full text-sm"
+                                  className="cell-input w-full text-xs text-left truncate"
+                                  title={currentFamily ?? ''}
                                   value={currentFamily ?? ''}
                                   onChange={(e) => {
                                     const newFamily = e.target.value;
@@ -1564,7 +1633,7 @@ const EstimateEditor = () => {
                               );
                             })()}
                           </td>
-                          <td className="py-4 px-4 text-center">
+                          <td className="py-2 px-2 min-w-0 text-left align-middle">
                             {/* Grade dropdown — filtered by family + classification; title shows hoover on hover */}                            {(() => {
                               const currentMat = materials.find(m => m.id === layer.materialId);
                               const currentFamily = currentMat?.substrateFamily ?? null;
@@ -1580,34 +1649,49 @@ const EstimateEditor = () => {
                                 return true;
                               });
 
+                              if (structureLocked && layer.materialType !== 'ink') {
+                                return (
+                                  <span className="text-xs text-navy truncate block" title={layer.materialName}>
+                                    {layer.materialName}
+                                  </span>
+                                );
+                              }
+
                               return (
-                                <select
-                                  className="input w-full text-sm"
+                                <StructureGradeSelect
                                   value={layer.materialId}
-                                  title={currentMat?.hoover ?? ''}
-                                  onChange={(e) => {
-                                    const mat = materials.find(m => m.id === e.target.value);
+                                  options={gradeOptions.map((m) => ({
+                                    id: m.id,
+                                    name: m.name,
+                                    hoover: m.hoover ?? null,
+                                  }))}
+                                  onChange={(materialId) => {
+                                    const mat = materials.find((m) => m.id === materialId);
                                     if (!mat) return;
-                                    setLayers(prev => prev.map(l => l.id === layer.id ? {
-                                      ...l, materialId: mat.id, materialName: mat.name,
-                                      costPerKgUsd: parseFloat(mat.costPerKgUsd) || 0,
-                                      isSolventBased: mat.isSolventBased || false,
-                                      gsm: l.micron * (parseFloat(mat.density) || 0.9),
-                                      hoover: mat.hoover ?? null,
-                                    } : l));
+                                    setLayers((prev) =>
+                                      prev.map((l) =>
+                                        l.id === layer.id
+                                          ? {
+                                              ...l,
+                                              materialId: mat.id,
+                                              materialName: mat.name,
+                                              costPerKgUsd: parseFloat(mat.costPerKgUsd) || 0,
+                                              isSolventBased: mat.isSolventBased || false,
+                                              gsm: l.micron * (parseFloat(mat.density) || 0.9),
+                                              hoover: mat.hoover ?? null,
+                                            }
+                                          : l
+                                      )
+                                    );
                                   }}
-                                >
-                                  {gradeOptions.map(m => (
-                                    <option key={m.id} value={m.id} title={m.hoover ?? ''}>{m.name}</option>
-                                  ))}
-                                </select>
+                                />
                               );
                             })()}
                             {/* Admin key — hidden from UI, kept for debugging only via DevTools */}
                           </td>
 
                           {/* µ / GSM — input with unit label; substrate=µ, ink/adhesive=gsm; yellow when 0 */}
-                          <td className="py-4 px-3 text-center">
+                          <td className="py-2 px-1 text-center min-w-0 align-middle">
                             {(() => {
                               const mat = materials.find(m => m.id === layer.materialId);
                               const solidPct = mat?.solidPercent ?? 100;
@@ -1618,7 +1702,7 @@ const EstimateEditor = () => {
                                 ? `Density: ${density.toFixed(3)} g/cm³`
                                 : `Solid content: ${solidPct}%`;
                               return (
-                                <div className="flex items-center justify-center gap-1">
+                                <div className="inline-flex items-center justify-center gap-1">
                                   <input
                                     type="number"
                                     value={parseFloat(layer.micron.toFixed(1))}
@@ -1633,139 +1717,156 @@ const EstimateEditor = () => {
                                         gsm: isSubstrate ? micron * density : micron,
                                       } : l));
                                     }}
-                                    className={`input w-20 font-mono text-sm text-center ${layer.micron === 0 ? 'bg-amber-50 border-amber-200' : ''}`}
+                                    className={`cell-input w-14 font-mono text-sm text-center px-1 ${layer.micron === 0 ? 'bg-amber-50 border-amber-200' : ''}`}
                                     inputMode="decimal"
                                   />
-                                  <span className="text-xs text-mist w-6 text-left">{unitLabel}</span>
+                                  <span className="text-xs text-mist w-7 shrink-0 text-left">{unitLabel}</span>
                                 </div>
                               );
                             })()}
                           </td>
 
                           {/* Total GSM per row = layer.gsm (substrate: µ×density; ink: solid%×µ/100) */}
-                          <td className="py-4 px-3 font-mono text-sm text-center font-semibold text-navy">
+                          <td className="py-2 px-2 font-mono text-xs text-right font-semibold text-navy tabular-nums align-middle">
                             {layer.gsm > 0 ? layer.gsm.toFixed(2) : <span className="text-mist">0.00</span>}
                           </td>
 
-                          {/* Cost / Kg — always editable input; column visibility controlled by header */}
-                          <td className="py-2 px-3 font-mono text-sm text-center">
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={usdToDisplay(layer.costPerKgUsd, fxRate).toFixed(2)}
-                              onChange={(e) => {
-                                const displayVal = parseFloat(e.target.value) || 0;
-                                const usd = fxRate > 0 ? displayVal / fxRate : displayVal;
-                                setLayers((prev) => prev.map((l) =>
-                                  l.id === layer.id ? { ...l, costPerKgUsd: usd } : l
-                                ));
-                              }}
-                              className="input w-24 font-mono text-sm text-center"
-                              inputMode="decimal"
-                              aria-label={`Cost per kg for ${layer.materialName}`}
-                            />
-                          </td>
+                          {showStructureCosts && (
+                            <>
+                              <td className="py-2 px-2 text-right align-middle">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={usdToDisplay(layer.costPerKgUsd, fxRate).toFixed(2)}
+                                  onChange={(e) => {
+                                    const displayVal = parseFloat(e.target.value) || 0;
+                                    const usd = fxRate > 0 ? displayVal / fxRate : displayVal;
+                                    setLayers((prev) => prev.map((l) =>
+                                      l.id === layer.id ? { ...l, costPerKgUsd: usd } : l
+                                    ));
+                                  }}
+                                  className="cell-input w-full max-w-[5.5rem] ml-auto font-mono text-[11px] text-right px-1"
+                                  inputMode="decimal"
+                                  aria-label={`Cost per kg for ${layer.materialName}`}
+                                />
+                              </td>
+                              <td className="py-2 px-2 font-mono text-[11px] text-right tabular-nums text-navy align-middle">
+                                {(() => {
+                                  const calcLayer = clientCalcResult?.estimate.layers[idx];
+                                  const c = calcLayer?.costPerM2;
+                                  if (c == null || c <= 0) return <span className="text-mist">—</span>;
+                                  return usdToDisplayPrecise(c, fxRate).toFixed(4);
+                                })()}
+                              </td>
+                            </>
+                          )}
 
-                          {/* Cost / M² — from engine result, x.xxxx */}
-                          <td className="py-4 px-3 font-mono text-sm text-center">
-                            {(() => {
-                              const calcLayer = clientCalcResult?.estimate.layers[idx];
-                              const c = calcLayer?.costPerM2;
-                              if (c == null || c <= 0) return <span className="text-mist">—</span>;
-                              return usdToDisplayPrecise(c, fxRate).toFixed(4);
-                            })()}
-                          </td>
-                          {!structureLocked && (
-                            <td className="py-4 px-3">
-                              <div className="flex items-center gap-2">
+                          <td className="py-2 px-1">
+                            {canEditLayerStructure(layer) && (
+                              <div className="flex items-center justify-center gap-0.5">
                                 <button
                                   type="button"
                                   disabled={idx === 0}
-                                  onClick={() => moveLayer(idx, -1)}
-                                  className="text-xs text-mist hover:text-navy disabled:opacity-30"
+                                  onClick={() => moveLayer(idx, -1, structureLocked)}
+                                  className="p-1 text-mist hover:text-navy disabled:opacity-30"
                                   title="Move up"
                                   aria-label="Move layer up"
                                 >▲</button>
                                 <button
                                   type="button"
                                   disabled={idx === layers.length - 1}
-                                  onClick={() => moveLayer(idx, 1)}
-                                  className="text-xs text-mist hover:text-navy disabled:opacity-30"
+                                  onClick={() => moveLayer(idx, 1, structureLocked)}
+                                  className="p-1 text-mist hover:text-navy disabled:opacity-30"
                                   title="Move down"
                                   aria-label="Move layer down"
                                 >▼</button>
-                                <button onClick={() => setLayers((prev) => prev.filter((l) => l.id !== layer.id))} className="text-sm text-mist hover:text-danger">Remove</button>
-                                {canConfigureSolvent && layer.materialType === 'adhesive' && layer.isSolventBased && (
+                                <button
+                                  type="button"
+                                  onClick={() => setLayers((prev) => prev.filter((l) => l.id !== layer.id))}
+                                  className="p-1 text-mist hover:text-danger text-xs"
+                                  title="Remove"
+                                  aria-label="Remove layer"
+                                >✕</button>
+                                {!structureLocked && canConfigureSolvent && layer.materialType === 'adhesive' && layer.isSolventBased && (
                                   <button
                                     type="button"
-                                    className="text-xs text-blue-700 hover:text-blue-900 whitespace-nowrap"
+                                    className="p-1 text-[10px] text-blue-700 hover:text-blue-900"
                                     onClick={() => setFormulaModalLayerId(layer.id)}
+                                    title="Lamination formula"
                                   >
-                                    {laminationRecipeOverrides[layer.id] ? 'Formula*' : 'Formula'}
+                                    {laminationRecipeOverrides[layer.id] ? 'F*' : 'F'}
                                   </button>
                                 )}
                               </div>
-                            </td>
-                          )}
+                            )}
+                          </td>
                         </tr>
                       ))}
                       {needsSolventMix && (
                         <>
                           {solventConfigBar && (
                             <tr className="border-b border-amber-200/80 bg-amber-50/60">
-                              <td colSpan={solventTableColSpan} className="py-2.5 px-4">
+                              <td colSpan={structureColCount} className="py-2 px-2">
                                 {solventConfigBar}
                               </td>
                             </tr>
                           )}
                           <tr className="border-b border-border bg-amber-50/50">
-                            <td className="py-3 px-3" />
-                            <td className="py-3 px-4">
-                              <span className="text-xs px-2 py-1 rounded-md bg-amber-100 text-amber-900">Solvent</span>
+                            <td className="py-2 px-1" />
+                            <td className="py-2 px-1">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900">Solvent</span>
                             </td>
-                            <td className="py-3 px-3 text-center text-mist text-sm">—</td>
-                            <td className="py-3 px-3">
+                            <td className="py-2 px-1 text-center text-mist text-xs">—</td>
+                            <td className="py-2 px-1">
                               <button
                                 type="button"
-                                className="inline-flex items-center gap-1.5 text-sm font-medium text-navy hover:text-gold"
+                                className="inline-flex items-center gap-1 text-xs font-medium text-navy hover:text-gold"
                                 onClick={() => setSolventDetailsExpanded((v) => !v)}
                                 aria-expanded={solventDetailsExpanded}
                               >
                                 {solventDetailsExpanded ? (
-                                  <Minus className="w-4 h-4 shrink-0" aria-hidden />
+                                  <Minus className="w-3.5 h-3.5 shrink-0" aria-hidden />
                                 ) : (
-                                  <Plus className="w-4 h-4 shrink-0" aria-hidden />
+                                  <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden />
                                 )}
                                 Solvents
                               </button>
                             </td>
-                            <td className="py-3 px-3 text-center text-mist text-xs">—</td>
-                            <td className="py-3 px-3 text-center text-mist">—</td>
-                            <td className="py-3 px-3 font-mono text-sm text-center font-semibold text-navy">
-                              {usdToDisplayPrecise(solventTotalPerKgUsd, fxRate).toFixed(4)}
-                            </td>
-                            <td className="py-3 px-3 font-mono text-sm text-center font-semibold text-navy">
-                              {usdToDisplayPrecise(solventTotalPerM2Usd, fxRate).toFixed(4)}
-                            </td>
-                            {!structureLocked && <td className="py-3 px-3" />}
+                            <td className="py-2 px-1 text-center text-mist text-[10px]">—</td>
+                            <td className="py-2 px-1 text-center text-mist">—</td>
+                            {showStructureCosts && (
+                              <>
+                                <td className="py-2 px-1 font-mono text-[11px] text-center font-semibold text-navy tabular-nums">
+                                  {usdToDisplayPrecise(solventTotalPerKgUsd, fxRate).toFixed(4)}
+                                </td>
+                                <td className="py-2 px-1 font-mono text-[11px] text-center font-semibold text-navy tabular-nums">
+                                  {usdToDisplayPrecise(solventTotalPerM2Usd, fxRate).toFixed(4)}
+                                </td>
+                              </>
+                            )}
+                            <td className="py-2 px-1" />
                           </tr>
                           {solventDetailsExpanded &&
                             solventCostLines.map((line) => (
                               <tr key={line.key} className="border-b border-border bg-slate/30">
-                                <td className="py-2 px-3" />
-                                <td className="py-2 px-3" />
-                                <td className="py-2 px-3" />
-                                <td className="py-2 px-4 pl-10 text-sm text-mist">{line.label}</td>
-                                <td className="py-2 px-3 text-center text-mist text-xs">—</td>
-                                <td className="py-2 px-3 text-center text-mist">—</td>
-                                <td className="py-2 px-3 font-mono text-sm text-center">
-                                  {usdToDisplayPrecise(line.perKgUsd, fxRate).toFixed(4)}
-                                </td>
-                                <td className="py-2 px-3 font-mono text-sm text-center">
-                                  {usdToDisplayPrecise(line.perM2Usd, fxRate).toFixed(4)}
-                                </td>
-                                {!structureLocked && <td className="py-2 px-3" />}
+                                <td className="py-1.5 px-1" />
+                                <td className="py-1.5 px-1" />
+                                <td className="py-1.5 px-1" />
+                                <td className="py-1.5 px-1 pl-4 text-[11px] text-mist truncate">{line.label}</td>
+                                <td className="py-1.5 px-1 text-center text-mist text-[10px]">—</td>
+                                <td className="py-1.5 px-1 text-center text-mist">—</td>
+                                {showStructureCosts && (
+                                  <>
+                                    <td className="py-1.5 px-1 font-mono text-[11px] text-center tabular-nums">
+                                      {usdToDisplayPrecise(line.perKgUsd, fxRate).toFixed(4)}
+                                    </td>
+                                    <td className="py-1.5 px-1 font-mono text-[11px] text-center tabular-nums">
+                                      {usdToDisplayPrecise(line.perM2Usd, fxRate).toFixed(4)}
+                                    </td>
+                                  </>
+                                )}
+                                <td className="py-1.5 px-1" />
                               </tr>
                             ))}
                         </>
@@ -1773,68 +1874,173 @@ const EstimateEditor = () => {
                     </tbody>
                     <tfoot>
                       <tr className="border-t-2 border-border bg-slate/40">
-                        <td colSpan={4} className="py-4 px-3 text-sm font-bold text-navy text-right">
+                        <td colSpan={4} className="py-3 px-2 text-xs font-bold text-navy text-right">
                           Total
                         </td>
                         <td
-                          className="py-4 px-3 text-center"
+                          className="py-3 px-1 text-center"
                           title="Total structure (µ) — substrate µ + ink/adhesive dry gsm ÷ density."
                         >
-                          <div className="flex items-center justify-center gap-1">
-                            <span className="font-mono text-sm font-bold text-navy w-20 text-center tabular-nums">
-                              {totalConstructionMicron != null && totalConstructionMicron > 0
-                                ? totalConstructionMicron.toFixed(2)
-                                : '—'}
-                            </span>
-                            <span className="font-mono text-sm font-bold text-navy w-6 text-left">
-                              µ
-                            </span>
-                          </div>
+                          <span className="font-mono text-xs font-bold text-navy tabular-nums">
+                            {totalConstructionMicron != null && totalConstructionMicron > 0
+                              ? `${totalConstructionMicron.toFixed(2)} µ`
+                              : '—'}
+                          </span>
                         </td>
-                        <td className="py-4 px-3 font-mono text-sm text-center font-bold text-navy tabular-nums">
+                        <td className="py-3 px-2 font-mono text-xs text-right font-bold text-navy tabular-nums">
                           {totalGsm.toFixed(2)}
                         </td>
-                        <td className="py-4 px-3 font-mono text-sm text-center font-bold text-navy tabular-nums">
-                          {rmTotals
-                            ? usdToDisplayPrecise(rmTotals.rmPerKg, fxRate).toFixed(4)
-                            : '—'}
-                        </td>
-                        <td className="py-4 px-3 font-mono text-sm text-center font-bold text-navy tabular-nums">
-                          {rmTotals
-                            ? usdToDisplayPrecise(rmTotals.rmPerM2, fxRate).toFixed(4)
-                            : '—'}
-                        </td>
-                        {!structureLocked && <td className="py-4 px-3" />}
+                        {showStructureCosts && (
+                          <>
+                            <td className="py-3 px-2 font-mono text-[11px] text-right font-bold text-navy tabular-nums">
+                              {rmTotals
+                                ? usdToDisplayPrecise(rmTotals.rmPerKg, fxRate).toFixed(4)
+                                : '—'}
+                            </td>
+                            <td className="py-3 px-2 font-mono text-[11px] text-right font-bold text-navy tabular-nums">
+                              {rmTotals
+                                ? usdToDisplayPrecise(rmTotals.rmPerM2, fxRate).toFixed(4)
+                                : '—'}
+                            </td>
+                          </>
+                        )}
+                        <td className="py-3 px-1" />
                       </tr>
                     </tfoot>
                   </table>
-                  </div> {/* end overflow-x-auto */}
                 </div> {/* end hidden md:block */}
+                  </div> {/* end table column — self-sized, no stretch gap */}
 
-                {/* Add layer buttons — hidden when structure is locked (came from template) */}
-                {!structureLocked && (
-                  <div className="flex flex-wrap gap-3 pt-4">
-                    <select className="input w-48" onChange={(e) => {
-                      const type = e.target.value as 'substrate' | 'ink' | 'adhesive';
-                      if (!type) return;
-                      const defaultMat = materials.find(m => m.type === type);
-                      const micron = type === 'substrate' ? 25 : 2;
-                      const newLayer: LayerItem = { id: crypto.randomUUID(), materialId: defaultMat?.id || '', materialName: defaultMat?.name || 'Select material', materialType: type, micron, gsm: type === 'substrate' ? micron * (defaultMat?.density ? parseFloat(defaultMat.density) : 0.9) : micron, costPerKgUsd: defaultMat ? parseFloat(defaultMat.costPerKgUsd) : 0, isSolventBased: defaultMat?.isSolventBased || false, position: layers.length, hoover: defaultMat?.hoover || null };
-                      setLayers((prev) => [...prev, newLayer]);
-                      e.target.value = '';
-                    }} defaultValue="">
-                      <option value="" disabled>+ Add Layer...</option>
-                      <option value="substrate">Substrate</option>
-                      <option value="ink">Ink & Coating</option>
-                      <option value="adhesive">Adhesive</option>
-                    </select>
+                  <div
+                    className="hidden lg:block overflow-hidden bg-white border-l border-border"
+                    style={
+                      structureTableHeight != null
+                        ? { height: structureTableHeight, maxHeight: structureTableHeight }
+                        : undefined
+                    }
+                  >
+                    <FilmStackVisualizer
+                      layers={visualizerLayers}
+                      webWidthMm={
+                        printWebWidth > 0
+                          ? printWebWidth
+                          : dimensions.reelWidthMm > 0
+                            ? dimensions.reelWidthMm
+                            : null
+                      }
+                      className="h-full w-full"
+                    />
                   </div>
-                )}
+                </div> {/* end structure body row */}
+              </div> {/* end unified structure card */}
 
+              <div className="flex flex-wrap gap-3 items-center">
+                <select className="input w-48" onChange={(e) => {
+                    const type = e.target.value as 'substrate' | 'ink' | 'adhesive';
+                    if (!type) return;
+                    if (structureLocked && type !== 'ink') return;
+                    if (type === 'substrate' && substrateLayerCount >= maxSubstrates) return;
+                    if (type === 'adhesive' && adhesiveLayerCount >= maxAdhesives) return;
+                    const defaultMat = materials.find(m => m.type === type);
+                    const micron = type === 'substrate' ? 25 : 2;
+                    const newLayer: LayerItem = { id: crypto.randomUUID(), materialId: defaultMat?.id || '', materialName: defaultMat?.name || 'Select material', materialType: type, micron, gsm: type === 'substrate' ? micron * (defaultMat?.density ? parseFloat(defaultMat.density) : 0.9) : micron, costPerKgUsd: defaultMat ? parseFloat(defaultMat.costPerKgUsd) : 0, isSolventBased: defaultMat?.isSolventBased || false, position: layers.length, hoover: defaultMat?.hoover || null };
+                    setLayers((prev) => [...prev, newLayer]);
+                    e.target.value = '';
+                  }} defaultValue="">
+                    <option value="" disabled>+ Add Layer...</option>
+                    {!structureLocked && (
+                      <>
+                        <option value="substrate" disabled={substrateLayerCount >= maxSubstrates}>
+                          Substrate{substrateLayerCount >= maxSubstrates ? ` (max ${maxSubstrates})` : ''}
+                        </option>
+                        <option value="adhesive" disabled={adhesiveLayerCount >= maxAdhesives}>
+                          Adhesive{adhesiveLayerCount >= maxAdhesives ? ` (max ${maxAdhesives})` : ''}
+                        </option>
+                      </>
+                    )}
+                    <option value="ink">Ink & Coating</option>
+                  </select>
+                {structureLocked && (
+                  <p className="text-xs text-mist">
+                    Template structure is fixed — add or reposition ink & coating (e.g. varnish) only.
+                  </p>
+                )}
               </div>
 
-              {/* ── Dimensions ───────────────────────────────────────────────── */}
-              <div className="border-t border-border pt-6">
+              {showWebTotals && (
+                <div className="card">
+                  <h3 className="font-display font-semibold text-navy mb-1">Web Totals</h3>
+                  <p className="text-xs text-mist mb-4">Structure yield and material cost per web unit</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+                    {can('filmDensity') && (
+                      <>
+                        <div
+                          className="rounded-xl border border-border bg-slate/40 px-4 py-3 min-w-0"
+                          title="Physical construction thickness (substrate µ + ink/adhesive dry gsm ÷ density)"
+                        >
+                          <p className="text-[11px] font-medium text-mist leading-tight">Construction</p>
+                          <p className="mt-1.5 font-mono text-lg font-semibold text-navy tabular-nums leading-none">
+                            {totalConstructionMicron != null && totalConstructionMicron > 0
+                              ? `${totalConstructionMicron.toFixed(2)} µ`
+                              : '—'}
+                          </p>
+                        </div>
+                        <div className="rounded-xl border border-border bg-slate/40 px-4 py-3 min-w-0">
+                          <p className="text-[11px] font-medium text-mist leading-tight">GSM</p>
+                          <p className="mt-1.5 font-mono text-lg font-semibold text-navy tabular-nums leading-none">
+                            {totalGsm.toFixed(2)}
+                          </p>
+                        </div>
+                        <div
+                          className="rounded-xl border border-border bg-slate/40 px-4 py-3 min-w-0"
+                          title="GSM ÷ construction µ"
+                        >
+                          <p className="text-[11px] font-medium text-mist leading-tight">Density</p>
+                          <p className="mt-1.5 font-mono text-lg font-semibold text-navy tabular-nums leading-none">
+                            {structureDensity} <span className="text-xs font-normal text-mist">g/cm³</span>
+                          </p>
+                        </div>
+                      </>
+                    )}
+                    {yieldSqmPerKg != null && yieldSqmPerKg > 0 && (
+                      <div
+                        className="rounded-xl border border-border bg-slate/40 px-4 py-3 min-w-0"
+                        title="Square metres of web per kilogram (1000 ÷ GSM)"
+                      >
+                        <p className="text-[11px] font-medium text-mist leading-tight">Yield</p>
+                        <p className="mt-1.5 font-mono text-lg font-semibold text-navy tabular-nums leading-none">
+                          {yieldSqmPerKg.toFixed(2)}{' '}
+                          <span className="text-xs font-normal text-mist">m²/kg</span>
+                        </p>
+                      </div>
+                    )}
+                    {can('rmCostPerKg') && rmTotals && (
+                      <>
+                        <div className="rounded-xl border border-border bg-slate/40 px-4 py-3 min-w-0">
+                          <p className="text-[11px] font-medium text-mist leading-tight">RM cost</p>
+                          <p className="mt-1.5 font-mono text-lg font-semibold text-navy tabular-nums leading-none">
+                            {estimate?.displayCurrency || 'USD'}{' '}
+                            {usdToDisplayPrecise(rmTotals.rmPerKg, fxRate).toFixed(2)}
+                            <span className="text-xs font-normal text-mist">/kg</span>
+                          </p>
+                        </div>
+                        {(can('costPerSqm') || can('rmCostPerKg')) && rmTotals.rmPerM2 > 0 && (
+                          <div className="rounded-xl border border-border bg-slate/40 px-4 py-3 min-w-0">
+                            <p className="text-[11px] font-medium text-mist leading-tight">RM cost</p>
+                            <p className="mt-1.5 font-mono text-lg font-semibold text-navy tabular-nums leading-none">
+                              {estimate?.displayCurrency || 'USD'}{' '}
+                              {usdToDisplayPrecise(rmTotals.rmPerM2, fxRate).toFixed(4)}
+                              <span className="text-xs font-normal text-mist">/m²</span>
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="card">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-display font-semibold text-navy">Dimensions</h3>
                   {/* Printing web class badge — read-only, auto-derived from ink layers */}
@@ -1934,82 +2140,9 @@ const EstimateEditor = () => {
                       <p className="text-xs text-mist">Printing web width <span className="cursor-help">ⓘ</span></p>
                       <p className="font-mono font-semibold text-gold">{printWebWidth} mm</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-mist">Total GSM</p>
-                      <p className="font-mono font-semibold">{totalGsm.toFixed(1)}</p>
-                    </div>
-                    {totalGsm > 0 && (
-                      <div>
-                        <p className="text-xs text-mist">m²/kg</p>
-                        <p className="font-mono font-semibold">{(1000 / totalGsm).toFixed(2)}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Pouch/Bag: show GSM + density summary */}
-                {(productFamily === 'pouch' || productFamily === 'bag') && totalGsm > 0 && (
-                  <div className="mt-4 p-3 bg-slate rounded-lg flex items-center gap-6 text-sm flex-wrap">
-                    <div>
-                      <p className="text-xs text-mist">Total GSM</p>
-                      <p className="font-mono font-semibold">{totalGsm.toFixed(1)}</p>
-                    </div>
-                    {totalGsm > 0 && (
-                      <div>
-                        <p className="text-xs text-mist">m²/kg</p>
-                        <p className="font-mono font-semibold">{(1000 / totalGsm).toFixed(2)}</p>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
-
-              {/* Stack profile — aligned with table, desktop only */}
-              <aside className="hidden lg:flex flex-col gap-4 lg:sticky lg:top-8 min-w-0">
-                <div className="card">
-                  <h3 className="font-display font-semibold text-navy mb-0.5">Layer build-up</h3>
-                  <p className="text-xs text-mist mb-3">Mass share by layer (GSM)</p>
-                  <LaminateVisualizer
-                    layers={visualizerLayers}
-                    width={260}
-                    height={stackProfileHeight}
-                    labelMode="composition"
-                    className="w-full max-w-[280px] mx-auto"
-                  />
-                </div>
-                {can('filmDensity') && (
-                  <div className="card">
-                    <h3 className="font-display font-semibold text-navy mb-3">Web properties</h3>
-                    <dl className="space-y-2.5 text-sm">
-                      <div className="flex justify-between gap-3">
-                        <dt
-                          className="text-mist cursor-help border-b border-dotted border-mist/50"
-                          title="Total GSM ÷ total structure µ"
-                        >
-                          Density
-                        </dt>
-                        <dd className="font-mono font-semibold text-navy tabular-nums">
-                          {structureDensity} g/cm³
-                        </dd>
-                      </div>
-                      <div className="flex justify-between gap-3">
-                        <dt className="text-mist">Total GSM</dt>
-                        <dd className="font-mono font-semibold text-navy tabular-nums">
-                          {totalGsm.toFixed(2)}
-                        </dd>
-                      </div>
-                      <div className="flex justify-between gap-3">
-                        <dt className="text-mist">Structure µ</dt>
-                        <dd className="font-mono font-semibold text-navy tabular-nums">
-                          {totalConstructionMicron != null && totalConstructionMicron > 0
-                            ? totalConstructionMicron.toFixed(2)
-                            : '—'}
-                        </dd>
-                      </div>
-                    </dl>
-                  </div>
-                )}
-              </aside>
             </div>
           )}
 
@@ -2055,9 +2188,9 @@ const EstimateEditor = () => {
           )}
         </div>
 
-        {/* Right panel — pricing & breakdown */}
-        <div className="lg:w-72 lg:flex-shrink-0 mt-8 lg:mt-0">
-          <div className="lg:sticky lg:top-8 space-y-6">
+        {/* Pricing & actions — full width below editor (not sidebar) */}
+        <div className="mt-8 pt-8 border-t border-border">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="card bg-gold/5 border-gold/20">
               <h3 className="font-display font-semibold text-navy mb-2">Selling Price</h3>
               <div className="text-3xl font-display font-bold text-gold-accessible mb-2">{estimate?.displayCurrency || 'USD'} {displaySalePrice.toFixed(2)} /kg</div>
@@ -2065,7 +2198,7 @@ const EstimateEditor = () => {
             </div>
 
             {can('costBreakdown') && (
-              <div className="card">
+              <div className="card lg:col-span-1">
                 <h3 className="font-display font-semibold text-navy mb-4">Cost Breakdown</h3>
                 {(() => {
                   // Use engine result when available (accurate); fall back to saved estimate fields
@@ -2161,7 +2294,7 @@ const EstimateEditor = () => {
               </div>
             )}
 
-            <div className="space-y-2">
+            <div className="card space-y-2">
               <button onClick={handleSave} disabled={saving} className="btn-primary w-full">
                 {saving ? 'Saving...' : 'Save'}
               </button>
@@ -2173,7 +2306,9 @@ const EstimateEditor = () => {
               </button>
               <button onClick={handleRequote} className="text-sm text-mist hover:text-ink w-full text-center py-2">Duplicate for re-quote</button>
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             <div className="card">
               <h4 className="font-display font-semibold text-navy mb-2">Send to customer</h4>
               <p className="text-xs text-mist mb-3">
@@ -2335,7 +2470,9 @@ const EstimateEditor = () => {
         title="Add layer"
       >
         <div className="space-y-2">
-          {(['substrate', 'ink', 'adhesive'] as const).map((type) => (
+          {(['substrate', 'ink', 'adhesive'] as const)
+            .filter((type) => !structureLocked || type === 'ink')
+            .map((type) => (
             <button
               key={type}
               type="button"

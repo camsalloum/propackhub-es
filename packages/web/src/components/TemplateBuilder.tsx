@@ -204,7 +204,7 @@ function MaterialSelect({
 
   return (
     <select
-      className="input flex-1 min-w-[12rem] text-sm"
+      className="input w-full min-w-0 text-sm"
       value={value || ''}
       onChange={(e) => onChange(e.target.value || null)}
     >
@@ -593,296 +593,293 @@ export function TemplateBuilder({
   const substrateCount = layers.filter((l) => l.layer_type === 'substrate').length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-black/40"
-        aria-label="Close"
-        onClick={onClose}
-      />
-      <div className="relative bg-white w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto rounded-t-xl sm:rounded-xl shadow-xl p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 text-sm font-medium text-mist hover:text-navy"
-            onClick={onClose}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to templates
-          </button>
-          <button
-            type="button"
-            className="p-2 rounded-lg text-mist hover:text-navy hover:bg-slate"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <h2 className="text-lg font-display font-bold text-navy mb-4">
+    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+      <header className="shrink-0 flex items-center justify-between gap-3 border-b border-border px-6 py-4">
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 text-sm font-medium text-mist hover:text-navy"
+          onClick={onClose}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to templates
+        </button>
+        <h2 className="text-lg font-display font-bold text-navy">
           {mode === 'create' ? 'New template' : 'Edit template'}
         </h2>
+        <button
+          type="button"
+          className="p-2 rounded-lg text-mist hover:text-navy hover:bg-slate"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </header>
 
-        <div className="space-y-3">
-          {/* Row 1: Name (full width) */}
-          <div>
-            <label className="block text-xs font-medium text-navy mb-1">Name</label>
-            <input
-              className="input w-full text-sm"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. PE Plain Mono"
-            />
-          </div>
-
-          {/* Row 2: Product type + Material class */}
-          <div className="grid grid-cols-2 gap-2">
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 lg:px-10 py-6">
+        <div className="w-full max-w-[1600px] mx-auto space-y-6">
+          {/* ── Template metadata ── */}
+          <section className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-navy mb-1">Product type</label>
-              <select
-                className="input w-full text-sm"
-                value={productFamily}
-                onChange={(e) => {
-                  const fam = e.target.value;
-                  setProductFamily(fam);
-                  const subs = productSubtypeOptions.filter((s) => s.parent === fam);
-                  const staticSubs = subtypesForFamily(fam);
-                  const firstSub = subs[0]?.code ?? staticSubs[0]?.key ?? null;
-                  setProductSubtype(firstSub);
-                  if (mode === 'create') {
-                    setProcesses(deriveDefaultProcesses(structureTier, printMode, fam, materialClass, processOptions));
-                  }
-                }}
-              >
-                {productTypeOptions.map((pt) => (
-                  <option key={pt.value} value={pt.value}>{pt.label}</option>
-                ))}
-              </select>
+              <label className="block text-xs font-medium text-navy mb-1">Name</label>
+              <input
+                className="input w-full max-w-xl text-sm"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. PE Plain Mono"
+              />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-navy mb-1">Material class</label>
-              <select
-                className="input w-full text-sm"
-                value={materialClass}
-                onChange={(e) => handleMaterialClassChange(e.target.value as 'PE' | 'Non PE')}
-              >
-                <option value="PE">PE</option>
-                <option value="Non PE">Non PE</option>
-              </select>
-            </div>
-          </div>
 
-          {/* Row 3: Subtype (when Pouch/Bag) + Structure tier — or just tier if no subtype */}
-          <div className="grid grid-cols-2 gap-2">
-            {availableSubtypes.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className="block text-xs font-medium text-navy mb-1">
-                  {productFamily === 'bag' ? 'Bag type' : 'Pouch type'}
-                </label>
+                <label className="block text-xs font-medium text-navy mb-1">Product type</label>
                 <select
                   className="input w-full text-sm"
-                  value={productSubtype ?? ''}
-                  onChange={(e) => setProductSubtype(e.target.value || null)}
-                >
-                  <option value="">— Select —</option>
-                  {(() => {
-                    const groups = new Map<string, typeof availableSubtypes>();
-                    for (const s of availableSubtypes) {
-                      const g = s.group ?? '';
-                      if (!groups.has(g)) groups.set(g, []);
-                      groups.get(g)!.push(s);
+                  value={productFamily}
+                  onChange={(e) => {
+                    const fam = e.target.value;
+                    setProductFamily(fam);
+                    const subs = productSubtypeOptions.filter((s) => s.parent === fam);
+                    const staticSubs = subtypesForFamily(fam);
+                    const firstSub = subs[0]?.code ?? staticSubs[0]?.key ?? null;
+                    setProductSubtype(firstSub);
+                    if (mode === 'create') {
+                      setProcesses(deriveDefaultProcesses(structureTier, printMode, fam, materialClass, processOptions));
                     }
-                    return Array.from(groups.entries()).map(([group, items]) =>
-                      group ? (
-                        <optgroup key={group} label={group}>
-                          {items.map((s) => <option key={s.code} value={s.code}>{s.label}</option>)}
-                        </optgroup>
-                      ) : items.map((s) => <option key={s.code} value={s.code}>{s.label}</option>)
-                    );
-                  })()}
-                </select>
-              </div>
-            ) : (
-              // Roll/Sleeve: no subtype — structure tier takes col 1
-              <div>
-                <label className="block text-xs font-medium text-navy mb-1">Structure tier</label>
-                <select
-                  className="input w-full text-sm"
-                  value={structureTier}
-                  onChange={(e) => handleTierChange(e.target.value as StructureTier)}
+                  }}
                 >
-                  {STRUCTURE_TIERS.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
+                  {productTypeOptions.map((pt) => (
+                    <option key={pt.value} value={pt.value}>{pt.label}</option>
                   ))}
                 </select>
               </div>
-            )}
-            {availableSubtypes.length > 0 ? (
-              // Pouch/Bag: structure tier goes in col 2
               <div>
-                <label className="block text-xs font-medium text-navy mb-1">Structure tier</label>
+                <label className="block text-xs font-medium text-navy mb-1">Material class</label>
                 <select
                   className="input w-full text-sm"
-                  value={structureTier}
-                  onChange={(e) => handleTierChange(e.target.value as StructureTier)}
+                  value={materialClass}
+                  onChange={(e) => handleMaterialClassChange(e.target.value as 'PE' | 'Non PE')}
                 >
-                  {STRUCTURE_TIERS.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
+                  <option value="PE">PE</option>
+                  <option value="Non PE">Non PE</option>
                 </select>
               </div>
-            ) : (
-              // Roll/Sleeve: print mode in col 2
-              <div>
-                <label className="block text-xs font-medium text-navy mb-1">Print mode</label>
-                <select
-                  className="input w-full text-sm"
-                  value={printMode}
-                  onChange={(e) => handlePrintModeChange(e.target.value as PrintMode)}
-                >
-                  <option value="Plain">Plain</option>
-                  <option value="Printed">Printed</option>
-                </select>
-              </div>
-            )}
-          </div>
-
-          {/* Row 4: Print mode (only for Pouch/Bag where row 3 is subtype+tier) */}
-          {availableSubtypes.length > 0 && (
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs font-medium text-navy mb-1">Print mode</label>
-                <select
-                  className="input w-full text-sm"
-                  value={printMode}
-                  onChange={(e) => handlePrintModeChange(e.target.value as PrintMode)}
-                >
-                  <option value="Plain">Plain</option>
-                  <option value="Printed">Printed</option>
-                </select>
-              </div>
-              <div /> {/* spacer */}
+              {availableSubtypes.length > 0 ? (
+                <div>
+                  <label className="block text-xs font-medium text-navy mb-1">
+                    {productFamily === 'bag' ? 'Bag type' : 'Pouch type'}
+                  </label>
+                  <select
+                    className="input w-full text-sm"
+                    value={productSubtype ?? ''}
+                    onChange={(e) => setProductSubtype(e.target.value || null)}
+                  >
+                    <option value="">— Select —</option>
+                    {(() => {
+                      const groups = new Map<string, typeof availableSubtypes>();
+                      for (const s of availableSubtypes) {
+                        const g = s.group ?? '';
+                        if (!groups.has(g)) groups.set(g, []);
+                        groups.get(g)!.push(s);
+                      }
+                      return Array.from(groups.entries()).map(([group, items]) =>
+                        group ? (
+                          <optgroup key={group} label={group}>
+                            {items.map((s) => <option key={s.code} value={s.code}>{s.label}</option>)}
+                          </optgroup>
+                        ) : items.map((s) => <option key={s.code} value={s.code}>{s.label}</option>)
+                      );
+                    })()}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-medium text-navy mb-1">Structure tier</label>
+                  <select
+                    className="input w-full text-sm"
+                    value={structureTier}
+                    onChange={(e) => handleTierChange(e.target.value as StructureTier)}
+                  >
+                    {STRUCTURE_TIERS.map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {availableSubtypes.length > 0 ? (
+                <div>
+                  <label className="block text-xs font-medium text-navy mb-1">Structure tier</label>
+                  <select
+                    className="input w-full text-sm"
+                    value={structureTier}
+                    onChange={(e) => handleTierChange(e.target.value as StructureTier)}
+                  >
+                    {STRUCTURE_TIERS.map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-medium text-navy mb-1">Print mode</label>
+                  <select
+                    className="input w-full text-sm"
+                    value={printMode}
+                    onChange={(e) => handlePrintModeChange(e.target.value as PrintMode)}
+                  >
+                    <option value="Plain">Plain</option>
+                    <option value="Printed">Printed</option>
+                  </select>
+                </div>
+              )}
+              {availableSubtypes.length > 0 && (
+                <div>
+                  <label className="block text-xs font-medium text-navy mb-1">Print mode</label>
+                  <select
+                    className="input w-full text-sm"
+                    value={printMode}
+                    onChange={(e) => handlePrintModeChange(e.target.value as PrintMode)}
+                  >
+                    <option value="Plain">Plain</option>
+                    <option value="Printed">Printed</option>
+                  </select>
+                </div>
+              )}
             </div>
-          )}
+          </section>
 
-          {/* Classification + compact visualizer */}
           {layers.length > 0 && (
-            <div className="rounded-lg border border-border bg-slate/30 px-3 py-2 flex items-center gap-3">
+            <section className="rounded-xl border border-border bg-slate/30 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex-1 min-w-0">
                 <LaminateVisualizer
                   layers={vizLayers}
-                  width={240}
-                  height={28}
+                  width={480}
+                  height={40}
                   orientation="horizontal"
                   labelMode="number"
-                  className="w-full h-7"
+                  className="w-full h-10"
                 />
               </div>
-              <div className="shrink-0 text-right">
-                <p className="text-xs font-semibold text-navy leading-snug">{classTag}</p>
-                <p className="text-xs text-mist">
-                  {layerCount}L · {substrateCount}S
+              <div className="shrink-0 sm:text-right sm:pl-4 sm:border-l sm:border-border">
+                <p className="text-sm font-semibold text-navy leading-snug">{classTag}</p>
+                <p className="text-xs text-mist mt-0.5">
+                  {layerCount} layers · {substrateCount} substrates
                 </p>
               </div>
-            </div>
+            </section>
           )}
 
-          {/* Layer stack */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-semibold text-navy uppercase tracking-wide">Layers</label>
-              <div className="flex gap-2">
+          <section className="rounded-xl border border-border overflow-hidden bg-white">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-border bg-slate/40">
+              <h3 className="text-sm font-semibold text-navy uppercase tracking-wide">Layers</h3>
+              <div className="flex flex-wrap gap-2">
                 {layers.filter((l) => l.layer_type === 'substrate').length < TIER_SUBSTRATE_COUNT[structureTier] && (
-                  <button type="button" className="text-xs text-gold font-medium" onClick={() => addLayer('substrate')}>
-                    + Sub
+                  <button type="button" className="btn-secondary text-xs py-1.5 px-3" onClick={() => addLayer('substrate')}>
+                    + Substrate
                   </button>
                 )}
                 {printMode === 'Printed' && (
-                  <button type="button" className="text-xs text-gold font-medium" onClick={() => addLayer('ink')}>
-                    + Ink
+                  <button type="button" className="btn-secondary text-xs py-1.5 px-3" onClick={() => addLayer('ink')}>
+                    + Ink & coating
                   </button>
                 )}
                 {structureTier !== 'Mono' &&
                   layers.filter((l) => l.layer_type === 'adhesive').length < TIER_SUBSTRATE_COUNT[structureTier] - 1 && (
-                  <button type="button" className="text-xs text-gold font-medium" onClick={() => addLayer('adhesive')}>
-                    + Adh
+                  <button type="button" className="btn-secondary text-xs py-1.5 px-3" onClick={() => addLayer('adhesive')}>
+                    + Adhesive
                   </button>
                 )}
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              {layers.map((layer, i) => (
-                <div key={layer.clientId} className="flex gap-1.5 items-center">
-                  {/* Position badge */}
-                  <span className="w-5 h-5 shrink-0 rounded text-white text-xs font-semibold flex items-center justify-center bg-navy">
-                    {i + 1}
-                  </span>
+            {layers.length === 0 ? (
+              <p className="text-sm text-mist px-4 py-8 text-center">No layers yet — add a substrate to start.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm table-fixed min-w-[640px]">
+                  <colgroup>
+                    <col style={{ width: '3.5rem' }} />
+                    <col style={{ width: '11rem' }} />
+                    <col />
+                    <col style={{ width: '7.5rem' }} />
+                  </colgroup>
+                  <thead>
+                    <tr className="border-b border-border text-xs font-medium text-mist">
+                      <th className="py-2.5 px-2 text-center">#</th>
+                      <th className="py-2.5 px-3 text-left">Type</th>
+                      <th className="py-2.5 px-3 text-left">Material / grade</th>
+                      <th className="py-2.5 px-2 text-center">Order</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {layers.map((layer, i) => (
+                      <tr key={layer.clientId} className="border-b border-border last:border-0 hover:bg-slate/30">
+                        <td className="py-2.5 px-2 text-center">
+                          <span className="inline-flex w-7 h-7 rounded-md text-white text-xs font-semibold items-center justify-center bg-navy">
+                            {i + 1}
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 align-middle">
+                          <select
+                            className="input w-full text-sm"
+                            value={layer.layer_type}
+                            onChange={(e) => updateLayerType(i, e.target.value as BuilderLayer['layer_type'])}
+                          >
+                            <option value="substrate">Substrate</option>
+                            <option value="ink" disabled={printMode === 'Plain'}>
+                              {printMode === 'Plain' ? 'Ink (plain only)' : 'Ink & coating'}
+                            </option>
+                            <option value="adhesive" disabled={structureTier === 'Mono'}>
+                              {structureTier === 'Mono' ? 'Adhesive (n/a)' : 'Adhesive'}
+                            </option>
+                          </select>
+                        </td>
+                        <td className="py-2 px-3 align-middle min-w-0">
+                          <MaterialSelect
+                            value={layer.materialId}
+                            layerType={layer.layer_type}
+                            materials={materials}
+                            materialClass={materialClass}
+                            structureType={structureType}
+                            productType={engineProductType}
+                            onChange={(id) => updateLayerMaterial(i, id)}
+                          />
+                        </td>
+                        <td className="py-2 px-2 align-middle">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              disabled={i === 0}
+                              onClick={() => moveLayer(i, -1)}
+                              className="p-1.5 rounded-md text-mist hover:text-navy hover:bg-slate disabled:opacity-25"
+                              aria-label="Move up"
+                            >▲</button>
+                            <button
+                              type="button"
+                              disabled={i === layers.length - 1}
+                              onClick={() => moveLayer(i, 1)}
+                              className="p-1.5 rounded-md text-mist hover:text-navy hover:bg-slate disabled:opacity-25"
+                              aria-label="Move down"
+                            >▼</button>
+                            <button
+                              type="button"
+                              className="p-1.5 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50"
+                              onClick={() => removeLayer(i)}
+                              aria-label="Remove layer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
 
-                  {/* Layer type */}
-                  <select
-                    className="input text-xs py-1 w-28 shrink-0"
-                    value={layer.layer_type}
-                    onChange={(e) => updateLayerType(i, e.target.value as BuilderLayer['layer_type'])}
-                  >
-                    <option value="substrate">Substrate</option>
-                    <option value="ink" disabled={printMode === 'Plain'}>
-                      {printMode === 'Plain' ? 'Ink (Plain)' : 'Ink & Coating'}
-                    </option>
-                    <option value="adhesive" disabled={structureTier === 'Mono'}>
-                      {structureTier === 'Mono' ? 'Adhesive (Mono)' : 'Adhesive'}
-                    </option>
-                  </select>
-
-                  {/* Material picker */}
-                  <MaterialSelect
-                    value={layer.materialId}
-                    layerType={layer.layer_type}
-                    materials={materials}
-                    materialClass={materialClass}
-                    structureType={structureType}
-                    productType={engineProductType}
-                    onChange={(id) => updateLayerMaterial(i, id)}
-                  />
-
-                  {/* Reorder + remove — compact icon group */}
-                  <div className="flex shrink-0 gap-0.5">
-                    <button
-                      type="button"
-                      disabled={i === 0}
-                      onClick={() => moveLayer(i, -1)}
-                      className="text-mist hover:text-navy disabled:opacity-20 px-1 text-xs leading-none"
-                      aria-label="Move up"
-                    >▲</button>
-                    <button
-                      type="button"
-                      disabled={i === layers.length - 1}
-                      onClick={() => moveLayer(i, 1)}
-                      className="text-mist hover:text-navy disabled:opacity-20 px-1 text-xs leading-none"
-                      aria-label="Move down"
-                    >▼</button>
-                    <button
-                      type="button"
-                      className="text-red-400 hover:text-red-600 px-1"
-                      onClick={() => removeLayer(i)}
-                      aria-label="Remove layer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              {layers.length === 0 && (
-                <p className="text-xs text-mist py-1">No layers yet.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Processes */}
-          <div>
+          <section>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-navy">Processes</label>
               {/* Toggle for advanced / full list */}
@@ -928,7 +925,7 @@ export function TemplateBuilder({
                     Complex structure ({layers.length} layers) — verify all processes apply.
                   </p>
                 )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-3">
                   {processOptions.map((opt) => (
                     <label
                       key={opt.code}
@@ -950,24 +947,23 @@ export function TemplateBuilder({
                 </div>
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Footer actions */}
-        <div className="flex gap-2 mt-4 pt-3 border-t border-border">
-          <button type="button" className="btn-secondary flex-1 text-sm" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="btn-primary flex-1 text-sm"
-            disabled={saving || !name.trim()}
-            onClick={handleSave}
-          >
-            {saving ? 'Saving…' : mode === 'create' ? 'Create template' : 'Save changes'}
-          </button>
+          </section>
         </div>
       </div>
+
+      <footer className="shrink-0 flex items-center justify-end gap-3 px-6 lg:px-10 py-4 border-t border-border bg-white">
+        <button type="button" className="btn-secondary text-sm px-6" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn-primary text-sm px-8"
+          disabled={saving || !name.trim()}
+          onClick={handleSave}
+        >
+          {saving ? 'Saving…' : mode === 'create' ? 'Create template' : 'Save changes'}
+        </button>
+      </footer>
     </div>
   );
 }

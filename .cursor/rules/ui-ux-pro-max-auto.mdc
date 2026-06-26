@@ -1,0 +1,18 @@
+---
+description: >-
+  Auto-invoke UI UX Pro Max for interface work — build, design, create,
+  implement, review, fix, or improve UI, UX, landing pages, dashboards,
+  forms, layouts, components, styling, accessibility, or visual polish.
+globs: "**/*.{tsx,jsx,vue,css,scss,less,html}"
+alwaysApply: false
+---
+
+# UI UX Pro Max (auto)
+
+When the user request involves UI or UX (including keywords: build, design, create, implement, review, fix, improve, layout, component, page, screen, modal, form, dashboard, landing, styling, accessibility):
+
+1. Read and follow `.cursor/skills/ui-ux-pro-max/SKILL.md` before writing or editing UI code.
+2. Run the skill's design-system / search scripts when instructed.
+3. Apply the generated design system, pre-delivery checklist, and stack-specific rules from the skill.
+
+Do not skip the skill for "quick" UI changes.

@@ -60,3 +60,7 @@ logs/
 
 # Stored proposal PDFs
 packages/server/uploads/
+
+# UI UX Pro Max auto-update markers (local only)
+scripts/.ui-ux-pro-max-last-update
+scripts/.ui-ux-pro-max-cli-last-update

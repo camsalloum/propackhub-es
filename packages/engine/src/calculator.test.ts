@@ -804,6 +804,58 @@ describe('Engine calculator — golden tests', () => {
     );
   });
 
+  it('UV ink stack has zero ink makeup and cleaning solvent', () => {
+    const materials = new Map(LARAVEL_REFERENCE_MATERIALS);
+    const uvInk = materials.get('ink-uv');
+    if (!uvInk) {
+      materials.set('ink-uv', {
+        id: 'ink-uv',
+        name: 'Ink UV',
+        type: 'ink',
+        solidPercent: 100,
+        density: 1,
+        costPerKgUsd: 8,
+        wastePercent: 3,
+        isSolventBased: false,
+      });
+    }
+    const estimate: Estimate = {
+      id: 'test-uv-ink',
+      tenantId: 'tenant-1',
+      jobName: 'UV only',
+      status: 'draft',
+      layers: [
+        { id: 'layer-pet', materialId: 'pet-transparent', micron: 12, position: 0 },
+        { id: 'layer-ink', materialId: 'ink-uv', micron: 2, position: 1 },
+      ],
+      slabs: [],
+      markupPercent: 15,
+      platesPerKg: 0,
+      deliveryPerKg: 0,
+      orderQuantityKg: 2000,
+      displayCurrencyCode: 'USD',
+      exchangeRateUsdToDisplay: 1,
+      dimensions: {
+        productType: 'roll',
+        reelWidthMm: 800,
+        cutoffMm: 600,
+        piecesPerCut: 1,
+        numberOfUps: 1,
+        extraPrintingTrimMm: 0,
+        printingWebClass: 'narrow_web',
+      },
+      processes: [],
+      solventCostPerKgUsd: 1.54,
+      cleaningSolventKgPerJob: 20,
+    };
+
+    const result = calculateEstimate(estimate, materials);
+    expect(result.estimate.inkMakeupSolventCostPerKg ?? 0).toBe(0);
+    expect(result.estimate.cleaningSolventCostPerKg ?? 0).toBe(0);
+    expect(result.estimate.solventMixCostPerKg ?? 0).toBe(0);
+    expect((result.estimate.layers[1]?.costPerM2 ?? 0)).toBeGreaterThan(0);
+  });
+
   it('throws when layer material is missing from map', () => {
     const materials = new Map<string, Material>([
       ['mat-1', {

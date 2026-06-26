@@ -6,6 +6,11 @@ import BottomSheet from '../components/BottomSheet';
 import FilmStackVisualizer from '../components/FilmStackVisualizer';
 import StructureGradeSelect from '../components/StructureGradeSelect';
 import { JobHeaderFields } from '../components/JobHeaderFields';
+import { BagConfigurator } from '../components/BagConfigurator';
+import {
+  bagDefaultsPatchForSubtype,
+  configuratorTypeForBagSubtype,
+} from '../lib/bagConfiguratorCatalog';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { usdToDisplay, usdToDisplayPrecise, displayToUsd } from '../lib/currency';
@@ -21,7 +26,7 @@ import {
 import { setWorkingEstimateForTemplate } from '../lib/estimateSession';
 import { estimateStatusLabel } from '../lib/estimateStatus';
 import { groupMaterialsForPicker, type CategoryNode } from '../lib/materialTaxonomy';
-import { derivePrintingWebClass, stackNeedsSolventMix, stackHasSbInk, defaultInkPrintingProcess, inkSolventRatioForProcess, materialAllowedForTemplateLayer, DEFAULT_CLEANING_SOLVENT_KG_PER_JOB, type LaminationRecipe, type InkPrintingProcess } from '@es/engine';
+import { stackNeedsSolventMix, stackHasSbInk, defaultInkPrintingProcess, inkSolventRatioForProcess, materialAllowedForTemplateLayer, DEFAULT_CLEANING_SOLVENT_KG_PER_JOB, type LaminationRecipe, type InkPrintingProcess } from '@es/engine';
 import LaminationFormulaModal from '../components/LaminationFormulaModal';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
 import {
@@ -36,7 +41,7 @@ import {
   resolveSolventCostPerKgUsd,
 } from '../lib/solvent';
 import {
-  dimensionFieldsFor,
+  dimensionFieldsForEstimation,
   subtypesForFamily,
   defaultSubtypeForFamily,
   engineTypeForFamily,
@@ -75,6 +80,13 @@ const DEFAULT_UNIT_OPTIONS = DEFAULT_MASTER_REFERENCE.unitOptions;
 const LAYER_TYPE_LABELS: Record<string, string> = {
   substrate: 'Substrate',
   ink: 'Ink & Coating',
+  adhesive: 'Adhesive',
+};
+
+/** Short labels for the fixed-width structure table Type column */
+const LAYER_TYPE_TABLE_LABELS: Record<string, string> = {
+  substrate: 'Substrate',
+  ink: 'Ink',
   adhesive: 'Adhesive',
 };
 
@@ -218,11 +230,6 @@ const EstimateEditor = () => {
     [layers]
   );
 
-  const derivedPrintingWebClass = useMemo(
-    () => derivePrintingWebClass(layerMaterialRefs, engineMaterials),
-    [layerMaterialRefs, engineMaterials]
-  );
-
   const needsSolventMix = useMemo(
     () => stackNeedsSolventMix(layerMaterialRefs, engineMaterials),
     [layerMaterialRefs, engineMaterials]
@@ -329,6 +336,28 @@ const EstimateEditor = () => {
     setAddLayerSheetOpen(false);
   };
 
+  const insertInkLayerAfter = (afterIndex: number) => {
+    const defaultMat = materials.find((m) => m.type === 'ink');
+    const micron = 2;
+    const newLayer: LayerItem = {
+      id: crypto.randomUUID(),
+      materialId: defaultMat?.id || '',
+      materialName: defaultMat?.name || 'Select material',
+      materialType: 'ink',
+      micron,
+      gsm: micron,
+      costPerKgUsd: defaultMat ? parseFloat(defaultMat.costPerKgUsd) : 0,
+      isSolventBased: defaultMat?.isSolventBased || false,
+      position: afterIndex + 1,
+      hoover: defaultMat?.hoover ?? null,
+    };
+    setLayers((prev) => {
+      const copy = [...prev];
+      copy.splice(afterIndex + 1, 0, newLayer);
+      return copy.map((l, i) => ({ ...l, position: i }));
+    });
+  };
+
   const openLayerEdit = (layerId: string) => {
     setEditingLayerId(layerId);
     setLayerSheetOpen(true);
@@ -340,7 +369,9 @@ const EstimateEditor = () => {
   // `productType` state holds the Master-Data product-type CODE (family): roll/sleeve/pouch/bag/custom.
   // The engine costing type is derived (bag → pouch). Subtypes link to a family by `parent`.
   const productFamily: ProductFamily = productType;
-  const subtypeDimensionFields = dimensionFieldsFor(productFamily, productSubtype);
+  const estimationDimensionFields = dimensionFieldsForEstimation(productFamily, productSubtype);
+  const bagConfiguratorType = configuratorTypeForBagSubtype(productSubtype);
+  const bagConfiguratorActive = productFamily === 'bag' && bagConfiguratorType != null;
 
   // Subtype list — driven by Master Data (productSubtypeOptions), not the static catalog.
   // Fall back to static catalog only when Master Data hasn't loaded yet.
@@ -359,6 +390,31 @@ const EstimateEditor = () => {
     setProductType((prev) => normalizeProductType(prev, productTypeOptions));
     setOrderQuantityUnit((prev) => normalizeUnitValue(prev, unitOptions));
   }, [productTypeOptions, unitOptions]);
+
+  // Seed bag schematic defaults when subtype selects a configurator-backed bag type.
+  useEffect(() => {
+    if (!bagConfiguratorActive || !bagConfiguratorType) return;
+    setDimensions((prev) => {
+      const patch = bagDefaultsPatchForSubtype(bagConfiguratorType, prev);
+      let changed = false;
+      const next = { ...prev };
+      for (const [key, value] of Object.entries(patch)) {
+        const prevVal = next[key];
+        const bodyKey = key === 'openWidthMm' || key === 'openHeightMm';
+        const shouldReplace =
+          prevVal == null ||
+          !Number.isFinite(prevVal) ||
+          (bodyKey && prevVal <= 0) ||
+          ((key === 'bottomGussetMm' || key === 'sideGussetMm') &&
+            (prevVal == null || (prevVal > 0 && prevVal < 5)));
+        if (shouldReplace || (key.startsWith('bag') && prevVal == null)) {
+          next[key] = value;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [bagConfiguratorActive, bagConfiguratorType, productSubtype]);
 
   // Load materials + customers on mount
   const loadBaseData = useCallback(async () => {
@@ -453,7 +509,9 @@ const EstimateEditor = () => {
       materialName: mat?.name || 'Select material',
       materialType: mat?.type || type,
       micron,
-      gsm: micron * (mat?.density ? parseFloat(mat.density) : 0.9),
+      gsm: (mat?.type || type) === 'substrate'
+        ? micron * (mat?.density ? parseFloat(mat.density) : 0.9)
+        : micron,
       costPerKgUsd: mat ? parseFloat(mat.costPerKgUsd) : 0,
       isSolventBased: mat?.isSolventBased || false,
       position,
@@ -594,13 +652,14 @@ const EstimateEditor = () => {
         } as DimensionState & { templateClassification?: unknown; configureFromTemplate?: boolean });
       } else if (data.dimensions) {
         setDimensions({
-          reelWidthMm: data.dimensions.reelWidthMm || 800,
-          cutoffMm: data.dimensions.cutoffMm || 600,
-          numberOfUps: data.dimensions.numberOfUps || 1,
-          extraPrintingTrimMm: data.dimensions.extraPrintingTrimMm || 0,
-          piecesPerCut: data.dimensions.piecesPerCut || 1,
-          openWidthMm: data.dimensions.openWidthMm || 200,
-          openHeightMm: data.dimensions.openHeightMm || 250,
+          reelWidthMm: 800,
+          cutoffMm: 600,
+          numberOfUps: 1,
+          extraPrintingTrimMm: 0,
+          piecesPerCut: 1,
+          openWidthMm: 200,
+          openHeightMm: 250,
+          ...(data.dimensions as Partial<DimensionState>),
         });
       }
       if (
@@ -1103,15 +1162,77 @@ const EstimateEditor = () => {
   // ── Component-scope derived flags ────────────────────────────────────────
   // structureLocked: estimate from a standard template — substrate/adhesive stack is fixed.
   // Ink & coating (e.g. varnish) may still be added, removed, reordered, and graded per job.
-  const structureLocked = Boolean(estimate?.sourceTemplateKey);
+  const structureLocked = Boolean(estimate?.sourceTemplateKey?.trim());
+  /** Template quotes: add/remove/reorder — ink only */
   const canEditLayerStructure = (layer: { materialType: string }) =>
     !structureLocked || layer.materialType === 'ink';
   const showStructureCosts = can('materialCostPerKg');
-  const structureColCount = 6 + (showStructureCosts ? 2 : 0) + 1;
+  const showInkControlsCol = structureLocked;
+  const showLayerActionsCol = !structureLocked;
+  const showLayerControlsCol = showLayerActionsCol || showInkControlsCol;
+  const structureColCount = 6 + (showStructureCosts ? 2 : 0) + (showLayerControlsCol ? 1 : 0);
   const substrateLayerCount = layers.filter((l) => l.materialType === 'substrate').length;
   const adhesiveLayerCount = layers.filter((l) => l.materialType === 'adhesive').length;
   const maxSubstrates = 4;
   const maxAdhesives = 3;
+
+  const renderInkControlsCell = (idx: number, layer: { id: string; materialType: string }) => {
+    const btnClass =
+      'p-0 h-2.5 w-2.5 flex items-center justify-center text-[9px] leading-none';
+    const stackClass =
+      'flex flex-col items-center gap-px text-mist select-none mx-auto';
+
+    if (layer.materialType === 'ink') {
+      return (
+        <div className={stackClass}>
+          <button
+            type="button"
+            className={`${btnClass} hover:text-gold`}
+            title="Add ink & coating below"
+            aria-label="Add ink & coating below"
+            onClick={() => insertInkLayerAfter(idx)}
+          >+</button>
+          <button
+            type="button"
+            disabled={idx === 0}
+            onClick={() => moveLayer(idx, -1, true)}
+            className={`${btnClass} hover:text-navy disabled:opacity-25`}
+            title="Move up"
+            aria-label="Move layer up"
+          >▲</button>
+          <button
+            type="button"
+            disabled={idx === layers.length - 1}
+            onClick={() => moveLayer(idx, 1, true)}
+            className={`${btnClass} hover:text-navy disabled:opacity-25`}
+            title="Move down"
+            aria-label="Move layer down"
+          >▼</button>
+          <button
+            type="button"
+            onClick={() => setLayers((prev) => prev.filter((l) => l.id !== layer.id))}
+            className={`${btnClass} hover:text-danger`}
+            title="Remove"
+            aria-label="Remove layer"
+          >✕</button>
+        </div>
+      );
+    }
+    if (idx === 0 && !layers.some((l) => l.materialType === 'ink')) {
+      return (
+        <div className={stackClass}>
+          <button
+            type="button"
+            className={`${btnClass} hover:text-gold`}
+            title="Add ink & coating"
+            aria-label="Add ink & coating"
+            onClick={() => insertInkLayerAfter(-1)}
+          >+</button>
+        </div>
+      );
+    }
+    return null;
+  };
 
   /** Round to at most `d` decimal places, stripping trailing zeros. */
   const fmt = (n: number, d = 4): string => {
@@ -1354,14 +1475,46 @@ const EstimateEditor = () => {
           onCustomerDraftChange={setCustomerDraftName}
           jobName={jobName}
           onJobNameChange={setJobName}
-          productType={productType}
-          onProductTypeChange={setProductType}
+          productType={productFamily}
+          onProductTypeChange={(next) => {
+            setProductType(next);
+            setProductSubtype(defaultSubtypeForFamily(next as ProductFamily));
+          }}
           productTypeOptions={productTypeOptions}
+          productTypeLocked={structureLocked}
+          productSubtype={productSubtype}
+          onProductSubtypeChange={(next) => {
+            setProductSubtype(next);
+            const nextBagType = configuratorTypeForBagSubtype(next);
+            if (productFamily === 'bag' && nextBagType) {
+              setDimensions((prev) => ({
+                ...prev,
+                ...bagDefaultsPatchForSubtype(nextBagType, prev),
+              }));
+            }
+          }}
+          subtypeLabel={`${PRODUCT_FAMILY_LABELS[productFamily] ?? productFamily} type`}
+          availableSubtypes={availableSubtypes}
+          dimensionFields={bagConfiguratorActive ? [] : estimationDimensionFields}
+          dimensions={dimensions}
+          onDimensionChange={(key, value) =>
+            setDimensions((prev) => ({ ...prev, [key]: value }))
+          }
           orderQuantity={orderQuantity}
           onOrderQuantityChange={setOrderQuantity}
           orderQuantityUnit={orderQuantityUnit}
           onOrderQuantityUnitChange={setOrderQuantityUnit}
           unitOptions={unitOptions}
+          bagDimensionsPanel={
+            bagConfiguratorActive ? (
+              <BagConfigurator
+                productSubtype={productSubtype}
+                dimensions={dimensions}
+                onDimensionsChange={(patch) => setDimensions((prev) => ({ ...prev, ...patch }))}
+                disabled={structureLocked}
+              />
+            ) : undefined
+          }
         />
       </div>
 
@@ -1387,7 +1540,11 @@ const EstimateEditor = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] border-b border-border bg-white">
                   <div className="px-5 py-3.5 lg:border-r border-border">
                     <h3 className="text-lg font-display font-semibold text-navy tracking-tight">{stackLabel}</h3>
-                    <p className="text-xs text-mist mt-0.5">Layers, grades &amp; RM costs</p>
+                    <p className="text-xs text-mist mt-0.5">
+                      {structureLocked
+                        ? 'Template quote — films & adhesives are fixed; edit grades, thickness (µ/gsm), costs, and ink & coating rows'
+                        : 'Layers, grades & RM costs'}
+                    </p>
                   </div>
                   <div className="px-5 py-3.5 hidden lg:block border-l border-border bg-slate/20">
                     <h3 className="text-lg font-display font-semibold text-navy tracking-tight">Layer build-up</h3>
@@ -1427,7 +1584,7 @@ const EstimateEditor = () => {
                       total={layers.length}
                       layer={{ ...layer, type: layer.materialType, material: layer.materialName, costPerKg: can('materialCostPerKg') ? layer.costPerKgUsd : undefined }}
                       showCost={can('materialCostPerKg')}
-                      onEdit={canEditLayerStructure(layer) ? () => openLayerEdit(layer.id) : undefined}
+                      onEdit={() => openLayerEdit(layer.id)}
                       showFormula={canConfigureSolvent && layer.materialType === 'adhesive' && layer.isSolventBased}
                       formulaOverridden={!!laminationRecipeOverrides[layer.id]}
                       onFormula={
@@ -1505,58 +1662,63 @@ const EstimateEditor = () => {
                 </div>
 
                 {/* Desktop structure table — single unified table */}
-                <div ref={structureTableRef} className="hidden md:block overflow-x-hidden p-4">
+                <div ref={structureTableRef} className="hidden md:block overflow-x-auto min-w-0 p-4">
                   <table className="w-full table-fixed text-sm">
                     <colgroup>
                       <col style={{ width: '4%' }} />
-                      <col style={{ width: showStructureCosts ? '7%' : '9%' }} />
-                      <col style={{ width: showStructureCosts ? '14%' : '15%' }} />
-                      <col style={{ width: showStructureCosts ? '22%' : '26%' }} />
+                      <col style={{ width: showStructureCosts ? '10%' : '11%' }} />
+                      <col style={{ width: showStructureCosts ? '14%' : '14%' }} />
+                      <col style={{ width: showStructureCosts ? '25%' : '26%' }} />
                       <col style={{ width: '10%' }} />
                       <col style={{ width: '7%' }} />
                       {showStructureCosts && <col style={{ width: '10%' }} />}
                       {showStructureCosts && <col style={{ width: '10%' }} />}
-                      <col style={{ width: '9%' }} />
+                      {showLayerControlsCol && (
+                        <col style={{ width: showInkControlsCol ? '4%' : '10%' }} />
+                      )}
                     </colgroup>
                     <thead>
                       <tr className="border-b border-border">
-                        <th className="text-center py-2.5 px-1 text-xs font-medium text-mist">#</th>
-                        <th className="text-center py-2.5 px-1 text-xs font-medium text-mist">Type</th>
-                        <th className="text-left py-2.5 px-2 text-xs font-medium text-mist">Family</th>
-                        <th className="text-left py-2.5 px-2 text-xs font-medium text-mist">Grade</th>
-                        <th className="text-center py-2.5 px-1 text-xs font-medium text-mist">
+                        <th className="text-center align-middle py-2.5 px-1 text-xs font-medium text-mist">#</th>
+                        <th className="text-center align-middle py-2.5 px-1 text-xs font-medium text-mist">Type</th>
+                        <th className="text-center align-middle py-2.5 px-2 text-xs font-medium text-mist">Family</th>
+                        <th className="text-center align-middle py-2.5 px-2 text-xs font-medium text-mist">Grade</th>
+                        <th className="text-center align-middle py-2.5 px-1 text-xs font-medium text-mist">
                           Value <span className="font-normal text-mist/80">µ/gsm</span>
                         </th>
-                        <th className="text-right py-2.5 px-2 text-xs font-medium text-mist">GSM</th>
+                        <th className="text-center align-middle py-2.5 px-2 text-xs font-medium text-mist">GSM</th>
                         {showStructureCosts && (
                           <>
-                            <th className="text-right py-2.5 px-2 text-[10px] font-medium text-mist leading-tight">
+                            <th className="text-center align-middle py-2.5 px-2 text-[10px] font-medium text-mist leading-tight">
                               $/kg
                             </th>
-                            <th className="text-right py-2.5 px-2 text-[10px] font-medium text-mist leading-tight">
+                            <th className="text-center align-middle py-2.5 px-2 text-[10px] font-medium text-mist leading-tight">
                               $/m²
                             </th>
                           </>
                         )}
-                        <th className="py-2.5 px-1" />
+                        {showLayerControlsCol && (
+                          <th className="text-center align-middle py-2.5 px-0.5 text-xs font-medium text-mist" aria-label="Row actions" />
+                        )}
                       </tr>
                     </thead>
                     <tbody>
                       {layers.map((layer, idx) => (
                         <tr key={layer.id} className="border-b border-border last:border-0 hover:bg-slate/50">
                           <td className="py-2.5 px-2 text-xs text-mist text-center">{idx + 1}</td>
-                          <td className="py-2.5 px-2 min-w-0">
-                            <span className={`text-xs px-2 py-1 rounded-md ${layer.materialType === 'substrate' ? 'bg-blue-100 text-blue-800' : layer.materialType === 'ink' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>{LAYER_TYPE_LABELS[layer.materialType] || layer.materialType}</span>
+                          <td className="py-2 px-1 min-w-0 align-middle text-center overflow-hidden">
+                            <span
+                              className={`inline-block max-w-full truncate text-xs px-1.5 py-0.5 rounded-md ${layer.materialType === 'substrate' ? 'bg-blue-100 text-blue-800' : layer.materialType === 'ink' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}
+                              title={LAYER_TYPE_LABELS[layer.materialType] || layer.materialType}
+                            >
+                              {LAYER_TYPE_TABLE_LABELS[layer.materialType] || layer.materialType}
+                            </span>
                           </td>
-                          <td className="py-2 px-2 min-w-0 text-left align-middle">
+                          <td className="py-2 px-2 min-w-0 text-left align-middle overflow-hidden">
                             {/* Family dropdown — filtered by template classification (PE → PE only, Non PE → no PE) */}
                             {(() => {
                               const currentMat = materials.find(m => m.id === layer.materialId);
                               const currentFamily = currentMat?.substrateFamily ?? null;
-
-                              if (structureLocked && layer.materialType !== 'ink') {
-                                return <span className="text-sm text-mist truncate">{currentFamily || '—'}</span>;
-                              }
 
                               if (layer.materialType !== 'substrate') {
                                 // Ink/adhesive: show family dropdown (Solvent Based, UV-LED, etc.)
@@ -1567,7 +1729,7 @@ const EstimateEditor = () => {
                                 )].sort();
 
                                 if (inkFamilies.length === 0) {
-                                  return <span className="text-sm text-mist">{currentFamily || '—'}</span>;
+                                  return <span className="text-sm text-mist truncate block" title={currentFamily ?? ''}>{currentFamily || '—'}</span>;
                                 }
 
                                 return (
@@ -1633,7 +1795,7 @@ const EstimateEditor = () => {
                               );
                             })()}
                           </td>
-                          <td className="py-2 px-2 min-w-0 text-left align-middle">
+                          <td className="py-2 px-2 min-w-0 text-left align-middle overflow-hidden">
                             {/* Grade dropdown — filtered by family + classification; title shows hoover on hover */}                            {(() => {
                               const currentMat = materials.find(m => m.id === layer.materialId);
                               const currentFamily = currentMat?.substrateFamily ?? null;
@@ -1648,14 +1810,6 @@ const EstimateEditor = () => {
                                 if (currentFamily && m.substrateFamily !== currentFamily) return false;
                                 return true;
                               });
-
-                              if (structureLocked && layer.materialType !== 'ink') {
-                                return (
-                                  <span className="text-xs text-navy truncate block" title={layer.materialName}>
-                                    {layer.materialName}
-                                  </span>
-                                );
-                              }
 
                               return (
                                 <StructureGradeSelect
@@ -1677,7 +1831,10 @@ const EstimateEditor = () => {
                                               materialName: mat.name,
                                               costPerKgUsd: parseFloat(mat.costPerKgUsd) || 0,
                                               isSolventBased: mat.isSolventBased || false,
-                                              gsm: l.micron * (parseFloat(mat.density) || 0.9),
+                                              gsm:
+                                                l.materialType === 'substrate'
+                                                  ? l.micron * (parseFloat(mat.density) || 0.9)
+                                                  : l.micron,
                                               hoover: mat.hoover ?? null,
                                             }
                                           : l
@@ -1762,8 +1919,11 @@ const EstimateEditor = () => {
                             </>
                           )}
 
-                          <td className="py-2 px-1">
-                            {canEditLayerStructure(layer) && (
+                          {showLayerControlsCol && (
+                          <td className={`align-middle ${showInkControlsCol ? 'py-1 px-0' : 'py-2 px-1'}`}>
+                            {showInkControlsCol
+                              ? renderInkControlsCell(idx, layer)
+                              : canEditLayerStructure(layer) && (
                               <div className="flex items-center justify-center gap-0.5">
                                 <button
                                   type="button"
@@ -1788,7 +1948,7 @@ const EstimateEditor = () => {
                                   title="Remove"
                                   aria-label="Remove layer"
                                 >✕</button>
-                                {!structureLocked && canConfigureSolvent && layer.materialType === 'adhesive' && layer.isSolventBased && (
+                                {canConfigureSolvent && layer.materialType === 'adhesive' && layer.isSolventBased && (
                                   <button
                                     type="button"
                                     className="p-1 text-[10px] text-blue-700 hover:text-blue-900"
@@ -1801,6 +1961,7 @@ const EstimateEditor = () => {
                               </div>
                             )}
                           </td>
+                          )}
                         </tr>
                       ))}
                       {needsSolventMix && (
@@ -1845,7 +2006,7 @@ const EstimateEditor = () => {
                                 </td>
                               </>
                             )}
-                            <td className="py-2 px-1" />
+                            {showLayerActionsCol && <td className="py-2 px-1" />}
                           </tr>
                           {solventDetailsExpanded &&
                             solventCostLines.map((line) => (
@@ -1866,7 +2027,7 @@ const EstimateEditor = () => {
                                     </td>
                                   </>
                                 )}
-                                <td className="py-1.5 px-1" />
+                                {showLayerActionsCol && <td className="py-1.5 px-1" />}
                               </tr>
                             ))}
                         </>
@@ -1904,7 +2065,7 @@ const EstimateEditor = () => {
                             </td>
                           </>
                         )}
-                        <td className="py-3 px-1" />
+                        {showLayerActionsCol && <td className="py-3 px-1" />}
                       </tr>
                     </tfoot>
                   </table>
@@ -1934,11 +2095,11 @@ const EstimateEditor = () => {
                 </div> {/* end structure body row */}
               </div> {/* end unified structure card */}
 
+              {!structureLocked && (
               <div className="flex flex-wrap gap-3 items-center">
                 <select className="input w-48" onChange={(e) => {
                     const type = e.target.value as 'substrate' | 'ink' | 'adhesive';
                     if (!type) return;
-                    if (structureLocked && type !== 'ink') return;
                     if (type === 'substrate' && substrateLayerCount >= maxSubstrates) return;
                     if (type === 'adhesive' && adhesiveLayerCount >= maxAdhesives) return;
                     const defaultMat = materials.find(m => m.type === type);
@@ -1948,24 +2109,16 @@ const EstimateEditor = () => {
                     e.target.value = '';
                   }} defaultValue="">
                     <option value="" disabled>+ Add Layer...</option>
-                    {!structureLocked && (
-                      <>
-                        <option value="substrate" disabled={substrateLayerCount >= maxSubstrates}>
-                          Substrate{substrateLayerCount >= maxSubstrates ? ` (max ${maxSubstrates})` : ''}
-                        </option>
-                        <option value="adhesive" disabled={adhesiveLayerCount >= maxAdhesives}>
-                          Adhesive{adhesiveLayerCount >= maxAdhesives ? ` (max ${maxAdhesives})` : ''}
-                        </option>
-                      </>
-                    )}
+                    <option value="substrate" disabled={substrateLayerCount >= maxSubstrates}>
+                      Substrate{substrateLayerCount >= maxSubstrates ? ` (max ${maxSubstrates})` : ''}
+                    </option>
                     <option value="ink">Ink & Coating</option>
+                    <option value="adhesive" disabled={adhesiveLayerCount >= maxAdhesives}>
+                      Adhesive{adhesiveLayerCount >= maxAdhesives ? ` (max ${maxAdhesives})` : ''}
+                    </option>
                   </select>
-                {structureLocked && (
-                  <p className="text-xs text-mist">
-                    Template structure is fixed — add or reposition ink & coating (e.g. varnish) only.
-                  </p>
-                )}
               </div>
+              )}
 
               {showWebTotals && (
                 <div className="card">
@@ -2040,109 +2193,6 @@ const EstimateEditor = () => {
                 </div>
               )}
 
-              <div className="card">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-display font-semibold text-navy">Dimensions</h3>
-                  {/* Printing web class badge — read-only, auto-derived from ink layers */}
-                  {can('printingWebClass') && derivedPrintingWebClass && (
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${derivedPrintingWebClass === 'wide_web' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
-                      {derivedPrintingWebClass === 'wide_web' ? 'Wide Web (SB)' : 'Narrow Web (UV)'}
-                    </span>
-                  )}
-                </div>
-
-                {/* Pouch/Bag: Kind locked from template, subtype chosen per job */}
-                {(productFamily === 'pouch' || productFamily === 'bag') && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label className="block text-xs font-medium text-mist mb-1">Kind</label>
-                      {structureLocked ? (
-                        <p className="input bg-slate text-navy font-medium capitalize">{productFamily}</p>
-                      ) : (
-                        <select
-                          className="input w-full"
-                          value={productFamily}
-                          onChange={(e) => {
-                            setProductType(e.target.value);
-                            setProductSubtype(defaultSubtypeForFamily(e.target.value as ProductFamily));
-                          }}
-                        >
-                          {/* Kind options — pouch/bag families from Master Data productTypeOptions */}
-                          {productTypeOptions
-                            .filter(opt => opt.value === 'pouch' || opt.value === 'bag')
-                            .map(opt => (
-                              <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                        </select>
-                      )}
-                    </div>
-                    {availableSubtypes.length > 0 && (
-                      <div>
-                        <label className="block text-xs font-medium text-mist mb-1">
-                          {PRODUCT_FAMILY_LABELS[productFamily] ?? productFamily} type
-                        </label>
-                        <select
-                          className="input w-full"
-                          value={productSubtype ?? ''}
-                          onChange={(e) => setProductSubtype(e.target.value || null)}
-                        >
-                          <option value="">Select type…</option>
-                          {availableSubtypes.map((s) => (
-                            <option key={s.code} value={s.code}>
-                              {s.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Dynamic dimension fields driven by productCatalog */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {subtypeDimensionFields.map((f) =>
-                    f.type === 'boolean' ? (
-                      <label key={f.key} className="flex items-center gap-2 md:mt-7">
-                        <input
-                          type="checkbox"
-                          checked={Number(dimensions[f.key]) === 1}
-                          onChange={(e) =>
-                            setDimensions((prev) => ({ ...prev, [f.key]: e.target.checked ? 1 : 0 }))
-                          }
-                        />
-                        <span className="text-sm font-medium text-navy">{f.label}</span>
-                        {f.hint && <span className="text-xs text-mist">— {f.hint}</span>}
-                      </label>
-                    ) : (
-                      <div key={f.key}>
-                        <label className="block text-sm font-medium text-navy mb-2">
-                          {f.label}{f.unit ? ` (${f.unit})` : ''}{f.required ? ' *' : ''}
-                        </label>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          className={`input w-full ${f.required && (dimensions[f.key] ?? 0) === 0 ? 'bg-amber-50 border-amber-200' : ''}`}
-                          value={dimensions[f.key] ?? 0}
-                          onChange={(e) =>
-                            setDimensions((prev) => ({ ...prev, [f.key]: Number(e.target.value) }))
-                          }
-                        />
-                        {f.hint && <p className="text-xs text-mist mt-1">{f.hint}</p>}
-                      </div>
-                    )
-                  )}
-                </div>
-
-                {/* Printing web width badge (read-only, always visible for roll/sleeve) */}
-                {can('printingWebWidth') && (productFamily === 'roll' || productFamily === 'sleeve') && printWebWidth > 0 && (
-                  <div className="mt-4 p-3 bg-slate rounded-lg flex items-center gap-6 text-sm flex-wrap">
-                    <div title="Press/lamination width before slitting — not your finished reel width.">
-                      <p className="text-xs text-mist">Printing web width <span className="cursor-help">ⓘ</span></p>
-                      <p className="font-mono font-semibold text-gold">{printWebWidth} mm</p>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           )}
 
@@ -2418,7 +2468,9 @@ const EstimateEditor = () => {
                     materialType: editingLayer.materialType,
                     costPerKgUsd: parseFloat(mat.costPerKgUsd) || 0,
                     isSolventBased: mat.isSolventBased || false,
-                    gsm: l.micron * (parseFloat(mat.density) || 0.9),
+                    gsm: editingLayer.materialType === 'substrate'
+                      ? l.micron * (parseFloat(mat.density) || 0.9)
+                      : l.micron,
                   } : l));
                 }}
                 className="input w-full min-h-[48px]"
@@ -2436,10 +2488,11 @@ const EstimateEditor = () => {
                 value={editingLayer.micron}
                 onChange={(e) => {
                   const micron = Number(e.target.value);
+                  const isSubstrate = editingLayer.materialType === 'substrate';
                   setLayers((prev) => prev.map((l) => l.id === editingLayer.id ? {
                     ...l,
                     micron,
-                    gsm: micron * densityForMaterial(l.materialId),
+                    gsm: isSubstrate ? micron * densityForMaterial(l.materialId) : micron,
                   } : l));
                 }}
                 className="input w-full min-h-[48px] font-mono text-lg"

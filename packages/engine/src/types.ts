@@ -50,7 +50,8 @@ export interface EstimateDimensions {
   openHeightMm?: number;
   layFlatValue?: number;
   // Common
-  printingWebClass: 'wide_web' | 'narrow_web'; // Wide Web = Ink SB, Narrow Web = Ink UV
+  /** Derived metadata for DB/reporting — not used in costing formulas. */
+  printingWebClass?: 'wide_web' | 'narrow_web';
 }
 
 export interface Slab {

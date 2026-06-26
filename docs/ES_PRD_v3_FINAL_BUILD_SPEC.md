@@ -258,13 +258,16 @@ Both types use the same currency, library, and visibility model. **No** corporat
 ```
 ┌──────────────────────────────┬────────────────────────┐
 │  LEFT (scroll)               │  RIGHT (sticky)        │
-│  1. Customer & job name      │  Laminate Visualizer   │
-│  2. Layer stack (no $/kg)    │  Total GSM / µ         │
-│  3. Dimensions               │  Selling price (gold)  │
-│  4. Slabs (price/kg only)    │  [Generate PDF]        │
-│  (no markup, no RM, no %)    │  (no cost breakdown)   │
+│  1. Job details (unified)    │  Laminate Visualizer   │
+│     customer, job, product   │  Total GSM / µ         │
+│     type, dimensions, qty    │  Selling price (gold)  │
+│  2. Layer stack (no $/kg)    │  [Generate PDF]        │
+│  3. Slabs (price/kg only)    │  (no cost breakdown)   │
+│  (no markup, no RM, no %)    │                        │
 └──────────────────────────────┴────────────────────────┘
 ```
+
+**Job details panel (V1 — single card, top of editor):** Customer, job name, product type (+ pouch/bag subtype when applicable), **estimation-phase dimension fields** (reel width, cut-off, open W×H, etc.), and order quantity + unit. No separate “Dimensions” card below the structure table. Machine-layout fields (`number_of_ups`, `extra_printing_trim_mm`) are **hidden during estimation** — stored as defaults (`ups=1`, `trim=0`) and set at **order confirmation** once the press/lane layout is known.
 
 **Tenant admin (`tenant_admin`) — full costing view:**
 
@@ -435,27 +438,27 @@ See §9.8 — `GET/PATCH /settings/currency`, `POST /settings/currency/refresh`.
 
 **Seed dimension keys:** Templates ship `default_dimensions` per `product_type` — roll/sleeve use `reel_width_mm`, `cutoff_mm`, `extra_printing_trim_mm`, `number_of_ups`, `pieces_per_cut` (roll only); pouch uses `open_width_mm`, `open_height_mm`, etc. Legacy seed keys (`width_mm`) normalize to `reel_width_mm` on import (scaffold Step 3).
 
-#### 6.2.1 Printing web class & ink systems (Decision #19)
+#### 6.2.1 Ink systems — layer-based (replaces Decision #19 UI)
 
-On every **printed** estimate (any template with an ink layer), show:
+**V1 model:** Users pick **Ink & Coating** as a structure layer and choose the material from the library (SB or UV). There is **no** “Wide Web / Narrow Web” dropdown on the estimate — that was retired from the UI.
 
-| UI label | Value | Ink material | Solid % | Solvent-mix (ink) |
-|----------|-------|--------------|---------|-------------------|
-| **Wide Web printing** | `wide_web` | Ink SB | 30 | Yes — ink-to-solvent ratio |
-| **Narrow Web printing** | `narrow_web` | Ink UV | 100 | No |
+| Ink material | `is_solvent_based` | Dry GSM on layer row | RM cost | Solvent-mix (ink) | Press cleaning |
+|--------------|-------------------|----------------------|---------|-------------------|----------------|
+| **Ink SB** (solvent-based) | `true` | User enters dry gsm | `(dry_gsm/1000) × cost_per_kg_dry` | Yes — flexo/roto makeup ratio | Yes (EA kg/job) |
+| **Ink UV** | `false` | User enters dry gsm | `(dry_gsm/1000) × cost_per_kg_dry` | **No** | **No** |
 
-**Defaults (owner locked):**
+**SB ink makeup (on-press):** Not tied to wide/narrow web. Estimate shows **Flexo** vs **Rotogravure** when SB ink is in the stack:
 
-- **All printed templates default to Wide Web → Ink SB**, including **Labels** and **Shrink Sleeves**
-- User switches to Narrow Web → engine replaces ink layer with **Ink UV**, hides ink solvent block
-- Laminate stacks with **Adhesive SB** may still show solvent-mix for adhesive even when ink is UV (engine rule)
+| Process | Default ratio (dry ink GSM ÷ ratio = makeup GSM) | Typical stack hint |
+|---------|-----------------------------------------------|-------------------|
+| Flexo | 1.5 | PE-family substrates |
+| Rotogravure | 1.0 | PET / BOPP / PA / etc. |
 
-**Behaviour on change:**
+User may override ratio per quote. `estimate.solvent_ratio` column is legacy; engine uses `ink_printing_process` + `ink_solvent_ratio`.
 
-```
-wide_web  → ink layer material = Ink SB,  solid = 30, show solvent ratio if SB in stack
-narrow_web → ink layer material = Ink UV, solid = 100, no solvent for ink
-```
+**SB adhesive:** Lamination EA from `laminationRecipe` (GP/MP/HP) — unchanged. UV ink does **not** block adhesive solvent; stacks with UV ink + SB adhesive still get lamination solvent only.
+
+**`printing_web_class` column:** Auto-derived on save for reporting (`narrow_web` if any UV ink layer; else `wide_web`). **Not a costing input** and not shown in Job details.
 
 Separate **cost/kg** in tenant library for Ink SB and Ink UV. Not color-specific (no Black/White SKUs).
 
@@ -676,9 +679,9 @@ printing_web_width_mm = (reel_width_mm × number_of_ups) + extra_printing_trim_m
 |-------|-----------|----------|-------|
 | Reel width | `reel_width_mm` | Yes | Was misnamed `roll_width_mm` in draft schema |
 | Cut-off | `cutoff_mm` | Yes | Repeat length |
-| Extra printing trim | `extra_printing_trim_mm` | Yes | Added to web width |
+| Extra printing trim | `extra_printing_trim_mm` | **Hidden at estimation** | Default `0`; set at order confirmation per machine |
 | Pieces per cut | `pieces_per_cut` | Yes | Roll only |
-| Number of ups | `number_of_ups` | Yes | Lanes across web |
+| Number of ups | `number_of_ups` | **Hidden at estimation** | Default `1`; set at order confirmation per lane layout |
 | Printing web width | `printing_web_width_mm` | **Computed** | Read-only in UI |
 
 **Sleeve** (`product_type = sleeve`) — Shrink Sleeves template:
@@ -687,14 +690,14 @@ Same as roll except `pieces_per_cut` fixed to 1; uses `reel_width_mm` as “real
 
 **Pouch** (`product_type = pouch`):
 
-| Field | DB column |
-|-------|-----------|
-| Open width | `open_width_mm` |
-| Open height | `open_height_mm` |
-| Number of ups | `number_of_ups` |
-| Extra printing trim | `extra_printing_trim_mm` |
-| Lay-flat | `lay_flat_mm` (optional) |
-| Zipper | `zipper_*` — Phase 1.1 if deferred |
+| Field | DB column | Estimation UI |
+|-------|-----------|---------------|
+| Open width | `open_width_mm` | Visible |
+| Open height | `open_height_mm` | Visible |
+| Number of ups | `number_of_ups` | Hidden (default `1`) |
+| Extra printing trim | `extra_printing_trim_mm` | Hidden (default `0`) |
+| Lay-flat | `lay_flat_mm` (optional) | Visible when applicable |
+| Zipper | `zipper_*` | Phase 1.1 if deferred |
 
 #### 6.9.3 Derived yield fields (engine — port from COSTING_NOTES §7)
 
@@ -738,15 +741,15 @@ Rep: hidden by default; PDF may show reel width + OD + length when `roll_after_s
 
 **Defaults (audit — simple happy path):** Every template seeds `number_of_ups: 1`, `extra_printing_trim_mm: 0` unless template explicitly needs multi-up (many pouches).
 
-**Primary fields (always visible):** reel width / open W×H, cut-off.
+**Estimation phase (visible):** reel width / open W×H, cut-off, lay-flat (sleeve), pieces per cut (roll), pouch/bag subtype-specific fields (gussets, zipper, etc.). Compact numeric inputs (~6.5rem) in a responsive grid inside the **Job details** card.
 
-**Collapsed disclosure — “Multi-up / trim”:** Contains `number_of_ups`, `extra_printing_trim_mm`, `pieces_per_cut` (roll). Auto-expands when template `default_dimensions` has `number_of_ups > 1`.
+**Order-confirmation phase (hidden at estimation):** `number_of_ups`, `extra_printing_trim_mm` — not shown while quoting; entered later when the job is confirmed and the press/lane layout is known. Values remain in `dimensions` JSON (defaults used by engine for printing-web-width formula).
 
-**Printing web width badge:** Read-only, rep-visible. Tooltip: *“Press/lamination width before slitting — not your finished reel width.”*
+**Printing web width:** Computed read-only value for roll/sleeve (not shown in Job details row). Shown in Web Totals / structure context when `printing_web_width` visibility is on.
 
-**Desktop:** Dimensions card below Laminate Visualizer — fields change by `product_type`.
+**Desktop:** One **Job details** card above the Structure tab — no separate Dimensions card. Spec row is a single horizontal line (product type, subtype, qty, mm fields).
 
-**Mobile:** Dimensions in collapsible card above layer cards; same fields, no horizontal table.
+**Mobile:** Same Job details fields at top; layer cards below (§5.8).
 
 **Admin-only rows:** yield conversions, roll-after-slitting detail, order unit breakdown — hidden unless visibility profile allows.
 
@@ -756,7 +759,7 @@ Rep: hidden by default; PDF may show reel width + OD + length when `roll_after_s
 |------|-----|-------|
 | Client-side `packages/engine` in web | ✅ §7.1 | — |
 | Visibility presets | ✅ §6.8 | — |
-| Dimensions UX (collapse ups/trim, tooltip) | ✅ §6.9.6 | — |
+| Dimensions UX (Job details panel, hide ups/trim at estimation) | ✅ §6.9.6 | Order-confirmation ups/trim UI → Phase 1.1 |
 | Empty / loading / error states | ✅ §5.9 | — |
 | Mobile keyboard + `inputmode` | ✅ §5.8 | — |
 | Admin progressive disclosure | ✅ §5.7 | — |
@@ -865,10 +868,10 @@ interface RollAfterSlittingInput {
 }
 ```
 
-**Material model (Laravel parity + Decision #19):** Three layer types. **Printing web class** drives ink:
+**Material model (Laravel parity + layer-based ink):** Three laminate layer types plus catalog **solvent** rows (not stack layers). Ink system is determined by the **ink layer material** (`is_solvent_based`), not a global web-class toggle:
 
-- **Wide Web printing** (default) → **Ink SB** (30% solid) + ink-to-solvent ratio
-- **Narrow Web printing** → **Ink UV** (100% solid), no solvent for ink
+- **Ink SB** (`is_solvent_based = true`) → dry GSM on layer row; on-press makeup via flexo/roto ratio; press cleaning EA
+- **Ink UV** (`is_solvent_based = false`) → dry GSM on layer row only; no ink makeup or cleaning
 
 Defaults **Wide Web / SB** for all printed PGs including Labels and Shrink Sleeves. **Adhesive SB** for lamination. **Microns always user-variable.**
 

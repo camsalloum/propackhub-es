@@ -3,7 +3,7 @@ import type { LayerMaterialRef } from './layer-stack';
 
 export type InkPrintingProcess = 'flexo' | 'rotogravure';
 
-/** Dry ink GSM ÷ ratio = on-press makeup solvent GSM (legacy Excel model). */
+/** Dry ink GSM ÷ ratio = on-press makeup solvent GSM (Excel model). Ratio from flexo/roto — not wide/narrow web. */
 export const INK_SOLVENT_RATIO_FLEXO = 1.5;
 export const INK_SOLVENT_RATIO_ROTOGRAVURE = 1.0;
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { derivePrintingWebClass, stackNeedsSolventMix } from './layer-stack';
+import { derivePrintingWebClass, stackNeedsSolventMix, stackHasSbInk, stackHasUvInk } from './layer-stack';
 import type { Material } from './types';
 
 const sbInk: Material = {
@@ -58,6 +58,15 @@ describe('derivePrintingWebClass', () => {
   });
 });
 
+describe('stackHasUvInk / stackHasSbInk', () => {
+  it('detects UV and SB ink separately', () => {
+    expect(stackHasUvInk([{ materialId: 'ink-uv' }], materials)).toBe(true);
+    expect(stackHasSbInk([{ materialId: 'ink-sb' }], materials)).toBe(true);
+    expect(stackHasUvInk([{ materialId: 'ink-sb' }], materials)).toBe(false);
+    expect(stackHasSbInk([{ materialId: 'ink-uv' }], materials)).toBe(false);
+  });
+});
+
 describe('stackNeedsSolventMix', () => {
   it('is true for SB ink or adhesive', () => {
     expect(stackNeedsSolventMix([{ materialId: 'ink-sb' }], materials)).toBe(true);
@@ -67,5 +76,14 @@ describe('stackNeedsSolventMix', () => {
   it('is false for substrate-only or UV ink', () => {
     expect(stackNeedsSolventMix([{ materialId: 'pet' }], materials)).toBe(false);
     expect(stackNeedsSolventMix([{ materialId: 'ink-uv' }], materials)).toBe(false);
+  });
+
+  it('is true when SB ink and UV ink are both present', () => {
+    expect(
+      stackNeedsSolventMix(
+        [{ materialId: 'ink-sb' }, { materialId: 'ink-uv' }],
+        materials
+      )
+    ).toBe(true);
   });
 });

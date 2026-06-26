@@ -868,7 +868,7 @@ npm run update-materials
 
 **UX:** Estimate editor no longer shows Printing Web Class. Users add **Ink & Coating** as a layer type; material dropdown filters to `type === 'ink'` (same pattern for substrate/adhesive).
 
-**Costing:** `derivePrintingWebClass` + `stackNeedsSolventMix` in `@es/engine/layer-stack` — UV ink layer → `narrow_web`; solvent mix block when SB ink/adhesive present (not when user picked “wide web”).
+**Costing:** Ink system from layer `isSolventBased` + flexo/roto for SB makeup (`ink-printing.ts`). `stackNeedsSolventMix` gates solvent block. `derivePrintingWebClass` → DB metadata only (UV ink → `narrow_web`).
 
 **Persistence:** `printing_web_class` column kept for compat; auto-derived on create/update from layer materials. Template instantiate + Standard Templates admin derive same way; printing web dropdown removed from template editor.
 
@@ -1112,3 +1112,12 @@ npm run update-materials
 - `canConfigureSolvent` TDZ: must be `can('solventMixCost') || can('markupPercent')`.
 
 **Tomorrow:** verify save/reload of solvent fields; align PRD/ES_MEMORY ink-makeup text; optional UX tweaks.
+
+### 2026-06-26 — Engine: layer-based SB/UV costing
+
+- **Concept:** Wide/Narrow web UI retired; costing uses `material.isSolventBased` on ink/adhesive rows. SB ink → flexo/roto makeup + cleaning; UV ink → dry GSM RM only. SB adhesive → lamination EA even when ink is UV.
+- **Engine:** `solvent-costing` uses `stackNeedsSolventMix` / `stackHasSbInk`; `printingWebClass` optional metadata; validator no longer requires it. Tests: `solvent-costing.test.ts`, calculator UV case. PRD §6.2.1 rewritten.
+
+- **Icon overflow:** Template-locked ink controls in dedicated **4%** column — vertical `+▲▼✕` stack, outside $/m². Unlocked actions column 10% horizontal.
+- **GSM:** Grade dropdown in table already gated (`substrate` only). Fixed mobile bottom-sheet material + micron handlers; legacy `getTemplateLayers` scaffold.
+- **Layer access:** Removed `canEditLayerFamilyGrade` template gate — substrate/adhesive family & grade dropdowns work on template quotes; only add/remove/reorder stays ink-only.

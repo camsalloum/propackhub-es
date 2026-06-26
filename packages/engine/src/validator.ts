@@ -1,4 +1,5 @@
 import { Estimate, Layer, Material, EstimateDimensions } from './types';
+import { stackNeedsSolventMix } from './layer-stack';
 
 /**
  * Validate an estimate structure
@@ -82,9 +83,7 @@ export function validateDimensions(dimensions: EstimateDimensions): string[] {
       break;
   }
 
-  if (!dimensions.printingWebClass) {
-    errors.push('printingWebClass is required');
-  }
+  // printingWebClass is auto-derived on save from ink layer materials — not user input.
 
   return errors;
 }
@@ -155,20 +154,11 @@ export function validateMaterial(material: Material): string[] {
 }
 
 /**
- * Check if estimate has solvent-based layers (requires solvent mix)
+ * @deprecated Use `stackNeedsSolventMix` from `layer-stack` — same rule (SB ink or SB adhesive only).
  */
 export function hasSolventBasedLayers(layers: Layer[], materials: Map<string, Material>): boolean {
-  return layers.some(layer => {
-    const material = materials.get(layer.materialId);
-    if (!material) return false;
-    
-    // Use isSolventBased field if available, otherwise fallback to name check
-    if (material.isSolventBased !== undefined) {
-      return material.isSolventBased;
-    }
-    
-    // Fallback: Ink SB or Adhesive SB require solvent mix (legacy support)
-    return (material.type === 'ink' && material.name.includes('SB')) ||
-           (material.type === 'adhesive' && material.name.includes('SB'));
-  });
+  return stackNeedsSolventMix(
+    layers.map((l) => ({ materialId: l.materialId })),
+    materials
+  );
 }

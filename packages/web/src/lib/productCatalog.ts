@@ -98,6 +98,15 @@ const F = {
   flap: { key: 'flapMm', label: 'Flap / lip', type: 'number', unit: 'mm', hint: 'Adhesive flap depth' } as DimensionFieldDef,
 };
 
+/**
+ * Machine-layout fields — not shown during estimation; confirmed at order stage.
+ * Engine still uses stored defaults (typically ups=1, trim=0).
+ */
+export const ESTIMATION_HIDDEN_DIMENSION_KEYS = new Set<string>([
+  'numberOfUps',
+  'extraPrintingTrimMm',
+]);
+
 const ROLL_FIELDS: DimensionFieldDef[] = [F.reelWidth, F.cutoff, F.numberOfUps, F.trim, F.piecesPerCut];
 const SLEEVE_FIELDS: DimensionFieldDef[] = [F.layFlat, F.reelWidth, F.cutoff, F.numberOfUps, F.trim];
 
@@ -160,6 +169,16 @@ export function dimensionFieldsFor(
   if (family === 'sleeve') return SLEEVE_FIELDS;
   if (family === 'bag') return BAG_BASE;
   return POUCH_BASE;
+}
+
+/** Estimation-phase fields only (hides machine-layout ups/trim). */
+export function dimensionFieldsForEstimation(
+  family: ProductFamily,
+  subtypeKey?: string | null
+): DimensionFieldDef[] {
+  return dimensionFieldsFor(family, subtypeKey).filter(
+    (f) => !ESTIMATION_HIDDEN_DIMENSION_KEYS.has(f.key)
+  );
 }
 
 /** Default subtype when a family is first selected (first in catalog). */

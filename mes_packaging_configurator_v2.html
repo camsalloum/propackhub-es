@@ -1,0 +1,484 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{display:flex;height:600px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;background:var(--color-background-primary)}
+.sidebar{width:195px;background:var(--color-background-secondary);border-right:0.5px solid var(--color-border-tertiary);padding:10px;overflow-y:auto;flex-shrink:0}
+.sidebar h2{font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.bag-item{padding:7px 9px;border-radius:var(--border-radius-md);font-size:12px;color:var(--color-text-primary);cursor:pointer;margin-bottom:3px;border:0.5px solid transparent;line-height:1.3}
+.bag-item:hover{background:var(--color-background-primary);border-color:var(--color-border-tertiary)}
+.bag-item.active{background:var(--color-background-primary);border-color:var(--color-border-secondary);font-weight:500;color:var(--color-text-primary)}
+.content{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{padding:10px 14px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:15px;font-weight:500;color:var(--color-text-primary);display:flex;align-items:center;gap:8px}
+.bag-tag{font-size:11px;font-weight:400;background:var(--color-background-info);color:var(--color-text-info);padding:2px 8px;border-radius:99px}
+.main{display:flex;flex:1;min-height:0}
+.form-panel{width:205px;padding:12px;border-right:0.5px solid var(--color-border-tertiary);flex-shrink:0;overflow-y:auto}
+.form-panel h3{font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.field{margin-bottom:10px}
+.field label{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--color-text-secondary);margin-bottom:3px}
+.field label span{font-size:10px;color:var(--color-text-tertiary);font-style:italic}
+.field input{width:100%;padding:5px 8px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary)}
+.divider{font-size:10px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.07em;margin:12px 0 8px;padding-bottom:4px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.canvas-panel{flex:1;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.canvas-panel svg{flex:1;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:var(--color-background-primary)}
+.footer{padding:8px 14px;border-top:0.5px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-secondary);background:var(--color-background-secondary)}
+</style>
+
+<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden">MES Packaging Structure Configurator — select a bag type and input dimensions to update the schematic</h2>
+
+<div class="wrap">
+  <div class="sidebar">
+    <h2>Bag types</h2>
+    <div class="bag-item active" data-type="bottom-gusset">Bottom-gusset shopping</div>
+    <div class="bag-item" data-type="side-gusset">Side-gusset shopping</div>
+    <div class="bag-item" data-type="courier">Courier bag</div>
+    <div class="bag-item" data-type="diaper">Diaper bag</div>
+    <div class="bag-item" data-type="industrial">Industrial bag</div>
+    <div class="bag-item" data-type="loop">Loop handle</div>
+    <div class="bag-item" data-type="patch">Patch handle</div>
+    <div class="bag-item" data-type="punch">Punch handle</div>
+    <div class="bag-item" data-type="wicket">Wicket bag</div>
+  </div>
+
+  <div class="content">
+    <div class="topbar">
+      Packaging structure configurator
+      <span class="bag-tag" id="bag-tag">Bottom-gusset shopping</span>
+    </div>
+    <div class="main">
+      <div class="form-panel" id="form-panel"></div>
+      <div class="canvas-panel">
+        <svg id="drawing" viewBox="0 0 390 360" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="a1" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto"><path d="M0,0 L0,5 L5,2.5z" fill="#888"/></marker>
+            <marker id="a2" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto-start-reverse"><path d="M0,0 L0,5 L5,2.5z" fill="#888"/></marker>
+          </defs>
+          <g id="bag-drawing"></g>
+          <g id="dim-lines"></g>
+          <g id="dim-labels"></g>
+        </svg>
+      </div>
+    </div>
+    <div class="footer" id="footer-desc">Adjust dimensions — schematic updates live</div>
+  </div>
+</div>
+
+<script>
+const BAG_TYPES = {
+  'bottom-gusset': {
+    label: 'Bottom-gusset shopping',
+    desc: 'W × H × G (bottom gusset) + top fold F. Spec: W × H × BG.',
+    fields: [
+      {id:'W', label:'Width (W)', unit:'mm', val:400, hint:'Front panel width'},
+      {id:'H', label:'Height (H)', unit:'mm', val:500, hint:'Total bag height'},
+      {id:'G', label:'Bottom gusset (G)', unit:'mm', val:120, hint:'Depth when standing'},
+      {id:'F', label:'Top fold (F)', unit:'mm', val:50, hint:'Seal/fold at top'},
+      {id:'T', label:'Film thickness', unit:'µm', val:80, hint:'25–150 µm typical'},
+    ]
+  },
+  'side-gusset': {
+    label: 'Side-gusset shopping',
+    desc: 'W × H × SG (each side) + top seal. Internal depth ≈ 2×SG.',
+    fields: [
+      {id:'W', label:'Width (W)', unit:'mm', val:350, hint:'Front panel only'},
+      {id:'H', label:'Height (H)', unit:'mm', val:450, hint:'Bottom seal to top'},
+      {id:'SG', label:'Side gusset (SG)', unit:'mm', val:80, hint:'One side; depth = 2×SG'},
+      {id:'TS', label:'Top seal (TS)', unit:'mm', val:20, hint:'Heat-seal width at top'},
+      {id:'T', label:'Film thickness', unit:'µm', val:60, hint:'Gauge'},
+    ]
+  },
+  'courier': {
+    label: 'Courier bag',
+    desc: 'W × L + flap overlap. Tamper-evident adhesive seal.',
+    fields: [
+      {id:'W', label:'Width (W)', unit:'mm', val:250, hint:'Bag width'},
+      {id:'L', label:'Length (L)', unit:'mm', val:350, hint:'Full bag length'},
+      {id:'FL', label:'Flap/seal length (FL)', unit:'mm', val:50, hint:'Adhesive closure area'},
+      {id:'POD', label:'POD pocket height', unit:'mm', val:80, hint:'0 = no POD pocket'},
+      {id:'T', label:'Film thickness', unit:'µm', val:65, hint:'51–80 µm typical'},
+    ]
+  },
+  'diaper': {
+    label: 'Diaper bag',
+    desc: 'W × H × G (bottom) + neck cut NC. Often with handle & vent holes.',
+    fields: [
+      {id:'W', label:'Width (W)', unit:'mm', val:500, hint:'Bag width flat'},
+      {id:'H', label:'Height (H)', unit:'mm', val:650, hint:'Total height'},
+      {id:'G', label:'Bottom gusset (G)', unit:'mm', val:180, hint:'Depth for bulky product'},
+      {id:'NC', label:'Neck cut (NC)', unit:'mm', val:60, hint:'Top opening cutout'},
+      {id:'VH', label:'Vent holes (Ø)', unit:'mm', val:6, hint:'Diameter; 0 = none'},
+      {id:'T', label:'Film thickness', unit:'µm', val:100, hint:'25–150 µm'},
+    ]
+  },
+  'industrial': {
+    label: 'Industrial bag',
+    desc: 'W × L × SG (side gusset) + valve or open mouth.',
+    fields: [
+      {id:'W', label:'Width (W)', unit:'mm', val:400, hint:'Flat tube width'},
+      {id:'L', label:'Length (L)', unit:'mm', val:700, hint:'Bag length'},
+      {id:'SG', label:'Side gusset (SG)', unit:'mm', val:100, hint:'Each side gusset'},
+      {id:'VLV', label:'Valve size (VLV)', unit:'mm', val:80, hint:'0 = open mouth'},
+      {id:'T', label:'Film thickness', unit:'µm', val:150, hint:'100–250 µm heavy duty'},
+    ]
+  },
+  'loop': {
+    label: 'Loop handle',
+    desc: 'W × H × G (bottom or side) + loop handle: length HL, width HW.',
+    fields: [
+      {id:'W', label:'Width (W)', unit:'mm', val:300, hint:'Bag body width'},
+      {id:'H', label:'Height (H)', unit:'mm', val:380, hint:'Bag body height'},
+      {id:'G', label:'Gusset (G)', unit:'mm', val:80, hint:'Bottom or side gusset'},
+      {id:'HL', label:'Handle length (HL)', unit:'mm', val:260, hint:'Loop length; typ. 250–300'},
+      {id:'HW', label:'Handle width (HW)', unit:'mm', val:25, hint:'Loop width; typ. 20–38 mm'},
+      {id:'T', label:'Film thickness', unit:'µm', val:70, hint:'Body gauge'},
+    ]
+  },
+  'patch': {
+    label: 'Patch handle',
+    desc: 'W × H + patch reinforcement: PW × PH, and handle hole size.',
+    fields: [
+      {id:'W', label:'Width (W)', unit:'mm', val:320, hint:'Bag width'},
+      {id:'H', label:'Height (H)', unit:'mm', val:400, hint:'Bag height'},
+      {id:'G', label:'Gusset (G)', unit:'mm', val:60, hint:'Side or bottom gusset'},
+      {id:'PW', label:'Patch width (PW)', unit:'mm', val:120, hint:'Reinforcement patch W'},
+      {id:'PH', label:'Patch height (PH)', unit:'mm', val:80, hint:'Reinforcement patch H'},
+      {id:'HD', label:'Handle hole (HD)', unit:'mm', val:30, hint:'Punched hole diameter'},
+    ]
+  },
+  'punch': {
+    label: 'Punch/die-cut handle',
+    desc: 'W × H + die-cut handle slot: slot width SW, slot height SH, position from top PT.',
+    fields: [
+      {id:'W', label:'Width (W)', unit:'mm', val:280, hint:'Bag width'},
+      {id:'H', label:'Height (H)', unit:'mm', val:360, hint:'Bag height'},
+      {id:'G', label:'Gusset (G)', unit:'mm', val:0, hint:'0 = flat bag'},
+      {id:'SW', label:'Slot width (SW)', unit:'mm', val:120, hint:'Die-cut slot width'},
+      {id:'SH', label:'Slot height (SH)', unit:'mm', val:25, hint:'Slot height (kidney/oval)'},
+      {id:'PT', label:'Slot from top (PT)', unit:'mm', val:20, hint:'Distance slot to top edge'},
+    ]
+  },
+  'wicket': {
+    label: 'Wicket bag',
+    desc: 'W × H + lip (wicket header) LH, wicket hole spacing WS, gusset G.',
+    fields: [
+      {id:'W', label:'Width (W)', unit:'mm', val:300, hint:'Bag width'},
+      {id:'H', label:'Height (H)', unit:'mm', val:400, hint:'Bag body height'},
+      {id:'G', label:'Bottom gusset (G)', unit:'mm', val:80, hint:'0 = flat bottom'},
+      {id:'LH', label:'Lip/header (LH)', unit:'mm', val:40, hint:'Wicket header strip'},
+      {id:'WS', label:'Wicket hole spacing', unit:'mm', val:76, hint:'Industry std: 76.2 mm'},
+      {id:'WD', label:'Wicket hole Ø (WD)', unit:'mm', val:8, hint:'Hole diameter'},
+    ]
+  }
+};
+
+let currentType = 'bottom-gusset';
+let vals = {};
+
+function buildForm(type) {
+  const cfg = BAG_TYPES[type];
+  const fp = document.getElementById('form-panel');
+  vals = {};
+  cfg.fields.forEach(f => vals[f.id] = f.val);
+
+  let html = '<h3>Dimensions</h3>';
+  cfg.fields.forEach(f => {
+    html += `<div class="field">
+      <label>${f.label} <span>${f.hint}</span></label>
+      <input type="number" id="inp_${f.id}" value="${f.val}" data-id="${f.id}">
+    </div>`;
+  });
+  fp.innerHTML = html;
+
+  cfg.fields.forEach(f => {
+    document.getElementById('inp_'+f.id).addEventListener('input', function(){
+      vals[this.dataset.id] = parseFloat(this.value)||0;
+      draw(currentType);
+    });
+  });
+
+  document.getElementById('bag-tag').textContent = cfg.label;
+  document.getElementById('footer-desc').textContent = cfg.desc;
+}
+
+function dim(x1,y1,x2,y2,label,offset,horiz) {
+  const g = document.getElementById('dim-lines');
+  const gl = document.getElementById('dim-labels');
+  const mx=(x1+x2)/2, my=(y1+y2)/2;
+  const ox= horiz ? 0 : offset;
+  const oy= horiz ? offset : 0;
+
+  const l = document.createElementNS('http://www.w3.org/2000/svg','line');
+  l.setAttribute('x1',x1+ox); l.setAttribute('y1',y1+oy);
+  l.setAttribute('x2',x2+ox); l.setAttribute('y2',y2+oy);
+  l.setAttribute('stroke','#aaa'); l.setAttribute('stroke-width','0.7');
+  l.setAttribute('marker-start','url(#a2)'); l.setAttribute('marker-end','url(#a1)');
+  g.appendChild(l);
+
+  const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+  t.setAttribute('x', mx+ox); t.setAttribute('y', my+oy+(horiz?0:0));
+  t.setAttribute('text-anchor','middle');
+  t.setAttribute('dominant-baseline','middle');
+  t.setAttribute('font-size','9');
+  t.setAttribute('fill','#555');
+  t.setAttribute('font-family','Arial,sans-serif');
+  if(!horiz) t.setAttribute('transform',`rotate(-90,${mx+ox},${my+oy})`);
+  t.textContent = label;
+  gl.appendChild(t);
+}
+
+function clearDims(){
+  document.getElementById('dim-lines').innerHTML='';
+  document.getElementById('dim-labels').innerHTML='';
+  document.getElementById('bag-drawing').innerHTML='';
+}
+
+function rect(x,y,w,h,fill,stroke,dash,rx){
+  const el=document.createElementNS('http://www.w3.org/2000/svg','rect');
+  el.setAttribute('x',x);el.setAttribute('y',y);el.setAttribute('width',w);el.setAttribute('height',h);
+  el.setAttribute('fill',fill);el.setAttribute('stroke',stroke);el.setAttribute('stroke-width','1');
+  if(dash) el.setAttribute('stroke-dasharray','4,3');
+  el.setAttribute('rx',rx||2);
+  document.getElementById('bag-drawing').appendChild(el);
+  return el;
+}
+function poly(pts,fill,stroke){
+  const el=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  el.setAttribute('points',pts.map(p=>p.join(',')).join(' '));
+  el.setAttribute('fill',fill);el.setAttribute('stroke',stroke);el.setAttribute('stroke-width','1');
+  document.getElementById('bag-drawing').appendChild(el);
+}
+function circle(cx,cy,r,fill,stroke){
+  const el=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  el.setAttribute('cx',cx);el.setAttribute('cy',cy);el.setAttribute('r',r);
+  el.setAttribute('fill',fill);el.setAttribute('stroke',stroke);el.setAttribute('stroke-width','0.8');
+  document.getElementById('bag-drawing').appendChild(el);
+}
+function line2(x1,y1,x2,y2,stroke,dash){
+  const el=document.createElementNS('http://www.w3.org/2000/svg','line');
+  el.setAttribute('x1',x1);el.setAttribute('y1',y1);el.setAttribute('x2',x2);el.setAttribute('y2',y2);
+  el.setAttribute('stroke',stroke);el.setAttribute('stroke-width','0.8');
+  if(dash) el.setAttribute('stroke-dasharray','3,2');
+  document.getElementById('bag-drawing').appendChild(el);
+}
+
+const VW=390, VH=360;
+const PAD={l:55,r:35,t:18,b:28};
+
+function fitScale(W,H){
+  const aw=VW-PAD.l-PAD.r, ah=VH-PAD.t-PAD.b;
+  return Math.min(aw/Math.max(W,1), ah/Math.max(H,1), 1.2);
+}
+function anchor(dW,dH){
+  return {x:PAD.l+(VW-PAD.l-PAD.r-dW)/2, y:PAD.t+(VH-PAD.t-PAD.b-dH)/2};
+}
+
+function draw(type){
+  clearDims();
+  const v=vals;
+  switch(type){
+    case 'bottom-gusset': drawBottomGusset(v); break;
+    case 'side-gusset':   drawSideGusset(v); break;
+    case 'courier':       drawCourier(v); break;
+    case 'diaper':        drawDiaper(v); break;
+    case 'industrial':    drawIndustrial(v); break;
+    case 'loop':          drawLoop(v); break;
+    case 'patch':         drawPatch(v); break;
+    case 'punch':         drawPunch(v); break;
+    case 'wicket':        drawWicket(v); break;
+  }
+}
+
+function drawBottomGusset(v){
+  const sc=fitScale(v.W, v.H+v.G);
+  const dW=v.W*sc, dH=v.H*sc, dG=v.G*sc, dF=v.F*sc;
+  const {x,y}=anchor(dW,dH+dG);
+  rect(x,y,dW,dH,'#E6F1FB','#185FA5');
+  if(dF>2) rect(x,y,dW,Math.min(dF,dH),'#B5D4F4','#185FA5',true);
+  if(dG>0){
+    const indent=Math.min(dW*0.08,14);
+    poly([[x,y+dH],[x+dW,y+dH],[x+dW-indent,y+dH+dG],[x+indent,y+dH+dG]],'#EAF3DE','#3B6D11');
+  }
+  dim(x,y+dH+dG+14,x+dW,y+dH+dG+14,`W=${v.W}mm`,0,true);
+  dim(x-20,y,x-20,y+dH,`H=${v.H}mm`,-8,false);
+  if(dG>0) dim(x+dW+12,y+dH,x+dW+12,y+dH+dG,`G=${v.G}mm`,4,false);
+  if(dF>2) dim(x+dW+12,y,x+dW+12,y+Math.min(dF,dH),`F=${v.F}mm`,4,false);
+}
+
+function drawSideGusset(v){
+  const dSG=Math.min(v.SG,v.W*0.25);
+  const sc=fitScale(v.W, v.H);
+  const dW=v.W*sc, dH=v.H*sc, dg=dSG*sc, dTS=Math.min(v.TS*sc,dH*0.15);
+  const {x,y}=anchor(dW,dH);
+  rect(x,y,dW,dH,'#E6F1FB','#185FA5');
+  line2(x+dg,y,x+dg,y+dH,'#185FA5',true);
+  line2(x+dW-dg,y,x+dW-dg,y+dH,'#185FA5',true);
+  if(dTS>2) rect(x,y+dH-dTS,dW,dTS,'#B5D4F4','#185FA5',true);
+  dim(x,y+dH+14,x+dW,y+dH+14,`W=${v.W}mm`,0,true);
+  dim(x-20,y,x-20,y+dH,`H=${v.H}mm`,-8,false);
+  dim(x,y-12,x+dg,y-12,`SG=${v.SG}mm`,0,true);
+  if(dTS>2) dim(x+dW+12,y+dH-dTS,x+dW+12,y+dH,`TS=${v.TS}mm`,4,false);
+}
+
+function drawCourier(v){
+  const sc=fitScale(v.W, v.L);
+  const dW=v.W*sc, dL=v.L*sc, dFL=Math.min(v.FL*sc,dL*0.2), dPOD=Math.min(v.POD*sc,dL*0.15);
+  const {x,y}=anchor(dW,dL);
+  rect(x,y,dW,dL,'#EAF3DE','#3B6D11');
+  if(dFL>2) rect(x,y,dW,dFL,'#C0DD97','#3B6D11',true);
+  line2(x,y+dFL,x+dW,y+dFL,'#3B6D11',false);
+  if(dPOD>2){
+    rect(x+8,y+dFL+8,dW*0.4,dPOD,'#fff','#3B6D11');
+  }
+  dim(x,y+dL+14,x+dW,y+dL+14,`W=${v.W}mm`,0,true);
+  dim(x-20,y,x-20,y+dL,`L=${v.L}mm`,-8,false);
+  dim(x+dW+12,y,x+dW+12,y+dFL,`FL=${v.FL}mm`,4,false);
+  if(dPOD>2) dim(x+dW+12,y+dFL+8,x+dW+12,y+dFL+8+dPOD,`POD=${v.POD}mm`,4,false);
+}
+
+function drawDiaper(v){
+  const sc=fitScale(v.W, v.H+v.G);
+  const dW=v.W*sc, dH=v.H*sc, dG=v.G*sc, dNC=Math.min(v.NC*sc,dH*0.12);
+  const {x,y}=anchor(dW,dH+dG);
+  rect(x,y,dW,dH,'#FAEEDA','#854F0B');
+  if(dG>0){
+    const ind=Math.min(dW*0.07,16);
+    poly([[x,y+dH],[x+dW,y+dH],[x+dW-ind,y+dH+dG],[x+ind,y+dH+dG]],'#FAC775','#854F0B');
+  }
+  if(dNC>2){
+    rect(x+dW*0.25,y,dW*0.5,dNC,'#f4f6f9','#854F0B',true,3);
+  }
+  if(v.VH>0){
+    const vr=Math.min(v.VH*sc/2,4);
+    circle(x+dW*0.75,y+dH*0.15,vr,'#fff','#854F0B');
+    circle(x+dW*0.8,y+dH*0.15,vr,'#fff','#854F0B');
+  }
+  dim(x,y+dH+dG+14,x+dW,y+dH+dG+14,`W=${v.W}mm`,0,true);
+  dim(x-20,y,x-20,y+dH,`H=${v.H}mm`,-8,false);
+  if(dG>0) dim(x+dW+12,y+dH,x+dW+12,y+dH+dG,`G=${v.G}mm`,4,false);
+  if(dNC>2) dim(x-20,y,x-20,y+dNC,`NC=${v.NC}mm`,-22,false);
+}
+
+function drawIndustrial(v){
+  const sc=fitScale(v.W+v.SG*2, v.L);
+  const dW=v.W*sc, dL=v.L*sc, dSG=v.SG*sc;
+  const {x,y}=anchor(dW+dSG*2,dL);
+  rect(x+dSG,y,dW,dL,'#F1EFE8','#5F5E5A');
+  if(dSG>0){
+    rect(x,y,dSG,dL,'#D3D1C7','#5F5E5A',true);
+    rect(x+dSG+dW,y,dSG,dL,'#D3D1C7','#5F5E5A',true);
+  }
+  if(v.VLV>0){
+    const vw=Math.min(v.VLV*sc,dSG*0.8);
+    rect(x+dSG+dW*0.35,y-vw*0.4,dW*0.3,vw*0.4,'#D3D1C7','#5F5E5A');
+  }
+  dim(x+dSG,y+dL+14,x+dSG+dW,y+dL+14,`W=${v.W}mm`,0,true);
+  dim(x-20,y,x-20,y+dL,`L=${v.L}mm`,-8,false);
+  if(dSG>0) dim(x,y-12,x+dSG,y-12,`SG=${v.SG}mm`,0,true);
+  if(v.VLV>0){
+    const vw=Math.min(v.VLV*sc,dSG*0.8);
+    dim(x+dSG+dW*0.35,y-vw*0.4-10,x+dSG+dW*0.65,y-vw*0.4-10,`VLV=${v.VLV}mm`,0,true);
+  }
+}
+
+function drawLoop(v){
+  const loopH=Math.min(v.HL*0.5,v.H*0.3);
+  const sc=fitScale(v.W, v.H+v.G+loopH);
+  const dW=v.W*sc, dH=v.H*sc, dG=v.G*sc, dHL=v.HL*sc*0.5, dHW=Math.min(v.HW*sc,dW*0.06+4);
+  const {x,y}=anchor(dW,dH+dG+dHL);
+  const by=y+dHL;
+  rect(x,by,dW,dH,'#E6F1FB','#185FA5');
+  if(dG>0){
+    const ind=Math.min(dW*0.08,12);
+    poly([[x,by+dH],[x+dW,by+dH],[x+dW-ind,by+dH+dG],[x+ind,by+dH+dG]],'#B5D4F4','#185FA5');
+  }
+  // loops
+  const loop1x=x+dW*0.28, loop2x=x+dW*0.72;
+  [loop1x,loop2x].forEach(lx=>{
+    const el=document.createElementNS('http://www.w3.org/2000/svg','path');
+    el.setAttribute('d',`M${lx-dHW},${by} C${lx-dHW},${by-dHL} ${lx+dHW},${by-dHL} ${lx+dHW},${by}`);
+    el.setAttribute('fill','none');el.setAttribute('stroke','#185FA5');el.setAttribute('stroke-width','2');
+    document.getElementById('bag-drawing').appendChild(el);
+  });
+  dim(x,by+dH+dG+14,x+dW,by+dH+dG+14,`W=${v.W}mm`,0,true);
+  dim(x-20,by,x-20,by+dH,`H=${v.H}mm`,-8,false);
+  if(dG>0) dim(x+dW+12,by+dH,x+dW+12,by+dH+dG,`G=${v.G}mm`,4,false);
+  dim(x+loop1x-x-dHW,by-dHL-10,x+loop1x-x+dHW,by-dHL-10,`HW=${v.HW}mm`,0,true);
+  dim(x+dW+12,by-dHL,x+dW+12,by,`HL/2=${Math.round(v.HL/2)}mm`,4,false);
+}
+
+function drawPatch(v){
+  const sc=fitScale(v.W,v.H);
+  const dW=v.W*sc, dH=v.H*sc, dG=v.G*sc;
+  const {x,y}=anchor(dW,dH);
+  rect(x,y,dW,dH,'#EEEDFE','#534AB7');
+  if(dG>0){
+    line2(x+dG,y,x+dG,y+dH,'#534AB7',true);
+    line2(x+dW-dG,y,x+dW-dG,y+dH,'#534AB7',true);
+  }
+  const pw=Math.min(v.PW*sc,dW*0.7), ph=Math.min(v.PH*sc,dH*0.3);
+  const px=x+(dW-pw)/2, py=y+dH*0.05;
+  rect(px,py,pw,ph,'#AFA9EC','#534AB7');
+  const hd=Math.min(v.HD*sc/2,ph*0.35);
+  circle(px+pw/2,py+ph/2,hd,'#fff','#534AB7');
+  dim(x,y+dH+14,x+dW,y+dH+14,`W=${v.W}mm`,0,true);
+  dim(x-20,y,x-20,y+dH,`H=${v.H}mm`,-8,false);
+  dim(px,py-10,px+pw,py-10,`PW=${v.PW}mm`,0,true);
+  dim(x+dW+12,py,x+dW+12,py+ph,`PH=${v.PH}mm`,4,false);
+}
+
+function drawPunch(v){
+  const sc=fitScale(v.W,v.H);
+  const dW=v.W*sc, dH=v.H*sc, dG=v.G*sc;
+  const {x,y}=anchor(dW,dH);
+  rect(x,y,dW,dH,'#FBEAF0','#993556');
+  if(dG>0){
+    line2(x+dG,y,x+dG,y+dH,'#993556',true);
+    line2(x+dW-dG,y,x+dW-dG,y+dH,'#993556',true);
+  }
+  const sw=Math.min(v.SW*sc,dW*0.65), sh=Math.min(v.SH*sc,dH*0.15), pt=Math.min(v.PT*sc,dH*0.12);
+  const sx=x+(dW-sw)/2, sy=y+pt;
+  const el=document.createElementNS('http://www.w3.org/2000/svg','rect');
+  el.setAttribute('x',sx);el.setAttribute('y',sy);el.setAttribute('width',sw);el.setAttribute('height',sh);
+  el.setAttribute('fill','#fff');el.setAttribute('stroke','#993556');el.setAttribute('stroke-width','1');
+  el.setAttribute('rx',sh/2);
+  document.getElementById('bag-drawing').appendChild(el);
+  dim(x,y+dH+14,x+dW,y+dH+14,`W=${v.W}mm`,0,true);
+  dim(x-20,y,x-20,y+dH,`H=${v.H}mm`,-8,false);
+  dim(sx,sy-10,sx+sw,sy-10,`SW=${v.SW}mm`,0,true);
+  dim(x+dW+12,sy,x+dW+12,sy+sh,`SH=${v.SH}mm`,4,false);
+  dim(x-20,y,x-20,y+pt,`PT=${v.PT}mm`,-22,false);
+}
+
+function drawWicket(v){
+  const sc=fitScale(v.W, v.H+v.G+v.LH);
+  const dW=v.W*sc, dH=v.H*sc, dG=v.G*sc, dLH=v.LH*sc;
+  const {x,y}=anchor(dW,dH+dG+dLH);
+  rect(x,y,dW,dLH,'#D3D1C7','#5F5E5A');
+  rect(x,y+dLH,dW,dH,'#F1EFE8','#5F5E5A');
+  if(dG>0){
+    const ind=Math.min(dW*0.08,12);
+    poly([[x,y+dLH+dH],[x+dW,y+dLH+dH],[x+dW-ind,y+dLH+dH+dG],[x+ind,y+dLH+dH+dG]],'#D3D1C7','#5F5E5A');
+  }
+  const ws=v.WS*sc, wd=Math.min(v.WD*sc/2,5);
+  const numH=Math.max(1,Math.floor(dW/ws));
+  const startX=x+(dW-(numH-1)*ws)/2;
+  for(let i=0;i<numH;i++) circle(startX+i*ws,y+dLH/2,wd,'#fff','#5F5E5A');
+  line2(x,y+dLH,x+dW,y+dLH,'#5F5E5A',false);
+  dim(x,y+dLH+dH+dG+14,x+dW,y+dLH+dH+dG+14,`W=${v.W}mm`,0,true);
+  dim(x-20,y+dLH,x-20,y+dLH+dH,`H=${v.H}mm`,-8,false);
+  dim(x+dW+12,y,x+dW+12,y+dLH,`LH=${v.LH}mm`,4,false);
+  if(dG>0) dim(x+dW+12,y+dLH+dH,x+dW+12,y+dLH+dH+dG,`G=${v.G}mm`,4,false);
+}
+
+document.querySelectorAll('.bag-item').forEach(el=>{
+  el.addEventListener('click',function(){
+    document.querySelectorAll('.bag-item').forEach(i=>i.classList.remove('active'));
+    this.classList.add('active');
+    currentType=this.dataset.type;
+    buildForm(currentType);
+    draw(currentType);
+  });
+});
+
+buildForm(currentType);
+draw(currentType);
+</script>

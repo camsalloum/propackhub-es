@@ -10,7 +10,7 @@ import {
   resolveInkPrintingProcess,
   resolveInkSolventRatio,
 } from './ink-printing';
-import { hasSolventBasedLayers } from './validator';
+import { stackHasSbInk, stackNeedsSolventMix } from './layer-stack';
 
 export interface SolventCostDetail {
   laminationCostPerM2: number;
@@ -47,15 +47,9 @@ function layerRecipe(
   return material.laminationRecipe ?? null;
 }
 
-function hasSbInk(layers: Layer[], materials: Map<string, Material>): boolean {
-  return layers.some((layer) => {
-    const m = materials.get(layer.materialId);
-    return m?.type === 'ink' && Boolean(m.isSolventBased);
-  });
-}
-
 /**
- * Lamination EA (recipe per adhesive layer) + cleaning solvent (SB ink jobs).
+ * Lamination EA (SB adhesive recipes) + ink makeup (SB ink only, flexo/roto ratio) + cleaning (SB ink only).
+ * UV ink layers: dry GSM in RM cost only — no makeup or cleaning solvent.
  */
 export function calculateSolventCosts(
   estimate: Estimate,
@@ -76,7 +70,7 @@ export function calculateSolventCosts(
     inkSolventRatio: 1,
   };
 
-  if (!hasSolventBasedLayers(estimate.layers, materials) || totalGsm <= 0) {
+  if (!stackNeedsSolventMix(estimate.layers, materials) || totalGsm <= 0) {
     return empty;
   }
 
@@ -111,7 +105,7 @@ export function calculateSolventCosts(
   );
 
   let cleaningCostPerKg = 0;
-  if (hasSbInk(layers, materials)) {
+  if (stackHasSbInk(estimate.layers, materials)) {
     const cleaningKg =
       estimate.cleaningSolventKgPerJob ?? DEFAULT_CLEANING_SOLVENT_KG_PER_JOB;
     const orderKg = estimate.orderQuantityKg ?? 1000;

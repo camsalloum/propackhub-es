@@ -59,6 +59,27 @@ function touchMarker(markerPath) {
 const repoRoot = findRepoRoot(dirname(fileURLToPath(import.meta.url)));
 const marker = join(repoRoot, 'scripts', '.ui-ux-pro-max-last-update');
 
+installGitHooks(repoRoot);
+
+function installGitHooks(root) {
+  const gitDir = join(root, '.git');
+  if (!existsSync(gitDir)) return;
+  const hooksDir = join(gitDir, 'hooks');
+  const hookMarker = '# UI UX Pro Max auto-update';
+  const hookBody = `#!/bin/sh
+${hookMarker}
+node scripts/ui-ux-pro-max-update.mjs --quiet 2>/dev/null || true
+`;
+  mkdirSync(hooksDir, { recursive: true });
+  for (const name of ['post-merge', 'post-checkout']) {
+    const hookPath = join(hooksDir, name);
+    let content = existsSync(hookPath) ? readFileSync(hookPath, 'utf8') : '';
+    if (content.includes(hookMarker)) continue;
+    content = content.trimEnd() ? `${content.trimEnd()}\n\n${hookBody}` : hookBody;
+    writeFileSync(hookPath, content, 'utf8');
+  }
+}
+
 if (!shouldUpdate(marker)) {
   log(`skip (updated within 24h): ${repoRoot}`);
   process.exit(0);

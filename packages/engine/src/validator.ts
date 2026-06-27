@@ -1,5 +1,6 @@
 import { Estimate, Layer, Material, EstimateDimensions } from './types';
 import { stackNeedsSolventMix } from './layer-stack';
+import { resolveBagConfiguratorType } from './bag-flat-sheet';
 
 /**
  * Validate an estimate structure
@@ -79,6 +80,24 @@ export function validateDimensions(dimensions: EstimateDimensions): string[] {
       }
       if (dimensions.extraPrintingTrimMm === undefined) {
         errors.push('extraPrintingTrimMm is required');
+      }
+      break;
+
+    case 'bag':
+      if (!dimensions.openWidthMm || dimensions.openWidthMm <= 0) {
+        errors.push('openWidthMm is required and must be positive for bag');
+      }
+      if (!dimensions.openHeightMm || dimensions.openHeightMm <= 0) {
+        errors.push('openHeightMm is required and must be positive for bag');
+      }
+      if (dimensions.numberOfUps === undefined || dimensions.numberOfUps < 1) {
+        errors.push('numberOfUps is required and must be at least 1');
+      }
+      if (dimensions.extraPrintingTrimMm === undefined) {
+        errors.push('extraPrintingTrimMm is required');
+      }
+      if (!resolveBagConfiguratorType(dimensions)) {
+        errors.push('bagSubtype (or a known productSubtype) is required for bag');
       }
       break;
   }

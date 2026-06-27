@@ -1496,6 +1496,8 @@ const EstimateEditor = () => {
                 productSubtype={productSubtype}
                 dimensions={dimensions}
                 onDimensionsChange={(patch) => setDimensions((prev) => ({ ...prev, ...patch }))}
+                totalGsm={clientCalcResult?.estimate?.totalGsm}
+                piecesPerKg={clientCalcResult?.estimate?.piecesPerKg}
               />
             ) : undefined
           }

@@ -1,6 +1,7 @@
 import {
   calculateEstimate,
   DEFAULT_CLEANING_SOLVENT_KG_PER_JOB,
+  BAG_SUBTYPE_TO_CONFIGURATOR,
   type Estimate as EngineEstimate,
   type CalculationResult,
 } from '@es/engine';
@@ -61,6 +62,14 @@ export function buildEngineEstimateFromRows(opts: {
       productType: estimate.productType,
       printingWebClass: estimate.printingWebClass,
       ...(estimate.dimensions as object),
+      // Resolve bag configurator type from productSubtype so the engine's
+      // flat-sheet area model can run without a web/engine coupling.
+      ...(estimate.productSubtype
+        ? {
+            productSubtype: estimate.productSubtype,
+            bagSubtype: BAG_SUBTYPE_TO_CONFIGURATOR[estimate.productSubtype],
+          }
+        : {}),
     },
     markupPercent: parseFloat(estimate.markupPercent),
     platesPerKg: parseFloat(estimate.platesPerKg),
@@ -85,6 +94,8 @@ export function buildEngineEstimateFromRows(opts: {
       : slabs[0]?.quantityKg
         ? parseFloat(slabs[0].quantityKg)
         : 1000,
+    // Unit the user entered orderQuantityKg in; engine converts to true kg.
+    orderQuantityUnit: estimate.orderQuantityUnit ?? 'kgs',
     solventCostPerKgUsd: resolveSolventCostPerKgUsd(materials, {
       solventMaterialId: estimate.solventMaterialId,
       solventCostPerKgUsd: estimate.solventCostPerKgUsd

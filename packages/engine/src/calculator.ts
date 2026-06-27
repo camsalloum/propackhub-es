@@ -8,6 +8,8 @@ import {
   calculateTotalConstructionMicron,
   calculateStructureDensity,
 } from './structure-metrics';
+import { calculateBagFlatSheetAreaM2 } from './bag-flat-sheet';
+import { convertOrderQuantityToKg } from './unit-conversion';
 
 /**
  * Main calculation engine - mirrors Laravel costing formulas
@@ -56,6 +58,19 @@ export function calculateEstimate(
   // Step 6: Calculate product-specific metrics
   const productMetrics = calculateProductMetrics(estimate.dimensions, totalGsm, filmDensity, printingWebWidthMm);
 
+  // Step 6b: Convert user-entered order quantity (in `orderQuantityUnit`) to true kg.
+  // productMetrics are independent of order quantity, so no circular dependency.
+  const trueOrderQuantityKg = convertOrderQuantityToKg(
+    estimate.orderQuantityKg,
+    estimate.orderQuantityUnit,
+    {
+      piecesPerKg: productMetrics.piecesPerKg,
+      sqmPerKg,
+      linearMPerKgWeb: productMetrics.linearMPerKgWeb,
+      linearMPerKgReel: productMetrics.linearMPerKgReel,
+    }
+  );
+
   // Step 7: Solvent — lamination EA (recipes) + press cleaning (SB ink)
   const solventDetail = calculateSolventCosts(
     estimate,
@@ -65,8 +80,8 @@ export function calculateEstimate(
   );
   const solventCostPerKg = solventDetail.totalCostPerKg;
 
-  // Step 8: Calculate operation costs from processes
-  const processResults = calculateProcessCosts(estimate.processes, estimate.orderQuantityKg, productMetrics);
+  // Step 8: Calculate operation costs from processes (using converted kg)
+  const processResults = calculateProcessCosts(estimate.processes, trueOrderQuantityKg, productMetrics);
 
   // Step 9: Calculate sale price per kg (Laravel additive formula)
   const salePricePerKg = calculateSalePrice(
@@ -139,6 +154,7 @@ export function calculateEstimate(
   const updatedEstimate: Estimate = {
     ...estimate,
     layers: layersWithCalc,
+    processes: processResults.processes,
     totalGsm,
     totalMicron,
     substrateGaugeMicron,
@@ -167,10 +183,10 @@ export function calculateEstimate(
     gramsPerPiece: productMetrics.gramsPerPiece,
     linearMPerKgWeb: productMetrics.linearMPerKgWeb,
     linearMPerKgReel: productMetrics.linearMPerKgReel,
-    // Order quantities
-    orderQuantityKpcs: estimate.orderQuantityKg * (productMetrics.piecesPerKg || 0) / 1000,
-    orderQuantitySqm: estimate.orderQuantityKg * (sqmPerKg || 0),
-    orderQuantityMeters: estimate.orderQuantityKg * (productMetrics.linearMPerKgWeb || 0)
+    // Order quantities (derived from the converted true kg)
+    orderQuantityKpcs: trueOrderQuantityKg * (productMetrics.piecesPerKg || 0) / 1000,
+    orderQuantitySqm: trueOrderQuantityKg * (sqmPerKg || 0),
+    orderQuantityMeters: trueOrderQuantityKg * (productMetrics.linearMPerKgWeb || 0)
   };
 
   return {
@@ -292,11 +308,8 @@ function calculateProductMetrics(
       break;
 
     case 'pouch':
-    case 'bag':
-      // Bag and Pouch share the same area-based costing formula:
+      // Pouch: face-area model.
       // pieces_per_kg = 1000 / (openWidthMm × openHeightMm × totalGsm × 1e-6)
-      // The distinction (bag vs pouch) is preserved in productType on the estimate
-      // for reporting/filtering; the math is identical.
       if (dimensions.openWidthMm && dimensions.openHeightMm) {
         result.piecesPerKg = (1000 / (dimensions.openWidthMm * dimensions.openHeightMm * totalGsm * 1e-6)) * 1;
         result.gramsPerPiece = 1000 / result.piecesPerKg;
@@ -305,12 +318,44 @@ function calculateProductMetrics(
           result.linearMPerKgWeb = (sqmPerKg / printingWebWidthMm) * 1000;
         }
 
-        // linear_m_per_kg_reel uses open_height for both bag and pouch
+        // linear_m_per_kg_reel uses open_height (cut length)
         if (dimensions.openHeightMm > 0) {
           result.linearMPerKgReel = (sqmPerKg / dimensions.openHeightMm) * 1000;
         }
       }
       break;
+
+    case 'bag': {
+      // Bag: flat-sheet blank area model (gussets, flaps, lips, patches).
+      // See bag-flat-sheet.ts. Falls back to face area if subtype unresolved.
+      const bag = calculateBagFlatSheetAreaM2(dimensions);
+      if (bag.areaM2 > 0) {
+        // pieces_per_kg = 1000 / (areaM2 × totalGsm)
+        result.piecesPerKg = 1000 / (bag.areaM2 * totalGsm);
+        result.gramsPerPiece = 1000 / result.piecesPerKg;
+
+        if (printingWebWidthMm > 0) {
+          result.linearMPerKgWeb = (sqmPerKg / printingWebWidthMm) * 1000;
+        }
+
+        // Reel runs across the blank width (cross-direction)
+        if (bag.blankWidthMm > 0) {
+          result.linearMPerKgReel = (sqmPerKg / bag.blankWidthMm) * 1000;
+        }
+      } else if (dimensions.openWidthMm && dimensions.openHeightMm) {
+        // Fallback: unresolved bag subtype → face-area (pouch-style) estimate
+        result.piecesPerKg = (1000 / (dimensions.openWidthMm * dimensions.openHeightMm * totalGsm * 1e-6)) * 1;
+        result.gramsPerPiece = 1000 / result.piecesPerKg;
+
+        if (printingWebWidthMm > 0) {
+          result.linearMPerKgWeb = (sqmPerKg / printingWebWidthMm) * 1000;
+        }
+        if (dimensions.openHeightMm > 0) {
+          result.linearMPerKgReel = (sqmPerKg / dimensions.openHeightMm) * 1000;
+        }
+      }
+      break;
+    }
   }
 
   return result;
@@ -342,7 +387,8 @@ function calculateProcessCosts(
         runHours = meters / (process.speedValue * 60);
         break;
       case 'pcs_per_min':
-        const pieces = orderQuantityKg * (productMetrics.piecesPerKg || 0) / 1000;
+        // pieces = kg × piecesPerKg (piecesPerKg is pieces/kg, NOT kpcs/kg)
+        const pieces = orderQuantityKg * (productMetrics.piecesPerKg || 0);
         runHours = pieces / (process.speedValue * 60);
         break;
     }

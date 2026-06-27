@@ -11,6 +11,8 @@ export * from './lamination-recipe';
 export * from './solvent-costing';
 export * from './ink-printing';
 export * from './structure-metrics';
+export * from './bag-flat-sheet';
+export * from './unit-conversion';
 
 // Re-export for convenience
 export { calculateEstimate } from './calculator';

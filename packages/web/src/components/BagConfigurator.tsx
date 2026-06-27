@@ -1,5 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { Box, Layers } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BagSchematic } from './BagSchematic';
 import {
   BAG_CONFIGURATOR_CATALOG,
@@ -9,12 +8,6 @@ import {
   type BagConfiguratorConfig,
 } from '../lib/bagConfiguratorCatalog';
 import { bagDrawDimsFromFields, bagFaceAreaCm2, bagFlatSheetLabel } from '../lib/bagDrawDims';
-
-const BagScene3D = lazy(() =>
-  import('./BagScene3D').then((m) => ({ default: m.BagScene3D }))
-);
-
-type PreviewMode = '2d' | '3d';
 
 function BagInputField({
   field,
@@ -81,11 +74,17 @@ export function BagConfigurator({
   dimensions,
   onDimensionsChange,
   disabled = false,
+  totalGsm,
+  piecesPerKg,
 }: {
   productSubtype: string | null | undefined;
   dimensions: Record<string, number | undefined>;
   onDimensionsChange: (patch: Record<string, number>) => void;
   disabled?: boolean;
+  /** Total structure GSM from the calculation result (Structure web totals). */
+  totalGsm?: number;
+  /** Pieces per kg from the calculation result (flat-sheet area × totalGsm). */
+  piecesPerKg?: number;
 }) {
   const configType = configuratorTypeForBagSubtype(productSubtype);
   const config: BagConfiguratorConfig | null = configType ? BAG_CONFIGURATOR_CATALOG[configType] : null;
@@ -107,19 +106,12 @@ export function BagConfigurator({
     [config, onDimensionsChange]
   );
 
-  const supports3d = configType === 'bottom-gusset';
-  const [previewMode, setPreviewMode] = useState<PreviewMode>('2d');
-
-  useEffect(() => {
-    if (!supports3d && previewMode === '3d') setPreviewMode('2d');
-  }, [supports3d, previewMode]);
-
   if (!config || !configType) return null;
 
   return (
     <div className="w-full rounded-lg border border-slate bg-white overflow-hidden shadow-sm">
       {/* Dimension inputs — replaces old Job details width/height/gusset columns */}
-      <div className="flex flex-wrap items-end gap-x-3 gap-y-3 px-4 py-3 border-b border-slate bg-slate/25">
+      <div className="flex flex-wrap items-end justify-center gap-x-3 gap-y-3 px-4 py-3 border-b border-slate bg-slate/25">
         {config.fields.map((f) => (
           <BagInputField
             key={f.id}
@@ -129,52 +121,11 @@ export function BagConfigurator({
             disabled={disabled}
           />
         ))}
-        {supports3d && (
-          <div className="ml-auto flex items-center gap-1 rounded-md border border-slate bg-white p-0.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => setPreviewMode('2d')}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold rounded transition-colors ${
-                previewMode === '2d' ? 'bg-navy text-white' : 'text-navy/70 hover:bg-slate/30'
-              }`}
-              aria-pressed={previewMode === '2d'}
-            >
-              <Layers className="w-3.5 h-3.5" aria-hidden />
-              2D
-            </button>
-            <button
-              type="button"
-              onClick={() => setPreviewMode('3d')}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold rounded transition-colors ${
-                previewMode === '3d' ? 'bg-navy text-white' : 'text-navy/70 hover:bg-slate/30'
-              }`}
-              aria-pressed={previewMode === '3d'}
-            >
-              <Box className="w-3.5 h-3.5" aria-hidden />
-              3D
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Live preview */}
+      {/* Live schematic */}
       <div className="bg-[#f8f9fb] min-h-[360px]">
-        {previewMode === '2d' || !supports3d ? (
-          <BagSchematic type={configType} vals={fieldVals} />
-        ) : (
-          <Suspense
-            fallback={
-              <div className="flex items-center justify-center min-h-[360px] text-sm text-mist">Loading 3D preview…</div>
-            }
-          >
-            <BagScene3D
-              width={drawDims.W}
-              height={drawDims.H}
-              gusset={drawDims.G}
-              topFold={drawDims.F}
-            />
-          </Suspense>
-        )}
+        <BagSchematic type={configType} vals={fieldVals} />
       </div>
 
       {/* Status */}
@@ -192,7 +143,23 @@ export function BagConfigurator({
         <span>
           <span className="font-semibold text-navy/70">Flat sheet:</span> {bagFlatSheetLabel(drawDims, configType)}
         </span>
-        <span className="text-mist/90 ml-auto">Film gauge &amp; GSM from Structure web totals</span>
+        <span>
+          <span className="font-semibold text-navy/70">Total GSM:</span>{' '}
+          {Number.isFinite(totalGsm) && totalGsm && totalGsm > 0 ? (
+            <span className="text-navy font-semibold">{totalGsm.toFixed(1)} g/m²</span>
+          ) : (
+            <span className="text-mist/70 italic">— add layers</span>
+          )}
+        </span>
+        <span>
+          <span className="font-semibold text-navy/70">Pcs/kg:</span>{' '}
+          {Number.isFinite(piecesPerKg) && piecesPerKg && piecesPerKg > 0 ? (
+            <span className="text-navy font-semibold">{piecesPerKg.toFixed(1)}</span>
+          ) : (
+            <span className="text-mist/70 italic">— needs structure</span>
+          )}
+        </span>
+        <span className="text-mist/90 ml-auto">Film gauge &amp; GSM linked from Structure ↓</span>
       </div>
     </div>
   );

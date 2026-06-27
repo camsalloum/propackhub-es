@@ -49,6 +49,22 @@ export interface EstimateDimensions {
   openWidthMm?: number;
   openHeightMm?: number;
   layFlatValue?: number;
+  // Bag fields (flat-sheet area model — see bag-flat-sheet.ts)
+  /** Configurator type: 'bottom-gusset' | 'side-gusset' | 'courier' | 'diaper' | 'industrial' | 'loop' | 'patch' | 'punch' | 'wicket'. */
+  bagSubtype?: string;
+  /** Original product subtype code (e.g. 'bag_bottom_gusset_shopping') — fallback for inference. */
+  productSubtype?: string;
+  bottomGussetMm?: number;
+  sideGussetMm?: number;
+  flapMm?: number;
+  handleLengthMm?: number;
+  bagHandleWidthMm?: number;
+  bagPatchWidthMm?: number;
+  bagPatchHeightMm?: number;
+  /** Wicket lip/header strip height (mm). Added to length on top of the body. */
+  bagWicketLipMm?: number;
+  /** Seal allowance per cut (mm). Default 10 mm when omitted. */
+  sealAllowanceMm?: number;
   // Common
   /** Derived metadata for DB/reporting — not used in costing formulas. */
   printingWebClass?: 'wide_web' | 'narrow_web';
@@ -149,6 +165,9 @@ export interface Estimate {
 
   // Order quantities
   orderQuantityKg: number;
+  /** Unit the user entered `orderQuantityKg` in: 'kgs' | 'kpcs' | 'sqm' | 'lm' | 'roll_500_lm'.
+   *  'kgs' is the default (no conversion). All others are converted to true kg using productMetrics. */
+  orderQuantityUnit?: string;
   orderQuantityKpcs?: number;
   orderQuantitySqm?: number;
   orderQuantityMeters?: number;

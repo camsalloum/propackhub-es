@@ -1131,3 +1131,11 @@ npm run update-materials
 - **References:** `mes_packaging_configurator_v2.html` (legacy); user Bolt 2D HTML; R3F 3D bottom-gusset mockup (reviewed, not integrated).
 - **Next session:** Polish 2D all subtypes; add optional 3D toggle (bottom-gusset first, lazy Three.js, shared inputs).
 
+### 2026-06-27 — Bag 2D polish + 3D toggle
+
+- **2D:** All 9 schematic drawers show dimension labels with mm values (`W=400mm`, `G=120mm`, etc.) — matches legacy `mes_packaging_configurator_v2.html`.
+- **3D:** `BagScene3D` + `BagGeometry3D` — bottom-gusset only; wired to same W/H/G/F from `drawDims`; no colors/branding/volume/duplicate controls.
+- **Toggle:** `BagConfigurator` input row — **2D | 3D** buttons when subtype is bottom-gusset; `React.lazy` loads ~900 KB chunk on first 3D view.
+- **Deps:** `three@0.168`, `@react-three/fiber@8`, `@react-three/drei@9`; `@types/three` hoisted at workspace root with npm override.
+- **Pending:** Manual test save/reload per bag subtype; extend 3D to other subtypes if needed.
+

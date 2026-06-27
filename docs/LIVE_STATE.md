@@ -1,50 +1,42 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-06-26 (session end — bag configurator)
-**Session focus:** Bag visual configurator (2D Bolt UX) integrated into Job details; field-edit fixes
+**Last updated:** 2026-06-27 (session end — bag 2D polish + 3D toggle)
+**Session focus:** Bag configurator 2D dimension labels + optional bottom-gusset 3D preview
 
 ---
 
-## Where we stopped (read this first tomorrow)
+## Where we stopped (read this first next session)
 
 ### Bag configurator — current state ✅
 
 | Item | Status |
 |------|--------|
 | **When active** | Product type = **Bag** + mapped subtype (9 types) |
-| **Replaces** | Old Job details width/height/gusset columns (`dimensionFields={[]}`) |
-| **Layout** | Bolt-style: **input row** (mm) → **live 2D SVG** → status bar (face area, flat sheet) |
-| **Data** | Writes `dimensions` JSONB (`openWidthMm`, `bottomGussetMm`, `bag*` keys, etc.) |
+| **Layout** | Bolt-style: **input row** (mm) → **2D SVG or 3D** → status bar |
+| **2D polish** | All 9 subtypes show **`W=400mm`** style dim labels (legacy configurator format) |
+| **3D toggle** | **Bottom-gusset only** — 2D \| 3D buttons in input row; lazy-loaded `BagScene3D` (~900 KB chunk) |
+| **3D inputs** | Same W/H/G/F mm from `fieldVals` / `drawDims` — no duplicate controls, colors, or branding |
+| **Data** | Writes `dimensions` JSONB unchanged |
 | **Gauge / GSM** | **Not** on bag panel — Structure web totals only |
-| **Template quotes** | Bag dimensions **editable** (structure lock applies to layers only) |
-| **Field edits** | Fixed: no `effectiveBagFieldValue` snap-back; local draft inputs; direct `dimensionKey` patch |
 
-### Tomorrow — planned (user)
+### Next — planned (user)
 
-- [ ] **Polish 2D** schematic (all 9 subtypes): alignment, dim labels, subtype-specific fields on drawing where useful
-- [ ] **Add 3D** (test): optional toggle; start with **bottom-gusset** using reviewed Bolt/R3F mockup (`BagScene`, `BagGeometry`) — lazy-load `three` + R3F; **no** duplicate controls / colors / branding
-- [ ] Hard refresh + test: change W/H/G on each bag subtype; save estimate; reload dimensions
-- [ ] Reference assets: `mes_packaging_configurator_v2.html` (legacy 2D), user Bolt HTML (2D+3D toggle), pasted 3D mockup (bottom-gusset only)
+- [ ] Hard refresh + **manual test**: change W/H/G on each bag subtype; save estimate; reload dimensions
+- [ ] 3D: extend to other subtypes if bottom-gusset test passes (or keep 2D-only for non-bottom-gusset)
+- [ ] Optional: further 2D alignment tweaks per subtype (courier POD, diaper NC, etc.)
 
 ### Key files (bag configurator)
 
 ```
 packages/web/src/lib/bagConfiguratorCatalog.ts  — subtype map, field defs, seedBagDimensionPatch
 packages/web/src/lib/bagDrawDims.ts             — draw normalization + status bar labels
-packages/web/src/components/BagSchematic.tsx    — 9× Bolt-style 2D SVG (ResizeObserver)
-packages/web/src/components/BagConfigurator.tsx — input row + schematic + status
-packages/web/src/pages/EstimateEditor.tsx     — bagDimensionsPanel in JobHeaderFields; seed on subtype
+packages/web/src/components/BagSchematic.tsx    — 9× Bolt-style 2D SVG + mm dim labels
+packages/web/src/components/BagGeometry3D.tsx   — bottom-gusset mesh (no branding)
+packages/web/src/components/BagScene3D.tsx        — R3F canvas (lazy import)
+packages/web/src/components/BagConfigurator.tsx — input row + 2D/3D toggle + status
+packages/web/package.json                       — three, @react-three/fiber, @react-three/drei
+packages/web/vite.config.ts                     — optimizeDeps for three/R3F
 ```
-
-**Removed:** `bagSchematicLayout.ts` (SVG overlay inputs — abandoned)
-
-**Not in repo yet:** 3D components (`BagScene`, `BagGeometry`) — review only; integrate tomorrow
-
-### 3D mockup review notes (do not copy blindly)
-
-- Fix TS typos: `useState<BagConfig>`, `useRef<THREE.Group>`, `Partial<BagConfig>`
-- Skip: bag color, branding, volume formula, separate ControlsPanel
-- Wire 3D from same `fieldVals` as 2D (W/H/G mm), lazy import, bottom-gusset first
 
 ### Prior session work (still valid)
 
@@ -53,6 +45,7 @@ packages/web/src/pages/EstimateEditor.tsx     — bagDimensionsPanel in JobHeade
 | Template ink controls | ✅ 4% column vertical `+▲▼✕`; structure lock = stack only |
 | Engine SB/UV | ✅ Layer `isSolventBased`; 86 engine tests |
 | Job details unified | ✅ Subtype + order qty in spec row; bag panel below when bag |
+| Field edits | ✅ Local draft inputs; direct `dimensionKey` patch |
 
 ### Template lock rules (source of truth)
 

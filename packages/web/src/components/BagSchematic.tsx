@@ -13,11 +13,16 @@ const C = {
   gussetDash: '4,3',
   dimLine: '#3d4a60',
   dimText: '#1c2333',
-  dimFs: 12,
+  dimFs: 11,
   arrow: 6,
   dimOff: 30,
   dimStep: 32,
 };
+
+/** Dimension label with mm value — matches legacy configurator format. */
+function dimLbl(id: string, mm: number) {
+  return `${id}=${Math.round(mm)}mm`;
+}
 
 function mkT(W: number, H: number, vw: number, vh: number) {
   const m = 0.22;
@@ -178,10 +183,10 @@ function DrawBottomGusset({ d, vw, vh }: { d: BagDrawDims; vw: number; vh: numbe
         )}
         <rect x={x0} y={y0} width={bW} height={y1 - y0} fill="none" stroke={C.bagStroke} strokeWidth={C.sw} rx={1} />
       </g>
-      <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl="W" />
-      <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl="H" />
-      {G > 0 && <DimV y1={yG} y2={y1} xB={x1} off={C.dimOff} lbl="G" left={false} />}
-      {F > 0 && <DimV y1={y0} y2={yF} xB={x0} off={C.dimOff + C.dimStep} lbl="F" />}
+      <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl={dimLbl('W', W)} />
+      <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl={dimLbl('H', H)} />
+      {G > 0 && <DimV y1={yG} y2={y1} xB={x1} off={C.dimOff} lbl={dimLbl('G', G)} left={false} />}
+      {F > 0 && <DimV y1={y0} y2={yF} xB={x0} off={C.dimOff + C.dimStep} lbl={dimLbl('F', F)} />}
     </>
   );
 }
@@ -212,10 +217,10 @@ function DrawSideGusset({ d, vw, vh }: { d: BagDrawDims; vw: number; vh: number 
         <line x1={x1 - sg} y1={y0} x2={x1 - sg} y2={y1} stroke={C.bagStroke} strokeWidth={1} strokeDasharray={C.gussetDash} />
         <rect x={x0} y={y0} width={bW} height={y1 - y0} fill="none" stroke={C.bagStroke} strokeWidth={C.sw} rx={1} />
       </g>
-      <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl="W" />
-      <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl="H" />
-      <DimH x1={x0} x2={x0 + sg} yB={y1} off={C.dimOff} lbl="SG" above={false} />
-      {F > 0 && <DimV y1={y0} y2={yF} xB={x1} off={C.dimOff} lbl="TS" left={false} />}
+      <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl={dimLbl('W', W)} />
+      <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl={dimLbl('H', H)} />
+      <DimH x1={x0} x2={x0 + sg} yB={y1} off={C.dimOff} lbl={dimLbl('SG', SG)} above={false} />
+      {F > 0 && <DimV y1={y0} y2={yF} xB={x1} off={C.dimOff} lbl={dimLbl('TS', F)} left={false} />}
     </>
   );
 }
@@ -249,9 +254,9 @@ function DrawCourier({ d, vw, vh }: { d: BagDrawDims; vw: number; vh: number }) 
         />
         <line x1={x0} y1={yFlap} x2={x1} y2={yFlap} stroke={C.bagStroke} strokeWidth={1.5} />
       </g>
-      <DimH x1={x0} x2={x1} yB={yFlap} off={C.dimOff} lbl="W" />
-      <DimV y1={yFlap} y2={y1} xB={x0} off={C.dimOff} lbl="L" />
-      <DimV y1={y0} y2={yFlap} xB={x1} off={C.dimOff} lbl="FL" left={false} />
+      <DimH x1={x0} x2={x1} yB={yFlap} off={C.dimOff} lbl={dimLbl('W', W)} />
+      <DimV y1={yFlap} y2={y1} xB={x0} off={C.dimOff} lbl={dimLbl('L', H)} />
+      <DimV y1={y0} y2={yFlap} xB={x1} off={C.dimOff} lbl={dimLbl('FL', flap)} left={false} />
     </>
   );
 }
@@ -303,10 +308,10 @@ function DrawDiaper({ d, vw, vh }: { d: BagDrawDims; vw: number; vh: number }) {
         )}
         <rect x={x0} y={y0} width={bW} height={y1 - y0} fill="none" stroke={C.bagStroke} strokeWidth={C.sw} rx={2} />
       </g>
-      <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl="W" />
-      <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl="H" />
-      {G > 0 && <DimV y1={yG} y2={y1} xB={x1} off={C.dimOff} lbl="G" left={false} />}
-      {F > 0 && <DimV y1={y0} y2={yF} xB={x0} off={C.dimOff + C.dimStep} lbl="F" />}
+      <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl={dimLbl('W', W)} />
+      <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl={dimLbl('H', H)} />
+      {G > 0 && <DimV y1={yG} y2={y1} xB={x1} off={C.dimOff} lbl={dimLbl('G', G)} left={false} />}
+      {F > 0 && <DimV y1={y0} y2={yF} xB={x0} off={C.dimOff + C.dimStep} lbl={dimLbl('F', F)} />}
     </>
   );
 }
@@ -347,9 +352,9 @@ function DrawIndustrial({ d, vw, vh }: { d: BagDrawDims; vw: number; vh: number 
         />
         <rect x={x0} y={y0} width={bodyW} height={y1 - y0} fill="none" stroke={C.bagStroke} strokeWidth={2} />
       </g>
-      <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl="W" />
-      <DimV y1={y0} y2={y1} xB={t.px(0)} off={C.dimOff} lbl="L" />
-      {dSG > 0 && <DimH x1={t.px(0)} x2={x0} yB={y0} off={C.dimOff} lbl="SG" above={false} />}
+      <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl={dimLbl('W', W)} />
+      <DimV y1={y0} y2={y1} xB={t.px(0)} off={C.dimOff} lbl={dimLbl('L', H)} />
+      {dSG > 0 && <DimH x1={t.px(0)} x2={x0} yB={y0} off={C.dimOff} lbl={dimLbl('SG', SG)} above={false} />}
     </>
   );
 }
@@ -388,9 +393,9 @@ function DrawLoop({ d, vw, vh }: { d: BagDrawDims; vw: number; vh: number }) {
         <path d={loopPath(rx1, rx2)} fill="none" stroke={C.bagFill} strokeWidth={3} strokeLinecap="round" />
         <rect x={x0} y={y0} width={bW} height={y1 - y0} fill="none" stroke={C.bagStroke} strokeWidth={C.sw} rx={2} />
       </g>
-      <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl="W" />
-      <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl="H" />
-      <DimV y1={t.py(0)} y2={y0} xB={x1} off={C.dimOff} lbl="HL" left={false} />
+      <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl={dimLbl('W', W)} />
+      <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl={dimLbl('H', H)} />
+      <DimV y1={t.py(0)} y2={y0} xB={x1} off={C.dimOff} lbl={dimLbl('HL', HL)} left={false} />
     </>
   );
 }
@@ -432,8 +437,8 @@ function DrawPatch({ d, vw, vh }: { d: BagDrawDims; vw: number; vh: number }) {
         />
         <rect x={x0} y={y0} width={bW} height={y1 - y0} fill="none" stroke={C.bagStroke} strokeWidth={C.sw} rx={2} />
       </g>
-      <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl="W" />
-      <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl="H" />
+      <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl={dimLbl('W', W)} />
+      <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl={dimLbl('H', H)} />
     </>
   );
 }
@@ -467,8 +472,8 @@ function DrawPunch({ d, vw, vh }: { d: BagDrawDims; vw: number; vh: number }) {
         ))}
         <rect x={x0} y={y0} width={bW} height={y1 - y0} fill="none" stroke={C.bagStroke} strokeWidth={C.sw} rx={2} />
       </g>
-      <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl="W" />
-      <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl="H" />
+      <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl={dimLbl('W', W)} />
+      <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl={dimLbl('H', H)} />
     </>
   );
 }
@@ -495,9 +500,9 @@ function DrawWicket({ d, vw, vh }: { d: BagDrawDims; vw: number; vh: number }) {
         <circle cx={x1 - 14} cy={rodY} r={5} fill="#c0c8d0" stroke="#6a7588" strokeWidth={1} />
         <rect x={x0} y={yLip} width={bW} height={y1 - yLip} fill="none" stroke={C.bagStroke} strokeWidth={C.sw} rx={2} />
       </g>
-      <DimH x1={x0} x2={x1} yB={yLip} off={C.dimOff} lbl="W" />
-      <DimV y1={yLip} y2={y1} xB={x0} off={C.dimOff} lbl="H" />
-      <DimV y1={y0} y2={yLip} xB={x1} off={C.dimOff} lbl="LH" left={false} />
+      <DimH x1={x0} x2={x1} yB={yLip} off={C.dimOff} lbl={dimLbl('W', W)} />
+      <DimV y1={yLip} y2={y1} xB={x0} off={C.dimOff} lbl={dimLbl('H', H)} />
+      <DimV y1={y0} y2={yLip} xB={x1} off={C.dimOff} lbl={dimLbl('LH', lip)} left={false} />
     </>
   );
 }

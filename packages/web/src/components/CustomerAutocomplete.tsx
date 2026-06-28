@@ -91,7 +91,11 @@ export default function CustomerAutocomplete({
         pickCustomer(existing);
         return;
       }
-      const created = await apiClient.createCustomer({ companyName: trimmed });
+      const created = (await apiClient.createCustomer({ companyName: trimmed })) as {
+        id: string;
+        companyName: string;
+        contactName?: string;
+      };
       pickCustomer({
         id: created.id,
         companyName: created.companyName,
@@ -162,7 +166,7 @@ export default function CustomerAutocomplete({
         autoComplete="off"
       />
       {open && (
-        <ul className="absolute z-20 mt-1 w-full min-w-[12rem] bg-white border border-border rounded-lg shadow-lg max-h-52 overflow-auto">
+        <ul className="absolute z-20 mt-1 w-full min-w-[12rem] bg-surface-raised border border-border rounded-lg shadow-lg max-h-52 overflow-auto">
           {showCreateOption && (
             <li className="border-b border-border">
               <button

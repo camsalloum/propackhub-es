@@ -5,14 +5,20 @@
  * DOMAIN MODEL (owner-confirmed 2026-06-21):
  *   - Bag and Pouch are SEPARATE product kinds with their OWN subtypes and DIFFERENT
  *     displayed dimension fields.
- *   - Costing is unchanged: per the source Excel ("If Bag or Pouch" block), both Bag and
- *     Pouch reduce to the engine's `pouch` costing path (Open Width × Open Height + ups).
- *     So `engineTypeForFamily('bag') === 'pouch'` — the locked @es/engine + golden tests
- *     are NOT touched. The Bag/Pouch distinction lives in the UI + `productSubtype`.
+ *   - Costing is now SUBTYPE-DRIVEN per product kind (updated post engine split):
+ *       · Bag  → `bag-flat-sheet.ts`  via `dimensions.productType === 'bag'`
+ *       · Pouch → `pouch-flat-sheet.ts` via `dimensions.productType === 'pouch'`
+ *     Each branch falls back to the legacy face-area model when no subtype is set,
+ *     so pre-split estimates keep their original prices. The legacy comment that
+ *     "Bag and Pouch reduce to the engine's pouch costing path" no longer applies.
+ *   - `engineTypeForFamily('bag')` still returns `'pouch'` and is used only for
+ *     template-classification labels and UI groupings (sleeve vs film vs laminate);
+ *     it does NOT route the cost calculation, which reads `dimensions.productType`
+ *     directly. Kept for backward compatibility with template flows.
  *   - Subtypes are intended to be Master-Data-managed (reference category `product_subtype`);
  *     this file is the built-in default catalog + the field-schema source of truth.
  *
- * See docs/ES_DEEP_AUDIT_AND_ENHANCEMENT_PLAN_2026-06-21.md §18.1.
+ * See docs/POUCH_COSTING_RESEARCH.md and docs/BAG_COSTING_RESEARCH.md.
  */
 
 import type { ProductTypeValue } from './masterDataReference';
@@ -50,7 +56,15 @@ export interface ProductSubtype {
   dimensionFields: DimensionFieldDef[];
 }
 
-/** Bag/Pouch both cost via the engine `pouch` path; roll/sleeve are themselves; custom → pouch. */
+/**
+ * UI-family → engine costing alias.
+ * - Roll/Sleeve map to themselves.
+ * - **Bag and Pouch each have their OWN engine path now** (`case 'bag'` and
+ *   `case 'pouch'` in calculator.ts) — this function is kept only for template
+ *   classification labels and other UI groupings; it does NOT route costing.
+ *   Costing routing is driven by `dimensions.productType` set via
+ *   `productTypeForSave()` in estimateConfigure.ts, which preserves 'bag' as 'bag'.
+ */
 export function engineTypeForFamily(family: ProductFamily): EngineProductType {
   if (family === 'roll') return 'roll';
   if (family === 'sleeve') return 'sleeve';
@@ -127,6 +141,7 @@ export const POUCH_SUBTYPES: ProductSubtype[] = [
   { key: 'pouch_center_seal', label: 'Center-Seal Pouch', family: 'pouch', dimensionFields: POUCH_BASE },
   { key: 'pouch_gusset', label: 'Gusset Pouch', family: 'pouch', dimensionFields: [...POUCH_BASE, F.sideGusset] },
   { key: 'pouch_4_side_seal', label: '4-Side Seal Pouch', family: 'pouch', dimensionFields: POUCH_BASE },
+  { key: 'pouch_flat_bottom', label: 'Flat-Bottom (Box) Pouch', family: 'pouch', dimensionFields: [...POUCH_BASE, F.sideGusset] },
 ];
 
 export const BAG_SUBTYPES: ProductSubtype[] = [

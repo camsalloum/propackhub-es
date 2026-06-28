@@ -513,6 +513,46 @@ export const structureTemplatesRelations = relations(structureTemplates, ({ one 
   tenant: one(tenants, { fields: [structureTemplates.tenantId], references: [tenants.id] }),
 }));
 
+/**
+ * Platform-wide standard templates (admin-platform-templates spec).
+ * Canonical source of truth for every platform standard, independent of any tenant.
+ * Tenants get materialized copies in `structure_templates` via syncPlatformStandardsToTenant().
+ *
+ * Layer storage uses `ref_material_key` only (no tenant-scoped `materialId`).
+ */
+export const platformStandardTemplates = pgTable('platform_standard_templates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  /** Immutable canonical key (e.g. "laminates-non-pe-duplex"). Unique across the platform catalog. */
+  templateKey: varchar('template_key', { length: 128 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  pebiParentPg: varchar('pebi_parent_pg', { length: 255 }).notNull(),
+  productType: productTypeEnum('product_type').notNull(),
+  productSubtype: varchar('product_subtype', { length: 64 }),
+  materialClass: varchar('material_class', { length: 50 }),
+  structureType: varchar('structure_type', { length: 50 }),
+  substrateOrigin: varchar('substrate_origin', { length: 50 }),
+  displayOrder: integer('display_order').notNull().default(0),
+  defaultDimensions: jsonb('default_dimensions'),
+  /** Array of { layer_order, layer_type, ref_material_key, default_micron, swappable_with? } */
+  defaultLayers: jsonb('default_layers').notNull(),
+  defaultProcesses: jsonb('default_processes'),
+  defaultPrintingWebClass: printingWebClassEnum('default_printing_web_class').default('wide_web'),
+  solventMixEnabled: boolean('solvent_mix_enabled').default(false),
+  inkSystemOptions: jsonb('ink_system_options'),
+  substrateOptions: jsonb('substrate_options'),
+  isActive: boolean('is_active').notNull().default(true),
+  /** Audit: original platform_admin who created the row (uuid, FK not enforced) */
+  createdByUserId: uuid('created_by_user_id'),
+  /** Audit: most recent platform_admin who edited the row (uuid, FK not enforced) */
+  updatedByUserId: uuid('updated_by_user_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  templateKeyIdx: index('platform_standard_templates_template_key_idx').on(table.templateKey),
+  displayOrderIdx: index('platform_standard_templates_display_order_idx').on(table.displayOrder),
+  isActiveIdx: index('platform_standard_templates_is_active_idx').on(table.isActive),
+}));
+
 // Sessions (Phase 2.3 — refresh token rotation)
 export const sessions = pgTable('sessions', {
   id: uuid('id').primaryKey().defaultRandom(),

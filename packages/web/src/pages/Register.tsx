@@ -1,12 +1,21 @@
+// Feature: es-ui-revamp (Phase 1.5 visual refresh) — premium Register screen.
+//
+// Mirrors the Login refresh: branded shell with subtle mesh background,
+// elevated card with accent rim, refined logo, fluid-scale page title.
+// Account-creation behavior preserved verbatim (R14.7); on failure, inputs are
+// retained and the error is surfaced (R14.8).
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, Loader, ArrowLeft } from 'lucide-react';
+import { AlertCircle, Loader, ArrowLeft, UserPlus } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { apiClient } from '../lib/api';
+import { useEntrance } from '../hooks/useEntrance';
 
 const Register = () => {
   const navigate = useNavigate();
   const { register, isLoading, error } = useAuth();
+  const { ref: formRef } = useEntrance<HTMLDivElement>({ distance: 12 });
 
   const [currencies, setCurrencies] = useState<Array<{ code: string; name: string }>>([
     { code: 'AED', name: 'UAE Dirham' },
@@ -25,14 +34,11 @@ const Register = () => {
   });
 
   useEffect(() => {
-    apiClient.getSupportedCurrencies().then(setCurrencies).catch(() => {/* fallback list stays */});
+    apiClient.getSupportedCurrencies().then(setCurrencies).catch(() => {});
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,66 +49,75 @@ const Register = () => {
         formData.password,
         formData.displayName,
         formData.tenantName,
-        formData.displayCurrency
+        formData.displayCurrency,
       );
       navigate('/dashboard');
-    } catch (err) {
-      // Error is displayed from useAuth state
+    } catch {
+      // useAuth surfaces error; inputs preserved.
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy to-navy/80 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Back button */}
+    <div className="auth-shell">
+      <div className="auth-mesh" aria-hidden="true" />
+      <div className="auth-mesh auth-mesh-2" aria-hidden="true" />
+
+      <div ref={formRef} className="relative w-full max-w-md">
         <button
           onClick={() => navigate('/login')}
-          className="mb-6 text-gold hover:text-gold/80 flex items-center space-x-2 transition-colors"
+          className="mb-6 flex items-center gap-2 text-sm font-medium transition-colors duration-micro ease-micro"
+          style={{ color: 'rgb(var(--color-accent))' }}
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to login</span>
+          <span>Back to sign in</span>
         </button>
 
-        {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-gold rounded-lg mb-4">
-            <span className="font-display font-bold text-lg text-navy">ES</span>
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4"
+            style={{
+              background: 'linear-gradient(135deg, rgb(var(--color-accent)) 0%, rgb(var(--accent-9)) 100%)',
+              boxShadow: 'var(--elevation-3), inset 0 1px 0 rgb(255 255 255 / 0.25)',
+            }}>
+            <span className="font-display font-bold text-xl text-text-on-accent">ES</span>
           </div>
-          <h1 className="text-3xl font-display font-bold text-white mb-2">
-            Create Account
+          <p className="eyebrow mb-2 text-accent-text">ProPackHub</p>
+          <h1 className="font-display font-bold text-3xl lg:text-4xl tracking-tight text-text-primary">
+            Create your workspace
           </h1>
-          <p className="text-gold/80">Join Estimation Studio today</p>
+          <p className="mt-2 text-sm text-text-secondary">
+            Spin up Estimation Studio for your team in under a minute.
+          </p>
         </div>
 
-        {/* Form */}
-        <div className="bg-white rounded-xl shadow-lg p-8">
+        <div className="card" style={{ boxShadow: 'var(--elevation-4)' }}>
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="mb-6 p-4 rounded-lg flex items-start space-x-3"
+              style={{
+                background: 'rgb(var(--color-danger-soft))',
+                border: '1px solid rgb(var(--color-danger) / 0.3)',
+              }}>
+              <AlertCircle className="w-5 h-5 text-danger shrink-0 mt-0.5" />
+              <p className="text-sm text-danger">{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-navy mb-2">
-                Your Name
-              </label>
+              <label className="block text-sm font-medium text-text-primary mb-2">Your name</label>
               <input
                 type="text"
                 name="displayName"
                 value={formData.displayName}
                 onChange={handleChange}
                 required
-                placeholder="John Doe"
-                className="w-full border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
+                placeholder="Jane Doe"
+                className="input"
+                autoComplete="name"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-navy mb-2">
-                Company/Workspace Name
-              </label>
+              <label className="block text-sm font-medium text-text-primary mb-2">Workspace</label>
               <input
                 type="text"
                 name="tenantName"
@@ -110,38 +125,43 @@ const Register = () => {
                 onChange={handleChange}
                 required
                 placeholder="My Company"
-                className="w-full border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
+                className="input"
+                autoComplete="organization"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-navy mb-2">
-                Email
-              </label>
+              <label className="block text-sm font-medium text-text-primary mb-2">Email</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
                 required
-                placeholder="your@email.com"
-                className="w-full border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
+                placeholder="you@company.com"
+                className="input"
+                autoComplete="email"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-navy mb-2">Display Currency</label>
-              <select name="displayCurrency" value={formData.displayCurrency} onChange={handleChange} className="input w-full">
+              <label className="block text-sm font-medium text-text-primary mb-2">Display currency</label>
+              <select
+                name="displayCurrency"
+                value={formData.displayCurrency}
+                onChange={handleChange}
+                className="input"
+              >
                 {currencies.map((c) => (
-                  <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
+                  <option key={c.code} value={c.code}>
+                    {c.code} — {c.name}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-navy mb-2">
-                Password (min 8 characters)
-              </label>
+              <label className="block text-sm font-medium text-text-primary mb-2">Password</label>
               <input
                 type="password"
                 name="password"
@@ -149,31 +169,35 @@ const Register = () => {
                 onChange={handleChange}
                 required
                 minLength={8}
-                placeholder="••••••••"
-                className="w-full border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent"
+                placeholder="At least 8 characters"
+                className="input"
+                autoComplete="new-password"
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-gold text-white font-display font-semibold py-3 rounded-lg hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
-            >
-              {isLoading && <Loader className="w-4 h-4 animate-spin" />}
-              <span>{isLoading ? 'Creating account...' : 'Create Account'}</span>
+            <button type="submit" disabled={isLoading} className="btn-primary w-full">
+              {isLoading ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  <span>Creating workspace…</span>
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4" />
+                  <span>Create account</span>
+                </>
+              )}
             </button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-mist">
-            <p>
-              Already have an account?{' '}
-              <button
-                onClick={() => navigate('/login')}
-                className="text-gold font-medium hover:underline"
-              >
-                Sign in
-              </button>
-            </p>
+          <div className="mt-6 text-center text-sm text-text-secondary">
+            Already have an account?{' '}
+            <button
+              onClick={() => navigate('/login')}
+              className="text-accent-text font-medium hover:underline"
+            >
+              Sign in
+            </button>
           </div>
         </div>
       </div>

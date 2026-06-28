@@ -7,6 +7,8 @@ export interface TemplateLookupMaterial {
   substrateFamily?: string | null;
   substrateGrade?: string | null;
   costingKey?: string | null;
+  /** Master-data catalog key — the genuine cross-tenant identifier. */
+  platformMasterKey?: string | null;
 }
 
 export interface TemplateLayerRef {
@@ -30,6 +32,12 @@ export function buildTemplateMaterialLookup(materials: TemplateLookupMaterial[])
   for (const mat of materials) {
     if (mat.costingKey) {
       set(mat.costingKey, mat.id);
+    }
+    // Master-data catalog key is the genuine cross-tenant identifier: a layer
+    // that stores platformMasterKey resolves to the equivalent material in any
+    // tenant (all tenants seed the same platform_master_materials catalog).
+    if (mat.platformMasterKey) {
+      set(mat.platformMasterKey, mat.id);
     }
 
     const n = mat.name.toLowerCase();

@@ -1,8 +1,20 @@
+// Feature: es-ui-revamp — Dashboard (PREMIUM v2).
+// Display-tier typography, bigger and visible NumberTicker count-up, taller
+// sparklines, animated entrance with clear stagger, EmptyState for first-run,
+// and View-Transitions on every list-link.
+
 import { Link } from 'react-router-dom';
-import { PlusCircle, FileText, Users, TrendingUp, AlertTriangle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { PlusCircle, FileText, Users, TrendingUp, AlertTriangle, ArrowUpRight } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { apiClient } from '../lib/api';
 import { SkeletonDashboard } from '../components/Skeleton';
+import { useEntrance } from '../hooks/useEntrance';
+import { useStagger } from '../hooks/useStagger';
+import { useViewTransition } from '../hooks/useViewTransition';
+import NumberTicker from '../components/NumberTicker';
+import Sparkline, { type SparklineTone } from '../components/Sparkline';
+import EmptyState from '../components/EmptyState';
 
 interface SummaryEstimate {
   id: string;
@@ -26,13 +38,176 @@ interface DashboardSummary {
   expiringProposals: SummaryEstimate[];
 }
 
+interface StatDef {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  tone: SparklineTone;
+  series: (e: SummaryEstimate) => boolean;
+  getValue: (s: DashboardSummary) => number;
+}
+
+const STAT_DEFS: StatDef[] = [
+  {
+    key: 'thisMonth',
+    label: 'This month',
+    icon: FileText,
+    tone: 'accent',
+    series: () => true,
+    getValue: (s) => s.estimatesThisMonth,
+  },
+  {
+    key: 'drafts',
+    label: 'Drafts',
+    icon: FileText,
+    tone: 'warning',
+    series: (e) => e.status === 'draft',
+    getValue: (s) => s.drafts,
+  },
+  {
+    key: 'sent',
+    label: 'Sent',
+    icon: TrendingUp,
+    tone: 'info',
+    series: (e) => e.status === 'sent',
+    getValue: (s) => s.sent,
+  },
+  {
+    key: 'won',
+    label: 'Won',
+    icon: Users,
+    tone: 'success',
+    series: (e) => e.status === 'won',
+    getValue: (s) => s.won,
+  },
+];
+
+type ResolvedStat = { ok: true; value: number; series: number[] } | { ok: false };
+
+function weeklyBuckets(recent: SummaryEstimate[], predicate: (e: SummaryEstimate) => boolean): number[] {
+  const buckets = 8;
+  const counts = new Array<number>(buckets).fill(0);
+  const now = Date.now();
+  const weekMs = 7 * 24 * 60 * 60 * 1000;
+  for (const e of recent) {
+    if (!predicate(e)) continue;
+    const t = Date.parse(e.createdAt);
+    if (!Number.isFinite(t)) continue;
+    const idx = buckets - 1 - Math.floor((now - t) / weekMs);
+    if (idx >= 0 && idx < buckets) counts[idx] += 1;
+  }
+  return counts;
+}
+
+function resolveStat(def: StatDef, summary: DashboardSummary | null): ResolvedStat {
+  if (!summary) return { ok: false };
+  try {
+    const raw = def.getValue(summary);
+    if (raw == null || typeof raw !== 'number' || !Number.isFinite(raw)) return { ok: false };
+    const series = weeklyBuckets(summary.recent ?? [], def.series);
+    return { ok: true, value: raw, series };
+  } catch {
+    return { ok: false };
+  }
+}
+
+const StatCard = ({
+  def,
+  summary,
+  delay,
+}: {
+  def: StatDef;
+  summary: DashboardSummary | null;
+  delay: number;
+}) => {
+  const { ref } = useEntrance<HTMLDivElement>({ delay, distance: 16 });
+  const Icon = def.icon;
+  const resolved = resolveStat(def, summary);
+
+  if (!resolved.ok) {
+    return (
+      <div ref={ref} className="stat-card" role="group" aria-label={`${def.label}: unavailable`}>
+        <p className="stat-label">{def.label}</p>
+        <p className="mt-3 text-base font-medium text-danger inline-flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" /> Unavailable
+        </p>
+      </div>
+    );
+  }
+
+  // Trend: compare last 2 buckets vs prior 2 buckets, derive a delta indicator.
+  const trend = (() => {
+    const s = resolved.series;
+    if (s.length < 4) return null;
+    const recent = s.slice(-2).reduce((a, b) => a + b, 0);
+    const prior = s.slice(-4, -2).reduce((a, b) => a + b, 0);
+    if (prior === 0 && recent === 0) return null;
+    if (prior === 0) return { dir: 'up' as const, pct: 100 };
+    const pct = Math.round(((recent - prior) / prior) * 100);
+    if (pct === 0) return { dir: 'flat' as const, pct: 0 };
+    return { dir: pct > 0 ? 'up' as const : 'down' as const, pct: Math.abs(pct) };
+  })();
+
+  return (
+    <div
+      ref={ref}
+      className="stat-card"
+      data-interactive="true"
+      tabIndex={0}
+      role="group"
+      aria-label={`${def.label}: ${resolved.value}`}
+    >
+      <div className="stat-icon" aria-hidden="true">
+        <Icon className="w-5 h-5" />
+      </div>
+      <p className="stat-label">{def.label}</p>
+      <div className="flex items-baseline gap-2 mt-2">
+        <p className="stat-value">
+          <NumberTicker value={resolved.value} durationMs={1600} />
+        </p>
+        {trend && (
+          <span className={`delta delta-${trend.dir}`} title={`${trend.dir === 'up' ? '+' : trend.dir === 'down' ? '-' : ''}${trend.pct}% vs prior 2 weeks`}>
+            {trend.dir === 'up' && '↑'}
+            {trend.dir === 'down' && '↓'}
+            {trend.dir === 'flat' && '—'}
+            {trend.dir !== 'flat' && ` ${trend.pct}%`}
+          </span>
+        )}
+      </div>
+      <div className="-mx-1 -mb-1 mt-3">
+        <Sparkline data={resolved.series} tone={def.tone} height={56} />
+      </div>
+    </div>
+  );
+};
+
+const EntranceCard = ({
+  delay,
+  className,
+  children,
+}: {
+  delay: number;
+  className: string;
+  children: React.ReactNode;
+}) => {
+  const { ref } = useEntrance<HTMLDivElement>({ delay, distance: 16 });
+  return (
+    <div ref={ref} className={className}>
+      {children}
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getDelay } = useStagger();
+  const navigate = useViewTransition();
 
   useEffect(() => {
     fetchSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchSummary = async () => {
@@ -49,55 +224,24 @@ const Dashboard = () => {
     }
   };
 
-  const stats = summary
-    ? [
-        {
-          label: 'This Month',
-          value: summary.estimatesThisMonth.toString(),
-          icon: FileText,
-          color: 'text-navy',
-          bg: 'bg-slate',
-        },
-        {
-          label: 'Saved quotes',
-          value: summary.drafts.toString(),
-          icon: FileText,
-          color: 'text-yellow-600',
-          bg: 'bg-yellow-100',
-        },
-        {
-          label: 'Sent Proposals',
-          value: summary.sent.toString(),
-          icon: TrendingUp,
-          color: 'text-blue-600',
-          bg: 'bg-blue-100',
-        },
-        {
-          label: 'Won Orders',
-          value: summary.won.toString(),
-          icon: Users,
-          color: 'text-green-600',
-          bg: 'bg-green-100',
-        },
-      ]
-    : [];
-
   const formatTotal = (e: SummaryEstimate) =>
     `${e.displayCurrency || 'USD'} ${(e.totalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
-  if (loading) {
+  const sectionDelay = useMemo(() => getDelay(STAT_DEFS.length), [getDelay]);
+
+  if (loading && !summary) {
     return (
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <SkeletonDashboard />
       </div>
     );
   }
 
-  if (error) {
+  if (error && !summary) {
     return (
-      <div className="card bg-red-50 border border-red-200">
-        <p className="text-red-800 font-medium">Error loading dashboard</p>
-        <p className="text-red-600 text-sm mt-1">{error}</p>
+      <div className="card bg-danger-soft border border-danger/30 max-w-2xl mx-auto">
+        <p className="text-danger font-medium">Error loading dashboard</p>
+        <p className="text-danger/80 text-sm mt-1">{error}</p>
         <button type="button" className="btn-primary mt-4" onClick={fetchSummary}>
           Retry
         </button>
@@ -109,157 +253,142 @@ const Dashboard = () => {
   const expiring = summary?.expiringProposals ?? [];
 
   return (
-    <div>
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
+    <div className="max-w-7xl mx-auto">
+      {/* Hero header — large display title, eyebrow, primary CTA */}
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between mb-10 gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Dashboard</h1>
-          <p className="text-mist mt-2">Welcome back to ProPackHub Estimation Studio</p>
+          <p className="eyebrow">Workspace overview</p>
+          <h1 className="display-title mt-1">Dashboard</h1>
+          <p className="text-text-secondary mt-2 text-base max-w-xl">
+            Track quotes, conversions, and proposal velocity at a glance. All numbers update live.
+          </p>
         </div>
-        <Link
-          to="/templates"
-          className="mt-4 lg:mt-0 btn-primary inline-flex items-center space-x-2"
-        >
+        <Link to="/templates" className="btn-primary">
           <PlusCircle className="w-5 h-5" />
-          <span>New Estimate</span>
+          <span>New estimate</span>
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <div key={stat.label} className="card">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-mist">{stat.label}</p>
-                  <p className="text-3xl font-display font-bold text-navy mt-2">{stat.value}</p>
-                </div>
-                <div className={`p-3 rounded-full ${stat.bg}`}>
-                  <Icon className={`w-6 h-6 ${stat.color}`} />
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      {/* KPI grid with staggered entrance */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+        {STAT_DEFS.map((def, index) => (
+          <StatCard key={def.key} def={def} summary={summary} delay={getDelay(index)} />
+        ))}
       </div>
 
       {expiring.length > 0 && (
-        <div className="card mb-8 border-amber-200 bg-amber-50/50">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="w-5 h-5 text-amber-600" />
-            <h2 className="text-xl font-display font-semibold text-navy">Expiring Proposals</h2>
-            <span className="text-sm text-mist">(within 7 days)</span>
+        <EntranceCard delay={sectionDelay} className="card card-accent mb-8">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-warning-soft">
+              <AlertTriangle className="w-4 h-4 text-warning" />
+            </div>
+            <div>
+              <h2 className="section-title">Expiring proposals</h2>
+              <p className="text-xs text-text-secondary mt-0.5">Within the next 7 days</p>
+            </div>
           </div>
           <div className="space-y-3">
             {expiring.map((est) => (
               <div
                 key={est.id}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-white rounded-lg border border-amber-100"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 bg-surface-raised rounded-xl border border-warning/30"
               >
                 <div>
                   <span className="font-mono text-sm font-medium">{est.refNumber}</span>
-                  <span className="text-mist mx-2">·</span>
+                  <span className="text-text-secondary mx-2">·</span>
                   <span className="font-medium">{est.customerName || 'No customer'}</span>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="text-sm text-amber-700 font-medium">
+                  <span className="text-sm text-warning font-semibold">
                     {est.daysLeft === 0 ? 'Expires today' : `${est.daysLeft} day${est.daysLeft === 1 ? '' : 's'} left`}
                   </span>
-                  <Link to={`/estimate/${est.id}`} className="text-sm text-gold font-medium hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/estimate/${est.id}`)}
+                    className="text-sm text-accent-text font-medium hover:underline inline-flex items-center gap-1"
+                  >
                     Open
-                  </Link>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </EntranceCard>
       )}
 
       {recentEstimates.length > 0 ? (
-        <div className="card">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-display font-semibold text-navy">Recent Estimates</h2>
-            <Link to="/estimates" className="text-sm text-gold font-medium hover:underline">
+        <EntranceCard delay={sectionDelay} className="card !p-0 overflow-hidden">
+          <div className="flex items-center justify-between p-6 pb-4">
+            <div>
+              <h2 className="section-title">Recent estimates</h2>
+              <p className="text-xs text-text-secondary mt-0.5">Latest quotes across your workspace</p>
+            </div>
+            <Link to="/estimates" className="text-sm text-accent-text font-medium hover:underline inline-flex items-center gap-1">
               View all
+              <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="table-wrap">
+            <table className="data-table w-full">
               <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Ref #</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Customer</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Date</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Total</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-mist">Actions</th>
+                <tr>
+                  <th>Ref #</th>
+                  <th>Customer</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th className="text-right">Total</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {recentEstimates.map((estimate) => (
-                  <tr key={estimate.id} className="border-b border-border last:border-0 hover:bg-slate/50">
-                    <td className="py-4 px-4">
+                  <tr key={estimate.id}>
+                    <td>
                       <span className="font-mono text-sm font-medium">{estimate.refNumber}</span>
                     </td>
-                    <td className="py-4 px-4 font-medium">{estimate.customerName || 'Unknown Customer'}</td>
-                    <td className="py-4 px-4">
+                    <td className="font-medium">{estimate.customerName || 'Unknown Customer'}</td>
+                    <td>
                       <span className={`badge badge-${estimate.status}`}>
                         {estimate.status.charAt(0).toUpperCase() + estimate.status.slice(1)}
                       </span>
                     </td>
-                    <td className="py-4 px-4 text-mist">
+                    <td className="text-text-secondary">
                       {new Date(estimate.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="py-4 px-4 font-display font-semibold">{formatTotal(estimate)}</td>
-                    <td className="py-4 px-4">
-                      <div className="flex space-x-2">
-                        <Link
-                          to={`/estimate/${estimate.id}`}
-                          className="text-sm text-gold font-medium hover:underline"
-                        >
-                          Open
-                        </Link>
-                        {estimate.status === 'sent' && (
-                          <button
-                            onClick={async () => {
-                              try {
-                                const blob = await apiClient.getProposalPdf(estimate.id);
-                                const url = URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = `proposal-${estimate.refNumber}.pdf`;
-                                document.body.appendChild(a);
-                                a.click();
-                                a.remove();
-                                URL.revokeObjectURL(url);
-                              } catch {
-                                alert('Failed to download PDF');
-                              }
-                            }}
-                            className="text-sm text-mist font-medium hover:underline"
-                          >
-                            PDF
-                          </button>
-                        )}
-                      </div>
+                    <td className="text-right font-display font-semibold tabular">
+                      {formatTotal(estimate)}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/estimate/${estimate.id}`)}
+                        className="text-sm text-accent-text font-medium hover:underline inline-flex items-center gap-1"
+                      >
+                        Open
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </EntranceCard>
       ) : (
-        <div className="card text-center py-12">
-          <FileText className="w-12 h-12 text-mist mx-auto mb-4" />
-          <h3 className="text-xl font-display font-semibold text-navy mb-2">No estimates yet</h3>
-          <p className="text-mist mb-6">Create your first estimate to get started</p>
-          <Link to="/estimate/choose" className="btn-primary inline-flex items-center space-x-2">
-            <PlusCircle className="w-5 h-5" />
-            <span>Create First Estimate</span>
-          </Link>
-        </div>
+        <EmptyState
+          icon={FileText}
+          title="No estimates yet"
+          body="Pick a template, configure your stack, and your first cost estimate appears here. Saved quotes show up across the workspace once you create them."
+          action={
+            <Link to="/estimate/choose" className="btn-primary">
+              <PlusCircle className="w-5 h-5" />
+              <span>Create first estimate</span>
+            </Link>
+          }
+          secondary={<>Browse the <Link to="/templates" className="text-accent-text hover:underline">templates library</Link> first if you're not sure where to start.</>}
+        />
       )}
     </div>
   );

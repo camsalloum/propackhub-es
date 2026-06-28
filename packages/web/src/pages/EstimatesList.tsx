@@ -1,6 +1,9 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, RefreshCw, Loader2 } from 'lucide-react';
+import { Search, RefreshCw, Loader2, FileText } from 'lucide-react';
+import { useEntrance } from '../hooks/useEntrance';
+import { useViewTransition } from '../hooks/useViewTransition';
+import EmptyState from '../components/EmptyState';
 import { apiClient } from '../lib/api';
 import {
   ClassFilterPanel,
@@ -20,6 +23,11 @@ import {
 
 const EstimatesList = () => {
   const navigate = useNavigate();
+  // Smooth list → editor transition via the browser-native View Transitions API
+  // (instant fallback on older browsers; reduced-motion handled in CSS).
+  const navigateWithTransition = useViewTransition();
+  // Single-play mount entrance for the list content; no-op under reduced motion (R16.3, R16.6).
+  const { ref: entranceRef } = useEntrance<HTMLDivElement>();
   const [estimates, setEstimates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -122,9 +130,9 @@ const EstimatesList = () => {
 
   if (error) {
     return (
-      <div className="card bg-red-50 border-red-200">
-        <p className="text-red-800 font-medium">Could not load estimates</p>
-        <p className="text-red-600 text-sm mt-1">{error}</p>
+      <div className="card">
+        <p className="text-danger font-medium">Could not load estimates</p>
+        <p className="text-mist text-sm mt-1">{error}</p>
         <button type="button" className="btn-primary mt-4" onClick={fetchEstimates}>
           Retry
         </button>
@@ -133,7 +141,7 @@ const EstimatesList = () => {
   }
 
   return (
-    <div className="pb-4 max-w-7xl mx-auto">
+    <div ref={entranceRef} className="pb-4 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Estimates</h1>
@@ -172,10 +180,10 @@ const EstimatesList = () => {
             key={opt.value}
             type="button"
             onClick={() => setStatusFilter(opt.value)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors duration-micro ease-micro ${
               statusFilter === opt.value
-                ? 'bg-gold text-white border-gold'
-                : 'bg-white border-border text-ink hover:border-gold/40'
+                ? 'bg-gold text-text-on-accent border-gold'
+                : 'bg-surface-raised border-border text-ink hover:border-gold/40'
             }`}
           >
             {opt.label}
@@ -200,33 +208,40 @@ const EstimatesList = () => {
       />
 
       {estimates.length === 0 ? (
-        <div className="card text-center py-12">
-          <p className="text-mist mb-4">No estimates yet</p>
-          <Link to="/templates" className="btn-primary inline-flex">
-            Create your first quote
-          </Link>
-        </div>
+        <EmptyState
+          icon={FileText}
+          title="No estimates yet"
+          body="Pick a template to scaffold your first cost estimate. Saved quotes land here so the whole team can find them."
+          action={
+            <Link to="/templates" className="btn-primary inline-flex">
+              Create your first quote
+            </Link>
+          }
+        />
       ) : filtered.length === 0 ? (
-        <div className="card text-center py-10">
-          <p className="text-mist mb-3">No estimates match these filters.</p>
-          <button
-            type="button"
-            className="text-gold underline text-sm"
-            onClick={() => {
-              setSearchTerm('');
-              setCustomerFilter('');
-              setStatusFilter('all');
-              setClassFilter(EMPTY_CLASS_FILTER);
-            }}
-          >
-            Clear filters
-          </button>
-        </div>
+        <EmptyState
+          title="No estimates match these filters"
+          body="Try clearing search, customer, or status — or reset all filters."
+          action={
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setSearchTerm('');
+                setCustomerFilter('');
+                setStatusFilter('all');
+                setClassFilter(EMPTY_CLASS_FILTER);
+              }}
+            >
+              Clear filters
+            </button>
+          }
+        />
       ) : (
         <>
           <div className="space-y-3 md:hidden">
             {filtered.map((e) => (
-              <div key={e.id} className="card p-4">
+              <div key={e.id} data-interactive="true" className="card p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-mono text-xs text-mist">{e.refNumber}</p>
@@ -243,7 +258,14 @@ const EstimatesList = () => {
                     : '—'}
                 </p>
                 <div className="flex gap-2 mt-3">
-                  <Link to={`/estimate/${e.id}`} className="btn-secondary flex-1 text-center text-sm py-2">
+                  <Link
+                    to={`/estimate/${e.id}`}
+                    onClick={(ev) => {
+                      ev.preventDefault();
+                      navigateWithTransition(`/estimate/${e.id}`);
+                    }}
+                    className="btn-secondary flex-1 text-center text-sm py-2"
+                  >
                     Open
                   </Link>
                   <button
@@ -279,7 +301,7 @@ const EstimatesList = () => {
                 </thead>
                 <tbody>
                   {filtered.map((e) => (
-                    <tr key={e.id} className="border-b border-border last:border-0 hover:bg-slate/50">
+                    <tr key={e.id} className="border-b border-border last:border-0 hover:bg-slate/50 transition-colors duration-micro ease-micro">
                       <td className="py-4 px-4 font-mono text-sm">{e.refNumber}</td>
                       <td className="py-4 px-4">{e.jobName || '—'}</td>
                       <td className="py-4 px-4">{e.customerName || '—'}</td>
@@ -295,7 +317,14 @@ const EstimatesList = () => {
                       </td>
                       <td className="py-4 px-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Link to={`/estimate/${e.id}`} className="text-gold font-medium text-sm">
+                          <Link
+                            to={`/estimate/${e.id}`}
+                            onClick={(ev) => {
+                              ev.preventDefault();
+                              navigateWithTransition(`/estimate/${e.id}`);
+                            }}
+                            className="text-gold font-medium text-sm"
+                          >
                             Open
                           </Link>
                           <button

@@ -9,9 +9,10 @@
  * - printMode stored in defaultDimensions jsonb (Option A, no migration).
  */
 
-import { useState, useCallback } from 'react';
-import { X, ArrowLeft, Trash2 } from 'lucide-react';
+import { useState, useCallback, useId } from 'react';
+import { X, ArrowLeft, Trash2, GripVertical } from 'lucide-react';
 import LaminateVisualizer from './LaminateVisualizer';
+import { Overlay } from './Overlay';
 import {
   filterMaterialsForTemplateLayer,
   materialAllowedForTemplateLayer,
@@ -49,6 +50,8 @@ interface MaterialOption {
 interface TemplateForEdit {
   id: string;
   name: string;
+  /** Canonical cross-table key (preserved on tenant copies). */
+  templateKey?: string | null;
   productType: 'roll' | 'sleeve' | 'pouch';
   productSubtype?: string | null;
   materialClass?: string | null;
@@ -72,7 +75,24 @@ interface TemplateBuilderProps {
   productSubtypeOptions: ProductSubtypeOption[];
   processOptions: ProcessOption[];
   isAdmin: boolean;
-  onSaved: (template: TemplateForEdit) => void;
+  /**
+   * True when the caller's user role is `platform_admin`. Unlocks the
+   * "Save as platform standard" switch in the builder header.
+   */
+  isPlatformAdmin?: boolean;
+  /**
+   * Initial value for the "Save as platform standard" switch (only meaningful
+   * when `isPlatformAdmin` is true). Used by the "Clone to platform standard…"
+   * card action to land the builder pre-toggled on.
+   */
+  defaultSaveAsPlatformStandard?: boolean;
+  /**
+   * @param template the saved row
+   * @param meta.savedAsPlatformStandard true when the row was written to the
+   *        platform catalog (create-with-toggle or edit-of-standard), so the
+   *        page can land on the Standard Templates tab.
+   */
+  onSaved: (template: TemplateForEdit, meta: { savedAsPlatformStandard: boolean }) => void;
   onClose: () => void;
 }
 
@@ -232,6 +252,8 @@ export function TemplateBuilder({
   productSubtypeOptions,
   processOptions,
   isAdmin: _isAdmin,
+  isPlatformAdmin = false,
+  defaultSaveAsPlatformStandard = false,
   onSaved,
   onClose,
 }: TemplateBuilderProps) {
@@ -274,6 +296,15 @@ export function TemplateBuilder({
   const [printMode, setPrintMode] = useState<PrintMode>(initPrintMode);
   const [saving, setSaving] = useState(false);
   const [processesOpen, setProcessesOpen] = useState(false);
+  // Whether the platform_admin wants to publish this as a platform standard.
+  // In edit mode of an existing platform standard, the switch is implicit
+  // (we always route to PATCH /admin/platform-templates/:id) — we keep the
+  // state so the header chip can render.
+  const editingPlatformStandard = mode === 'edit' && template?.isStandard === true;
+  const [saveAsPlatformStandard, setSaveAsPlatformStandard] = useState<boolean>(
+    () => defaultSaveAsPlatformStandard || editingPlatformStandard
+  );
+  const titleId = useId();
 
   // Derive the engine costing type (roll/sleeve/pouch) from the UI family
   const engineProductType = engineTypeForFamily(productFamily) as 'roll' | 'sleeve' | 'pouch';
@@ -440,6 +471,29 @@ export function TemplateBuilder({
     });
   };
 
+  // ── Drag-and-drop reordering ───────────────────────────────────────────────
+  const [dragFromIndex, setDragFromIndex] = useState<number | null>(null);
+  const [dragHoverIndex, setDragHoverIndex] = useState<number | null>(null);
+
+  const reorderLayers = (from: number, to: number) => {
+    if (from === to || from < 0 || to < 0 || from >= layers.length || to >= layers.length) return;
+    setLayers((prev) => {
+      const copy = [...prev];
+      const [item] = copy.splice(from, 1);
+      copy.splice(to, 0, item);
+      return copy;
+    });
+  };
+
+  const handleLayerDrop = () => {
+    if (dragFromIndex !== null && dragHoverIndex !== null) {
+      reorderLayers(dragFromIndex, dragHoverIndex);
+    }
+    setDragFromIndex(null);
+    setDragHoverIndex(null);
+  };
+
+
   const removeLayer = (idx: number) => {
     setLayers((prev) => {
       const next = prev.filter((_, i) => i !== idx);
@@ -557,31 +611,69 @@ export function TemplateBuilder({
       }));
 
       let saved: TemplateForEdit;
+      let savedAsPlatformStandard = false;
       if (mode === 'create') {
-        saved = await apiClient.createTemplateFromDefinition({
-          name: name.trim(),
-          productType: engineProductType,
-          productSubtype: productSubtype ?? undefined,
-          materialClass,
-          structureTier,
-          printMode,
-          defaultLayers: layerPayload,
-          defaultProcesses: processes,
-        });
+        if (saveAsPlatformStandard && isPlatformAdmin) {
+          savedAsPlatformStandard = true;
+          saved = await apiClient.createPlatformTemplate({
+            name: name.trim(),
+            productType: engineProductType,
+            productSubtype: productSubtype ?? undefined,
+            materialClass,
+            structureTier,
+            printMode,
+            defaultLayers: layerPayload,
+            defaultProcesses: processes,
+          });
+        } else {
+          saved = await apiClient.createTemplateFromDefinition({
+            name: name.trim(),
+            productType: engineProductType,
+            productSubtype: productSubtype ?? undefined,
+            materialClass,
+            structureTier,
+            printMode,
+            defaultLayers: layerPayload,
+            defaultProcesses: processes,
+          });
+        }
       } else {
-        // Edit mode — PATCH the existing template
-        saved = await apiClient.updateTemplate(template!.id, {
-          name: name.trim(),
-          productType: engineProductType,
-          productSubtype: productSubtype ?? null,
-          materialClass,
-          structureTier,
-          printMode,
-          defaultLayers: layerPayload,
-          defaultProcesses: processes,
-        });
+        // Edit mode — PATCH the existing template.
+        // If the source row is a platform standard AND the caller is a platform_admin,
+        // route to the admin PATCH by templateKey so the change reaches the platform
+        // row (the local tenant copy's `id` is not what the platform table indexes).
+        if (editingPlatformStandard && isPlatformAdmin && template) {
+          const key = template.templateKey;
+          if (!key) {
+            throw new Error(
+              'This template has no canonical key; cannot edit as a platform standard. Re-sync templates and try again.'
+            );
+          }
+          savedAsPlatformStandard = true;
+          saved = await apiClient.updatePlatformTemplateByKey(key, {
+            name: name.trim(),
+            productType: engineProductType,
+            productSubtype: productSubtype ?? null,
+            materialClass,
+            structureTier,
+            printMode,
+            defaultLayers: layerPayload,
+            defaultProcesses: processes,
+          });
+        } else {
+          saved = await apiClient.updateTemplate(template!.id, {
+            name: name.trim(),
+            productType: engineProductType,
+            productSubtype: productSubtype ?? null,
+            materialClass,
+            structureTier,
+            printMode,
+            defaultLayers: layerPayload,
+            defaultProcesses: processes,
+          });
+        }
       }
-      onSaved(saved);
+      onSaved(saved, { savedAsPlatformStandard });
     } catch (err) {
       alert('Failed to save template: ' + (err instanceof Error ? err.message : 'Unknown'));
     } finally {
@@ -593,35 +685,36 @@ export function TemplateBuilder({
   const substrateCount = layers.filter((l) => l.layer_type === 'substrate').length;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white">
-      <header className="shrink-0 flex items-center justify-between gap-3 border-b border-border px-6 py-4">
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 text-sm font-medium text-mist hover:text-navy"
-          onClick={onClose}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to templates
-        </button>
-        <h2 className="text-lg font-display font-bold text-navy">
-          {mode === 'create' ? 'New template' : 'Edit template'}
-        </h2>
-        <button
-          type="button"
-          className="p-2 rounded-lg text-mist hover:text-navy hover:bg-slate"
-          onClick={onClose}
-          aria-label="Close"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </header>
+    <Overlay open onClose={onClose} variant="modal" labelledBy={titleId}>
+      <div className="bg-surface-overlay flex flex-col overflow-hidden rounded-xl shadow-xl w-[min(72rem,calc(100vw-2rem))] max-h-[90vh]">
+        <header className="shrink-0 flex items-center justify-between gap-3 border-b border-border px-6 py-4">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 text-sm font-medium text-text-secondary hover:text-brand"
+            onClick={onClose}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to templates
+          </button>
+          <h2 id={titleId} className="text-lg font-display font-bold text-brand">
+            {mode === 'create' ? 'New template' : 'Edit template'}
+          </h2>
+          <button
+            type="button"
+            className="p-2 rounded-lg text-text-secondary hover:text-brand hover:bg-surface-base"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </header>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 lg:px-10 py-6">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 lg:px-10 py-6">
         <div className="w-full max-w-[1600px] mx-auto space-y-6">
           {/* ── Template metadata ── */}
           <section className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-navy mb-1">Name</label>
+              <label className="block text-xs font-medium text-brand mb-1">Name</label>
               <input
                 className="input w-full max-w-xl text-sm"
                 value={name}
@@ -630,9 +723,30 @@ export function TemplateBuilder({
               />
             </div>
 
+            {/* Platform admin: save as platform standard */}
+            {isPlatformAdmin && (
+              <div data-testid="platform-standard-toggle">
+                {editingPlatformStandard ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">
+                    ★ Editing platform standard
+                  </span>
+                ) : (
+                  <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-text-primary">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-border accent-brand"
+                      checked={saveAsPlatformStandard}
+                      onChange={(e) => setSaveAsPlatformStandard(e.target.checked)}
+                    />
+                    Save as platform standard
+                  </label>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className="block text-xs font-medium text-navy mb-1">Product type</label>
+                <label className="block text-xs font-medium text-brand mb-1">Product type</label>
                 <select
                   className="input w-full text-sm"
                   value={productFamily}
@@ -654,7 +768,7 @@ export function TemplateBuilder({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-navy mb-1">Material class</label>
+                <label className="block text-xs font-medium text-brand mb-1">Material class</label>
                 <select
                   className="input w-full text-sm"
                   value={materialClass}
@@ -666,7 +780,7 @@ export function TemplateBuilder({
               </div>
               {availableSubtypes.length > 0 ? (
                 <div>
-                  <label className="block text-xs font-medium text-navy mb-1">
+                  <label className="block text-xs font-medium text-brand mb-1">
                     {productFamily === 'bag' ? 'Bag type' : 'Pouch type'}
                   </label>
                   <select
@@ -694,7 +808,7 @@ export function TemplateBuilder({
                 </div>
               ) : (
                 <div>
-                  <label className="block text-xs font-medium text-navy mb-1">Structure tier</label>
+                  <label className="block text-xs font-medium text-brand mb-1">Structure tier</label>
                   <select
                     className="input w-full text-sm"
                     value={structureTier}
@@ -708,7 +822,7 @@ export function TemplateBuilder({
               )}
               {availableSubtypes.length > 0 ? (
                 <div>
-                  <label className="block text-xs font-medium text-navy mb-1">Structure tier</label>
+                  <label className="block text-xs font-medium text-brand mb-1">Structure tier</label>
                   <select
                     className="input w-full text-sm"
                     value={structureTier}
@@ -721,7 +835,7 @@ export function TemplateBuilder({
                 </div>
               ) : (
                 <div>
-                  <label className="block text-xs font-medium text-navy mb-1">Print mode</label>
+                  <label className="block text-xs font-medium text-brand mb-1">Print mode</label>
                   <select
                     className="input w-full text-sm"
                     value={printMode}
@@ -734,7 +848,7 @@ export function TemplateBuilder({
               )}
               {availableSubtypes.length > 0 && (
                 <div>
-                  <label className="block text-xs font-medium text-navy mb-1">Print mode</label>
+                  <label className="block text-xs font-medium text-brand mb-1">Print mode</label>
                   <select
                     className="input w-full text-sm"
                     value={printMode}
@@ -749,7 +863,7 @@ export function TemplateBuilder({
           </section>
 
           {layers.length > 0 && (
-            <section className="rounded-xl border border-border bg-slate/30 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-4">
+            <section className="rounded-xl border border-border bg-surface-base/30 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex-1 min-w-0">
                 <LaminateVisualizer
                   layers={vizLayers}
@@ -761,17 +875,17 @@ export function TemplateBuilder({
                 />
               </div>
               <div className="shrink-0 sm:text-right sm:pl-4 sm:border-l sm:border-border">
-                <p className="text-sm font-semibold text-navy leading-snug">{classTag}</p>
-                <p className="text-xs text-mist mt-0.5">
+                <p className="text-sm font-semibold text-brand leading-snug">{classTag}</p>
+                <p className="text-xs text-text-secondary mt-0.5">
                   {layerCount} layers · {substrateCount} substrates
                 </p>
               </div>
             </section>
           )}
 
-          <section className="rounded-xl border border-border overflow-hidden bg-white">
-            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-border bg-slate/40">
-              <h3 className="text-sm font-semibold text-navy uppercase tracking-wide">Layers</h3>
+          <section className="rounded-xl border border-border overflow-hidden bg-surface-overlay">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-border bg-surface-base/40">
+              <h3 className="text-sm font-semibold text-brand uppercase tracking-wide">Layers</h3>
               <div className="flex flex-wrap gap-2">
                 {layers.filter((l) => l.layer_type === 'substrate').length < TIER_SUBSTRATE_COUNT[structureTier] && (
                   <button type="button" className="btn-secondary text-xs py-1.5 px-3" onClick={() => addLayer('substrate')}>
@@ -793,18 +907,18 @@ export function TemplateBuilder({
             </div>
 
             {layers.length === 0 ? (
-              <p className="text-sm text-mist px-4 py-8 text-center">No layers yet — add a substrate to start.</p>
+              <p className="text-sm text-text-secondary px-4 py-8 text-center">No layers yet — add a substrate to start.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm table-fixed min-w-[640px]">
                   <colgroup>
-                    <col style={{ width: '3.5rem' }} />
+                    <col style={{ width: '5rem' }} />
                     <col style={{ width: '11rem' }} />
                     <col />
                     <col style={{ width: '7.5rem' }} />
                   </colgroup>
                   <thead>
-                    <tr className="border-b border-border text-xs font-medium text-mist">
+                    <tr className="border-b border-border text-xs font-medium text-text-secondary">
                       <th className="py-2.5 px-2 text-center">#</th>
                       <th className="py-2.5 px-3 text-left">Type</th>
                       <th className="py-2.5 px-3 text-left">Material / grade</th>
@@ -813,11 +927,41 @@ export function TemplateBuilder({
                   </thead>
                   <tbody>
                     {layers.map((layer, i) => (
-                      <tr key={layer.clientId} className="border-b border-border last:border-0 hover:bg-slate/30">
+                      <tr
+                        key={layer.clientId}
+                        onDragEnter={() => {
+                          if (dragFromIndex !== null) setDragHoverIndex(i);
+                        }}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          handleLayerDrop();
+                        }}
+                        className={`border-b border-border last:border-0 hover:bg-surface-base/30 transition-colors ${
+                          dragFromIndex === i ? 'opacity-50' : ''
+                        } ${
+                          dragHoverIndex === i && dragFromIndex !== null && dragFromIndex !== i
+                            ? 'bg-brand/5 outline outline-1 outline-brand/40'
+                            : ''
+                        }`}
+                      >
                         <td className="py-2.5 px-2 text-center">
-                          <span className="inline-flex w-7 h-7 rounded-md text-white text-xs font-semibold items-center justify-center bg-navy">
-                            {i + 1}
-                          </span>
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              draggable
+                              onDragStart={() => setDragFromIndex(i)}
+                              onDragEnd={handleLayerDrop}
+                              className="shrink-0 text-text-secondary hover:text-brand cursor-grab active:cursor-grabbing touch-none"
+                              aria-label="Drag to reorder layer"
+                              title="Drag to reorder"
+                            >
+                              <GripVertical className="w-4 h-4" />
+                            </button>
+                            <span className="inline-flex w-7 h-7 rounded-md text-text-inverse text-xs font-semibold items-center justify-center bg-brand">
+                              {i + 1}
+                            </span>
+                          </div>
                         </td>
                         <td className="py-2 px-3 align-middle">
                           <select
@@ -851,19 +995,19 @@ export function TemplateBuilder({
                               type="button"
                               disabled={i === 0}
                               onClick={() => moveLayer(i, -1)}
-                              className="p-1.5 rounded-md text-mist hover:text-navy hover:bg-slate disabled:opacity-25"
+                              className="p-1.5 rounded-md text-text-secondary hover:text-brand hover:bg-surface-base disabled:opacity-25"
                               aria-label="Move up"
                             >▲</button>
                             <button
                               type="button"
                               disabled={i === layers.length - 1}
                               onClick={() => moveLayer(i, 1)}
-                              className="p-1.5 rounded-md text-mist hover:text-navy hover:bg-slate disabled:opacity-25"
+                              className="p-1.5 rounded-md text-text-secondary hover:text-brand hover:bg-surface-base disabled:opacity-25"
                               aria-label="Move down"
                             >▼</button>
                             <button
                               type="button"
-                              className="p-1.5 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50"
+                              className="p-1.5 rounded-md text-text-secondary hover:text-danger hover:bg-danger/10"
                               onClick={() => removeLayer(i)}
                               aria-label="Remove layer"
                             >
@@ -881,11 +1025,11 @@ export function TemplateBuilder({
 
           <section>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-navy">Processes</label>
+              <label className="block text-sm font-medium text-brand">Processes</label>
               {/* Toggle for advanced / full list */}
               <button
                 type="button"
-                className="text-xs text-gold font-medium"
+                className="text-xs text-accent-text font-medium"
                 onClick={() => setProcessesOpen((v) => !v)}
               >
                 {processesOpen ? 'Hide advanced ▲' : 'Customise ▼'}
@@ -900,17 +1044,17 @@ export function TemplateBuilder({
                   .map((opt) => (
                     <span
                       key={opt.code}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-navy/10 text-navy"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-brand/10 text-brand"
                       title={opt.description}
                     >
                       {opt.label}
                     </span>
                   ))}
                 {processes.filter((p) => p.enabled).length === 0 && (
-                  <span className="text-xs text-mist">No processes selected — click Customise to add.</span>
+                  <span className="text-xs text-text-secondary">No processes selected — click Customise to add.</span>
                 )}
                 {mode === 'create' && (
-                  <span className="text-xs text-mist ml-1">
+                  <span className="text-xs text-text-secondary ml-1">
                     (auto-set from structure — click Customise to override)
                   </span>
                 )}
@@ -919,9 +1063,9 @@ export function TemplateBuilder({
 
             {/* Advanced / full checkbox list — always open for complex structures */}
             {(processesOpen || layers.length > 4) && (
-              <div className="mt-2 p-3 rounded-lg border border-border bg-slate/20 space-y-2">
+              <div className="mt-2 p-3 rounded-lg border border-border bg-surface-base/20 space-y-2">
                 {layers.length > 4 && !processesOpen && (
-                  <p className="text-xs text-mist mb-2">
+                  <p className="text-xs text-text-secondary mb-2">
                     Complex structure ({layers.length} layers) — verify all processes apply.
                   </p>
                 )}
@@ -939,8 +1083,8 @@ export function TemplateBuilder({
                         onChange={() => toggleProcess(opt.code)}
                       />
                       <span>
-                        <span className="font-medium text-navy">{opt.label}</span>
-                        <span className="block text-xs text-mist">{opt.description}</span>
+                        <span className="font-medium text-brand">{opt.label}</span>
+                        <span className="block text-xs text-text-secondary">{opt.description}</span>
                       </span>
                     </label>
                   ))}
@@ -951,7 +1095,7 @@ export function TemplateBuilder({
         </div>
       </div>
 
-      <footer className="shrink-0 flex items-center justify-end gap-3 px-6 lg:px-10 py-4 border-t border-border bg-white">
+      <footer className="shrink-0 flex items-center justify-end gap-3 px-6 lg:px-10 py-4 border-t border-border bg-surface-overlay">
         <button type="button" className="btn-secondary text-sm px-6" onClick={onClose}>
           Cancel
         </button>
@@ -964,7 +1108,8 @@ export function TemplateBuilder({
           {saving ? 'Saving…' : mode === 'create' ? 'Create template' : 'Save changes'}
         </button>
       </footer>
-    </div>
+      </div>
+    </Overlay>
   );
 }
 

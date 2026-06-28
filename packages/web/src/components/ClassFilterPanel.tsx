@@ -42,10 +42,10 @@ function FilterChip({
       className={[
         'px-2.5 py-1 rounded-full text-xs font-medium border whitespace-nowrap transition-colors',
         active
-          ? 'bg-gold text-white border-gold'
+          ? 'bg-accent text-text-on-accent border-accent'
           : disabled
-            ? 'border-transparent text-mist/40 cursor-default'
-            : 'bg-white border-border text-ink hover:border-gold/50',
+            ? 'border-transparent text-text-secondary/40 cursor-default'
+            : 'bg-surface-raised border-border text-text-primary hover:border-accent/50',
       ].join(' ')}
     >
       {label}
@@ -96,7 +96,7 @@ export function ClassFilterPanel({
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
       <div className="flex flex-wrap items-center gap-1.5 min-w-0">
         {title ? (
-          <span className="text-xs font-medium text-mist shrink-0 mr-0.5">{title}</span>
+          <span className="text-xs font-medium text-text-secondary shrink-0 mr-0.5">{title}</span>
         ) : null}
         <FilterChip label="All" active={isAllActive} disabled={false} onClick={onReset} />
         <span className="text-border select-none hidden sm:inline" aria-hidden>
@@ -140,7 +140,7 @@ export function ClassFilterPanel({
           />
         ))}
       </div>
-      <p className="text-xs text-mist shrink-0 sm:pl-2">{countLabel}</p>
+      <p className="text-xs text-text-secondary shrink-0 sm:pl-2">{countLabel}</p>
     </div>
   );
 }

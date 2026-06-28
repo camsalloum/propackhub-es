@@ -37,7 +37,7 @@ function BagInputField({
       >
         {field.label}
       </label>
-      <div className="flex border border-amber-300 rounded-md overflow-hidden bg-amber-50 focus-within:border-gold focus-within:ring-2 focus-within:ring-gold/30 transition-shadow">
+      <div className="flex border border-accent/40 rounded-md overflow-hidden bg-accent-soft focus-within:border-accent focus-within:ring-2 focus-within:ring-focus-ring/30 transition-shadow">
         <input
           id={`bag-${field.id}`}
           type="number"
@@ -45,7 +45,7 @@ function BagInputField({
           min={0}
           step={0.1}
           disabled={disabled}
-          className="border-none outline-none w-[4.75rem] px-2 py-1.5 text-sm font-semibold text-navy tabular-nums text-center bg-amber-50 focus:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-white"
+          className="border-none outline-none w-[4.75rem] px-2 py-1.5 text-sm font-semibold text-brand tabular-nums text-center bg-accent-soft focus:bg-accent/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-surface-raised"
           value={draft}
           onChange={(e) => {
             setDraft(e.target.value);
@@ -59,7 +59,7 @@ function BagInputField({
             }
           }}
         />
-        <span className="bg-amber-100/70 border-l border-amber-300 px-2 py-1.5 text-[11px] font-semibold text-amber-700 flex items-center">
+        <span className="bg-accent/15 border-l border-accent/40 px-2 py-1.5 text-[11px] font-semibold text-accent-text flex items-center">
           {field.unit}
         </span>
       </div>
@@ -98,7 +98,7 @@ export function BagConfigurator({
   const engineDims = useMemo<EstimateDimensions>(() => {
     const d: Record<string, unknown> = { ...dimensions, productType: 'bag', bagSubtype: configType };
     if (config) for (const f of config.fields) d[f.dimensionKey] = fieldVals[f.id];
-    return d as EstimateDimensions;
+    return d as unknown as EstimateDimensions;
   }, [dimensions, fieldVals, config, configType]);
 
   const handleFieldChange = useCallback(
@@ -129,10 +129,10 @@ export function BagConfigurator({
   };
 
   return (
-    <div className="w-full rounded-lg border border-slate bg-white overflow-hidden shadow-sm">
+    <div className="w-full rounded-lg border border-border bg-surface-raised overflow-hidden shadow-sm">
       {/* Centered header — bag type already shown in the dropdown above, so not repeated here */}
-      <div className="px-4 pt-3 pb-2 text-center border-b border-slate bg-slate/10">
-        <p className="text-xs font-medium text-navy/70">
+      <div className="px-4 pt-3 pb-2 text-center border-b border-border bg-surface-sunken">
+        <p className="text-xs font-medium text-text-secondary">
           Adjust the highlighted dimensions (mm) — defaults are pre-filled
         </p>
       </div>
@@ -210,7 +210,7 @@ export function BagConfigurator({
                   Handle
                 </span>
                 <select
-                  className="border border-amber-300 rounded-md bg-amber-50 px-2 py-1.5 text-sm font-semibold text-navy h-[34px] focus:border-gold focus:ring-2 focus:ring-gold/30 outline-none disabled:opacity-50"
+                  className="border border-accent/40 rounded-md bg-accent-soft px-2 py-1.5 text-sm font-semibold text-brand h-[34px] focus:border-accent focus:ring-2 focus:ring-focus-ring/30 outline-none disabled:opacity-50"
                   value={loopWelded ? 'welded' : 'diecut'}
                   disabled={disabled}
                   onChange={(e) => onDimensionsChange({ bagLoopWelded: e.target.value === 'welded' ? 1 : 0 })}
@@ -242,7 +242,7 @@ export function BagConfigurator({
       <div className="px-4 py-2 border-t border-slate bg-slate/25 text-[11px] text-mist">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
           <span className="inline-flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden />
+            <span className="w-1.5 h-1.5 rounded-full bg-success" aria-hidden />
             <span className="font-semibold text-navy/70">Live</span>
           </span>
           <span>

@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { initializeDatabase, closeDatabase } from './db';
 import { seedDefaultAdmin } from './db/seed-admin';
 import { ensurePlatformMasterSeeded, ensureProcessesSeeded, ensureSolventCatalogSeeded, ensureLaminationAdhesivesSeeded } from './db/platform-master-data';
+import { bootstrapPlatformStandardCatalog } from './db/seed-platform-templates';
 import { buildApp } from './app';
 
 const PORT = parseInt(process.env.PORT || '5001');
@@ -17,6 +18,13 @@ async function start() {
     await ensureSolventCatalogSeeded();
     await ensureLaminationAdhesivesSeeded();
     await seedDefaultAdmin();
+    try {
+      await bootstrapPlatformStandardCatalog();
+    } catch (err) {
+      // Boot must not fail if the platform_standard_templates table doesn't
+      // exist yet (e.g. dev environments that haven't run migrations).
+      console.warn('⚠  bootstrapPlatformStandardCatalog skipped:', (err as Error).message);
+    }
     await fastify.listen({ port: PORT, host: HOST });
 
     console.log(`

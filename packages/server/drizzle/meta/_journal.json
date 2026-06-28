@@ -43,6 +43,13 @@
       "when": 1750820000000,
       "tag": "0006_ink_printing_process",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1782000000000,
+      "tag": "0007_platform_standard_templates",
+      "breakpoints": true
     }
   ]
 }

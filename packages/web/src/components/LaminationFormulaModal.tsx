@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import type { LaminationRecipe, LaminationRecipeComponent, LaminationComponentRole } from '@es/engine';
+import { Overlay } from './Overlay';
 
 interface LaminationFormulaModalProps {
   open: boolean;
@@ -33,6 +34,7 @@ export default function LaminationFormulaModal({
   readOnly = false,
 }: LaminationFormulaModalProps) {
   const [draft, setDraft] = useState<LaminationRecipe | null>(recipe);
+  const titleId = useId();
 
   useEffect(() => {
     if (open) {
@@ -44,7 +46,7 @@ export default function LaminationFormulaModal({
     }
   }, [open, recipe]);
 
-  if (!open || !draft) return null;
+  if (!draft) return null;
 
   const updateComponent = (index: number, patch: Partial<LaminationRecipeComponent>) => {
     setDraft((prev) => {
@@ -70,24 +72,23 @@ export default function LaminationFormulaModal({
   const totalParts = draft.components.reduce((s, c) => s + (c.parts || 0), 0);
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" role="dialog" aria-modal="true">
-      <button type="button" className="absolute inset-0 bg-navy/50" aria-label="Close" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+    <Overlay open={open} onClose={onClose} variant="modal" labelledBy={titleId}>
+      <div className="bg-surface-overlay rounded-xl shadow-xl w-[min(48rem,calc(100vw-2rem))] max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
-            <h3 className="font-display font-semibold text-navy">{title}</h3>
-            <p className="text-xs text-mist mt-1">
+            <h3 id={titleId} className="font-display font-semibold text-text-primary">{title}</h3>
+            <p className="text-xs text-text-secondary mt-1">
               Parts by weight — EA priced at estimate from Solvent catalog. Binder concentrate $/kg solid on layer row.
             </p>
           </div>
-          <button type="button" onClick={onClose} className="p-2 text-mist hover:text-navy" aria-label="Close">
+          <button type="button" onClick={onClose} className="p-2 text-text-secondary hover:text-text-primary" aria-label="Close">
             <X size={20} />
           </button>
         </div>
 
         <div className="overflow-y-auto px-5 py-4 space-y-3 flex-1">
           <div className="flex items-center gap-3 text-sm">
-            <label className="text-mist">Tier</label>
+            <label className="text-text-secondary">Tier</label>
             <select
               className="input w-32"
               disabled={readOnly}
@@ -104,13 +105,13 @@ export default function LaminationFormulaModal({
                 </option>
               ))}
             </select>
-            <span className="text-mist ml-auto">Total parts: {totalParts.toFixed(1)}</span>
+            <span className="text-text-secondary ml-auto">Total parts: {totalParts.toFixed(1)}</span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-mist border-b border-border">
+                <tr className="text-left text-text-secondary border-b border-border">
                   <th className="py-2 pr-2">Role</th>
                   <th className="py-2 pr-2">Component</th>
                   <th className="py-2 pr-2 text-right">Parts</th>
@@ -173,7 +174,7 @@ export default function LaminationFormulaModal({
                     </td>
                     <td className="py-2 pr-2">
                       {c.role === 'solvent' ? (
-                        <span className="text-xs text-mist">from Solvent tab</span>
+                        <span className="text-xs text-text-secondary">from Solvent tab</span>
                       ) : (
                         <input
                           type="number"
@@ -192,7 +193,7 @@ export default function LaminationFormulaModal({
                       <td className="py-2">
                         <button
                           type="button"
-                          className="text-mist hover:text-danger p-1"
+                          className="text-text-secondary hover:text-danger p-1"
                           onClick={() => removeComponent(i)}
                           aria-label="Remove component"
                         >
@@ -209,7 +210,7 @@ export default function LaminationFormulaModal({
           {!readOnly && (
             <button
               type="button"
-              className="flex items-center gap-1 text-sm text-blue-700 hover:text-blue-900"
+              className="flex items-center gap-1 text-sm text-accent-text hover:text-brand"
               onClick={addComponent}
             >
               <Plus size={14} /> Add component
@@ -235,6 +236,6 @@ export default function LaminationFormulaModal({
           )}
         </div>
       </div>
-    </div>
+    </Overlay>
   );
 }

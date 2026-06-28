@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Search, Plus } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
+import { useStagger } from '../hooks/useStagger';
+import { useEntrance } from '../hooks/useEntrance';
 import { SkeletonCard } from '../components/Skeleton';
 import { ClassFilterPanel, EMPTY_CLASS_FILTER } from '../components/ClassFilterPanel';
 import { TemplateStructureCard } from '../components/TemplateStructureCard';
@@ -139,6 +142,24 @@ function visualizerLayers(template: StructureTemplate, materials: MaterialOption
   });
 }
 
+/**
+ * Grid-cell wrapper that applies the staggered mount entrance (fade + slide)
+ * to a single template card. The card itself (`TemplateStructureCard`) is
+ * rendered as a child so its structure is untouched; the entrance is wired at
+ * the grid level via `useEntrance({ delay })`, fed by `useStagger().getDelay`.
+ * `useEntrance` is a no-op under reduced motion, so the card renders in its
+ * final visual state (R19.4, R19.6). `h-full` preserves the equal-height grid
+ * layout the cards relied on as direct grid items.
+ */
+const TemplateGridCell = ({ delay, children }: { delay: number; children: ReactNode }) => {
+  const { ref } = useEntrance<HTMLDivElement>({ delay });
+  return (
+    <div ref={ref} className="h-full">
+      {children}
+    </div>
+  );
+};
+
 const StandardTemplates = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -148,6 +169,11 @@ const StandardTemplates = () => {
   const customerFromUrl = searchParams.get('customer')?.trim() || '';
   const { reference: masterRef } = useMasterDataReference();
   const isAdmin = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
+  const isPlatformAdmin = user?.role === 'platform_admin';
+
+  // Per-item entrance delay for the staggered card-grid mount (R19.4);
+  // returns 0 under reduced motion so cards enter in their final state (R19.6).
+  const { getDelay } = useStagger();
 
   const canEditStandardTemplate = isAdmin;
   const canDeleteStandardTemplate = isAdmin;
@@ -171,6 +197,8 @@ const StandardTemplates = () => {
   // Smart Template Builder: unified create + edit modal state (Task 4.4)
   const [builderMode, setBuilderMode] = useState<'create' | 'edit' | null>(null);
   const [builderTemplate, setBuilderTemplate] = useState<StructureTemplate | null>(null);
+  /** Platform-admin shortcut: pre-toggle "Save as platform standard" when opening the builder. */
+  const [builderDefaultSavePlatform, setBuilderDefaultSavePlatform] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -382,6 +410,7 @@ const StandardTemplates = () => {
         busy={instantiating === template.id}
         showEditStructure={canEdit}
         showSaveToMyTemplates={!showMyGrid && Boolean(template.isStandard)}
+        showCloneToPlatformStandard={isPlatformAdmin}
         showDelete={canDelete && isMine}
         onCreateEstimate={() => createEstimateFromStructure(template)}
         onEditStructure={canEdit ? () => openEdit(template) : undefined}
@@ -389,6 +418,9 @@ const StandardTemplates = () => {
           !showMyGrid && template.isStandard
             ? () => openForkAsMyTemplate(template)
             : undefined
+        }
+        onCloneToPlatformStandard={
+          isPlatformAdmin ? () => openCloneAsPlatformStandard(template) : undefined
         }
         onDelete={canDelete && isMine ? () => handleDelete(template) : undefined}
         deleting={deleting === template.id}
@@ -399,11 +431,30 @@ const StandardTemplates = () => {
   const handleDelete = async (template: StructureTemplate) => {
     if (template.isStandard && !canDeleteStandardTemplate) return;
     if (!template.isStandard && !canManageMyTemplate(template)) return;
-    const label = template.isStandard ? 'deactivate' : 'delete';
-    if (!confirm(`${template.isStandard ? 'Deactivate' : 'Delete'} template "${template.name}"?`)) return;
+    const isPlatformDelete =
+      template.isStandard && isPlatformAdmin && Boolean(template.templateKey);
+    const label = isPlatformDelete
+      ? 'deactivate everywhere'
+      : template.isStandard
+        ? 'deactivate (this tenant only)'
+        : 'delete';
+    if (
+      !confirm(
+        isPlatformDelete
+          ? `Deactivate platform standard "${template.name}" for every tenant?`
+          : `${template.isStandard ? 'Deactivate' : 'Delete'} template "${template.name}"?`
+      )
+    )
+      return;
     setDeleting(template.id);
     try {
-      await apiClient.deleteTemplate(template.id);
+      if (isPlatformDelete) {
+        // Platform admin deletes the canonical row, then the next sync mirrors
+        // the deactivation into every tenant copy.
+        await apiClient.deletePlatformTemplateByKey(template.templateKey!);
+      } else {
+        await apiClient.deleteTemplate(template.id);
+      }
       await loadData();
     } catch (err) {
       alert(`Failed to ${label} template`);
@@ -418,11 +469,13 @@ const StandardTemplates = () => {
     // Use unified TemplateBuilder for edit (Task 4.1 — replaces old inline modal)
     setBuilderMode('edit');
     setBuilderTemplate(template);
+    setBuilderDefaultSavePlatform(false);
   };
 
   const openCreate = () => {
     setBuilderMode('create');
     setBuilderTemplate(null);
+    setBuilderDefaultSavePlatform(false);
   };
 
   /** Fork a standard structure into My Templates (no customer, no estimate). */
@@ -433,18 +486,42 @@ const StandardTemplates = () => {
       name: `${source.name} (my copy)`,
       isStandard: false,
     });
+    setBuilderDefaultSavePlatform(false);
   };
 
-  const handleBuilderSaved = async (_saved: unknown) => {
+  /**
+   * Platform-admin shortcut: clone any visible template into a new platform
+   * standard. Prefills the builder with the source's content and lands the
+   * "Save as platform standard" toggle pre-checked.
+   */
+  const openCloneAsPlatformStandard = (source: StructureTemplate) => {
+    if (!isPlatformAdmin) return;
+    setBuilderMode('create');
+    setBuilderTemplate({
+      ...source,
+      name: `${source.name} (copy)`,
+      isStandard: true,
+    });
+    setBuilderDefaultSavePlatform(true);
+  };
+
+  const handleBuilderSaved = async (
+    _saved: unknown,
+    meta?: { savedAsPlatformStandard: boolean }
+  ) => {
     setBuilderMode(null);
     setBuilderTemplate(null);
+    setBuilderDefaultSavePlatform(false);
     await loadData();
-    setPickerTab('mine');
+    // Land on the tab matching what was actually saved: platform standards on
+    // the Standard tab, personal templates on My Templates.
+    setPickerTab(meta?.savedAsPlatformStandard ? 'standard' : 'mine');
   };
 
   const handleBuilderClose = () => {
     setBuilderMode(null);
     setBuilderTemplate(null);
+    setBuilderDefaultSavePlatform(false);
   };
 
   const updateEditingLayer = (_index: number, _patch: Partial<TemplateLayer>) => { void 0; };
@@ -464,30 +541,7 @@ const StandardTemplates = () => {
     <div className="w-full pb-24 lg:pb-8">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div className="min-w-0">
-          <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Templates</h1>
-          <p className="text-mist mt-1 text-sm max-w-3xl">
-            Blueprints for layer stacks — <strong className="text-ink font-medium">never</strong> tied to
-            a customer. Use the buttons on each card:
-          </p>
-          <ul className="text-xs text-mist mt-2 space-y-1 max-w-3xl list-disc pl-4">
-            <li>
-              <strong className="text-ink">Create estimate</strong> → customer quote (fill customer in
-              the estimate editor, then Save → appears under{' '}
-              <Link to="/estimates" className="text-gold hover:underline">
-                Estimates
-              </Link>
-              )
-            </li>
-            <li>
-              <strong className="text-ink">Edit structure</strong> or{' '}
-              <strong className="text-ink">New structure</strong> → your My Templates blueprint (no
-              customer)
-            </li>
-            <li>
-              <strong className="text-ink">Save to My Templates</strong> (standard cards) → copy platform
-              default into your personal library
-            </li>
-          </ul>
+          <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand">Templates</h1>
         </div>
         <div className="flex gap-2 shrink-0">
           <button
@@ -510,7 +564,7 @@ const StandardTemplates = () => {
 
       <div className="mb-6">
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-mist" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
           <input
             type="text"
             placeholder="Search templates..."
@@ -542,8 +596,8 @@ const StandardTemplates = () => {
           type="button"
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
             pickerTab === 'standard'
-              ? 'border-gold text-gold'
-              : 'border-transparent text-mist hover:text-ink'
+              ? 'border-accent text-accent-text'
+              : 'border-transparent text-text-secondary hover:text-text-primary'
           }`}
           onClick={() => setPickerTab('standard')}
         >
@@ -553,35 +607,29 @@ const StandardTemplates = () => {
           type="button"
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
             pickerTab === 'mine'
-              ? 'border-gold text-gold'
-              : 'border-transparent text-mist hover:text-ink'
+              ? 'border-accent text-accent-text'
+              : 'border-transparent text-text-secondary hover:text-text-primary'
           }`}
           onClick={() => setPickerTab('mine')}
         >
           My Templates
           {myTemplates.length > 0 ? (
-            <span className="ml-1.5 text-xs font-normal text-mist">({myTemplates.length})</span>
+            <span className="ml-1.5 text-xs font-normal text-text-secondary">({myTemplates.length})</span>
           ) : null}
         </button>
       </div>
 
-      <p className="text-xs text-mist -mt-4 mb-4">
-        {pickerTab === 'mine'
-          ? 'Personal structures — edit or delete here. Create estimate when you have a customer.'
-          : 'Platform defaults — copy to My Templates to customize, or create estimate directly.'}
-      </p>
-
       {/* Phase 5.4: unresolved-layer banner shown when instantiate returns 409 */}
       {instantiateError && (
-        <div className="card bg-amber-50 border border-amber-200 text-sm text-amber-900 flex items-start justify-between gap-3 mb-4">
+        <div className="card bg-warning/10 border border-warning/40 text-sm text-text-primary flex items-start justify-between gap-3 mb-4">
           <div>
-            <p className="font-semibold mb-1">⚠ Template has unresolved materials</p>
+            <p className="font-semibold mb-1 text-warning">⚠ Template has unresolved materials</p>
             <p>{instantiateError.message}</p>
             {isAdmin && (
-              <p className="mt-1 text-xs">Re-link the template layers in the template editor (admin only) then try again.</p>
+              <p className="mt-1 text-xs text-text-secondary">Re-link the template layers in the template editor (admin only) then try again.</p>
             )}
           </div>
-          <button type="button" className="text-amber-700 hover:text-amber-900 shrink-0" onClick={() => setInstantiateError(null)}>✕</button>
+          <button type="button" className="text-warning hover:text-text-primary shrink-0" onClick={() => setInstantiateError(null)}>✕</button>
         </div>
       )}
       {loading ? (
@@ -599,43 +647,45 @@ const StandardTemplates = () => {
         </div>
       ) : activeTemplates.length === 0 ? (
         <div className="card text-center py-10 px-6 max-w-xl mx-auto">
-          <h3 className="text-lg font-display font-semibold text-navy mb-2">
+          <h3 className="text-lg font-display font-semibold text-brand mb-2">
             {showMyGrid ? 'No personal templates yet' : 'No templates in this category'}
           </h3>
           {showMyGrid ? (
-            <div className="text-mist text-sm space-y-3 text-left">
+            <div className="text-text-secondary text-sm space-y-3 text-left">
               <p>
-                <strong className="text-ink">My Templates</strong> stores reusable{' '}
+                <strong className="text-text-primary">My Templates</strong> stores reusable{' '}
                 <em>structures</em> (layer stack + materials), not saved quotes.
               </p>
               <p>
                 Open a saved quote from the{' '}
-                <Link to="/estimates" className="text-gold hover:underline">
+                <Link to="/estimates" className="text-accent-text hover:underline">
                   Estimates
                 </Link>{' '}
                 list — templates do not store customer-specific quotes.
               </p>
               <p>
                 To add a structure here: open an estimate →{' '}
-                <strong className="text-ink">Save structure to My Templates</strong>, or use{' '}
-                <strong className="text-ink">New template</strong> above.
+                <strong className="text-text-primary">Save structure to My Templates</strong>, or use{' '}
+                <strong className="text-text-primary">New template</strong> above.
               </p>
             </div>
           ) : (
-            <p className="text-mist text-sm">Try another filter or clear the search.</p>
+            <p className="text-text-secondary text-sm">Try another filter or clear the search.</p>
           )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-          {activeTemplates.map((template) =>
-            renderTemplateCard(template, {
-              badge: showMyGrid ? 'My template' : undefined,
-            })
-          )}
+          {activeTemplates.map((template, index) => (
+            <TemplateGridCell key={template.id} delay={getDelay(index)}>
+              {renderTemplateCard(template, {
+                badge: showMyGrid ? 'My template' : undefined,
+              })}
+            </TemplateGridCell>
+          ))}
         </div>
       )}
 
-      {/* Unified TemplateBuilder modal — create + edit (My Templates only) */}
+      {/* Unified TemplateBuilder modal — create + edit (My Templates + Platform standards) */}
       {builderMode && (
         <TemplateBuilder
           mode={builderMode}
@@ -645,6 +695,8 @@ const StandardTemplates = () => {
           productSubtypeOptions={masterRef.productSubtypeOptions}
           processOptions={masterRef.processOptions}
           isAdmin={isAdmin}
+          isPlatformAdmin={isPlatformAdmin}
+          defaultSaveAsPlatformStandard={builderDefaultSavePlatform}
           onSaved={handleBuilderSaved}
           onClose={handleBuilderClose}
         />

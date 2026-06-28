@@ -1,5 +1,9 @@
 export function SkeletonLine({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse bg-slate rounded ${className}`} />;
+  // Token-backed placeholder with a token-timed shimmer (see `.skeleton` in
+  // index.css). `aria-hidden` keeps it out of the accessibility tree; the
+  // dimensions come entirely from `className` so skeleton→content stays
+  // within the CLS ≤ 0.1 budget (R10.1, R10.4).
+  return <div aria-hidden="true" className={`skeleton rounded ${className}`} />;
 }
 
 export function SkeletonCard() {

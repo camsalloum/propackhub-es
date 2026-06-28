@@ -77,14 +77,14 @@ export default function LaminateVisualizer({
                 style={{ backgroundColor: layerTypeColor(layer.type) }}
                 aria-hidden
               />
-              <span className="text-navy truncate flex-1" title={layerLabel(layer, i)}>
+              <span className="text-brand truncate flex-1" title={layerLabel(layer, i)}>
                 {layerLabel(layer, i)}
               </span>
-              <span className="font-mono font-semibold text-navy tabular-nums shrink-0">
+              <span className="font-mono font-semibold text-brand tabular-nums shrink-0">
                 {pct.toFixed(pct >= 10 ? 0 : 1)}%
               </span>
               {gsm > 0 && (
-                <span className="font-mono text-mist tabular-nums shrink-0 w-12 text-right">
+                <span className="font-mono text-text-secondary tabular-nums shrink-0 w-12 text-right">
                   {gsm.toFixed(1)} gsm
                 </span>
               )}
@@ -116,7 +116,14 @@ export default function LaminateVisualizer({
           role="img"
           aria-label="Layer stack"
         >
-          <rect x={0} y={0} width={width} height={height} rx={6} fill="#F8FAFC" stroke="#E6E9EE" />
+          <rect
+            x={0}
+            y={0}
+            width={width}
+            height={height}
+            rx={6}
+            style={{ fill: 'rgb(var(--color-surface-base))', stroke: 'rgb(var(--color-border))' }}
+          />
           {segments.map(({ layer, x, w, i }) => (
             <g key={String(layer.id)}>
               <rect
@@ -132,7 +139,7 @@ export default function LaminateVisualizer({
                 <text
                   x={x + w / 2}
                   y={pad + barHeight / 2}
-                  fill="#ffffff"
+                  fill="#FFFFFF"
                   fontSize={Math.max(8, fontSize - 1)}
                   fontWeight={700}
                   fontFamily="Inter, Arial, sans-serif"
@@ -146,7 +153,7 @@ export default function LaminateVisualizer({
                 <text
                   x={x + w / 2}
                   y={pad + barHeight / 2}
-                  fill="#ffffff"
+                  fill="#FFFFFF"
                   fontSize={fontSize}
                   fontWeight={600}
                   fontFamily="Inter, Arial, sans-serif"
@@ -160,7 +167,7 @@ export default function LaminateVisualizer({
                 <text
                   x={x + w / 2}
                   y={pad + barHeight / 2}
-                  fill="#ffffff"
+                  fill="#FFFFFF"
                   fontSize={Math.max(8, fontSize - 2)}
                   fontFamily="Inter, Arial, sans-serif"
                   textAnchor="middle"
@@ -198,7 +205,14 @@ export default function LaminateVisualizer({
         role="img"
         aria-label="Layer stack cross-section"
       >
-        <rect x={0} y={0} width={width} height={height} rx={6} fill="#F8FAFC" stroke="#E6E9EE" />
+        <rect
+          x={0}
+          y={0}
+          width={width}
+          height={height}
+          rx={6}
+          style={{ fill: 'rgb(var(--color-surface-base))', stroke: 'rgb(var(--color-border))' }}
+        />
         {segments.map(({ layer, y, h, i }) => {
           const pct = shares[i] * 100;
           const pctLabel = pct >= 10 ? `${pct.toFixed(0)}%` : `${pct.toFixed(1)}%`;
@@ -219,7 +233,7 @@ export default function LaminateVisualizer({
                     <text
                       x={pad + 6}
                       y={y + h / 2 - (h >= 36 ? 6 : 0)}
-                      fill="#ffffff"
+                      fill="#FFFFFF"
                       fontSize={Math.max(8, fontSize - 2)}
                       fontWeight={500}
                       fontFamily="Inter, Arial, sans-serif"
@@ -231,7 +245,7 @@ export default function LaminateVisualizer({
                   <text
                     x={pad + barWidth - 6}
                     y={y + h / 2 + (h >= 36 ? 6 : 0)}
-                    fill="#ffffff"
+                    fill="#FFFFFF"
                     fontSize={Math.max(9, fontSize - 1)}
                     fontWeight={700}
                     fontFamily="Inter, Arial, sans-serif"
@@ -246,7 +260,7 @@ export default function LaminateVisualizer({
                 <text
                   x={pad + barWidth / 2}
                   y={y + h / 2}
-                  fill="#ffffff"
+                  fill="#FFFFFF"
                   fontSize={fontSize}
                   fontWeight={600}
                   fontFamily="Inter, Arial, sans-serif"
@@ -260,7 +274,7 @@ export default function LaminateVisualizer({
                 <text
                   x={pad + 4}
                   y={y + h / 2}
-                  fill="#ffffff"
+                  fill="#FFFFFF"
                   fontSize={Math.max(8, fontSize - 1)}
                   fontFamily="Inter, Arial, sans-serif"
                   dominantBaseline="middle"

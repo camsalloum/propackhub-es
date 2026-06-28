@@ -96,7 +96,7 @@ const LayerCard = ({
   };
 
   const typeColor =
-    layer.type === 'substrate' ? 'bg-blue-600' : layer.type === 'ink' ? 'bg-purple-600' : 'bg-green-600';
+    layer.type === 'substrate' ? 'bg-info' : layer.type === 'ink' ? 'bg-accent' : 'bg-success';
 
   return (
     <div className="relative overflow-hidden rounded-xl">
@@ -104,7 +104,7 @@ const LayerCard = ({
         <button
           type="button"
           onClick={confirmRemove}
-          className="flex-1 bg-danger text-white flex items-center justify-center min-h-[48px] text-xs font-medium"
+          className="flex-1 bg-danger text-text-on-accent flex items-center justify-center min-h-[48px] text-xs font-medium"
           aria-label="Delete layer"
         >
           {confirmingDelete ? 'Confirm' : <Trash2 className="w-5 h-5" />}
@@ -112,7 +112,7 @@ const LayerCard = ({
       </div>
 
       <div
-        className={`relative bg-white border border-border rounded-xl transition-transform touch-pan-y ${
+        className={`relative bg-surface-raised border border-border rounded-xl transition-transform touch-pan-y ${
           isDragging ? 'opacity-60 scale-[0.98] shadow-lg z-10' : ''
         }`}
         style={{ transform: `translateX(${offsetX}px)` }}
@@ -132,19 +132,19 @@ const LayerCard = ({
             draggable
             onDragStart={() => onDragStart?.(index)}
             onDragEnd={() => onDragEnd?.()}
-            className="shrink-0 w-11 h-11 flex items-center justify-center text-mist cursor-grab active:cursor-grabbing touch-none"
+            className="shrink-0 w-11 h-11 flex items-center justify-center text-text-secondary cursor-grab active:cursor-grabbing touch-none"
             aria-label="Reorder layer"
           >
             <GripVertical className="w-5 h-5" />
           </button>
 
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white shrink-0 ${typeColor}`}>
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-text-on-accent shrink-0 ${typeColor}`}>
             {layer.type?.charAt(0).toUpperCase()}
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="font-medium text-sm truncate">{layer.material}</div>
-            <div className="text-xs text-mist mt-0.5">
+            <div className="text-xs text-text-secondary mt-0.5">
               {layer.micron} µ · {(layer.gsm ?? 0).toFixed(1)} GSM
               {showCost && layer.costPerKg != null ? ` · $${layer.costPerKg.toFixed(2)}/kg` : ''}
             </div>
@@ -155,7 +155,7 @@ const LayerCard = ({
               type="button"
               onClick={onMoveUp}
               disabled={index === 0}
-              className="w-11 h-8 text-xs rounded bg-slate disabled:opacity-30"
+              className="w-11 h-8 text-xs rounded bg-surface-base disabled:opacity-30"
               aria-label="Move layer up"
             >
               ↑
@@ -164,7 +164,7 @@ const LayerCard = ({
               type="button"
               onClick={onMoveDown}
               disabled={index >= total - 1}
-              className="w-11 h-8 text-xs rounded bg-slate disabled:opacity-30"
+              className="w-11 h-8 text-xs rounded bg-surface-base disabled:opacity-30"
               aria-label="Move layer down"
             >
               ↓
@@ -175,7 +175,7 @@ const LayerCard = ({
             <button
               type="button"
               onClick={onFormula}
-              className="shrink-0 px-2 h-11 flex items-center justify-center rounded-lg bg-amber-50 text-amber-900 text-xs font-medium"
+              className="shrink-0 px-2 h-11 flex items-center justify-center rounded-lg bg-warning/10 text-warning text-xs font-medium"
               aria-label="Edit lamination formula"
             >
               {formulaOverridden ? 'Formula*' : 'Formula'}
@@ -185,7 +185,7 @@ const LayerCard = ({
           <button
             type="button"
             onClick={onEdit}
-            className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg bg-slate text-navy"
+            className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg bg-surface-base text-brand"
             aria-label="Edit layer"
           >
             <Pencil className="w-4 h-4" />

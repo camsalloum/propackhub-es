@@ -76,6 +76,43 @@ Migrations live in `packages/server/drizzle/`. The initial migration (`0000_init
 
 ---
 
+## Platform Standard Templates
+
+The structure templates that load by default with the app are stored in two places:
+
+1. **`structure-templates-seed.json`** (ships with the codebase) — the bootstrap source of truth for fresh installs. Twelve standards covering the PEBI catalog: Commercial Items Plain/Printed, Industrial Items, Shrink Film, Wide Film, Mono Layer Printed, Shrink Sleeves, Labels, Laminates (Duplex/Triplex/Quadriplex).
+
+2. **`platform_standard_templates` table** (database) — the runtime source of truth. On every server boot, the seed JSON is upserted into this table by `templateKey`; entries already present are **not** overwritten, so admin edits persist across deploys.
+
+When any tenant fetches `/api/v1/templates`, the server runs `syncPlatformStandardsToTenant()` to project the platform catalog into per-tenant `structure_templates` rows. This is how every tenant sees the same standards.
+
+### Adding a new standard
+
+Two paths:
+
+- **At deploy time (developers).** Add an entry to `structure-templates-seed.json`. On the next boot, `bootstrapPlatformStandardCatalog()` inserts it into the platform table if missing.
+- **At runtime (platform admins).** In the UI, click **New structure** (or **Clone to standard…** on any existing card) and toggle **Save as platform standard** in the builder header. The toggle is visible only to users with role `platform_admin`. The new standard is visible to every tenant on their next templates-list read.
+
+### Three template tiers
+
+| Tier | `isStandard` | `createdByUserId` | Created by | Visible to |
+|---|---|---|---|---|
+| Platform standard | `true` | `null` | `platform_admin` (via admin route) or seed JSON | every tenant |
+| Tenant add-on | `false` | `null` | `tenant_admin` | that tenant only |
+| My Template | `false` | `<userId>` | any user | that user only (plus admins) |
+
+### Admin routes
+
+- `GET    /api/v1/admin/platform-templates` — list all platform standards
+- `GET    /api/v1/admin/platform-templates/:id` — read one
+- `POST   /api/v1/admin/platform-templates` — create (or clone via `cloneFromTemplateId`)
+- `PATCH  /api/v1/admin/platform-templates/:id` — edit
+- `DELETE /api/v1/admin/platform-templates/:id` — soft delete (`isActive=false`)
+
+All five require `role = platform_admin`. Writes propagate to every tenant lazily on their next templates-list read.
+
+---
+
 ## API
 
 - **Base:** `http://localhost:5001`

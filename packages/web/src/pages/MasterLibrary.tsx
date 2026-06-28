@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate } from 'react-router-dom';
+import { useEntrance } from '../hooks/useEntrance';
 
 interface MasterMaterial {
   key: string;
@@ -20,6 +21,8 @@ interface MasterMaterial {
 
 const MasterLibrary = () => {
   const { user } = useAuth();
+  // Single-play mount entrance for the library content; no-op under reduced motion (R22.3, R22.5).
+  const { ref: entranceRef } = useEntrance<HTMLDivElement>();
   const [materials, setMaterials] = useState<MasterMaterial[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -61,14 +64,14 @@ const MasterLibrary = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto pb-24 lg:pb-0">
+    <div ref={entranceRef} className="max-w-4xl mx-auto pb-24 lg:pb-0">
       <div className="mb-6">
         <h1 className="text-2xl font-display font-bold text-navy">Master Raw Materials</h1>
         <p className="text-mist mt-1 text-sm">Platform seed copied to every new tenant at registration.</p>
       </div>
 
       {error && (
-        <div className="card bg-red-50 border-red-200 mb-4 text-red-700 text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="card bg-danger/10 border-danger/30 mb-4 text-danger text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <span>{error}</span>
           <button
             type="button"
@@ -123,7 +126,7 @@ const MasterLibrary = () => {
           </thead>
           <tbody>
             {materials.map((m, i) => (
-              <tr key={m.key} className="border-b border-border last:border-0">
+              <tr key={m.key} className="border-b border-border last:border-0 hover:bg-slate/50 transition-colors duration-micro ease-micro">
                 <td className="py-2 px-3 font-mono text-xs">{m.key}</td>
                 <td className="py-2 px-3">{m.name}</td>
                 <td className="py-2 px-3 capitalize">{m.type}</td>

@@ -45,14 +45,14 @@ function lengthBands(
 
   switch (type) {
     case 'diaper':
-      return [
+      return ([
         { h: TF, kind: 'fold', label: 'TF' },
         topSeal,
         body,
         { h: BG, kind: 'gusset', label: 'BG' },
-      ].filter((b) => b.h > 0);
+      ] as Band[]).filter((b) => b.h > 0);
     case 'wicket':
-      return [{ h: LH, kind: 'lip', label: 'LH' }, topSeal, body, bottom].filter((b) => b.h > 0);
+      return ([{ h: LH, kind: 'lip', label: 'LH' }, topSeal, body, bottom] as Band[]).filter((b) => b.h > 0);
     case 'loop':
       // body blank only = SA + H + BG (handles drawn as separate pieces)
       return [topSeal, body, ...(BG > 0 ? [{ h: BG, kind: 'gusset' as const, label: 'BG' }] : [])];
@@ -110,13 +110,13 @@ function CourierBlank({ d, vw, vh }: { d: EstimateDimensions; vw: number; vh: nu
   const FL = d.flapMm ?? 0;
   const SA = d.sealAllowanceMm ?? SA_DEFAULT;
   const POD = d.bagPodHeightMm ?? 0;
-  const bands: Band[] = [
+  const bands: Band[] = ([
     { h: FL, kind: 'flap', label: 'FL' },
     { h: H, kind: 'body' },
     { h: H, kind: 'body' },
     { h: SA, kind: 'seal', label: 'SA' },
     { h: POD, kind: 'pocket', label: 'POD' },
-  ].filter((b) => b.h > 0);
+  ] as Band[]).filter((b) => b.h > 0);
   const totalL = bands.reduce((s, b) => s + b.h, 0);
   const t = mkT(W, totalL, vw, vh);
   const x0 = t.px(0);

@@ -12,6 +12,7 @@ import { registerEstimateRoutes } from './routes/estimates';
 import { registerCustomerRoutes } from './routes/customers';
 import { registerSettingsRoutes } from './routes/settings';
 import { registerTemplateRoutes } from './routes/templates';
+import { registerAdminPlatformTemplateRoutes } from './routes/admin-platform-templates';
 import { registerUserRoutes } from './routes/users';
 import { registerDashboardRoutes } from './routes/dashboard';
 import { registerPlatformRoutes } from './routes/platform';
@@ -134,6 +135,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   registerCustomerRoutes(fastify);
   registerSettingsRoutes(fastify);
   registerTemplateRoutes(fastify);
+  registerAdminPlatformTemplateRoutes(fastify);
   registerUserRoutes(fastify);
   registerDashboardRoutes(fastify);
   registerPlatformRoutes(fastify);

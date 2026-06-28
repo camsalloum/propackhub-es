@@ -526,8 +526,12 @@ export class ApiClient {
     return this.request<any[]>('GET', '/api/v1/settings/slab-templates');
   }
 
-  createTemplate(name: string, estimateId: string) {
-    return this.request<any>('POST', '/api/v1/templates', { name, estimateId });
+  createTemplate(name: string, estimateId: string, opts?: { saveAsPlatformStandard?: boolean }) {
+    return this.request<any>('POST', '/api/v1/templates', {
+      name,
+      estimateId,
+      ...(opts?.saveAsPlatformStandard ? { saveAsPlatformStandard: true } : {}),
+    });
   }
 
   createTemplateFromDefinition(data: {
@@ -544,6 +548,9 @@ export class ApiClient {
       default_micron: number;
     }>;
     defaultProcesses?: Array<{ process_key: string; enabled: boolean }>;
+    /** Admin shortcut: when true, server delegates to the platform-templates path. */
+    saveAsPlatformStandard?: boolean;
+    cloneFromTemplateId?: string;
   }) {
     return this.request<any>('POST', '/api/v1/templates', { source: 'fromDefinition', ...data });
   }
@@ -656,6 +663,69 @@ export class ApiClient {
     orderQuantityUnit?: string;
   }) {
     return this.request<any>('POST', `/api/v1/templates/${id}/instantiate`, data);
+  }
+
+  // ── Platform-standard catalog (platform_admin only) ────────────────────
+  listPlatformTemplates() {
+    return this.request<any[]>('GET', '/api/v1/admin/platform-templates');
+  }
+
+  getPlatformTemplate(id: string) {
+    return this.request<any>('GET', `/api/v1/admin/platform-templates/${id}`);
+  }
+
+  createPlatformTemplate(data: {
+    name: string;
+    pebiParentPg?: string;
+    productType: 'roll' | 'sleeve' | 'pouch';
+    productSubtype?: string | null;
+    materialClass: 'PE' | 'Non PE';
+    structureTier: 'Mono' | 'Duplex' | 'Triplex' | 'Quadriplex';
+    printMode: 'Plain' | 'Printed';
+    defaultLayers: Array<{
+      layer_order: number;
+      layer_type: 'substrate' | 'ink' | 'adhesive';
+      materialId?: string | null;
+      ref_material_key?: string;
+      default_micron: number;
+    }>;
+    defaultProcesses?: Array<{ process_key: string; enabled: boolean }>;
+    defaultDimensions?: Record<string, unknown>;
+    displayOrder?: number;
+    cloneFromTemplateId?: string;
+  }) {
+    return this.request<any>('POST', '/api/v1/admin/platform-templates', data);
+  }
+
+  updatePlatformTemplate(id: string, data: Record<string, unknown>) {
+    return this.request<any>('PATCH', `/api/v1/admin/platform-templates/${id}`, data);
+  }
+
+  /**
+   * Same as updatePlatformTemplate but addressed by the canonical `templateKey`.
+   * Used by the editor: tenant copies expose only their local id, but every
+   * row carries the cross-table key.
+   */
+  updatePlatformTemplateByKey(templateKey: string, data: Record<string, unknown>) {
+    return this.request<any>(
+      'PATCH',
+      `/api/v1/admin/platform-templates/by-key/${encodeURIComponent(templateKey)}`,
+      data
+    );
+  }
+
+  deletePlatformTemplate(id: string) {
+    return this.request<{ ok: boolean; deactivated?: boolean; alreadyInactive?: boolean }>(
+      'DELETE',
+      `/api/v1/admin/platform-templates/${id}`
+    );
+  }
+
+  deletePlatformTemplateByKey(templateKey: string) {
+    return this.request<{ ok: boolean; deactivated?: boolean; alreadyInactive?: boolean }>(
+      'DELETE',
+      `/api/v1/admin/platform-templates/by-key/${encodeURIComponent(templateKey)}`
+    );
   }
 }
 

@@ -12,6 +12,7 @@ export * from './solvent-costing';
 export * from './ink-printing';
 export * from './structure-metrics';
 export * from './bag-flat-sheet';
+export * from './pouch-flat-sheet';
 export * from './unit-conversion';
 
 // Re-export for convenience

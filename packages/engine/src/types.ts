@@ -45,10 +45,16 @@ export interface EstimateDimensions {
   extraPrintingTrimMm?: number;
   numberOfUps?: number;
   piecesPerCut?: number;
-  // Pouch fields
+  // Pouch fields (face dimensions also reused by bag flat-sheet model)
   openWidthMm?: number;
   openHeightMm?: number;
   layFlatValue?: number;
+  /** Pouch configurator type: 'three-side-seal' | 'center-seal' | 'four-side-seal' | 'stand-up' | 'side-gusset' | 'flat-bottom'. */
+  pouchSubtype?: string;
+  /** Center-seal (pillow / VFFS) back/fin overlap (mm). Added to blank width. */
+  centerSealOverlapMm?: number;
+  /** Flat-bottom (box) pouch bottom-panel depth (mm). Adds a separate W×D panel. */
+  bottomDepthMm?: number;
   // Bag fields (flat-sheet area model — see bag-flat-sheet.ts)
   /** Configurator type: 'bottom-gusset' | 'side-gusset' | 'courier' | 'diaper' | 'industrial' | 'loop' | 'patch' | 'punch' | 'wicket'. */
   bagSubtype?: string;

@@ -4,9 +4,16 @@ import { Settings as SettingsIcon, Users, DollarSign, FileText, Globe, Database 
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { useVisibilityProfile, VISIBILITY_KEYS } from '../hooks/useVisibilityProfile';
+import { ThemeSwitcher } from '../theme/ThemeSwitcher';
+import { useEntrance } from '../hooks/useEntrance';
+import { useDensity } from '../hooks/useDensity';
 
 const Settings = () => {
   const { user } = useAuth();
+  // Single-play mount entrance for the settings content; no-op under reduced motion (R23.5).
+  const { ref: entranceRef } = useEntrance<HTMLDivElement>();
+  // Density preference (Comfortable / Compact / Spacious); persisted in PreferenceStore.
+  const { density, densities, setDensity } = useDensity();
   const isAdmin = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
   const [activeTab, setActiveTab] = useState<'general' | 'team' | 'currency' | 'proposal'>('general');
   const [teamUsers, setTeamUsers] = useState<any[]>([]);
@@ -143,26 +150,26 @@ const Settings = () => {
   };
 
   return (
-    <div>
+    <div ref={entranceRef}>
       <div className="mb-8">
         {isAdmin && (
           <Link
             to="/platform/master-data"
-            className="card p-4 mb-6 flex items-center gap-3 hover:border-gold/40 transition-colors"
+            className="card p-4 mb-6 flex items-center gap-3 hover:border-accent/40 transition-colors duration-micro ease-micro"
           >
-            <Database className="w-6 h-6 text-gold shrink-0" />
+            <Database className="w-6 h-6 text-accent-text shrink-0" />
             <div>
-              <p className="font-medium text-navy">Master Data</p>
-              <p className="text-sm text-mist">
+              <p className="font-medium text-brand">Master Data</p>
+              <p className="text-sm text-text-secondary">
                 Platform materials, product types, units — changes sync to all tenants
               </p>
             </div>
           </Link>
         )}
-        <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Settings</h1>
-        <p className="text-mist mt-2">Configure your Estimation Studio workspace</p>
+        <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand">Settings</h1>
+        <p className="text-text-secondary mt-2">Configure your Estimation Studio workspace</p>
         {settingsError && (
-          <div className="mt-4 card bg-red-50 border border-red-200 text-sm text-red-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="mt-4 card bg-danger/10 border border-danger/30 text-sm text-danger flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <span>{settingsError}</span>
             <button type="button" className="btn-secondary text-sm" onClick={loadSettings}>
               Retry
@@ -182,8 +189,8 @@ const Settings = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                    isActive ? 'bg-gold/10 text-gold' : 'hover:bg-slate text-ink'
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-micro ease-micro ${
+                    isActive ? 'bg-accent/10 text-accent-text' : 'hover:bg-surface-base text-text-primary'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -198,11 +205,11 @@ const Settings = () => {
         <div className="flex-1">
           {activeTab === 'general' && (
             <div className="card">
-              <h2 className="text-xl font-display font-semibold text-navy mb-6">General Settings</h2>
+              <h2 className="text-xl font-display font-semibold text-brand mb-6">General Settings</h2>
               
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-navy mb-2">Tenant Name</label>
+                  <label className="block text-sm font-medium text-brand mb-2">Tenant Name</label>
                   <input
                     type="text"
                     value={tenantName}
@@ -212,23 +219,56 @@ const Settings = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-navy mb-2">Default Markup %</label>
+                  <label className="block text-sm font-medium text-brand mb-2">Default Markup %</label>
                   <input
                     type="number"
                     value={defaultMarkup}
                     onChange={(e) => setDefaultMarkup(Number(e.target.value))}
                     className="input w-32"
                   />
-                  <p className="text-sm text-mist mt-2">Applied to all new estimates unless overridden</p>
+                  <p className="text-sm text-text-secondary mt-2">Applied to all new estimates unless overridden</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-navy mb-2">Default Slab Template</label>
+                  <label className="block text-sm font-medium text-brand mb-2">Default Slab Template</label>
                   <select value={defaultSlabTemplate} onChange={(e) => setDefaultSlabTemplate(e.target.value)} className="input w-64">
                     <option value="standard">Standard 4-tier (1T/2T/5T/10T)</option>
                     <option value="small">Small quantities (500/1000/2000 kg)</option>
                     <option value="large">Large quantities (5T/10T/20T/50T)</option>
                   </select>
+                </div>
+
+                <div className="pt-6 border-t border-border">
+                  <ThemeSwitcher />
+                </div>
+
+                <div className="pt-6 border-t border-border">
+                  <h3 className="font-display font-semibold text-brand mb-2">Density</h3>
+                  <p className="text-sm text-text-secondary mb-4">
+                    Adjust how tightly the interface packs information. Applies app-wide and persists across sessions.
+                  </p>
+                  <div className="inline-flex rounded-lg border border-border p-1 bg-surface-base" role="radiogroup" aria-label="Interface density">
+                    {densities.map((d) => {
+                      const active = density === d;
+                      const label = d.charAt(0).toUpperCase() + d.slice(1);
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          onClick={() => { void setDensity(d); }}
+                          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-micro ease-micro min-w-[7rem] ${
+                            active
+                              ? 'bg-surface-raised text-brand shadow-sm'
+                              : 'text-text-secondary hover:text-text-primary'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="pt-6 border-t border-border">
@@ -240,15 +280,15 @@ const Settings = () => {
 
           {activeTab === 'team' && (
             <div className="card">
-              <h2 className="text-xl font-display font-semibold text-navy mb-6">Team & Visibility</h2>
+              <h2 className="text-xl font-display font-semibold text-brand mb-6">Team & Visibility</h2>
               {!isAdmin ? (
-                <p className="text-mist text-sm">Only tenant admins can manage team visibility.</p>
+                <p className="text-text-secondary text-sm">Only tenant admins can manage team visibility.</p>
               ) : teamLoading ? (
-                <p className="text-mist text-sm">Loading team settings…</p>
+                <p className="text-text-secondary text-sm">Loading team settings…</p>
               ) : (
                 <div className="space-y-6">
                   {teamError && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg text-sm text-danger flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <span>{teamError}</span>
                       <button type="button" className="btn-secondary text-sm" onClick={loadTeamSettings}>
                         Retry
@@ -256,7 +296,7 @@ const Settings = () => {
                     </div>
                   )}
                   <div>
-                    <h3 className="font-display font-semibold text-navy mb-4">Preview as user</h3>
+                    <h3 className="font-display font-semibold text-brand mb-4">Preview as user</h3>
                     <div className="flex flex-wrap gap-2">
                       <button type="button" className="btn-secondary text-sm" onClick={() => setPreviewPreset('sales_rep')}>
                         Preview as Sales rep
@@ -265,28 +305,28 @@ const Settings = () => {
                         Exit preview
                       </button>
                     </div>
-                    <p className="text-xs text-mist mt-2">Opens estimate editor with sales rep visibility. Stored in session.</p>
+                    <p className="text-xs text-text-secondary mt-2">Opens estimate editor with sales rep visibility. Stored in session.</p>
                   </div>
                   <div>
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(visibilityPresets).map(([key, preset]) => (
-                        <span key={key} className="text-xs px-3 py-1 bg-slate rounded-full text-ink">{preset.name}</span>
+                        <span key={key} className="text-xs px-3 py-1 bg-surface-base rounded-full text-text-primary">{preset.name}</span>
                       ))}
                     </div>
                   </div>
                   <div className="pt-6 border-t border-border">
-                    <h3 className="font-display font-semibold text-navy mb-4">Team Members</h3>
-                    {teamUsers.length === 0 && <p className="text-mist text-sm">No team members found.</p>}
+                    <h3 className="font-display font-semibold text-brand mb-4">Team Members</h3>
+                    {teamUsers.length === 0 && <p className="text-text-secondary text-sm">No team members found.</p>}
                     <div className="space-y-4">
                       {teamUsers.map((member) => (
-                        <div key={member.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-slate rounded-lg">
+                        <div key={member.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-surface-base rounded-lg">
                           <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-navy/10 rounded-full flex items-center justify-center">
-                              <span className="font-display font-semibold text-navy">{member.displayName?.charAt(0) || '?'}</span>
+                            <div className="w-10 h-10 bg-brand/10 rounded-full flex items-center justify-center">
+                              <span className="font-display font-semibold text-brand">{member.displayName?.charAt(0) || '?'}</span>
                             </div>
                             <div>
                               <p className="font-medium">{member.displayName}</p>
-                              <p className="text-sm text-mist">{member.email} · {member.role}</p>
+                              <p className="text-sm text-text-secondary">{member.email} · {member.role}</p>
                             </div>
                           </div>
                           <div className="flex flex-wrap gap-2">
@@ -346,14 +386,14 @@ const Settings = () => {
 
           {activeTab === 'currency' && (
             <div className="card">
-              <h2 className="text-xl font-display font-semibold text-navy mb-6">Currency Settings</h2>
+              <h2 className="text-xl font-display font-semibold text-brand mb-6">Currency Settings</h2>
               
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-navy mb-2">Display Currency</label>
+                  <label className="block text-sm font-medium text-brand mb-2">Display Currency</label>
                   <div className="flex items-center space-x-4">
                     <div className="relative">
-                      <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-mist" />
+                      <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-text-secondary" />
                       <select className="input pl-10 w-48" value={displayCurrency} onChange={(e) => setDisplayCurrency(e.target.value)}>
                         <option value="AED">AED - UAE Dirham</option>
                         <option value="USD">USD - US Dollar</option>
@@ -363,12 +403,12 @@ const Settings = () => {
                         <option value="INR">INR - Indian Rupee</option>
                       </select>
                     </div>
-                    <span className="text-sm text-mist">Material library always uses USD</span>
+                    <span className="text-sm text-text-secondary">Material library always uses USD</span>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="font-display font-semibold text-navy mb-4">Exchange Rate</h3>
+                  <h3 className="font-display font-semibold text-brand mb-4">Exchange Rate</h3>
                   <div className="space-y-4">
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center">
@@ -397,7 +437,7 @@ const Settings = () => {
 
                     {/* PRD §6.10 — stale-rate banner */}
                     {isFxStale && (
-                      <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                      <div className="flex items-center gap-2 p-3 bg-warning/10 border border-warning/30 rounded-lg text-sm text-warning">
                         <span>⚠ Exchange rate is more than 24h old.</span>
                         <button onClick={refreshFx} className="underline font-medium hover:no-underline">
                           Refresh now
@@ -405,10 +445,10 @@ const Settings = () => {
                       </div>
                     )}
                     {fxRefreshError && (
-                      <p className="text-sm text-red-600">{fxRefreshError}</p>
+                      <p className="text-sm text-danger">{fxRefreshError}</p>
                     )}
                     <div>
-                      <label className="block text-sm font-medium text-navy mb-2">1 USD =</label>
+                      <label className="block text-sm font-medium text-brand mb-2">1 USD =</label>
                       <div className="flex items-center space-x-2">
                         <input
                           type="number"
@@ -418,13 +458,13 @@ const Settings = () => {
                           className="input w-32"
                         />
                         <span className="text-sm">{displayCurrency}</span>
-                        <button onClick={refreshFx} className="text-sm text-gold font-medium hover:underline ml-4">
+                        <button onClick={refreshFx} className="text-sm text-accent-text font-medium hover:underline ml-4">
                           Refresh now
                         </button>
                       </div>
                     </div>
 
-                    <p className="text-sm text-mist">
+                    <p className="text-sm text-text-secondary">
                       {fxLastUpdated
                         ? `Last updated: ${new Date(fxLastUpdated).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })} (${useAutoFx ? 'auto' : 'manual'})`
                         : 'Rate not yet fetched — click Refresh now'}
@@ -433,7 +473,7 @@ const Settings = () => {
                 </div>
 
                 <div className="pt-6 border-t border-border">
-                  <p className="text-sm text-mist mb-4">
+                  <p className="text-sm text-text-secondary mb-4">
                     <strong>Note:</strong> Estimates snapshot the exchange rate at calculation time.
                     Changing rates here only affects new estimates and re-quotes.
                   </p>
@@ -446,38 +486,38 @@ const Settings = () => {
 
           {activeTab === 'proposal' && (
             <div className="card">
-              <h2 className="text-xl font-display font-semibold text-navy mb-6">Proposal Branding</h2>
+              <h2 className="text-xl font-display font-semibold text-brand mb-6">Proposal Branding</h2>
               
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-navy mb-2">Company Logo</label>
+                  <label className="block text-sm font-medium text-brand mb-2">Company Logo</label>
                   <div className="flex items-center space-x-4">
-                    <div className="w-32 h-16 bg-slate border border-dashed border-border rounded-lg flex items-center justify-center">
-                      {logoUrl ? <img src={logoUrl} alt="logo" className="max-w-full max-h-full" /> : <FileText className="w-8 h-8 text-mist" />}
+                    <div className="w-32 h-16 bg-surface-base border border-dashed border-border rounded-lg flex items-center justify-center">
+                      {logoUrl ? <img src={logoUrl} alt="logo" className="max-w-full max-h-full" /> : <FileText className="w-8 h-8 text-text-secondary" />}
                     </div>
                     <div>
                       <button onClick={() => { const url = prompt('Enter logo URL'); if (url) setLogoUrl(url); }} className="btn-secondary text-sm">Upload Logo</button>
-                      <p className="text-xs text-mist mt-2">PNG or SVG, max 2MB (URL or upload)</p>
+                      <p className="text-xs text-text-secondary mt-2">PNG or SVG, max 2MB (URL or upload)</p>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-navy mb-2">Primary Color</label>
+                  <label className="block text-sm font-medium text-brand mb-2">Primary Color</label>
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-lg bg-navy border border-border"></div>
+                    <div className="w-12 h-12 rounded-lg bg-brand border border-border"></div>
                     <input
                       type="text"
                       value={brandPrimaryColor}
                       onChange={(e) => setBrandPrimaryColor(e.target.value)}
                       className="input font-mono w-32"
                     />
-                    <span className="text-sm text-mist">Used for headers and accents</span>
+                    <span className="text-sm text-text-secondary">Used for headers and accents</span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-navy mb-2">Terms & Conditions</label>
+                  <label className="block text-sm font-medium text-brand mb-2">Terms & Conditions</label>
                   <textarea
                     value={termsAndConditions}
                     onChange={(e) => setTermsAndConditions(e.target.value)}
@@ -487,7 +527,7 @@ const Settings = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-navy mb-2">Footer Text</label>
+                  <label className="block text-sm font-medium text-brand mb-2">Footer Text</label>
                   <textarea
                     value={footerText}
                     onChange={(e) => setFooterText(e.target.value)}

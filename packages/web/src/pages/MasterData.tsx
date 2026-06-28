@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Save, Trash2, Database } from 'lucide-react';
+import { Plus, Save, Trash2, Database, GripVertical } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useEntrance } from '../hooks/useEntrance';
 import { useMasterDataContext } from '../contexts/MasterDataContext';
 import {
   apiClient,
@@ -122,6 +123,8 @@ function newMaterialRow(tabCode: string, tabLabel: string): PlatformMasterMateri
 const MasterData = () => {
   const { user, isLoading } = useAuth();
   const { invalidate } = useMasterDataContext();
+  // Single-play mount entrance for the library content; no-op under reduced motion (R22.3, R22.5).
+  const { ref: entranceRef } = useEntrance<HTMLDivElement>();
   const [tab, setTab] = useState<Tab>('rm_type');
   const [materials, setMaterials] = useState<PlatformMasterMaterialRow[]>([]);
   const [refItems, setRefItems] = useState<PlatformReferenceItemInput[]>([]);
@@ -214,7 +217,7 @@ const MasterData = () => {
         ?.cleaningSolventKgPerJob ?? 20
     );
     if (!isMaterialTab(tab)) {
-      setRefItems(map[tab] ?? []);
+      setRefItems((map as Record<string, PlatformReferenceItemInput[]>)[tab] ?? []);
     }
     if (tab === 'product_type') {
       const subRows = ((ref as { productSubtypeRows?: Array<{ label: string; code: string; parent?: string }> })
@@ -241,7 +244,6 @@ const MasterData = () => {
     }
   }, [tab]);
 
-  const canManageMasterData = true; // All users can view Raw Materials; save is restricted to admins below
   const canEdit = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
 
   useEffect(() => {
@@ -426,6 +428,24 @@ const MasterData = () => {
     });
   };
 
+  // ── Drag-and-drop reordering (product types) ───────────────────────────────
+  const [ptDragFrom, setPtDragFrom] = useState<number | null>(null);
+  const [ptDragHover, setPtDragHover] = useState<number | null>(null);
+  const reorderProductType = (from: number, to: number) => {
+    if (from === to || from < 0 || to < 0 || from >= refItems.length || to >= refItems.length) return;
+    setRefItems((prev) => {
+      const copy = [...prev];
+      const [item] = copy.splice(from, 1);
+      copy.splice(to, 0, item);
+      return copy;
+    });
+  };
+  const commitPtDrag = () => {
+    if (ptDragFrom !== null && ptDragHover !== null) reorderProductType(ptDragFrom, ptDragHover);
+    setPtDragFrom(null);
+    setPtDragHover(null);
+  };
+
   const addSubtype = (parent: string) =>
     setSubtypeRows((prev) => [...prev, { label: 'New subtype', code: '', parent: parent.toLowerCase() }]);
 
@@ -452,6 +472,46 @@ const MasterData = () => {
       [copy[idx], copy[targetIdx]] = [copy[targetIdx], copy[idx]];
       return copy;
     });
+  };
+
+  // ── Drag-and-drop reordering (subtypes — constrained to same parent) ────────
+  const [subDragFrom, setSubDragFrom] = useState<number | null>(null);
+  const [subDragHover, setSubDragHover] = useState<number | null>(null);
+  const commitSubDrag = () => {
+    if (
+      subDragFrom !== null &&
+      subDragHover !== null &&
+      subDragFrom !== subDragHover &&
+      subtypeRows[subDragFrom]?.parent === subtypeRows[subDragHover]?.parent
+    ) {
+      setSubtypeRows((prev) => {
+        const copy = [...prev];
+        const [item] = copy.splice(subDragFrom, 1);
+        // Account for index shift when removing an earlier element.
+        const insertAt = subDragFrom < subDragHover ? subDragHover - 1 : subDragHover;
+        copy.splice(insertAt, 0, item);
+        return copy;
+      });
+    }
+    setSubDragFrom(null);
+    setSubDragHover(null);
+  };
+
+  // ── Drag-and-drop reordering (processes) ────────────────────────────────────
+  const [procDragFrom, setProcDragFrom] = useState<number | null>(null);
+  const [procDragHover, setProcDragHover] = useState<number | null>(null);
+  const commitProcDrag = () => {
+    if (procDragFrom !== null && procDragHover !== null && procDragFrom !== procDragHover) {
+      setProcessRows((prev) => {
+        const copy = [...prev];
+        const [item] = copy.splice(procDragFrom, 1);
+        const insertAt = procDragFrom < procDragHover ? procDragHover - 1 : procDragHover;
+        copy.splice(insertAt, 0, item);
+        return copy;
+      });
+    }
+    setProcDragFrom(null);
+    setProcDragHover(null);
   };
 
   const updateMaterialRow = (id: string, patch: Partial<PlatformMasterMaterialRow>) => {
@@ -520,7 +580,7 @@ const MasterData = () => {
   }
 
   return (
-    <div className="w-full pb-24 lg:pb-8">
+    <div ref={entranceRef} className="w-full pb-24 lg:pb-8">
       <div className="mb-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl font-display font-bold text-navy flex items-center gap-2">
@@ -547,10 +607,10 @@ const MasterData = () => {
       </div>
 
       {error && (
-        <div className="card bg-red-50 border-red-200 mb-4 text-red-700 text-sm">{error}</div>
+        <div className="card bg-danger/10 border-danger/30 mb-4 text-danger text-sm">{error}</div>
       )}
       {status && (
-        <div className="card bg-green-50 border-green-200 mb-4 text-green-800 text-sm">{status}</div>
+        <div className="card bg-success/10 border-success/30 mb-4 text-success text-sm">{status}</div>
       )}
 
       <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
@@ -559,8 +619,8 @@ const MasterData = () => {
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${
-              tab === t.id ? 'bg-gold/15 text-gold' : 'bg-white text-ink hover:bg-slate'
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors duration-micro ease-micro shrink-0 ${
+              tab === t.id ? 'bg-gold/15 text-gold' : 'bg-surface-raised text-ink hover:bg-slate'
             }`}
           >
             {t.label}
@@ -571,7 +631,7 @@ const MasterData = () => {
       {isMaterialTab(tab) ? (
         <div className="card overflow-hidden">
           {tab === 'solvent' && canEdit && (
-            <div className="px-3 py-3 border-b border-border bg-amber-50/50 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="px-3 py-3 border-b border-border bg-warning/10 grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-medium text-mist mb-1">
                   Default cleaning EA (kg/job)
@@ -690,7 +750,7 @@ const MasterData = () => {
                     <td>
                       {(tab === 'ink' || tab === 'adhesive') ? (
                         <span
-                          className="cell-num font-mono text-sm font-semibold text-amber-700 px-2"
+                          className="cell-num font-mono text-sm font-semibold text-warning px-2"
                           title={`${(row.liquidCostUsd ?? row.costPerKgUsd).toFixed(2)} ÷ ${row.solidPercent}% = ${row.costPerKgUsd.toFixed(4)}`}
                         >
                           {row.costPerKgUsd.toFixed(2)}
@@ -724,7 +784,7 @@ const MasterData = () => {
                       {tab === 'adhesive' && row.isSolventBased && canEdit && (
                         <button
                           type="button"
-                          className="text-xs text-blue-700 hover:text-blue-900 mr-1"
+                          className="text-xs text-accent-text hover:text-accent mr-1 transition-colors duration-micro ease-micro"
                           onClick={() => setFormulaMaterialId(row.id)}
                         >
                           Formula
@@ -733,7 +793,7 @@ const MasterData = () => {
                       {canEdit && (
                         <button
                           type="button"
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                          className="p-1.5 text-danger hover:bg-danger/10 rounded transition-colors duration-micro ease-micro"
                           onClick={() => removeMaterialRow(row)}
                           aria-label="Delete"
                         >
@@ -764,8 +824,27 @@ const MasterData = () => {
           {refItems.map((pt, i) => {
             const ptCode = (pt.code ?? '').toLowerCase();
             return (
-              <div key={i} className="border border-border rounded-lg p-3 bg-slate/10">
+              <div
+                key={i}
+                onDragEnter={() => { if (ptDragFrom !== null) setPtDragHover(i); }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { e.preventDefault(); commitPtDrag(); }}
+                className={`border border-border rounded-lg p-3 bg-slate/10 transition-colors ${
+                  ptDragFrom === i ? 'opacity-50' : ''
+                } ${ptDragHover === i && ptDragFrom !== null && ptDragFrom !== i ? 'outline outline-1 outline-gold/50 bg-gold/5' : ''}`}
+              >
                 <div className="flex flex-wrap items-center gap-2">
+                  {/* Drag handle */}
+                  <span
+                    draggable
+                    onDragStart={() => setPtDragFrom(i)}
+                    onDragEnd={commitPtDrag}
+                    className="text-mist hover:text-navy cursor-grab active:cursor-grabbing touch-none shrink-0"
+                    aria-label="Drag to reorder product type"
+                    title="Drag to reorder"
+                  >
+                    <GripVertical className="w-4 h-4" />
+                  </span>
                   {/* Reorder arrows */}
                   <div className="flex flex-col gap-0">
                     <button
@@ -795,7 +874,7 @@ const MasterData = () => {
                     value={pt.code ?? ''}
                     onChange={(e) => updateProductType(i, { code: e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '') })}
                   />
-                  <button type="button" className="p-1.5 text-red-600 hover:bg-red-50 rounded" onClick={() => removeProductType(i)} aria-label="Delete product type">
+                  <button type="button" className="p-1.5 text-danger hover:bg-danger/10 rounded transition-colors duration-micro ease-micro" onClick={() => removeProductType(i)} aria-label="Delete product type">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -809,7 +888,28 @@ const MasterData = () => {
                       .map(({ j }) => j);
                     const posInGroup = groupIdxs.indexOf(idx);
                     return (
-                      <div key={idx} className="flex flex-wrap items-center gap-2">
+                      <div
+                        key={idx}
+                        onDragEnter={() => {
+                          if (subDragFrom !== null && subtypeRows[subDragFrom]?.parent === ptCode) setSubDragHover(idx);
+                        }}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => { e.preventDefault(); commitSubDrag(); }}
+                        className={`flex flex-wrap items-center gap-2 rounded transition-colors ${
+                          subDragFrom === idx ? 'opacity-50' : ''
+                        } ${subDragHover === idx && subDragFrom !== null && subDragFrom !== idx ? 'outline outline-1 outline-gold/50 bg-gold/5' : ''}`}
+                      >
+                        {/* Drag handle */}
+                        <span
+                          draggable
+                          onDragStart={() => setSubDragFrom(idx)}
+                          onDragEnd={commitSubDrag}
+                          className="text-mist hover:text-navy cursor-grab active:cursor-grabbing touch-none shrink-0"
+                          aria-label="Drag to reorder subtype"
+                          title="Drag to reorder"
+                        >
+                          <GripVertical className="w-3.5 h-3.5" />
+                        </span>
                         {/* Subtype reorder */}
                         <div className="flex flex-col gap-0">
                           <button
@@ -839,7 +939,7 @@ const MasterData = () => {
                           value={s.code}
                           onChange={(e) => updateSubtype(idx, { code: e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '') })}
                         />
-                        <button type="button" className="p-1 text-red-600 hover:bg-red-50 rounded" onClick={() => removeSubtype(idx)} aria-label="Delete subtype">
+                        <button type="button" className="p-1 text-danger hover:bg-danger/10 rounded transition-colors duration-micro ease-micro" onClick={() => removeSubtype(idx)} aria-label="Delete subtype">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -879,16 +979,34 @@ const MasterData = () => {
             {processRows.map((proc, i) => {
               const groupIdxCount = processRows.length;
               return (
-                <div key={i} className="border border-border rounded-lg p-3 bg-slate/10 space-y-2">
+                <div
+                  key={i}
+                  onDragEnter={() => { if (procDragFrom !== null) setProcDragHover(i); }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => { e.preventDefault(); commitProcDrag(); }}
+                  className={`border border-border rounded-lg p-3 bg-slate/10 space-y-2 transition-colors ${
+                    procDragFrom === i ? 'opacity-50' : ''
+                  } ${procDragHover === i && procDragFrom !== null && procDragFrom !== i ? 'outline outline-1 outline-gold/50 bg-gold/5' : ''}`}
+                >
                   {/* Row 1: reorder + label + code + delete */}
                   <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      draggable
+                      onDragStart={() => setProcDragFrom(i)}
+                      onDragEnd={commitProcDrag}
+                      className="text-mist hover:text-navy cursor-grab active:cursor-grabbing touch-none shrink-0"
+                      aria-label="Drag to reorder process"
+                      title="Drag to reorder"
+                    >
+                      <GripVertical className="w-4 h-4" />
+                    </span>
                     <div className="flex flex-col gap-0 shrink-0">
                       <button type="button" disabled={i === 0} onClick={() => setProcessRows((prev) => { const c = [...prev]; [c[i], c[i-1]] = [c[i-1], c[i]]; return c; })} className="text-mist hover:text-navy disabled:opacity-20 text-xs leading-none px-0.5" aria-label="Move up">▲</button>
                       <button type="button" disabled={i === groupIdxCount - 1} onClick={() => setProcessRows((prev) => { const c = [...prev]; [c[i], c[i+1]] = [c[i+1], c[i]]; return c; })} className="text-mist hover:text-navy disabled:opacity-20 text-xs leading-none px-0.5" aria-label="Move down">▼</button>
                     </div>
                     <input className="input !min-h-[34px] !py-1 !px-2 text-sm flex-1 min-w-[8rem]" placeholder="Label (e.g. Extrusion)" value={proc.label} onChange={(e) => setProcessRows((prev) => prev.map((p, j) => j === i ? { ...p, label: e.target.value } : p))} />
                     <input className="input !min-h-[34px] !py-1 !px-2 text-sm font-mono w-36" placeholder="code" value={proc.code} onChange={(e) => setProcessRows((prev) => prev.map((p, j) => j === i ? { ...p, code: e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '') } : p))} />
-                    <button type="button" className="p-1.5 text-red-600 hover:bg-red-50 rounded shrink-0" onClick={() => setProcessRows((prev) => prev.filter((_, j) => j !== i))} aria-label="Delete process"><Trash2 className="w-4 h-4" /></button>
+                    <button type="button" className="p-1.5 text-danger hover:bg-danger/10 rounded shrink-0 transition-colors duration-micro ease-micro" onClick={() => setProcessRows((prev) => prev.filter((_, j) => j !== i))} aria-label="Delete process"><Trash2 className="w-4 h-4" /></button>
                   </div>
                   {/* Row 2: description + cost defaults */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pl-6">
@@ -989,7 +1107,7 @@ const MasterData = () => {
                     <td className="text-center">
                       <button
                         type="button"
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                        className="p-1.5 text-danger hover:bg-danger/10 rounded transition-colors duration-micro ease-micro"
                         onClick={() =>
                           tab === 'rm_type'
                             ? removeRmTypeItem(i)
@@ -1015,7 +1133,7 @@ const MasterData = () => {
           if (!formulaMaterialId) return;
           const stats = deriveBinderConcentrateStats(recipe);
           updateMaterialRow(formulaMaterialId, {
-            laminationRecipe: recipe,
+            laminationRecipe: recipe as unknown as Record<string, unknown>,
             solidPercent: stats.solidPercent,
             costPerKgUsd: stats.costPerKgUsd,
             liquidCostUsd: stats.liquidCostUsd,

@@ -25,11 +25,23 @@ import {
 
 /** Seed missing standards, dedupe legacy rows, then assign stable keys. */
 async function prepareTemplatesForTenant(tenantId: string): Promise<void> {
-  await ensureTemplatesForTenant(tenantId);
-  await syncMissingStandardTemplates(tenantId);
-  await pruneDuplicateStandardTemplates(tenantId);
-  await syncTemplateKeysForTenant(tenantId);
-  await relinkTemplatesForTenant(tenantId);
+  // Each pass is wrapped so an isolated failure (e.g. a fresh dev DB where
+  // platform_standard_templates doesn't exist yet) cannot 500 the list
+  // endpoint. The list response is still useful with stale data; the failed
+  // pass is logged so the cause is visible in the server console.
+  const runPass = async (label: string, fn: () => Promise<unknown>) => {
+    try {
+      await fn();
+    } catch (err) {
+      console.error(`[templates] ${label} failed for tenant ${tenantId}:`, err);
+    }
+  };
+
+  await runPass('ensureTemplatesForTenant', () => ensureTemplatesForTenant(tenantId));
+  await runPass('syncMissingStandardTemplates', () => syncMissingStandardTemplates(tenantId));
+  await runPass('pruneDuplicateStandardTemplates', () => pruneDuplicateStandardTemplates(tenantId));
+  await runPass('syncTemplateKeysForTenant', () => syncTemplateKeysForTenant(tenantId));
+  await runPass('relinkTemplatesForTenant', () => relinkTemplatesForTenant(tenantId));
 }
 
 type TemplateRow = typeof schema.structureTemplates.$inferSelect;
@@ -518,6 +530,8 @@ const CreateTemplateFromEstimateSchema = z.object({
   source: z.literal('fromEstimate').optional(), // backward compat: may be omitted
   name: z.string().min(1),
   estimateId: z.string().uuid(),
+  /** Admin shortcut: forwarded to the platform-admin create route. */
+  saveAsPlatformStandard: z.boolean().optional(),
 });
 
 const CreateTemplateFromDefinitionSchema = z.object({
@@ -532,6 +546,10 @@ const CreateTemplateFromDefinitionSchema = z.object({
   defaultProcesses: z
     .array(z.object({ process_key: z.string(), enabled: z.boolean() }))
     .optional(),
+  /** Admin shortcut: when true, delegates to POST /admin/platform-templates. */
+  saveAsPlatformStandard: z.boolean().optional(),
+  /** Optional: clone-from source id, only used when saveAsPlatformStandard is true. */
+  cloneFromTemplateId: z.string().uuid().optional(),
 });
 
 const CreateTemplateSchema = z.discriminatedUnion('source', [
@@ -556,6 +574,33 @@ export async function createTemplateRoute(
     const tenantId = extractTenantFromRequest(request);
     const db = getDatabase();
     const body = request.body as any;
+
+    // Admin shortcut: forward to the platform-templates create flow.
+    // Only platform_admin may use this — non-admins get 403 here so they cannot
+    // bypass the regular My Template path by setting the flag.
+    if (body?.saveAsPlatformStandard === true) {
+      if (user.role !== 'platform_admin') {
+        request.log.warn(
+          { userId: user.userId, role: user.role, route: request.url },
+          'Non-platform_admin attempted saveAsPlatformStandard via /api/v1/templates'
+        );
+        return reply.status(403).send({ error: 'Platform admin role required for saveAsPlatformStandard' });
+      }
+      const { createPlatformTemplateRoute } = await import('./admin-platform-templates');
+      // The admin route expects the same field shape we already have; we strip
+      // the `source` discriminator since the admin schema doesn't use it.
+      const adminBody = { ...body };
+      delete adminBody.source;
+      delete adminBody.saveAsPlatformStandard;
+      // Re-wrap the request so the admin handler reads our normalized body.
+      const adminRequest = new Proxy(request, {
+        get(target, prop, receiver) {
+          if (prop === 'body') return adminBody;
+          return Reflect.get(target, prop, receiver);
+        },
+      }) as typeof request;
+      return createPlatformTemplateRoute(_fastify, adminRequest as FastifyRequest<{ Body: unknown }>, reply);
+    }
 
     // Route to the appropriate handler branch
     if (body?.source === 'fromDefinition') {

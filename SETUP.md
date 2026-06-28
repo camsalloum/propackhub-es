@@ -111,6 +111,15 @@ Primary path for master data is the **Master Data admin page** (`/platform/maste
 ✓ Database schema is up to date
 ```
 
+### Platform standard templates bootstrap
+
+After migrations apply, the server boot also runs `bootstrapPlatformStandardCatalog()`, which upserts the 12 built-in standards from `structure-templates-seed.json` into the new `platform_standard_templates` table.
+
+- **Fresh install:** all 12 standards are inserted; per-tenant copies are projected the first time any tenant fetches `/api/v1/templates`.
+- **Upgrade from earlier version (before this feature):** existing tenant copies in `structure_templates` are matched by `templateKey` and kept in place. The new platform table is filled from the seed JSON, and edits made by `platform_admin` thereafter persist across deploys.
+
+See **README.md → Platform Standard Templates** for the runtime admin flow and API surface.
+
 ## Step 5: Start Development Servers
 
 ### Option A: Double-click Startup Scripts

@@ -4,13 +4,103 @@
   "graph": {},
   "nodes": [
     {
+      "label": "bag-costing.test.ts",
+      "file_type": "code",
+      "source_file": "bag-costing.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "bag_costing_test",
+      "community": 1,
+      "norm_label": "bag-costing.test.ts"
+    },
+    {
+      "label": "bag-flat-sheet.test.ts",
+      "file_type": "code",
+      "source_file": "bag-flat-sheet.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "bag_flat_sheet_test",
+      "community": 7,
+      "norm_label": "bag-flat-sheet.test.ts"
+    },
+    {
+      "label": "bag-flat-sheet.ts",
+      "file_type": "code",
+      "source_file": "bag-flat-sheet.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "bag_flat_sheet",
+      "community": 7,
+      "norm_label": "bag-flat-sheet.ts"
+    },
+    {
+      "label": "BagConfiguratorType",
+      "file_type": "code",
+      "source_file": "bag-flat-sheet.ts",
+      "source_location": "L15",
+      "_origin": "ast",
+      "id": "bag_flat_sheet_bagconfiguratortype",
+      "community": 7,
+      "norm_label": "bagconfiguratortype"
+    },
+    {
+      "label": "BAG_SUBTYPE_TO_CONFIGURATOR",
+      "file_type": "code",
+      "source_file": "bag-flat-sheet.ts",
+      "source_location": "L36",
+      "_origin": "ast",
+      "id": "bag_flat_sheet_bag_subtype_to_configurator",
+      "community": 7,
+      "norm_label": "bag_subtype_to_configurator"
+    },
+    {
+      "label": "BagFlatSheetResult",
+      "file_type": "code",
+      "source_file": "bag-flat-sheet.ts",
+      "source_location": "L52",
+      "_origin": "ast",
+      "id": "bag_flat_sheet_bagflatsheetresult",
+      "community": 7,
+      "norm_label": "bagflatsheetresult"
+    },
+    {
+      "label": "resolveBagConfiguratorType()",
+      "file_type": "code",
+      "source_file": "bag-flat-sheet.ts",
+      "source_location": "L69",
+      "_origin": "ast",
+      "id": "bag_flat_sheet_resolvebagconfiguratortype",
+      "community": 7,
+      "norm_label": "resolvebagconfiguratortype()"
+    },
+    {
+      "label": "BAG_SUBTYPE_VALUES",
+      "file_type": "code",
+      "source_file": "bag-flat-sheet.ts",
+      "source_location": "L83",
+      "_origin": "ast",
+      "id": "bag_flat_sheet_bag_subtype_values",
+      "community": 7,
+      "norm_label": "bag_subtype_values"
+    },
+    {
+      "label": "calculateBagFlatSheetAreaM2()",
+      "file_type": "code",
+      "source_file": "bag-flat-sheet.ts",
+      "source_location": "L93",
+      "_origin": "ast",
+      "id": "bag_flat_sheet_calculatebagflatsheetaream2",
+      "community": 7,
+      "norm_label": "calculatebagflatsheetaream2()"
+    },
+    {
       "label": "calculator.test.ts",
       "file_type": "code",
       "source_file": "calculator.test.ts",
       "source_location": "L1",
       "_origin": "ast",
       "id": "calculator_test",
-      "community": 4,
+      "community": 3,
       "norm_label": "calculator.test.ts"
     },
     {
@@ -27,7 +117,7 @@
       "label": "calculateEstimate()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L16",
+      "source_location": "L19",
       "_origin": "ast",
       "id": "calculator_calculateestimate",
       "community": 1,
@@ -37,7 +127,7 @@
       "label": "calculateLayer()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L187",
+      "source_location": "L204",
       "_origin": "ast",
       "id": "calculator_calculatelayer",
       "community": 1,
@@ -47,7 +137,7 @@
       "label": "calculatePrintingWebWidth()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L221",
+      "source_location": "L238",
       "_origin": "ast",
       "id": "calculator_calculateprintingwebwidth",
       "community": 1,
@@ -57,7 +147,7 @@
       "label": "calculateProductMetrics()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L242",
+      "source_location": "L259",
       "_origin": "ast",
       "id": "calculator_calculateproductmetrics",
       "community": 1,
@@ -67,7 +157,7 @@
       "label": "calculateProcessCosts()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L322",
+      "source_location": "L392",
       "_origin": "ast",
       "id": "calculator_calculateprocesscosts",
       "community": 1,
@@ -77,7 +167,7 @@
       "label": "calculateSalePrice()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L375",
+      "source_location": "L446",
       "_origin": "ast",
       "id": "calculator_calculatesaleprice",
       "community": 1,
@@ -90,7 +180,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "golden_fixtures",
-      "community": 4,
+      "community": 3,
       "norm_label": "golden-fixtures.ts"
     },
     {
@@ -100,7 +190,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "golden_fixtures_hpbinder",
-      "community": 4,
+      "community": 3,
       "norm_label": "hpbinder"
     },
     {
@@ -110,7 +200,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "golden_fixtures_laravel_reference_materials",
-      "community": 4,
+      "community": 3,
       "norm_label": "laravel_reference_materials"
     },
     {
@@ -120,7 +210,7 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "golden_fixtures_baseestimate",
-      "community": 4,
+      "community": 3,
       "norm_label": "baseestimate()"
     },
     {
@@ -130,7 +220,7 @@
       "source_location": "L115",
       "_origin": "ast",
       "id": "golden_fixtures_goldenscenario",
-      "community": 4,
+      "community": 3,
       "norm_label": "goldenscenario"
     },
     {
@@ -140,7 +230,7 @@
       "source_location": "L133",
       "_origin": "ast",
       "id": "golden_fixtures_golden_scenarios",
-      "community": 4,
+      "community": 3,
       "norm_label": "golden_scenarios"
     },
     {
@@ -150,7 +240,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "golden_test",
-      "community": 4,
+      "community": 3,
       "norm_label": "golden.test.ts"
     },
     {
@@ -200,7 +290,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "ink_printing_inkprintingprocess",
-      "community": 3,
+      "community": 6,
       "norm_label": "inkprintingprocess"
     },
     {
@@ -290,7 +380,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lamination_recipe_test",
-      "community": 4,
+      "community": 3,
       "norm_label": "lamination-recipe.test.ts"
     },
     {
@@ -300,7 +390,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "lamination_recipe_test_eaprice",
-      "community": 4,
+      "community": 3,
       "norm_label": "eaprice()"
     },
     {
@@ -310,7 +400,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lamination_recipe",
-      "community": 4,
+      "community": 3,
       "norm_label": "lamination-recipe.ts"
     },
     {
@@ -320,7 +410,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "lamination_recipe_laminationtier",
-      "community": 4,
+      "community": 3,
       "norm_label": "laminationtier"
     },
     {
@@ -330,7 +420,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "lamination_recipe_laminationcomponentrole",
-      "community": 4,
+      "community": 3,
       "norm_label": "laminationcomponentrole"
     },
     {
@@ -340,7 +430,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "lamination_recipe_laminationrecipecomponent",
-      "community": 4,
+      "community": 3,
       "norm_label": "laminationrecipecomponent"
     },
     {
@@ -360,7 +450,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "lamination_recipe_laminationcostresult",
-      "community": 4,
+      "community": 3,
       "norm_label": "laminationcostresult"
     },
     {
@@ -370,7 +460,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "lamination_recipe_default_lamination_recipes",
-      "community": 4,
+      "community": 3,
       "norm_label": "default_lamination_recipes"
     },
     {
@@ -380,7 +470,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "lamination_recipe_recipefortier",
-      "community": 4,
+      "community": 3,
       "norm_label": "recipefortier()"
     },
     {
@@ -390,7 +480,7 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "lamination_recipe_bindercomponents",
-      "community": 4,
+      "community": 3,
       "norm_label": "bindercomponents()"
     },
     {
@@ -400,7 +490,7 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "lamination_recipe_solventcomponents",
-      "community": 4,
+      "community": 3,
       "norm_label": "solventcomponents()"
     },
     {
@@ -410,7 +500,7 @@
       "source_location": "L105",
       "_origin": "ast",
       "id": "lamination_recipe_derivebinderconcentratestats",
-      "community": 4,
+      "community": 3,
       "norm_label": "derivebinderconcentratestats()"
     },
     {
@@ -420,7 +510,7 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "lamination_recipe_summarizerecipe",
-      "community": 4,
+      "community": 3,
       "norm_label": "summarizerecipe()"
     },
     {
@@ -430,7 +520,7 @@
       "source_location": "L162",
       "_origin": "ast",
       "id": "lamination_recipe_calculatelaminationcost",
-      "community": 4,
+      "community": 3,
       "norm_label": "calculatelaminationcost()"
     },
     {
@@ -520,7 +610,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "layer_stack_layermaterialref",
-      "community": 6,
+      "community": 0,
       "norm_label": "layermaterialref"
     },
     {
@@ -582,6 +672,86 @@
       "id": "layer_stack_stackneedssolventmix",
       "community": 0,
       "norm_label": "stackneedssolventmix()"
+    },
+    {
+      "label": "pouch-flat-sheet.test.ts",
+      "file_type": "code",
+      "source_file": "pouch-flat-sheet.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "pouch_flat_sheet_test",
+      "community": 7,
+      "norm_label": "pouch-flat-sheet.test.ts"
+    },
+    {
+      "label": "pouch-flat-sheet.ts",
+      "file_type": "code",
+      "source_file": "pouch-flat-sheet.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "pouch_flat_sheet",
+      "community": 7,
+      "norm_label": "pouch-flat-sheet.ts"
+    },
+    {
+      "label": "PouchConfiguratorType",
+      "file_type": "code",
+      "source_file": "pouch-flat-sheet.ts",
+      "source_location": "L25",
+      "_origin": "ast",
+      "id": "pouch_flat_sheet_pouchconfiguratortype",
+      "community": 7,
+      "norm_label": "pouchconfiguratortype"
+    },
+    {
+      "label": "POUCH_SUBTYPE_TO_CONFIGURATOR",
+      "file_type": "code",
+      "source_file": "pouch-flat-sheet.ts",
+      "source_location": "L37",
+      "_origin": "ast",
+      "id": "pouch_flat_sheet_pouch_subtype_to_configurator",
+      "community": 7,
+      "norm_label": "pouch_subtype_to_configurator"
+    },
+    {
+      "label": "PouchFlatSheetResult",
+      "file_type": "code",
+      "source_file": "pouch-flat-sheet.ts",
+      "source_location": "L61",
+      "_origin": "ast",
+      "id": "pouch_flat_sheet_pouchflatsheetresult",
+      "community": 7,
+      "norm_label": "pouchflatsheetresult"
+    },
+    {
+      "label": "POUCH_SUBTYPE_VALUES",
+      "file_type": "code",
+      "source_file": "pouch-flat-sheet.ts",
+      "source_location": "L72",
+      "_origin": "ast",
+      "id": "pouch_flat_sheet_pouch_subtype_values",
+      "community": 7,
+      "norm_label": "pouch_subtype_values"
+    },
+    {
+      "label": "resolvePouchConfiguratorType()",
+      "file_type": "code",
+      "source_file": "pouch-flat-sheet.ts",
+      "source_location": "L85",
+      "_origin": "ast",
+      "id": "pouch_flat_sheet_resolvepouchconfiguratortype",
+      "community": 7,
+      "norm_label": "resolvepouchconfiguratortype()"
+    },
+    {
+      "label": "calculatePouchFlatSheetAreaM2()",
+      "file_type": "code",
+      "source_file": "pouch-flat-sheet.ts",
+      "source_location": "L104",
+      "_origin": "ast",
+      "id": "pouch_flat_sheet_calculatepouchflatsheetaream2",
+      "community": 7,
+      "norm_label": "calculatepouchflatsheetaream2()"
     },
     {
       "label": "solvent-costing.test.ts",
@@ -1070,7 +1240,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "types",
-      "community": 3,
+      "community": 7,
       "norm_label": "types.ts"
     },
     {
@@ -1090,7 +1260,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "types_material",
-      "community": 0,
+      "community": 1,
       "norm_label": "material"
     },
     {
@@ -1110,34 +1280,34 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "types_estimatedimensions",
-      "community": 0,
+      "community": 7,
       "norm_label": "estimatedimensions"
     },
     {
       "label": "Slab",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L57",
+      "source_location": "L85",
       "_origin": "ast",
       "id": "types_slab",
-      "community": 3,
+      "community": 7,
       "norm_label": "slab"
     },
     {
       "label": "Process",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L63",
+      "source_location": "L91",
       "_origin": "ast",
       "id": "types_process",
-      "community": 3,
+      "community": 7,
       "norm_label": "process"
     },
     {
       "label": "Estimate",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L75",
+      "source_location": "L103",
       "_origin": "ast",
       "id": "types_estimate",
       "community": 3,
@@ -1147,41 +1317,111 @@
       "label": "CalculationResult",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L157",
+      "source_location": "L188",
       "_origin": "ast",
       "id": "types_calculationresult",
-      "community": 3,
+      "community": 7,
       "norm_label": "calculationresult"
     },
     {
       "label": "MissingMaterialsError",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L170",
+      "source_location": "L201",
       "_origin": "ast",
       "id": "types_missingmaterialserror",
-      "community": 3,
+      "community": 7,
       "norm_label": "missingmaterialserror"
     },
     {
       "label": ".constructor()",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L173",
+      "source_location": "L204",
       "_origin": "ast",
       "id": "types_missingmaterialserror_constructor",
-      "community": 3,
+      "community": 7,
       "norm_label": ".constructor()"
     },
     {
       "label": "VisibilityProfile",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L180",
+      "source_location": "L211",
       "_origin": "ast",
       "id": "types_visibilityprofile",
-      "community": 3,
+      "community": 7,
       "norm_label": "visibilityprofile"
+    },
+    {
+      "label": "unit-conversion.test.ts",
+      "file_type": "code",
+      "source_file": "unit-conversion.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "unit_conversion_test",
+      "community": 1,
+      "norm_label": "unit-conversion.test.ts"
+    },
+    {
+      "label": "metrics",
+      "file_type": "code",
+      "source_file": "unit-conversion.test.ts",
+      "source_location": "L4",
+      "_origin": "ast",
+      "id": "unit_conversion_test_metrics",
+      "community": 1,
+      "norm_label": "metrics"
+    },
+    {
+      "label": "unit-conversion.ts",
+      "file_type": "code",
+      "source_file": "unit-conversion.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "unit_conversion",
+      "community": 1,
+      "norm_label": "unit-conversion.ts"
+    },
+    {
+      "label": "OrderQuantityUnit",
+      "file_type": "code",
+      "source_file": "unit-conversion.ts",
+      "source_location": "L17",
+      "_origin": "ast",
+      "id": "unit_conversion_orderquantityunit",
+      "community": 1,
+      "norm_label": "orderquantityunit"
+    },
+    {
+      "label": "ORDER_QUANTITY_UNITS",
+      "file_type": "code",
+      "source_file": "unit-conversion.ts",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "unit_conversion_order_quantity_units",
+      "community": 1,
+      "norm_label": "order_quantity_units"
+    },
+    {
+      "label": "ConversionMetrics",
+      "file_type": "code",
+      "source_file": "unit-conversion.ts",
+      "source_location": "L23",
+      "_origin": "ast",
+      "id": "unit_conversion_conversionmetrics",
+      "community": 1,
+      "norm_label": "conversionmetrics"
+    },
+    {
+      "label": "convertOrderQuantityToKg()",
+      "file_type": "code",
+      "source_file": "unit-conversion.ts",
+      "source_location": "L37",
+      "_origin": "ast",
+      "id": "unit_conversion_convertorderquantitytokg",
+      "community": 1,
+      "norm_label": "convertorderquantitytokg()"
     },
     {
       "label": "validator.ts",
@@ -1197,7 +1437,7 @@
       "label": "validateEstimate()",
       "file_type": "code",
       "source_file": "validator.ts",
-      "source_location": "L7",
+      "source_location": "L8",
       "_origin": "ast",
       "id": "validator_validateestimate",
       "community": 0,
@@ -1207,7 +1447,7 @@
       "label": "validateDimensions()",
       "file_type": "code",
       "source_file": "validator.ts",
-      "source_location": "L42",
+      "source_location": "L43",
       "_origin": "ast",
       "id": "validator_validatedimensions",
       "community": 0,
@@ -1217,7 +1457,7 @@
       "label": "validateLayers()",
       "file_type": "code",
       "source_file": "validator.ts",
-      "source_location": "L94",
+      "source_location": "L113",
       "_origin": "ast",
       "id": "validator_validatelayers",
       "community": 0,
@@ -1227,7 +1467,7 @@
       "label": "validateMaterial()",
       "file_type": "code",
       "source_file": "validator.ts",
-      "source_location": "L126",
+      "source_location": "L145",
       "_origin": "ast",
       "id": "validator_validatematerial",
       "community": 0,
@@ -1237,7 +1477,7 @@
       "label": "hasSolventBasedLayers()",
       "file_type": "code",
       "source_file": "validator.ts",
-      "source_location": "L159",
+      "source_location": "L178",
       "_origin": "ast",
       "id": "validator_hassolventbasedlayers",
       "community": 0,
@@ -1245,6 +1485,297 @@
     }
   ],
   "links": [
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-costing.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_costing_test",
+      "target": "calculator"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-costing.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_costing_test",
+      "target": "calculator_calculateestimate"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-costing.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_costing_test",
+      "target": "types"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-costing.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_costing_test",
+      "target": "types_estimate"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-costing.test.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_costing_test",
+      "target": "types_material"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-flat-sheet.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_flat_sheet_test",
+      "target": "bag_flat_sheet"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-flat-sheet.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_flat_sheet_test",
+      "target": "bag_flat_sheet_bag_subtype_to_configurator"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-flat-sheet.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_flat_sheet_test",
+      "target": "bag_flat_sheet_calculatebagflatsheetaream2"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-flat-sheet.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_flat_sheet_test",
+      "target": "bag_flat_sheet_resolvebagconfiguratortype"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-flat-sheet.test.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_flat_sheet_test",
+      "target": "types"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-flat-sheet.test.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_flat_sheet_test",
+      "target": "types_estimatedimensions"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-flat-sheet.ts",
+      "source_location": "L30",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_flat_sheet",
+      "target": "bag_flat_sheet_bag_subtype_to_configurator"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-flat-sheet.ts",
+      "source_location": "L75",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_flat_sheet",
+      "target": "bag_flat_sheet_bag_subtype_values"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-flat-sheet.ts",
+      "source_location": "L15",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_flat_sheet",
+      "target": "bag_flat_sheet_bagconfiguratortype"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-flat-sheet.ts",
+      "source_location": "L44",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_flat_sheet",
+      "target": "bag_flat_sheet_bagflatsheetresult"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-flat-sheet.ts",
+      "source_location": "L85",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_flat_sheet",
+      "target": "bag_flat_sheet_calculatebagflatsheetaream2"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-flat-sheet.ts",
+      "source_location": "L61",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_flat_sheet",
+      "target": "bag_flat_sheet_resolvebagconfiguratortype"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-flat-sheet.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_flat_sheet",
+      "target": "types"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-flat-sheet.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_flat_sheet",
+      "target": "types_estimatedimensions"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "calculator.ts",
+      "source_location": "L11",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "calculator",
+      "target": "bag_flat_sheet"
+    },
+    {
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "index.ts",
+      "source_location": "L14",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "index",
+      "target": "bag_flat_sheet"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "validator.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "validator",
+      "target": "bag_flat_sheet"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "bag-flat-sheet.ts",
+      "source_location": "L88",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "bag_flat_sheet_calculatebagflatsheetaream2",
+      "target": "bag_flat_sheet_resolvebagconfiguratortype"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "validator.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "validator",
+      "target": "bag_flat_sheet_resolvebagconfiguratortype"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "validator.ts",
+      "source_location": "L99",
+      "weight": 1.0,
+      "source": "validator_validatedimensions",
+      "target": "bag_flat_sheet_resolvebagconfiguratortype"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "calculator.ts",
+      "source_location": "L11",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "calculator",
+      "target": "bag_flat_sheet_calculatebagflatsheetaream2"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "calculator.ts",
+      "source_location": "L331",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "calculator_calculateproductmetrics",
+      "target": "bag_flat_sheet_calculatebagflatsheetaream2"
+    },
     {
       "relation": "imports_from",
       "context": "import",
@@ -1274,9 +1805,9 @@
       "source_file": "calculator.test.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_test",
-      "target": "golden_fixtures",
-      "confidence_score": 1.0
+      "target": "golden_fixtures"
     },
     {
       "relation": "imports",
@@ -1285,9 +1816,9 @@
       "source_file": "calculator.test.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_test",
-      "target": "golden_fixtures_laravel_reference_materials",
-      "confidence_score": 1.0
+      "target": "golden_fixtures_laravel_reference_materials"
     },
     {
       "relation": "imports_from",
@@ -1296,9 +1827,9 @@
       "source_file": "calculator.test.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_test",
-      "target": "lamination_recipe",
-      "confidence_score": 1.0
+      "target": "lamination_recipe"
     },
     {
       "relation": "imports",
@@ -1307,9 +1838,9 @@
       "source_file": "calculator.test.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_test",
-      "target": "lamination_recipe_default_lamination_recipes",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_default_lamination_recipes"
     },
     {
       "relation": "imports_from",
@@ -1409,11 +1940,33 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "calculator.ts",
-      "source_location": "L5",
+      "source_location": "L12",
       "weight": 1.0,
       "source": "calculator",
-      "target": "solvent_costing",
+      "target": "pouch_flat_sheet",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "calculator.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "calculator",
+      "target": "pouch_flat_sheet_calculatepouchflatsheetaream2",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "calculator.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "calculator",
+      "target": "solvent_costing"
     },
     {
       "relation": "imports",
@@ -1422,9 +1975,9 @@
       "source_file": "calculator.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "solvent_costing_calculatesolventcosts",
-      "confidence_score": 1.0
+      "target": "solvent_costing_calculatesolventcosts"
     },
     {
       "relation": "imports_from",
@@ -1433,9 +1986,9 @@
       "source_file": "calculator.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "structure_metrics",
-      "confidence_score": 1.0
+      "target": "structure_metrics"
     },
     {
       "relation": "imports",
@@ -1444,9 +1997,9 @@
       "source_file": "calculator.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "structure_metrics_calculatestructuredensity",
-      "confidence_score": 1.0
+      "target": "structure_metrics_calculatestructuredensity"
     },
     {
       "relation": "imports",
@@ -1455,9 +2008,9 @@
       "source_file": "calculator.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "structure_metrics_calculatesubstrategaugemicron",
-      "confidence_score": 1.0
+      "target": "structure_metrics_calculatesubstrategaugemicron"
     },
     {
       "relation": "imports",
@@ -1466,9 +2019,9 @@
       "source_file": "calculator.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "structure_metrics_calculatetotalconstructionmicron",
-      "confidence_score": 1.0
+      "target": "structure_metrics_calculatetotalconstructionmicron"
     },
     {
       "relation": "imports_from",
@@ -1557,6 +2110,28 @@
       "confidence_score": 1.0,
       "source": "calculator",
       "target": "types_process"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "calculator.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "calculator",
+      "target": "unit_conversion"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "calculator.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "calculator",
+      "target": "unit_conversion_convertorderquantitytokg"
     },
     {
       "relation": "imports_from",
@@ -1691,6 +2266,17 @@
       "target": "structure_metrics_calculatetotalconstructionmicron"
     },
     {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "calculator.ts",
+      "source_location": "L63",
+      "weight": 1.0,
+      "source": "calculator_calculateestimate",
+      "target": "unit_conversion_convertorderquantitytokg"
+    },
+    {
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -1711,6 +2297,17 @@
       "confidence_score": 1.0,
       "source": "index",
       "target": "calculator_calculateestimate"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "calculator.ts",
+      "source_location": "L315",
+      "weight": 1.0,
+      "source": "calculator_calculateproductmetrics",
+      "target": "pouch_flat_sheet_calculatepouchflatsheetaream2",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -1748,9 +2345,9 @@
       "source_file": "golden-fixtures.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_fixtures",
-      "target": "golden_fixtures_hpbinder",
-      "confidence_score": 1.0
+      "target": "golden_fixtures_hpbinder"
     },
     {
       "relation": "contains",
@@ -1769,9 +2366,9 @@
       "source_file": "golden-fixtures.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_fixtures",
-      "target": "lamination_recipe",
-      "confidence_score": 1.0
+      "target": "lamination_recipe"
     },
     {
       "relation": "imports",
@@ -1780,9 +2377,9 @@
       "source_file": "golden-fixtures.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_fixtures",
-      "target": "lamination_recipe_default_lamination_recipes",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_default_lamination_recipes"
     },
     {
       "relation": "imports",
@@ -1791,9 +2388,9 @@
       "source_file": "golden-fixtures.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "golden_fixtures",
-      "target": "lamination_recipe_derivebinderconcentratestats",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_derivebinderconcentratestats"
     },
     {
       "relation": "imports_from",
@@ -1879,9 +2476,9 @@
       "source_file": "index.ts",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "ink_printing",
-      "confidence_score": 1.0
+      "target": "ink_printing"
     },
     {
       "relation": "re_exports",
@@ -1890,9 +2487,9 @@
       "source_file": "index.ts",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "lamination_recipe",
-      "confidence_score": 1.0
+      "target": "lamination_recipe"
     },
     {
       "relation": "re_exports",
@@ -1910,11 +2507,22 @@
       "context": "export",
       "confidence": "EXTRACTED",
       "source_file": "index.ts",
-      "source_location": "L11",
+      "source_location": "L15",
       "weight": 1.0,
       "source": "index",
-      "target": "solvent_costing",
+      "target": "pouch_flat_sheet",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "index.ts",
+      "source_location": "L11",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "index",
+      "target": "solvent_costing"
     },
     {
       "relation": "re_exports",
@@ -1923,9 +2531,9 @@
       "source_file": "index.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "structure_metrics",
-      "confidence_score": 1.0
+      "target": "structure_metrics"
     },
     {
       "relation": "re_exports",
@@ -1965,6 +2573,17 @@
       "context": "export",
       "confidence": "EXTRACTED",
       "source_file": "index.ts",
+      "source_location": "L15",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "index",
+      "target": "unit_conversion"
+    },
+    {
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "index.ts",
       "source_location": "L6",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -1978,9 +2597,9 @@
       "source_file": "ink-printing.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing_test",
-      "target": "ink_printing",
-      "confidence_score": 1.0
+      "target": "ink_printing"
     },
     {
       "relation": "imports",
@@ -1989,9 +2608,9 @@
       "source_file": "ink-printing.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing_test",
-      "target": "ink_printing_defaultinkprintingprocess",
-      "confidence_score": 1.0
+      "target": "ink_printing_defaultinkprintingprocess"
     },
     {
       "relation": "imports",
@@ -2000,9 +2619,9 @@
       "source_file": "ink-printing.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing_test",
-      "target": "ink_printing_inksolventratioforprocess",
-      "confidence_score": 1.0
+      "target": "ink_printing_inksolventratioforprocess"
     },
     {
       "relation": "contains",
@@ -2010,9 +2629,9 @@
       "source_file": "ink-printing.test.ts",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing_test",
-      "target": "ink_printing_test_materials",
-      "confidence_score": 1.0
+      "target": "ink_printing_test_materials"
     },
     {
       "relation": "imports_from",
@@ -2021,9 +2640,9 @@
       "source_file": "ink-printing.test.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing_test",
-      "target": "types",
-      "confidence_score": 1.0
+      "target": "types"
     },
     {
       "relation": "imports",
@@ -2032,9 +2651,9 @@
       "source_file": "ink-printing.test.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing_test",
-      "target": "types_material",
-      "confidence_score": 1.0
+      "target": "types_material"
     },
     {
       "relation": "contains",
@@ -2042,9 +2661,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L77",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing",
-      "target": "ink_printing_calculateinkmakeupsolventcost",
-      "confidence_score": 1.0
+      "target": "ink_printing_calculateinkmakeupsolventcost"
     },
     {
       "relation": "contains",
@@ -2052,9 +2671,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing",
-      "target": "ink_printing_defaultinkprintingprocess",
-      "confidence_score": 1.0
+      "target": "ink_printing_defaultinkprintingprocess"
     },
     {
       "relation": "contains",
@@ -2062,9 +2681,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing",
-      "target": "ink_printing_inkprintingprocess",
-      "confidence_score": 1.0
+      "target": "ink_printing_inkprintingprocess"
     },
     {
       "relation": "contains",
@@ -2072,9 +2691,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L44",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing",
-      "target": "ink_printing_inksolventratioforprocess",
-      "confidence_score": 1.0
+      "target": "ink_printing_inksolventratioforprocess"
     },
     {
       "relation": "contains",
@@ -2082,9 +2701,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing",
-      "target": "ink_printing_ispesubstrate",
-      "confidence_score": 1.0
+      "target": "ink_printing_ispesubstrate"
     },
     {
       "relation": "contains",
@@ -2092,9 +2711,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing",
-      "target": "ink_printing_pe_family_codes",
-      "confidence_score": 1.0
+      "target": "ink_printing_pe_family_codes"
     },
     {
       "relation": "contains",
@@ -2102,9 +2721,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L48",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing",
-      "target": "ink_printing_resolveinkprintingprocess",
-      "confidence_score": 1.0
+      "target": "ink_printing_resolveinkprintingprocess"
     },
     {
       "relation": "contains",
@@ -2112,9 +2731,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L56",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing",
-      "target": "ink_printing_resolveinksolventratio",
-      "confidence_score": 1.0
+      "target": "ink_printing_resolveinksolventratio"
     },
     {
       "relation": "contains",
@@ -2122,9 +2741,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L66",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing",
-      "target": "ink_printing_sumsbinkdrygsm",
-      "confidence_score": 1.0
+      "target": "ink_printing_sumsbinkdrygsm"
     },
     {
       "relation": "imports_from",
@@ -2133,9 +2752,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing",
-      "target": "layer_stack",
-      "confidence_score": 1.0
+      "target": "layer_stack"
     },
     {
       "relation": "imports",
@@ -2144,9 +2763,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing",
-      "target": "layer_stack_layermaterialref",
-      "confidence_score": 1.0
+      "target": "layer_stack_layermaterialref"
     },
     {
       "relation": "imports_from",
@@ -2155,9 +2774,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing",
-      "target": "types",
-      "confidence_score": 1.0
+      "target": "types"
     },
     {
       "relation": "imports",
@@ -2166,9 +2785,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing",
-      "target": "types_estimate",
-      "confidence_score": 1.0
+      "target": "types_estimate"
     },
     {
       "relation": "imports",
@@ -2177,9 +2796,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing",
-      "target": "types_layer",
-      "confidence_score": 1.0
+      "target": "types_layer"
     },
     {
       "relation": "imports",
@@ -2188,9 +2807,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing",
-      "target": "types_material",
-      "confidence_score": 1.0
+      "target": "types_material"
     },
     {
       "relation": "imports_from",
@@ -2199,9 +2818,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "ink_printing",
-      "confidence_score": 1.0
+      "target": "ink_printing"
     },
     {
       "relation": "imports",
@@ -2210,9 +2829,9 @@
       "source_file": "types.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types",
-      "target": "ink_printing_inkprintingprocess",
-      "confidence_score": 1.0
+      "target": "ink_printing_inkprintingprocess"
     },
     {
       "relation": "references",
@@ -2221,9 +2840,9 @@
       "source_file": "types.ts",
       "source_location": "L98",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types_estimate",
-      "target": "ink_printing_inkprintingprocess",
-      "confidence_score": 1.0
+      "target": "ink_printing_inkprintingprocess"
     },
     {
       "relation": "calls",
@@ -2232,9 +2851,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L53",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing_resolveinkprintingprocess",
-      "target": "ink_printing_defaultinkprintingprocess",
-      "confidence_score": 1.0
+      "target": "ink_printing_defaultinkprintingprocess"
     },
     {
       "relation": "calls",
@@ -2243,9 +2862,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L63",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing_resolveinksolventratio",
-      "target": "ink_printing_inksolventratioforprocess",
-      "confidence_score": 1.0
+      "target": "ink_printing_inksolventratioforprocess"
     },
     {
       "relation": "calls",
@@ -2254,9 +2873,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L63",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing_resolveinksolventratio",
-      "target": "ink_printing_resolveinkprintingprocess",
-      "confidence_score": 1.0
+      "target": "ink_printing_resolveinkprintingprocess"
     },
     {
       "relation": "imports",
@@ -2265,9 +2884,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "ink_printing_resolveinkprintingprocess",
-      "confidence_score": 1.0
+      "target": "ink_printing_resolveinkprintingprocess"
     },
     {
       "relation": "calls",
@@ -2287,9 +2906,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing_solventcostdetail",
-      "target": "ink_printing_resolveinkprintingprocess",
-      "confidence_score": 1.0
+      "target": "ink_printing_resolveinkprintingprocess"
     },
     {
       "relation": "imports",
@@ -2298,9 +2917,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "ink_printing_resolveinksolventratio",
-      "confidence_score": 1.0
+      "target": "ink_printing_resolveinksolventratio"
     },
     {
       "relation": "calls",
@@ -2320,9 +2939,9 @@
       "source_file": "ink-printing.ts",
       "source_location": "L84",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "ink_printing_calculateinkmakeupsolventcost",
-      "target": "ink_printing_sumsbinkdrygsm",
-      "confidence_score": 1.0
+      "target": "ink_printing_sumsbinkdrygsm"
     },
     {
       "relation": "imports",
@@ -2331,9 +2950,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "ink_printing_calculateinkmakeupsolventcost",
-      "confidence_score": 1.0
+      "target": "ink_printing_calculateinkmakeupsolventcost"
     },
     {
       "relation": "calls",
@@ -2353,9 +2972,9 @@
       "source_file": "lamination-recipe.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe_test",
-      "target": "lamination_recipe",
-      "confidence_score": 1.0
+      "target": "lamination_recipe"
     },
     {
       "relation": "imports",
@@ -2364,9 +2983,9 @@
       "source_file": "lamination-recipe.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe_test",
-      "target": "lamination_recipe_calculatelaminationcost",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_calculatelaminationcost"
     },
     {
       "relation": "imports",
@@ -2375,9 +2994,9 @@
       "source_file": "lamination-recipe.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe_test",
-      "target": "lamination_recipe_default_lamination_recipes",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_default_lamination_recipes"
     },
     {
       "relation": "imports",
@@ -2386,9 +3005,9 @@
       "source_file": "lamination-recipe.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe_test",
-      "target": "lamination_recipe_derivebinderconcentratestats",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_derivebinderconcentratestats"
     },
     {
       "relation": "imports",
@@ -2397,9 +3016,9 @@
       "source_file": "lamination-recipe.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe_test",
-      "target": "lamination_recipe_summarizerecipe",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_summarizerecipe"
     },
     {
       "relation": "contains",
@@ -2407,9 +3026,9 @@
       "source_file": "lamination-recipe.test.ts",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe_test",
-      "target": "lamination_recipe_test_eaprice",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_test_eaprice"
     },
     {
       "relation": "contains",
@@ -2417,9 +3036,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L96",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe",
-      "target": "lamination_recipe_bindercomponents",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_bindercomponents"
     },
     {
       "relation": "contains",
@@ -2427,9 +3046,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L162",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe",
-      "target": "lamination_recipe_calculatelaminationcost",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_calculatelaminationcost"
     },
     {
       "relation": "contains",
@@ -2437,9 +3056,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L227",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe",
-      "target": "lamination_recipe_cleaningsolventcostperkg",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_cleaningsolventcostperkg"
     },
     {
       "relation": "contains",
@@ -2447,9 +3066,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L41",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe",
-      "target": "lamination_recipe_default_lamination_recipes",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_default_lamination_recipes"
     },
     {
       "relation": "contains",
@@ -2457,9 +3076,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L105",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe",
-      "target": "lamination_recipe_derivebinderconcentratestats",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_derivebinderconcentratestats"
     },
     {
       "relation": "contains",
@@ -2467,9 +3086,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe",
-      "target": "lamination_recipe_laminationcomponentrole",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_laminationcomponentrole"
     },
     {
       "relation": "contains",
@@ -2477,9 +3096,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe",
-      "target": "lamination_recipe_laminationcostresult",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_laminationcostresult"
     },
     {
       "relation": "contains",
@@ -2487,9 +3106,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L21",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe",
-      "target": "lamination_recipe_laminationrecipe",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_laminationrecipe"
     },
     {
       "relation": "contains",
@@ -2497,9 +3116,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe",
-      "target": "lamination_recipe_laminationrecipecomponent",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_laminationrecipecomponent"
     },
     {
       "relation": "contains",
@@ -2507,9 +3126,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe",
-      "target": "lamination_recipe_laminationtier",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_laminationtier"
     },
     {
       "relation": "contains",
@@ -2517,9 +3136,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L89",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe",
-      "target": "lamination_recipe_recipefortier",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_recipefortier"
     },
     {
       "relation": "contains",
@@ -2527,9 +3146,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L100",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe",
-      "target": "lamination_recipe_solventcomponents",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_solventcomponents"
     },
     {
       "relation": "contains",
@@ -2537,9 +3156,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L124",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe",
-      "target": "lamination_recipe_summarizerecipe",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_summarizerecipe"
     },
     {
       "relation": "imports_from",
@@ -2548,9 +3167,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "lamination_recipe",
-      "confidence_score": 1.0
+      "target": "lamination_recipe"
     },
     {
       "relation": "imports_from",
@@ -2559,9 +3178,9 @@
       "source_file": "solvent-costing.test.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing_test",
-      "target": "lamination_recipe",
-      "confidence_score": 1.0
+      "target": "lamination_recipe"
     },
     {
       "relation": "imports_from",
@@ -2570,9 +3189,9 @@
       "source_file": "types.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types",
-      "target": "lamination_recipe",
-      "confidence_score": 1.0
+      "target": "lamination_recipe"
     },
     {
       "relation": "imports",
@@ -2581,9 +3200,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "lamination_recipe_laminationrecipecomponent",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_laminationrecipecomponent"
     },
     {
       "relation": "imports",
@@ -2592,9 +3211,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "lamination_recipe_laminationrecipe",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_laminationrecipe"
     },
     {
       "relation": "imports",
@@ -2603,9 +3222,9 @@
       "source_file": "types.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types",
-      "target": "lamination_recipe_laminationrecipe",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_laminationrecipe"
     },
     {
       "relation": "references",
@@ -2614,9 +3233,9 @@
       "source_file": "types.ts",
       "source_location": "L103",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types_estimate",
-      "target": "lamination_recipe_laminationrecipe",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_laminationrecipe"
     },
     {
       "relation": "references",
@@ -2625,9 +3244,9 @@
       "source_file": "types.ts",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "types_material",
-      "target": "lamination_recipe_laminationrecipe",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_laminationrecipe"
     },
     {
       "relation": "imports",
@@ -2636,9 +3255,9 @@
       "source_file": "solvent-costing.test.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing_test",
-      "target": "lamination_recipe_default_lamination_recipes",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_default_lamination_recipes"
     },
     {
       "relation": "calls",
@@ -2647,9 +3266,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L201",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe_calculatelaminationcost",
-      "target": "lamination_recipe_bindercomponents",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_bindercomponents"
     },
     {
       "relation": "calls",
@@ -2658,9 +3277,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L110",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe_derivebinderconcentratestats",
-      "target": "lamination_recipe_bindercomponents",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_bindercomponents"
     },
     {
       "relation": "calls",
@@ -2669,9 +3288,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L194",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe_calculatelaminationcost",
-      "target": "lamination_recipe_solventcomponents",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_solventcomponents"
     },
     {
       "relation": "calls",
@@ -2680,9 +3299,9 @@
       "source_file": "lamination-recipe.ts",
       "source_location": "L148",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lamination_recipe_summarizerecipe",
-      "target": "lamination_recipe_calculatelaminationcost",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_calculatelaminationcost"
     },
     {
       "relation": "imports",
@@ -2691,9 +3310,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "lamination_recipe_calculatelaminationcost",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_calculatelaminationcost"
     },
     {
       "relation": "imports",
@@ -2702,9 +3321,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "lamination_recipe_cleaningsolventcostperkg",
-      "confidence_score": 1.0
+      "target": "lamination_recipe_cleaningsolventcostperkg"
     },
     {
       "relation": "calls",
@@ -2746,9 +3365,9 @@
       "source_file": "layer-stack.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack_test",
-      "target": "layer_stack_stackhassbink",
-      "confidence_score": 1.0
+      "target": "layer_stack_stackhassbink"
     },
     {
       "relation": "imports",
@@ -2757,9 +3376,9 @@
       "source_file": "layer-stack.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack_test",
-      "target": "layer_stack_stackhasuvink",
-      "confidence_score": 1.0
+      "target": "layer_stack_stackhasuvink"
     },
     {
       "relation": "imports",
@@ -2890,9 +3509,9 @@
       "source_file": "layer-stack.ts",
       "source_location": "L37",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack",
-      "target": "layer_stack_stackhassbink",
-      "confidence_score": 1.0
+      "target": "layer_stack_stackhassbink"
     },
     {
       "relation": "contains",
@@ -2900,9 +3519,9 @@
       "source_file": "layer-stack.ts",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack",
-      "target": "layer_stack_stackhasuvink",
-      "confidence_score": 1.0
+      "target": "layer_stack_stackhasuvink"
     },
     {
       "relation": "contains",
@@ -2943,9 +3562,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "layer_stack",
-      "confidence_score": 1.0
+      "target": "layer_stack"
     },
     {
       "relation": "imports_from",
@@ -2954,9 +3573,9 @@
       "source_file": "validator.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "validator",
-      "target": "layer_stack",
-      "confidence_score": 1.0
+      "target": "layer_stack"
     },
     {
       "relation": "calls",
@@ -2965,9 +3584,9 @@
       "source_file": "layer-stack.ts",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "layer_stack_deriveprintingwebclass",
-      "target": "layer_stack_stackhasuvink",
-      "confidence_score": 1.0
+      "target": "layer_stack_stackhasuvink"
     },
     {
       "relation": "imports",
@@ -2976,9 +3595,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "layer_stack_stackhassbink",
-      "confidence_score": 1.0
+      "target": "layer_stack_stackhassbink"
     },
     {
       "relation": "calls",
@@ -2998,9 +3617,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "layer_stack_stackneedssolventmix",
-      "confidence_score": 1.0
+      "target": "layer_stack_stackneedssolventmix"
     },
     {
       "relation": "calls",
@@ -3020,9 +3639,9 @@
       "source_file": "validator.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "validator",
-      "target": "layer_stack_stackneedssolventmix",
-      "confidence_score": 1.0
+      "target": "layer_stack_stackneedssolventmix"
     },
     {
       "relation": "calls",
@@ -3039,12 +3658,171 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "pouch-flat-sheet.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "pouch_flat_sheet_test",
+      "target": "pouch_flat_sheet",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "pouch-flat-sheet.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "pouch_flat_sheet_test",
+      "target": "pouch_flat_sheet_calculatepouchflatsheetaream2",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "pouch-flat-sheet.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "pouch_flat_sheet_test",
+      "target": "pouch_flat_sheet_pouch_subtype_to_configurator",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "pouch-flat-sheet.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "pouch_flat_sheet_test",
+      "target": "pouch_flat_sheet_resolvepouchconfiguratortype",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "pouch-flat-sheet.test.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "pouch_flat_sheet_test",
+      "target": "types",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "pouch-flat-sheet.test.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "pouch_flat_sheet_test",
+      "target": "types_estimatedimensions",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "pouch-flat-sheet.ts",
+      "source_location": "L94",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "pouch_flat_sheet",
+      "target": "pouch_flat_sheet_calculatepouchflatsheetaream2"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "pouch-flat-sheet.ts",
+      "source_location": "L37",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "pouch_flat_sheet",
+      "target": "pouch_flat_sheet_pouch_subtype_to_configurator"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "pouch-flat-sheet.ts",
+      "source_location": "L62",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "pouch_flat_sheet",
+      "target": "pouch_flat_sheet_pouch_subtype_values"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "pouch-flat-sheet.ts",
+      "source_location": "L25",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "pouch_flat_sheet",
+      "target": "pouch_flat_sheet_pouchconfiguratortype"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "pouch-flat-sheet.ts",
+      "source_location": "L51",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "pouch_flat_sheet",
+      "target": "pouch_flat_sheet_pouchflatsheetresult"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "pouch-flat-sheet.ts",
+      "source_location": "L75",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "pouch_flat_sheet",
+      "target": "pouch_flat_sheet_resolvepouchconfiguratortype"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "pouch-flat-sheet.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "pouch_flat_sheet",
+      "target": "types"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "pouch-flat-sheet.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "pouch_flat_sheet",
+      "target": "types_estimatedimensions"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "pouch-flat-sheet.ts",
+      "source_location": "L97",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "pouch_flat_sheet_calculatepouchflatsheetaream2",
+      "target": "pouch_flat_sheet_resolvepouchconfiguratortype"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "solvent-costing.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing_test",
-      "target": "solvent_costing",
-      "confidence_score": 1.0
+      "target": "solvent_costing"
     },
     {
       "relation": "imports",
@@ -3053,9 +3831,9 @@
       "source_file": "solvent-costing.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing_test",
-      "target": "solvent_costing_calculatesolventcosts",
-      "confidence_score": 1.0
+      "target": "solvent_costing_calculatesolventcosts"
     },
     {
       "relation": "contains",
@@ -3063,9 +3841,9 @@
       "source_file": "solvent-costing.test.ts",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing_test",
-      "target": "solvent_costing_test_adhesivesb",
-      "confidence_score": 1.0
+      "target": "solvent_costing_test_adhesivesb"
     },
     {
       "relation": "contains",
@@ -3073,9 +3851,9 @@
       "source_file": "solvent-costing.test.ts",
       "source_location": "L51",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing_test",
-      "target": "solvent_costing_test_baseestimate",
-      "confidence_score": 1.0
+      "target": "solvent_costing_test_baseestimate"
     },
     {
       "relation": "contains",
@@ -3083,9 +3861,9 @@
       "source_file": "solvent-costing.test.ts",
       "source_location": "L40",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing_test",
-      "target": "solvent_costing_test_pet",
-      "confidence_score": 1.0
+      "target": "solvent_costing_test_pet"
     },
     {
       "relation": "contains",
@@ -3093,9 +3871,9 @@
       "source_file": "solvent-costing.test.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing_test",
-      "target": "solvent_costing_test_sbink",
-      "confidence_score": 1.0
+      "target": "solvent_costing_test_sbink"
     },
     {
       "relation": "contains",
@@ -3103,9 +3881,9 @@
       "source_file": "solvent-costing.test.ts",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing_test",
-      "target": "solvent_costing_test_uvink",
-      "confidence_score": 1.0
+      "target": "solvent_costing_test_uvink"
     },
     {
       "relation": "imports_from",
@@ -3114,9 +3892,9 @@
       "source_file": "solvent-costing.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing_test",
-      "target": "types",
-      "confidence_score": 1.0
+      "target": "types"
     },
     {
       "relation": "imports",
@@ -3125,9 +3903,9 @@
       "source_file": "solvent-costing.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing_test",
-      "target": "types_estimate",
-      "confidence_score": 1.0
+      "target": "types_estimate"
     },
     {
       "relation": "imports",
@@ -3136,9 +3914,9 @@
       "source_file": "solvent-costing.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing_test",
-      "target": "types_layer",
-      "confidence_score": 1.0
+      "target": "types_layer"
     },
     {
       "relation": "imports",
@@ -3147,9 +3925,9 @@
       "source_file": "solvent-costing.test.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing_test",
-      "target": "types_material",
-      "confidence_score": 1.0
+      "target": "types_material"
     },
     {
       "relation": "contains",
@@ -3157,9 +3935,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L54",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "solvent_costing_calculatesolventcosts",
-      "confidence_score": 1.0
+      "target": "solvent_costing_calculatesolventcosts"
     },
     {
       "relation": "contains",
@@ -3167,9 +3945,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L40",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "solvent_costing_layerrecipe",
-      "confidence_score": 1.0
+      "target": "solvent_costing_layerrecipe"
     },
     {
       "relation": "contains",
@@ -3177,9 +3955,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L30",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "solvent_costing_resolvesolventcomponentprice",
-      "confidence_score": 1.0
+      "target": "solvent_costing_resolvesolventcomponentprice"
     },
     {
       "relation": "contains",
@@ -3187,9 +3965,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "solvent_costing_solventcostdetail",
-      "confidence_score": 1.0
+      "target": "solvent_costing_solventcostdetail"
     },
     {
       "relation": "imports_from",
@@ -3198,9 +3976,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "types",
-      "confidence_score": 1.0
+      "target": "types"
     },
     {
       "relation": "imports",
@@ -3209,9 +3987,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "types_estimate",
-      "confidence_score": 1.0
+      "target": "types_estimate"
     },
     {
       "relation": "imports",
@@ -3220,9 +3998,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "types_layer",
-      "confidence_score": 1.0
+      "target": "types_layer"
     },
     {
       "relation": "imports",
@@ -3231,9 +4009,9 @@
       "source_file": "solvent-costing.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "solvent_costing",
-      "target": "types_material",
-      "confidence_score": 1.0
+      "target": "types_material"
     },
     {
       "relation": "imports_from",
@@ -3242,9 +4020,9 @@
       "source_file": "structure-metrics.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_metrics_test",
-      "target": "structure_metrics",
-      "confidence_score": 1.0
+      "target": "structure_metrics"
     },
     {
       "relation": "imports",
@@ -3253,9 +4031,9 @@
       "source_file": "structure-metrics.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_metrics_test",
-      "target": "structure_metrics_calculatestructuredensity",
-      "confidence_score": 1.0
+      "target": "structure_metrics_calculatestructuredensity"
     },
     {
       "relation": "imports",
@@ -3264,9 +4042,9 @@
       "source_file": "structure-metrics.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_metrics_test",
-      "target": "structure_metrics_calculatesubstrategaugemicron",
-      "confidence_score": 1.0
+      "target": "structure_metrics_calculatesubstrategaugemicron"
     },
     {
       "relation": "imports",
@@ -3275,9 +4053,9 @@
       "source_file": "structure-metrics.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_metrics_test",
-      "target": "structure_metrics_calculatetotalconstructionmicron",
-      "confidence_score": 1.0
+      "target": "structure_metrics_calculatetotalconstructionmicron"
     },
     {
       "relation": "imports",
@@ -3286,9 +4064,9 @@
       "source_file": "structure-metrics.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_metrics_test",
-      "target": "structure_metrics_layerphysicalthicknessmicron",
-      "confidence_score": 1.0
+      "target": "structure_metrics_layerphysicalthicknessmicron"
     },
     {
       "relation": "contains",
@@ -3296,9 +4074,9 @@
       "source_file": "structure-metrics.test.ts",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_metrics_test",
-      "target": "structure_metrics_test_materials",
-      "confidence_score": 1.0
+      "target": "structure_metrics_test_materials"
     },
     {
       "relation": "imports_from",
@@ -3307,9 +4085,9 @@
       "source_file": "structure-metrics.test.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_metrics_test",
-      "target": "types",
-      "confidence_score": 1.0
+      "target": "types"
     },
     {
       "relation": "imports",
@@ -3318,9 +4096,9 @@
       "source_file": "structure-metrics.test.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_metrics_test",
-      "target": "types_layer",
-      "confidence_score": 1.0
+      "target": "types_layer"
     },
     {
       "relation": "imports",
@@ -3329,9 +4107,9 @@
       "source_file": "structure-metrics.test.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_metrics_test",
-      "target": "types_material",
-      "confidence_score": 1.0
+      "target": "types_material"
     },
     {
       "relation": "contains",
@@ -3339,9 +4117,9 @@
       "source_file": "structure-metrics.ts",
       "source_location": "L41",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_metrics",
-      "target": "structure_metrics_calculatestructuredensity",
-      "confidence_score": 1.0
+      "target": "structure_metrics_calculatestructuredensity"
     },
     {
       "relation": "contains",
@@ -3349,9 +4127,9 @@
       "source_file": "structure-metrics.ts",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_metrics",
-      "target": "structure_metrics_calculatesubstrategaugemicron",
-      "confidence_score": 1.0
+      "target": "structure_metrics_calculatesubstrategaugemicron"
     },
     {
       "relation": "contains",
@@ -3359,9 +4137,9 @@
       "source_file": "structure-metrics.ts",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_metrics",
-      "target": "structure_metrics_calculatetotalconstructionmicron",
-      "confidence_score": 1.0
+      "target": "structure_metrics_calculatetotalconstructionmicron"
     },
     {
       "relation": "contains",
@@ -3369,9 +4147,9 @@
       "source_file": "structure-metrics.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_metrics",
-      "target": "structure_metrics_layerphysicalthicknessmicron",
-      "confidence_score": 1.0
+      "target": "structure_metrics_layerphysicalthicknessmicron"
     },
     {
       "relation": "imports_from",
@@ -3380,9 +4158,9 @@
       "source_file": "structure-metrics.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_metrics",
-      "target": "types",
-      "confidence_score": 1.0
+      "target": "types"
     },
     {
       "relation": "imports",
@@ -3391,9 +4169,9 @@
       "source_file": "structure-metrics.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_metrics",
-      "target": "types_layer",
-      "confidence_score": 1.0
+      "target": "types_layer"
     },
     {
       "relation": "imports",
@@ -3402,9 +4180,9 @@
       "source_file": "structure-metrics.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_metrics",
-      "target": "types_material",
-      "confidence_score": 1.0
+      "target": "types_material"
     },
     {
       "relation": "imports_from",
@@ -4072,6 +4850,78 @@
       "confidence_score": 1.0,
       "source": "types_missingmaterialserror",
       "target": "types_missingmaterialserror_constructor"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "unit-conversion.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_conversion_test",
+      "target": "unit_conversion"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "unit-conversion.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_conversion_test",
+      "target": "unit_conversion_convertorderquantitytokg"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "unit-conversion.test.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_conversion_test",
+      "target": "unit_conversion_test_metrics"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "unit-conversion.ts",
+      "source_location": "L23",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_conversion",
+      "target": "unit_conversion_conversionmetrics"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "unit-conversion.ts",
+      "source_location": "L37",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_conversion",
+      "target": "unit_conversion_convertorderquantitytokg"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "unit-conversion.ts",
+      "source_location": "L19",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_conversion",
+      "target": "unit_conversion_order_quantity_units"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "unit-conversion.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_conversion",
+      "target": "unit_conversion_orderquantityunit"
     },
     {
       "relation": "contains",

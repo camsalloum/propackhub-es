@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, RefreshCw } from 'lucide-react';
 import { apiClient } from '../lib/api';
+import { useEntrance } from '../hooks/useEntrance';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
 import { roundUsd } from '../lib/currency';
 import { SkeletonTableRows } from '../components/Skeleton';
@@ -173,6 +174,8 @@ const Library = () => {
   const { reference: masterRef, version: masterDataVersion } = useMasterDataReference();
   const rmTypeOptions = masterRef.rmTypeOptions;
 
+  // Single-play mount entrance for the library content; no-op under reduced motion (R22.3, R22.5).
+  const { ref: entranceRef } = useEntrance<HTMLDivElement>();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilterCode, setActiveFilterCode] = useState<string>('all');
   const [familyFilter, setFamilyFilter] = useState<string>('all');
@@ -426,7 +429,7 @@ const Library = () => {
     return (
       <div className={`flex gap-2 ${compact ? 'mt-2' : ''}`}>
         <button type="button" onClick={() => savePriceDraft(material)} disabled={saving}
-          className={compact ? 'btn-primary flex-1 text-sm py-1.5' : 'text-sm text-white bg-gold px-3 py-1 rounded-md font-medium hover:opacity-90 disabled:opacity-50'}>
+          className={compact ? 'btn-primary flex-1 text-sm py-1.5' : 'text-sm text-text-on-accent bg-gold px-3 py-1 rounded-md font-medium hover:opacity-90 transition-opacity duration-micro ease-micro disabled:opacity-50'}>
           {saving ? 'Saving…' : 'Save prices'}
         </button>
         <button type="button" onClick={() => resetPriceDraft(material.id)} disabled={saving}
@@ -478,35 +481,25 @@ const Library = () => {
   }, [materials, searchTerm, activeFilterCode, activeRmType, rmTypeOptions, familyFilter]);
 
   const getTypeColor = (typeLabel: string) => {
+    // Domain category badges — map each raw-material type to a token-backed
+    // tinted-surface utility so the chip recolors with the active theme
+    // (no raw Tailwind palette literals leak through here).
     switch (typeLabel) {
-      case 'substrate': return 'bg-blue-100 text-blue-800';
-      case 'ink': return 'bg-purple-100 text-purple-800';
-      case 'adhesive': return 'bg-green-100 text-green-800';
-      case 'solvent': return 'bg-amber-100 text-amber-900';
-      case 'packaging': return 'bg-teal-100 text-teal-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'substrate': return 'bg-info-soft text-info';
+      case 'ink': return 'bg-accent-soft text-accent-text';
+      case 'adhesive': return 'bg-success-soft text-success';
+      case 'solvent': return 'bg-warning-soft text-warning';
+      case 'packaging': return 'bg-info-soft text-info';
+      default: return 'bg-surface-base text-text-secondary';
     }
   };
 
   const getFamilyColor = (family: string | null | undefined) => {
-    const MAP: Record<string, string> = {
-      BOPP: 'bg-sky-50 text-sky-700 border-sky-200',
-      PET: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-      PE: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      CPP: 'bg-amber-50 text-amber-700 border-amber-200',
-      PA: 'bg-rose-50 text-rose-700 border-rose-200',
-      ALU: 'bg-gray-100 text-gray-700 border-gray-300',
-      PAPER: 'bg-orange-50 text-orange-700 border-orange-200',
-      SLEEVE: 'bg-violet-50 text-violet-700 border-violet-200',
-      SPECIALTY: 'bg-pink-50 text-pink-700 border-pink-200',
-      Packaging: 'bg-teal-50 text-teal-700 border-teal-200',
-      'Solvent Based': 'bg-purple-50 text-purple-700 border-purple-200',
-      'UV-LED': 'bg-violet-50 text-violet-700 border-violet-200',
-      'Solvent Base': 'bg-green-50 text-green-700 border-green-200',
-      'Solvent Less': 'bg-lime-50 text-lime-700 border-lime-200',
-      'Mono Component': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    };
-    return MAP[family ?? ''] ?? 'bg-gray-50 text-gray-600 border-gray-200';
+    // Family chips share a single, neutral, theme-aware appearance so the row
+    // doesn't read as a rainbow. Identity is conveyed by the family name + a
+    // subtle accent-tinted border, not by hue.
+    void family;
+    return 'bg-surface-base text-text-primary border-border';
   };
 
   if (loading) {
@@ -519,16 +512,16 @@ const Library = () => {
 
   if (error) {
     return (
-      <div className="card bg-red-50 border border-red-200">
-        <p className="text-red-800 font-medium">Error loading raw materials</p>
-        <p className="text-red-600 text-sm mt-1">{error}</p>
+      <div className="card bg-danger/10 border border-danger/30">
+        <p className="text-danger font-medium">Error loading raw materials</p>
+        <p className="text-danger text-sm mt-1">{error}</p>
         <button type="button" className="btn-primary mt-4" onClick={fetchMaterials}>Retry</button>
       </div>
     );
   }
 
   return (
-    <div>
+    <div ref={entranceRef}>
       <div className="mb-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="min-w-0">
@@ -566,21 +559,21 @@ const Library = () => {
           <div className="flex flex-wrap gap-2">
             {/* All */}
             <button onClick={() => setActiveFilterCode('all')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium ${activeFilterCode === 'all' ? 'bg-gold text-white' : 'bg-slate text-ink hover:bg-border'}`}>
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-micro ease-micro ${activeFilterCode === 'all' ? 'bg-gold text-text-on-accent' : 'bg-slate text-ink hover:bg-border'}`}>
               All
             </button>
             {/* Dynamic rm_type tabs */}
             {rmTypeOptions.map((rt) => (
               <button key={rt.code} onClick={() => setActiveFilterCode(rt.code)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-micro ease-micro ${
                   activeFilterCode === rt.code
-                    ? rt.code === 'substrate' ? 'bg-blue-100 text-blue-800'
-                      : rt.code === 'ink' ? 'bg-purple-100 text-purple-800'
-                      : rt.code === 'adhesive' ? 'bg-green-100 text-green-800'
-                      : rt.code === 'solvent' ? 'bg-amber-100 text-amber-900'
-                      : rt.code === 'packaging' ? 'bg-teal-100 text-teal-800'
-                      : 'bg-gold/15 text-gold'
-                    : 'bg-slate text-ink hover:bg-border'
+                    ? rt.code === 'substrate' ? 'bg-info-soft text-info'
+                      : rt.code === 'ink' ? 'bg-accent-soft text-accent-text'
+                      : rt.code === 'adhesive' ? 'bg-success-soft text-success'
+                      : rt.code === 'solvent' ? 'bg-warning-soft text-warning'
+                      : rt.code === 'packaging' ? 'bg-info-soft text-info'
+                      : 'bg-accent/15 text-accent-text'
+                    : 'bg-surface-base text-text-primary hover:bg-border'
                 }`}>
                 {rt.label}
               </button>
@@ -592,12 +585,12 @@ const Library = () => {
           <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border">
             <span className="text-xs text-mist self-center mr-1">Family:</span>
             <button onClick={() => setFamilyFilter('all')}
-              className={`px-3 py-1 rounded-md text-xs font-medium border ${familyFilter === 'all' ? 'bg-gold text-white border-gold' : 'bg-white text-ink border-border hover:bg-slate'}`}>
+              className={`px-3 py-1 rounded-md text-xs font-medium border transition-colors duration-micro ease-micro ${familyFilter === 'all' ? 'bg-gold text-text-on-accent border-gold' : 'bg-surface-raised text-ink border-border hover:bg-slate'}`}>
               All
             </button>
             {substrateFamilies.filter((fam) => fam !== 'Packaging').map((fam) => (
               <button key={fam} onClick={() => setFamilyFilter(fam)}
-                className={`px-3 py-1 rounded-md text-xs font-medium border ${familyFilter === fam ? getFamilyColor(fam) + ' ring-2 ring-offset-1 ring-blue-300' : 'bg-white text-ink border-border hover:bg-slate'}`}>
+                className={`px-3 py-1 rounded-md text-xs font-medium border transition-colors duration-micro ease-micro ${familyFilter === fam ? getFamilyColor(fam) + ' ring-2 ring-offset-1 ring-focus-ring' : 'bg-surface-raised text-text-primary border-border hover:bg-surface-base'}`}>
                 {fam}
               </button>
             ))}
@@ -651,9 +644,9 @@ const Library = () => {
               </div>
               <div className="flex gap-2 mt-2">
                 <button type="button" onClick={() => { setEditingMaterial(material); setEditingRmType(null); setShowModal(true); }}
-                  className="flex-1 min-h-[36px] rounded-lg bg-slate text-sm font-medium text-navy">Edit</button>
+                  className="flex-1 min-h-[36px] rounded-lg bg-slate text-sm font-medium text-navy transition-colors duration-micro ease-micro hover:bg-border">Edit</button>
                 <button type="button" onClick={() => handleDelete(material.id)} disabled={deleting === material.id}
-                  className="min-h-[36px] px-4 rounded-lg bg-red-50 text-red-600 text-sm font-medium">Delete</button>
+                  className="min-h-[36px] px-4 rounded-lg bg-danger/10 text-danger text-sm font-medium transition-colors duration-micro ease-micro hover:bg-danger/20">Delete</button>
               </div>
             </div>
           ))
@@ -689,7 +682,7 @@ const Library = () => {
               </thead>
               <tbody>
                 {filteredMaterials.map((material) => (
-                  <tr key={material.id} className="border-b border-border last:border-0 hover:bg-slate/50">
+                  <tr key={material.id} className="border-b border-border last:border-0 hover:bg-slate/50 transition-colors duration-micro ease-micro">
                     <td className="py-1.5 px-3">
                       <span className={`text-xs px-1.5 py-0.5 rounded-md ${getTypeColor(displayMaterialType(material, rmTypeOptions))}`}>
                         {displayMaterialType(material, rmTypeOptions)}
@@ -756,7 +749,7 @@ const Library = () => {
                         const dryEquiv = liquid / (solid / 100);
                         return (
                           <span
-                            className={`font-mono text-sm font-semibold ${solid < 100 ? 'text-amber-700' : 'text-mist'}`}
+                            className={`font-mono text-sm font-semibold ${solid < 100 ? 'text-warning' : 'text-mist'}`}
                             title={`${liquid.toFixed(2)} ÷ ${solid}% = ${dryEquiv.toFixed(2)} $/kg dry equiv`}
                           >
                             {dryEquiv.toFixed(2)}
@@ -778,7 +771,7 @@ const Library = () => {
                           <button onClick={() => { setEditingMaterial(material); setEditingRmType(null); setShowModal(true); }}
                             className="text-sm text-gold font-medium hover:underline">Edit</button>
                           <button onClick={() => handleDelete(material.id)} disabled={deleting === material.id}
-                            className="text-sm text-red-600 font-medium hover:underline disabled:opacity-50">
+                            className="text-sm text-danger font-medium hover:underline disabled:opacity-50">
                             {deleting === material.id ? 'Deleting...' : 'Delete'}
                           </button>
                         </div>
@@ -803,8 +796,8 @@ const Library = () => {
 
       {/* Add / Edit modal */}
       {showModal && editingMaterial && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-          <div className="bg-white rounded-t-2xl sm:rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-xl safe-area-pb">
+        <div className="fixed inset-0 bg-scrim/60 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+          <div className="bg-surface-raised rounded-t-2xl sm:rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-xl safe-area-pb">
             <div className="px-6 pt-6 pb-4 border-b border-border shrink-0">
               <h3 className="font-display font-semibold text-navy text-lg">
                 {editingMaterial.id ? 'Edit Material' : 'Add Material'}
@@ -929,7 +922,7 @@ const Library = () => {
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-border bg-white shrink-0 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 rounded-b-xl">
+            <div className="px-6 py-4 border-t border-border bg-surface-raised shrink-0 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 rounded-b-xl">
               <button type="button" onClick={closeModal} className="btn-secondary w-full sm:w-auto">Cancel</button>
               <button type="button" onClick={handleSaveMaterial} className="btn-primary w-full sm:w-auto">
                 {editingMaterial.id ? 'Save changes' : 'Add material'}

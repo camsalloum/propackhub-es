@@ -9,6 +9,7 @@ import {
   calculateStructureDensity,
 } from './structure-metrics';
 import { calculateBagFlatSheetAreaM2 } from './bag-flat-sheet';
+import { calculatePouchFlatSheetAreaM2 } from './pouch-flat-sheet';
 import { convertOrderQuantityToKg } from './unit-conversion';
 
 /**
@@ -307,10 +308,29 @@ function calculateProductMetrics(
       }
       break;
 
-    case 'pouch':
-      // Pouch: face-area model.
-      // pieces_per_kg = 1000 / (openWidthMm × openHeightMm × totalGsm × 1e-6)
-      if (dimensions.openWidthMm && dimensions.openHeightMm) {
+    case 'pouch': {
+      // Pouch: flat-sheet blank area model (front + back + gussets + seals).
+      // See pouch-flat-sheet.ts. Falls back to legacy face-area when the subtype
+      // is unresolved (existing estimates created before subtype tagging).
+      const pouch = calculatePouchFlatSheetAreaM2(dimensions);
+      if (pouch.areaM2 > 0) {
+        // gramsPerPiece = flatArea × totalGsm
+        // pieces_per_kg = 1000 / (areaM2 × totalGsm)
+        result.piecesPerKg = 1000 / (pouch.areaM2 * totalGsm);
+        result.gramsPerPiece = 1000 / result.piecesPerKg;
+
+        if (printingWebWidthMm > 0) {
+          result.linearMPerKgWeb = (sqmPerKg / printingWebWidthMm) * 1000;
+        }
+
+        // Reel runs across the blank width (cross-direction)
+        if (pouch.blankWidthMm > 0) {
+          result.linearMPerKgReel = (sqmPerKg / pouch.blankWidthMm) * 1000;
+        }
+      } else if (dimensions.openWidthMm && dimensions.openHeightMm) {
+        // Fallback: legacy face-area pouch model (one face only).
+        // Kept for backward compatibility with pre-subtype estimates.
+        // pieces_per_kg = 1000 / (openWidthMm × openHeightMm × totalGsm × 1e-6)
         result.piecesPerKg = (1000 / (dimensions.openWidthMm * dimensions.openHeightMm * totalGsm * 1e-6)) * 1;
         result.gramsPerPiece = 1000 / result.piecesPerKg;
 
@@ -324,6 +344,7 @@ function calculateProductMetrics(
         }
       }
       break;
+    }
 
     case 'bag': {
       // Bag: flat-sheet blank area model (gussets, flaps, lips, patches).

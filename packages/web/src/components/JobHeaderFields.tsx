@@ -248,7 +248,7 @@ export function JobHeaderFields({
                       inputMode="decimal"
                       className={`input input-compact w-full text-center tabular-nums ${
                         f.required && (dimensions[f.key] ?? 0) === 0
-                          ? 'bg-amber-50 border-amber-200'
+                          ? 'bg-warning-soft border-warning/40'
                           : ''
                       }`}
                       value={dimensions[f.key] ?? 0}

@@ -95,7 +95,7 @@ export default function StructureGradeSelect({ value, options, disabled, onChang
           <ul
             ref={menuRef}
             role="listbox"
-            className="max-h-60 overflow-y-auto rounded-lg border border-border bg-white shadow-lg py-1 text-xs"
+            className="max-h-60 overflow-y-auto rounded-lg border border-border bg-surface-raised shadow-lg py-1 text-xs"
             style={menuStyle}
           >
             {options.length === 0 ? (

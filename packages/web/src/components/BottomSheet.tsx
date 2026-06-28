@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { X } from 'lucide-react';
+import { Overlay } from './Overlay';
+import { useSwipeToDismiss } from '../hooks/useSwipeToDismiss';
 
 interface BottomSheetProps {
   open: boolean;
@@ -9,15 +11,48 @@ interface BottomSheetProps {
   footer?: React.ReactNode;
 }
 
+const MOBILE_QUERY = '(max-width: 767.98px)';
+
+function readIsMobile(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return true;
+  }
+  return window.matchMedia(MOBILE_QUERY).matches;
+}
+
+/**
+ * Mobile bottom sheet — used by EstimateEditor for layer edit / add layer.
+ *
+ * PREMIUM v2 — adds swipe-to-dismiss gesture via `useSwipeToDismiss`, which
+ * uses motion library's spring physics for the snap-back and dismiss-slide.
+ * Drag handle is exposed at the top of the sheet so users see the affordance.
+ *
+ * Portal, scrim, focus trap, return-focus, Escape, body scroll lock, reduced
+ * motion, and the enter/exit slide are provided by `<Overlay variant="sheet">`.
+ */
 const BottomSheet = ({ open, onClose, title, children, footer }: BottomSheetProps) => {
-  const sheetRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const [isMobile, setIsMobile] = useState(readIsMobile);
+
+  // Swipe down to dismiss — motion-library-powered spring for the snap-back.
+  const { ref: handleRef } = useSwipeToDismiss<HTMLDivElement>({
+    onDismiss: onClose,
+    dismissThreshold: 0.30,
+    velocityThreshold: 0.5,
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia(MOBILE_QUERY);
+    const onChange = () => setIsMobile(mql.matches);
+    onChange();
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
     const vv = window.visualViewport;
     const onResize = () => {
       if (!vv) return;
@@ -29,38 +64,39 @@ const BottomSheet = ({ open, onClose, title, children, footer }: BottomSheetProp
     onResize();
 
     return () => {
-      document.body.style.overflow = prev;
       vv?.removeEventListener('resize', onResize);
       vv?.removeEventListener('scroll', onResize);
       setKeyboardOffset(0);
     };
   }, [open]);
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-[60] md:hidden" role="dialog" aria-modal="true">
-      <button
-        type="button"
-        className="absolute inset-0 bg-navy/40"
-        aria-label="Close"
-        onClick={onClose}
-      />
+    <Overlay open={open && isMobile} onClose={onClose} variant="sheet" labelledBy={titleId}>
       <div
-        ref={sheetRef}
-        className="absolute left-0 right-0 bg-white rounded-t-2xl shadow-xl flex flex-col max-h-[85vh]"
+        ref={handleRef}
+        className="w-full bg-surface-overlay rounded-t-2xl flex flex-col max-h-[85vh] touch-pan-y"
         style={{
-          bottom: keyboardOffset,
+          boxShadow: 'var(--elevation-5)',
+          marginBottom: keyboardOffset,
           paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
-          maxHeight: keyboardOffset > 0 ? `min(85vh, ${window.visualViewport?.height ?? window.innerHeight}px)` : '85vh',
+          maxHeight:
+            keyboardOffset > 0
+              ? `min(85vh, ${window.visualViewport?.height ?? window.innerHeight}px)`
+              : '85vh',
         }}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-          <h3 className="font-display font-semibold text-navy">{title}</h3>
+        {/* Drag handle — visual affordance for the swipe gesture */}
+        <div className="flex justify-center py-2.5 cursor-grab active:cursor-grabbing">
+          <div className="w-12 h-1.5 rounded-full bg-border-strong" aria-hidden="true" />
+        </div>
+        <div className="flex items-center justify-between px-4 pb-3 border-b border-border shrink-0">
+          <h3 id={titleId} className="font-display font-semibold text-text-primary">
+            {title}
+          </h3>
           <button
             type="button"
             onClick={onClose}
-            className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-slate text-mist tap-target"
+            className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-surface-base text-text-secondary tap-target"
             aria-label="Close sheet"
           >
             <X className="w-5 h-5" />
@@ -68,10 +104,10 @@ const BottomSheet = ({ open, onClose, title, children, footer }: BottomSheetProp
         </div>
         <div className="overflow-y-auto flex-1 px-4 py-4 overscroll-contain">{children}</div>
         {footer && (
-          <div className="shrink-0 px-4 py-3 border-t border-border bg-white">{footer}</div>
+          <div className="shrink-0 px-4 py-3 border-t border-border bg-surface-overlay">{footer}</div>
         )}
       </div>
-    </div>
+    </Overlay>
   );
 };
 

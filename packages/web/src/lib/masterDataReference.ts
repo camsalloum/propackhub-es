@@ -94,6 +94,7 @@ export const DEFAULT_PRODUCT_SUBTYPE_OPTIONS: ProductSubtypeOption[] = [
   { label: 'Center-Seal Pouch', code: 'pouch_center_seal', parent: 'pouch' },
   { label: 'Gusset Pouch', code: 'pouch_gusset', parent: 'pouch' },
   { label: '4-Side Seal Pouch', code: 'pouch_4_side_seal', parent: 'pouch' },
+  { label: 'Flat-Bottom (Box) Pouch', code: 'pouch_flat_bottom', parent: 'pouch' },
   { label: 'Punch Handle', code: 'bag_punch_handle', parent: 'bag', group: 'Commercial Bags' },
   { label: 'Loop Handle', code: 'bag_loop_handle', parent: 'bag', group: 'Commercial Bags' },
   { label: 'Patch Handle', code: 'bag_patch_handle', parent: 'bag', group: 'Commercial Bags' },

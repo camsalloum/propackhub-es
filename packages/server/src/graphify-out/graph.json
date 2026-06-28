@@ -17,7 +17,7 @@
       "label": "BuildAppOptions",
       "file_type": "code",
       "source_file": "app.ts",
-      "source_location": "L24",
+      "source_location": "L25",
       "_origin": "ast",
       "id": "app_buildappoptions",
       "community": 9,
@@ -27,7 +27,7 @@
       "label": "CAPACITOR_ORIGINS",
       "file_type": "code",
       "source_file": "app.ts",
-      "source_location": "L31",
+      "source_location": "L32",
       "_origin": "ast",
       "id": "app_capacitor_origins",
       "community": 9,
@@ -37,7 +37,7 @@
       "label": "buildApp()",
       "file_type": "code",
       "source_file": "app.ts",
-      "source_location": "L33",
+      "source_location": "L34",
       "_origin": "ast",
       "id": "app_buildapp",
       "community": 9,
@@ -130,7 +130,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "db_master_materials_io_producttyperow",
-      "community": 7,
+      "community": 8,
       "norm_label": "producttyperow"
     },
     {
@@ -140,7 +140,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "db_master_materials_io_printingwebrow",
-      "community": 7,
+      "community": 8,
       "norm_label": "printingwebrow"
     },
     {
@@ -220,7 +220,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_platform_master_audit",
-      "community": 0,
+      "community": 11,
       "norm_label": "platform-master-audit.ts"
     },
     {
@@ -230,7 +230,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "db_platform_master_audit_auditactortype",
-      "community": 0,
+      "community": 11,
       "norm_label": "auditactortype"
     },
     {
@@ -240,7 +240,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "db_platform_master_audit_masterauditaction",
-      "community": 0,
+      "community": 11,
       "norm_label": "masterauditaction"
     },
     {
@@ -250,7 +250,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "db_platform_master_audit_auditactor",
-      "community": 0,
+      "community": 11,
       "norm_label": "auditactor"
     },
     {
@@ -260,7 +260,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "db_platform_master_audit_appendmasterauditinput",
-      "community": 0,
+      "community": 11,
       "norm_label": "appendmasterauditinput"
     },
     {
@@ -300,7 +300,7 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "db_platform_master_audit_appendmasterauditentry",
-      "community": 0,
+      "community": 11,
       "norm_label": "appendmasterauditentry()"
     },
     {
@@ -320,7 +320,7 @@
       "source_location": "L105",
       "_origin": "ast",
       "id": "db_platform_master_audit_masterdatachangerow",
-      "community": 0,
+      "community": 11,
       "norm_label": "masterdatachangerow"
     },
     {
@@ -330,7 +330,7 @@
       "source_location": "L117",
       "_origin": "ast",
       "id": "db_platform_master_audit_listmasterdatachangessince",
-      "community": 0,
+      "community": 11,
       "norm_label": "listmasterdatachangessince()"
     },
     {
@@ -430,7 +430,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "db_platform_master_data_referenceiteminuseerror",
-      "community": 0,
+      "community": 11,
       "norm_label": "referenceiteminuseerror"
     },
     {
@@ -440,7 +440,7 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "db_platform_master_data_referenceiteminuseerror_constructor",
-      "community": 0,
+      "community": 11,
       "norm_label": ".constructor()"
     },
     {
@@ -520,7 +520,7 @@
       "source_location": "L190",
       "_origin": "ast",
       "id": "db_platform_master_data_listplatformmastermaterialswithids",
-      "community": 0,
+      "community": 11,
       "norm_label": "listplatformmastermaterialswithids()"
     },
     {
@@ -790,7 +790,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "db_platform_service_keys_listplatformservicekeys",
-      "community": 0,
+      "community": 11,
       "norm_label": "listplatformservicekeys()"
     },
     {
@@ -800,7 +800,7 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "db_platform_service_keys_revokeplatformservicekey",
-      "community": 0,
+      "community": 11,
       "norm_label": "revokeplatformservicekey()"
     },
     {
@@ -1030,7 +1030,7 @@
       "source_location": "L215",
       "_origin": "ast",
       "id": "db_schema_materials",
-      "community": 6,
+      "community": 16,
       "norm_label": "materials"
     },
     {
@@ -1050,7 +1050,7 @@
       "source_location": "L272",
       "_origin": "ast",
       "id": "db_schema_estimates",
-      "community": 6,
+      "community": 15,
       "norm_label": "estimates"
     },
     {
@@ -1060,7 +1060,7 @@
       "source_location": "L348",
       "_origin": "ast",
       "id": "db_schema_layers",
-      "community": 6,
+      "community": 15,
       "norm_label": "layers"
     },
     {
@@ -1144,10 +1144,20 @@
       "norm_label": "structuretemplatesrelations"
     },
     {
+      "label": "platformStandardTemplates",
+      "file_type": "code",
+      "source_file": "db/schema.ts",
+      "source_location": "L523",
+      "_origin": "ast",
+      "id": "db_schema_platformstandardtemplates",
+      "community": 6,
+      "norm_label": "platformstandardtemplates"
+    },
+    {
       "label": "sessions",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L517",
+      "source_location": "L557",
       "_origin": "ast",
       "id": "db_schema_sessions",
       "community": 6,
@@ -1157,7 +1167,7 @@
       "label": "usersRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L535",
+      "source_location": "L575",
       "_origin": "ast",
       "id": "db_schema_usersrelations",
       "community": 6,
@@ -1167,7 +1177,7 @@
       "label": "customersRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L539",
+      "source_location": "L579",
       "_origin": "ast",
       "id": "db_schema_customersrelations",
       "community": 6,
@@ -1177,7 +1187,7 @@
       "label": "estimatesRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L543",
+      "source_location": "L583",
       "_origin": "ast",
       "id": "db_schema_estimatesrelations",
       "community": 6,
@@ -1187,7 +1197,7 @@
       "label": "layersRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L552",
+      "source_location": "L592",
       "_origin": "ast",
       "id": "db_schema_layersrelations",
       "community": 6,
@@ -1197,7 +1207,7 @@
       "label": "processesRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L557",
+      "source_location": "L597",
       "_origin": "ast",
       "id": "db_schema_processesrelations",
       "community": 6,
@@ -1207,7 +1217,7 @@
       "label": "slabsRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L561",
+      "source_location": "L601",
       "_origin": "ast",
       "id": "db_schema_slabsrelations",
       "community": 6,
@@ -1470,7 +1480,7 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "db_seed_materials_loadplatformmastermaterials",
-      "community": 7,
+      "community": 0,
       "norm_label": "loadplatformmastermaterials()"
     },
     {
@@ -1500,7 +1510,7 @@
       "source_location": "L204",
       "_origin": "ast",
       "id": "db_seed_materials_syncmaterialsfortenant",
-      "community": 7,
+      "community": 0,
       "norm_label": "syncmaterialsfortenant()"
     },
     {
@@ -1520,8 +1530,68 @@
       "source_location": "L314",
       "_origin": "ast",
       "id": "db_seed_materials_getmastermaterialslist",
-      "community": 7,
+      "community": 4,
       "norm_label": "getmastermaterialslist()"
+    },
+    {
+      "label": "seed-platform-templates.ts",
+      "file_type": "code",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "db_seed_platform_templates",
+      "community": 9,
+      "norm_label": "seed-platform-templates.ts"
+    },
+    {
+      "label": "SeedLayer",
+      "file_type": "code",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L18",
+      "_origin": "ast",
+      "id": "db_seed_platform_templates_seedlayer",
+      "community": 9,
+      "norm_label": "seedlayer"
+    },
+    {
+      "label": "SeedEntry",
+      "file_type": "code",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "db_seed_platform_templates_seedentry",
+      "community": 9,
+      "norm_label": "seedentry"
+    },
+    {
+      "label": "entryToInsertRow()",
+      "file_type": "code",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L43",
+      "_origin": "ast",
+      "id": "db_seed_platform_templates_entrytoinsertrow",
+      "community": 9,
+      "norm_label": "entrytoinsertrow()"
+    },
+    {
+      "label": "bootstrapPlatformStandardCatalog()",
+      "file_type": "code",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L77",
+      "_origin": "ast",
+      "id": "db_seed_platform_templates_bootstrapplatformstandardcatalog",
+      "community": 9,
+      "norm_label": "bootstrapplatformstandardcatalog()"
+    },
+    {
+      "label": "listPlatformStandards()",
+      "file_type": "code",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L106",
+      "_origin": "ast",
+      "id": "db_seed_platform_templates_listplatformstandards",
+      "community": 9,
+      "norm_label": "listplatformstandards()"
     },
     {
       "label": "seed-slab-templates.ts",
@@ -1604,50 +1674,80 @@
       "norm_label": "templateseedentry"
     },
     {
-      "label": "templateKeyFromSeed()",
+      "label": "PlatformStandardSource",
       "file_type": "code",
       "source_file": "db/seed-templates.ts",
-      "source_location": "L41",
+      "source_location": "L45",
       "_origin": "ast",
-      "id": "db_seed_templates_templatekeyfromseed",
+      "id": "db_seed_templates_platformstandardsource",
       "community": 2,
-      "norm_label": "templatekeyfromseed()"
+      "norm_label": "platformstandardsource"
     },
     {
-      "label": "templateInsertRow()",
+      "label": "seedEntryToSource()",
       "file_type": "code",
       "source_file": "db/seed-templates.ts",
-      "source_location": "L50",
+      "source_location": "L66",
       "_origin": "ast",
-      "id": "db_seed_templates_templateinsertrow",
+      "id": "db_seed_templates_seedentrytosource",
       "community": 2,
-      "norm_label": "templateinsertrow()"
+      "norm_label": "seedentrytosource()"
     },
     {
       "label": "loadTenantMaterials()",
       "file_type": "code",
       "source_file": "db/seed-templates.ts",
-      "source_location": "L76",
+      "source_location": "L95",
       "_origin": "ast",
       "id": "db_seed_templates_loadtenantmaterials",
       "community": 2,
       "norm_label": "loadtenantmaterials()"
     },
     {
+      "label": "loadPlatformStandardSources()",
+      "file_type": "code",
+      "source_file": "db/seed-templates.ts",
+      "source_location": "L111",
+      "_origin": "ast",
+      "id": "db_seed_templates_loadplatformstandardsources",
+      "community": 2,
+      "norm_label": "loadplatformstandardsources()"
+    },
+    {
+      "label": "sourceToTenantInsertRow()",
+      "file_type": "code",
+      "source_file": "db/seed-templates.ts",
+      "source_location": "L163",
+      "_origin": "ast",
+      "id": "db_seed_templates_sourcetotenantinsertrow",
+      "community": 2,
+      "norm_label": "sourcetotenantinsertrow()"
+    },
+    {
       "label": "seedTemplatesForTenant()",
       "file_type": "code",
       "source_file": "db/seed-templates.ts",
-      "source_location": "L84",
+      "source_location": "L195",
       "_origin": "ast",
       "id": "db_seed_templates_seedtemplatesfortenant",
-      "community": 1,
+      "community": 2,
       "norm_label": "seedtemplatesfortenant()"
+    },
+    {
+      "label": "syncPlatformStandardsToTenant()",
+      "file_type": "code",
+      "source_file": "db/seed-templates.ts",
+      "source_location": "L240",
+      "_origin": "ast",
+      "id": "db_seed_templates_syncplatformstandardstotenant",
+      "community": 2,
+      "norm_label": "syncplatformstandardstotenant()"
     },
     {
       "label": "syncMissingStandardTemplates()",
       "file_type": "code",
       "source_file": "db/seed-templates.ts",
-      "source_location": "L116",
+      "source_location": "L354",
       "_origin": "ast",
       "id": "db_seed_templates_syncmissingstandardtemplates",
       "community": 2,
@@ -1657,7 +1757,7 @@
       "label": "pruneDuplicateStandardTemplates()",
       "file_type": "code",
       "source_file": "db/seed-templates.ts",
-      "source_location": "L161",
+      "source_location": "L359",
       "_origin": "ast",
       "id": "db_seed_templates_pruneduplicatestandardtemplates",
       "community": 2,
@@ -1667,7 +1767,7 @@
       "label": "syncTemplateKeysForTenant()",
       "file_type": "code",
       "source_file": "db/seed-templates.ts",
-      "source_location": "L200",
+      "source_location": "L398",
       "_origin": "ast",
       "id": "db_seed_templates_synctemplatekeysfortenant",
       "community": 2,
@@ -1677,17 +1777,17 @@
       "label": "ensureTemplatesForTenant()",
       "file_type": "code",
       "source_file": "db/seed-templates.ts",
-      "source_location": "L247",
+      "source_location": "L445",
       "_origin": "ast",
       "id": "db_seed_templates_ensuretemplatesfortenant",
-      "community": 1,
+      "community": 2,
       "norm_label": "ensuretemplatesfortenant()"
     },
     {
       "label": "relinkTemplatesForTenant()",
       "file_type": "code",
       "source_file": "db/seed-templates.ts",
-      "source_location": "L263",
+      "source_location": "L461",
       "_origin": "ast",
       "id": "db_seed_templates_relinktemplatesfortenant",
       "community": 2,
@@ -1707,7 +1807,7 @@
       "label": "PORT",
       "file_type": "code",
       "source_file": "index.ts",
-      "source_location": "L7",
+      "source_location": "L8",
       "_origin": "ast",
       "id": "index_port",
       "community": 0,
@@ -1717,11 +1817,211 @@
       "label": "start()",
       "file_type": "code",
       "source_file": "index.ts",
-      "source_location": "L12",
+      "source_location": "L13",
       "_origin": "ast",
       "id": "index_start",
       "community": 0,
       "norm_label": "start()"
+    },
+    {
+      "label": "admin-platform-templates.ts",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates",
+      "community": 3,
+      "norm_label": "admin-platform-templates.ts"
+    },
+    {
+      "label": "PlatformLayerSchema",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L28",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_platformlayerschema",
+      "community": 3,
+      "norm_label": "platformlayerschema"
+    },
+    {
+      "label": "CreatePlatformTemplateSchema",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L43",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_createplatformtemplateschema",
+      "community": 3,
+      "norm_label": "createplatformtemplateschema"
+    },
+    {
+      "label": "UpdatePlatformTemplateSchema",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L60",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_updateplatformtemplateschema",
+      "community": 3,
+      "norm_label": "updateplatformtemplateschema"
+    },
+    {
+      "label": "requirePlatformAdmin()",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L84",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_requireplatformadmin",
+      "community": 3,
+      "norm_label": "requireplatformadmin()"
+    },
+    {
+      "label": "NormalizedLayer",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L108",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_normalizedlayer",
+      "community": 3,
+      "norm_label": "normalizedlayer"
+    },
+    {
+      "label": "refKeyForMaterial()",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L135",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_refkeyformaterial",
+      "community": 3,
+      "norm_label": "refkeyformaterial()"
+    },
+    {
+      "label": "normalizeLayersToRefKeys()",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L152",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_normalizelayerstorefkeys",
+      "community": 3,
+      "norm_label": "normalizelayerstorefkeys()"
+    },
+    {
+      "label": "validateDefinition()",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L207",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_validatedefinition",
+      "community": 3,
+      "norm_label": "validatedefinition()"
+    },
+    {
+      "label": "buildPlatformRow()",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L270",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_buildplatformrow",
+      "community": 3,
+      "norm_label": "buildplatformrow()"
+    },
+    {
+      "label": "listPlatformTemplatesRoute()",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L313",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_listplatformtemplatesroute",
+      "community": 3,
+      "norm_label": "listplatformtemplatesroute()"
+    },
+    {
+      "label": "getPlatformTemplateRoute()",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L333",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_getplatformtemplateroute",
+      "community": 3,
+      "norm_label": "getplatformtemplateroute()"
+    },
+    {
+      "label": "createPlatformTemplateRoute()",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L352",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_createplatformtemplateroute",
+      "community": 3,
+      "norm_label": "createplatformtemplateroute()"
+    },
+    {
+      "label": "updatePlatformTemplateRoute()",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L498",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_updateplatformtemplateroute",
+      "community": 3,
+      "norm_label": "updateplatformtemplateroute()"
+    },
+    {
+      "label": "updatePlatformTemplateByKeyRoute()",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L533",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_updateplatformtemplatebykeyroute",
+      "community": 3,
+      "norm_label": "updateplatformtemplatebykeyroute()"
+    },
+    {
+      "label": "applyPlatformUpdate()",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L570",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_applyplatformupdate",
+      "community": 3,
+      "norm_label": "applyplatformupdate()"
+    },
+    {
+      "label": "deletePlatformTemplateRoute()",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L633",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_deleteplatformtemplateroute",
+      "community": 3,
+      "norm_label": "deleteplatformtemplateroute()"
+    },
+    {
+      "label": "deletePlatformTemplateByKeyRoute()",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L656",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_deleteplatformtemplatebykeyroute",
+      "community": 3,
+      "norm_label": "deleteplatformtemplatebykeyroute()"
+    },
+    {
+      "label": "applyPlatformDelete()",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L679",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_applyplatformdelete",
+      "community": 3,
+      "norm_label": "applyplatformdelete()"
+    },
+    {
+      "label": "registerAdminPlatformTemplateRoutes()",
+      "file_type": "code",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L699",
+      "_origin": "ast",
+      "id": "routes_admin_platform_templates_registeradminplatformtemplateroutes",
+      "community": 9,
+      "norm_label": "registeradminplatformtemplateroutes()"
     },
     {
       "label": "auth.ts",
@@ -1830,7 +2130,7 @@
       "source_location": "L325",
       "_origin": "ast",
       "id": "routes_auth_meroute",
-      "community": 4,
+      "community": 1,
       "norm_label": "meroute()"
     },
     {
@@ -1900,7 +2200,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_customers",
-      "community": 3,
+      "community": 1,
       "norm_label": "customers.ts"
     },
     {
@@ -1910,7 +2210,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "routes_customers_createcustomerschema",
-      "community": 3,
+      "community": 1,
       "norm_label": "createcustomerschema"
     },
     {
@@ -1920,7 +2220,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "routes_customers_updatecustomerschema",
-      "community": 3,
+      "community": 1,
       "norm_label": "updatecustomerschema"
     },
     {
@@ -1930,7 +2230,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "routes_customers_escapelike",
-      "community": 3,
+      "community": 1,
       "norm_label": "escapelike()"
     },
     {
@@ -1940,7 +2240,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "routes_customers_getcustomersroute",
-      "community": 3,
+      "community": 4,
       "norm_label": "getcustomersroute()"
     },
     {
@@ -1950,7 +2250,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "routes_customers_autocompletecustomersroute",
-      "community": 3,
+      "community": 1,
       "norm_label": "autocompletecustomersroute()"
     },
     {
@@ -1960,7 +2260,7 @@
       "source_location": "L101",
       "_origin": "ast",
       "id": "routes_customers_createcustomerroute",
-      "community": 3,
+      "community": 1,
       "norm_label": "createcustomerroute()"
     },
     {
@@ -1970,7 +2270,7 @@
       "source_location": "L134",
       "_origin": "ast",
       "id": "routes_customers_getcustomerroute",
-      "community": 3,
+      "community": 1,
       "norm_label": "getcustomerroute()"
     },
     {
@@ -1980,7 +2280,7 @@
       "source_location": "L160",
       "_origin": "ast",
       "id": "routes_customers_updatecustomerroute",
-      "community": 3,
+      "community": 1,
       "norm_label": "updatecustomerroute()"
     },
     {
@@ -1990,7 +2290,7 @@
       "source_location": "L192",
       "_origin": "ast",
       "id": "routes_customers_deletecustomerroute",
-      "community": 3,
+      "community": 1,
       "norm_label": "deletecustomerroute()"
     },
     {
@@ -2000,7 +2300,7 @@
       "source_location": "L246",
       "_origin": "ast",
       "id": "routes_customers_getcustomerestimatesroute",
-      "community": 3,
+      "community": 1,
       "norm_label": "getcustomerestimatesroute()"
     },
     {
@@ -2050,7 +2350,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "routes_dashboard_estimatetotaldisplay",
-      "community": 4,
+      "community": 5,
       "norm_label": "estimatetotaldisplay()"
     },
     {
@@ -2080,7 +2380,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_estimates",
-      "community": 5,
+      "community": 4,
       "norm_label": "estimates.ts"
     },
     {
@@ -2090,7 +2390,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "routes_estimates_estimaterow",
-      "community": 5,
+      "community": 4,
       "norm_label": "estimaterow"
     },
     {
@@ -2100,7 +2400,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "routes_estimates_layerrow",
-      "community": 5,
+      "community": 4,
       "norm_label": "layerrow"
     },
     {
@@ -2110,7 +2410,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "routes_estimates_getuservisibilityprofile",
-      "community": 5,
+      "community": 4,
       "norm_label": "getuservisibilityprofile()"
     },
     {
@@ -2120,7 +2420,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "routes_estimates_laminationrecipecomponentschema",
-      "community": 5,
+      "community": 4,
       "norm_label": "laminationrecipecomponentschema"
     },
     {
@@ -2130,7 +2430,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "routes_estimates_laminationrecipeschema",
-      "community": 5,
+      "community": 4,
       "norm_label": "laminationrecipeschema"
     },
     {
@@ -2140,7 +2440,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "routes_estimates_estimatecreateschema",
-      "community": 5,
+      "community": 4,
       "norm_label": "estimatecreateschema"
     },
     {
@@ -2150,7 +2450,7 @@
       "source_location": "L88",
       "_origin": "ast",
       "id": "routes_estimates_estimateupdateschema",
-      "community": 5,
+      "community": 4,
       "norm_label": "estimateupdateschema"
     },
     {
@@ -2170,7 +2470,7 @@
       "source_location": "L131",
       "_origin": "ast",
       "id": "routes_estimates_getestimatesroute",
-      "community": 3,
+      "community": 4,
       "norm_label": "getestimatesroute()"
     },
     {
@@ -2190,7 +2490,7 @@
       "source_location": "L327",
       "_origin": "ast",
       "id": "routes_estimates_calculateestimateroute",
-      "community": 5,
+      "community": 4,
       "norm_label": "calculateestimateroute()"
     },
     {
@@ -2210,7 +2510,7 @@
       "source_location": "L381",
       "_origin": "ast",
       "id": "routes_estimates_getestimateroute",
-      "community": 5,
+      "community": 4,
       "norm_label": "getestimateroute()"
     },
     {
@@ -2230,7 +2530,7 @@
       "source_location": "L741",
       "_origin": "ast",
       "id": "routes_estimates_deleteestimateroute",
-      "community": 3,
+      "community": 4,
       "norm_label": "deleteestimateroute()"
     },
     {
@@ -2290,7 +2590,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_materials",
-      "community": 3,
+      "community": 4,
       "norm_label": "materials.ts"
     },
     {
@@ -2300,7 +2600,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "routes_materials_ismaterialadmin",
-      "community": 3,
+      "community": 4,
       "norm_label": "ismaterialadmin()"
     },
     {
@@ -2310,7 +2610,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "routes_materials_normalizematerialprices",
-      "community": 3,
+      "community": 4,
       "norm_label": "normalizematerialprices()"
     },
     {
@@ -2320,7 +2620,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "routes_materials_materialschema",
-      "community": 3,
+      "community": 4,
       "norm_label": "materialschema"
     },
     {
@@ -2330,7 +2630,7 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "routes_materials_getmaterialsroute",
-      "community": 3,
+      "community": 4,
       "norm_label": "getmaterialsroute()"
     },
     {
@@ -2340,7 +2640,7 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "routes_materials_creatematerialroute",
-      "community": 3,
+      "community": 4,
       "norm_label": "creatematerialroute()"
     },
     {
@@ -2350,7 +2650,7 @@
       "source_location": "L138",
       "_origin": "ast",
       "id": "routes_materials_updatematerialroute",
-      "community": 3,
+      "community": 4,
       "norm_label": "updatematerialroute()"
     },
     {
@@ -2360,7 +2660,7 @@
       "source_location": "L187",
       "_origin": "ast",
       "id": "routes_materials_deletematerialroute",
-      "community": 3,
+      "community": 4,
       "norm_label": "deletematerialroute()"
     },
     {
@@ -2380,7 +2680,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_platform_master_data",
-      "community": 0,
+      "community": 11,
       "norm_label": "platform-master-data.ts"
     },
     {
@@ -2390,7 +2690,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "routes_platform_master_data_requiremasterdataadmin",
-      "community": 0,
+      "community": 11,
       "norm_label": "requiremasterdataadmin()"
     },
     {
@@ -2400,7 +2700,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "routes_platform_master_data_auditactorfromrequest",
-      "community": 0,
+      "community": 11,
       "norm_label": "auditactorfromrequest()"
     },
     {
@@ -2410,7 +2710,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "routes_platform_master_data_materialbodyschema",
-      "community": 0,
+      "community": 11,
       "norm_label": "materialbodyschema"
     },
     {
@@ -2420,7 +2720,7 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "routes_platform_master_data_referencecategoryschema",
-      "community": 0,
+      "community": 11,
       "norm_label": "referencecategoryschema"
     },
     {
@@ -2430,7 +2730,7 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "routes_platform_master_data_referenceitemschema",
-      "community": 0,
+      "community": 11,
       "norm_label": "referenceitemschema"
     },
     {
@@ -2460,7 +2760,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_platform",
-      "community": 7,
+      "community": 4,
       "norm_label": "platform.ts"
     },
     {
@@ -2470,7 +2770,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "routes_platform_requiremasterdataadmin",
-      "community": 7,
+      "community": 4,
       "norm_label": "requiremasterdataadmin()"
     },
     {
@@ -2587,7 +2887,7 @@
       "label": "TemplateRow",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L35",
+      "source_location": "L47",
       "_origin": "ast",
       "id": "routes_templates_templaterow",
       "community": 2,
@@ -2597,7 +2897,7 @@
       "label": "canManageStandardTemplate()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L38",
+      "source_location": "L50",
       "_origin": "ast",
       "id": "routes_templates_canmanagestandardtemplate",
       "community": 2,
@@ -2607,7 +2907,7 @@
       "label": "canDeleteMyTemplate()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L43",
+      "source_location": "L55",
       "_origin": "ast",
       "id": "routes_templates_candeletemytemplate",
       "community": 2,
@@ -2617,7 +2917,7 @@
       "label": "canEditMyTemplate()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L53",
+      "source_location": "L65",
       "_origin": "ast",
       "id": "routes_templates_caneditmytemplate",
       "community": 2,
@@ -2627,7 +2927,7 @@
       "label": "canViewTemplate()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L60",
+      "source_location": "L72",
       "_origin": "ast",
       "id": "routes_templates_canviewtemplate",
       "community": 2,
@@ -2637,7 +2937,7 @@
       "label": "TemplateLayerSchema",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L70",
+      "source_location": "L82",
       "_origin": "ast",
       "id": "routes_templates_templatelayerschema",
       "community": 2,
@@ -2647,7 +2947,7 @@
       "label": "UpdateTemplateSchema",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L79",
+      "source_location": "L91",
       "_origin": "ast",
       "id": "routes_templates_updatetemplateschema",
       "community": 2,
@@ -2657,7 +2957,7 @@
       "label": "getTemplatesRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L111",
+      "source_location": "L123",
       "_origin": "ast",
       "id": "routes_templates_gettemplatesroute",
       "community": 2,
@@ -2667,7 +2967,7 @@
       "label": "getTemplateByIdRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L173",
+      "source_location": "L185",
       "_origin": "ast",
       "id": "routes_templates_gettemplatebyidroute",
       "community": 2,
@@ -2677,7 +2977,7 @@
       "label": "instantiateByKeyRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L215",
+      "source_location": "L227",
       "_origin": "ast",
       "id": "routes_templates_instantiatebykeyroute",
       "community": 2,
@@ -2687,7 +2987,7 @@
       "label": "instantiateTemplateRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L286",
+      "source_location": "L298",
       "_origin": "ast",
       "id": "routes_templates_instantiatetemplateroute",
       "community": 2,
@@ -2697,7 +2997,7 @@
       "label": "CreateTemplateFromEstimateSchema",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L517",
+      "source_location": "L529",
       "_origin": "ast",
       "id": "routes_templates_createtemplatefromestimateschema",
       "community": 2,
@@ -2707,7 +3007,7 @@
       "label": "CreateTemplateFromDefinitionSchema",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L523",
+      "source_location": "L537",
       "_origin": "ast",
       "id": "routes_templates_createtemplatefromdefinitionschema",
       "community": 2,
@@ -2717,7 +3017,7 @@
       "label": "CreateTemplateSchema",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L537",
+      "source_location": "L555",
       "_origin": "ast",
       "id": "routes_templates_createtemplateschema",
       "community": 2,
@@ -2727,7 +3027,7 @@
       "label": "createTemplateRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L548",
+      "source_location": "L566",
       "_origin": "ast",
       "id": "routes_templates_createtemplateroute",
       "community": 2,
@@ -2737,7 +3037,7 @@
       "label": "createTemplateFromEstimateHandler()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L576",
+      "source_location": "L621",
       "_origin": "ast",
       "id": "routes_templates_createtemplatefromestimatehandler",
       "community": 2,
@@ -2747,7 +3047,7 @@
       "label": "createTemplateFromDefinition()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L696",
+      "source_location": "L741",
       "_origin": "ast",
       "id": "routes_templates_createtemplatefromdefinition",
       "community": 2,
@@ -2757,7 +3057,7 @@
       "label": "resolveMyTemplateOwnership()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L832",
+      "source_location": "L877",
       "_origin": "ast",
       "id": "routes_templates_resolvemytemplateownership",
       "community": 2,
@@ -2767,7 +3067,7 @@
       "label": "resolveOwnership()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L845",
+      "source_location": "L890",
       "_origin": "ast",
       "id": "routes_templates_resolveownership",
       "community": 2,
@@ -2777,7 +3077,7 @@
       "label": "updateTemplateRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L861",
+      "source_location": "L906",
       "_origin": "ast",
       "id": "routes_templates_updatetemplateroute",
       "community": 2,
@@ -2787,7 +3087,7 @@
       "label": "deleteTemplateRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L950",
+      "source_location": "L995",
       "_origin": "ast",
       "id": "routes_templates_deletetemplateroute",
       "community": 2,
@@ -2797,7 +3097,7 @@
       "label": "registerTemplateRoutes()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L999",
+      "source_location": "L1044",
       "_origin": "ast",
       "id": "routes_templates_registertemplateroutes",
       "community": 9,
@@ -3130,7 +3430,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "services_proposal_pdf",
-      "community": 4,
+      "community": 5,
       "norm_label": "proposal-pdf.ts"
     },
     {
@@ -3140,7 +3440,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "services_proposal_pdf_db",
-      "community": 4,
+      "community": 5,
       "norm_label": "db"
     },
     {
@@ -3150,7 +3450,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "services_proposal_pdf_proposallayerrow",
-      "community": 4,
+      "community": 5,
       "norm_label": "proposallayerrow"
     },
     {
@@ -3160,7 +3460,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "services_proposal_pdf_proposalprocessrow",
-      "community": 4,
+      "community": 5,
       "norm_label": "proposalprocessrow"
     },
     {
@@ -3170,7 +3470,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "services_proposal_pdf_proposalslabrow",
-      "community": 4,
+      "community": 5,
       "norm_label": "proposalslabrow"
     },
     {
@@ -3180,7 +3480,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "services_proposal_pdf_getuservisibilityprofile",
-      "community": 4,
+      "community": 5,
       "norm_label": "getuservisibilityprofile()"
     },
     {
@@ -3190,7 +3490,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "services_proposal_pdf_proposalsdir",
-      "community": 4,
+      "community": 5,
       "norm_label": "proposalsdir()"
     },
     {
@@ -3200,7 +3500,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "services_proposal_pdf_hashcode",
-      "community": 4,
+      "community": 5,
       "norm_label": "hashcode()"
     },
     {
@@ -3210,7 +3510,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "services_proposal_pdf_laminatesvgfromlayers",
-      "community": 4,
+      "community": 5,
       "norm_label": "laminatesvgfromlayers()"
     },
     {
@@ -3220,7 +3520,7 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "services_proposal_pdf_buildproposalpdfbuffer",
-      "community": 4,
+      "community": 5,
       "norm_label": "buildproposalpdfbuffer()"
     },
     {
@@ -3230,7 +3530,7 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "services_proposal_pdf_saveproposalpdf",
-      "community": 4,
+      "community": 5,
       "norm_label": "saveproposalpdf()"
     },
     {
@@ -3240,7 +3540,7 @@
       "source_location": "L162",
       "_origin": "ast",
       "id": "services_proposal_pdf_readstoredproposalpdf",
-      "community": 4,
+      "community": 5,
       "norm_label": "readstoredproposalpdf()"
     },
     {
@@ -3394,6 +3694,26 @@
       "norm_label": "resolvecosts()"
     },
     {
+      "label": "admin-platform-templates.integration.test.ts",
+      "file_type": "code",
+      "source_file": "test/admin-platform-templates.integration.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "test_admin_platform_templates_integration_test",
+      "community": 9,
+      "norm_label": "admin-platform-templates.integration.test.ts"
+    },
+    {
+      "label": "hasDatabase",
+      "file_type": "code",
+      "source_file": "test/admin-platform-templates.integration.test.ts",
+      "source_location": "L21",
+      "_origin": "ast",
+      "id": "test_admin_platform_templates_integration_test_hasdatabase",
+      "community": 9,
+      "norm_label": "hasdatabase"
+    },
+    {
       "label": "auth-estimates.integration.test.ts",
       "file_type": "code",
       "source_file": "test/auth-estimates.integration.test.ts",
@@ -3450,7 +3770,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_auth",
-      "community": 1,
+      "community": 4,
       "norm_label": "auth.ts"
     },
     {
@@ -3480,7 +3800,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "utils_auth_tokenpayload",
-      "community": 1,
+      "community": 3,
       "norm_label": "tokenpayload"
     },
     {
@@ -3490,7 +3810,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "utils_auth_extracttenantfromrequest",
-      "community": 3,
+      "community": 4,
       "norm_label": "extracttenantfromrequest()"
     },
     {
@@ -3500,7 +3820,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "utils_auth_extractuserfromrequest",
-      "community": 3,
+      "community": 4,
       "norm_label": "extractuserfromrequest()"
     },
     {
@@ -3514,13 +3834,23 @@
       "norm_label": "istenantadmin()"
     },
     {
+      "label": "isPlatformAdmin()",
+      "file_type": "code",
+      "source_file": "utils/auth.ts",
+      "source_location": "L39",
+      "_origin": "ast",
+      "id": "utils_auth_isplatformadmin",
+      "community": 3,
+      "norm_label": "isplatformadmin()"
+    },
+    {
       "label": "currency.test.ts",
       "file_type": "code",
       "source_file": "utils/currency.test.ts",
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_currency_test",
-      "community": 4,
+      "community": 5,
       "norm_label": "currency.test.ts"
     },
     {
@@ -3530,7 +3860,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_currency",
-      "community": 4,
+      "community": 5,
       "norm_label": "currency.ts"
     },
     {
@@ -3540,7 +3870,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "utils_currency_usdtodisplay",
-      "community": 4,
+      "community": 5,
       "norm_label": "usdtodisplay()"
     },
     {
@@ -3550,7 +3880,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "utils_currency_formatdisplayamount",
-      "community": 4,
+      "community": 5,
       "norm_label": "formatdisplayamount()"
     },
     {
@@ -3560,7 +3890,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "utils_currency_slabsusdtodisplay",
-      "community": 4,
+      "community": 5,
       "norm_label": "slabsusdtodisplay()"
     },
     {
@@ -3570,7 +3900,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_errors",
-      "community": 3,
+      "community": 1,
       "norm_label": "errors.ts"
     },
     {
@@ -3580,7 +3910,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "utils_errors_errorcode",
-      "community": 3,
+      "community": 1,
       "norm_label": "errorcode"
     },
     {
@@ -3590,7 +3920,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "utils_errors_errorenvelope",
-      "community": 3,
+      "community": 1,
       "norm_label": "errorenvelope"
     },
     {
@@ -3620,7 +3950,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "utils_errors_errorbody",
-      "community": 3,
+      "community": 1,
       "norm_label": "errorbody()"
     },
     {
@@ -3630,7 +3960,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "utils_errors_isfkviolation",
-      "community": 3,
+      "community": 1,
       "norm_label": "isfkviolation()"
     },
     {
@@ -3640,7 +3970,7 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "utils_errors_isuniqueviolation",
-      "community": 3,
+      "community": 1,
       "norm_label": "isuniqueviolation()"
     },
     {
@@ -3750,64 +4080,64 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_estimate_engine_input",
-      "community": 6,
+      "community": 15,
       "norm_label": "estimate-engine-input.ts"
     },
     {
       "label": "EstimateRow",
       "file_type": "code",
       "source_file": "utils/estimate-engine-input.ts",
-      "source_location": "L11",
+      "source_location": "L12",
       "_origin": "ast",
       "id": "utils_estimate_engine_input_estimaterow",
-      "community": 6,
+      "community": 15,
       "norm_label": "estimaterow"
     },
     {
       "label": "LayerRow",
       "file_type": "code",
       "source_file": "utils/estimate-engine-input.ts",
-      "source_location": "L12",
+      "source_location": "L13",
       "_origin": "ast",
       "id": "utils_estimate_engine_input_layerrow",
-      "community": 6,
+      "community": 15,
       "norm_label": "layerrow"
     },
     {
       "label": "MaterialRow",
       "file_type": "code",
       "source_file": "utils/estimate-engine-input.ts",
-      "source_location": "L13",
+      "source_location": "L14",
       "_origin": "ast",
       "id": "utils_estimate_engine_input_materialrow",
-      "community": 6,
+      "community": 15,
       "norm_label": "materialrow"
     },
     {
       "label": "ProcessRow",
       "file_type": "code",
       "source_file": "utils/estimate-engine-input.ts",
-      "source_location": "L14",
+      "source_location": "L15",
       "_origin": "ast",
       "id": "utils_estimate_engine_input_processrow",
-      "community": 6,
+      "community": 15,
       "norm_label": "processrow"
     },
     {
       "label": "SlabRow",
       "file_type": "code",
       "source_file": "utils/estimate-engine-input.ts",
-      "source_location": "L23",
+      "source_location": "L24",
       "_origin": "ast",
       "id": "utils_estimate_engine_input_slabrow",
-      "community": 6,
+      "community": 15,
       "norm_label": "slabrow"
     },
     {
       "label": "buildEngineEstimateFromRows()",
       "file_type": "code",
       "source_file": "utils/estimate-engine-input.ts",
-      "source_location": "L25",
+      "source_location": "L26",
       "_origin": "ast",
       "id": "utils_estimate_engine_input_buildengineestimatefromrows",
       "community": 5,
@@ -3817,10 +4147,10 @@
       "label": "calculateEstimateFromRows()",
       "file_type": "code",
       "source_file": "utils/estimate-engine-input.ts",
-      "source_location": "L111",
+      "source_location": "L122",
       "_origin": "ast",
       "id": "utils_estimate_engine_input_calculateestimatefromrows",
-      "community": 4,
+      "community": 5,
       "norm_label": "calculateestimatefromrows()"
     },
     {
@@ -4250,7 +4580,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_material_map",
-      "community": 5,
+      "community": 16,
       "norm_label": "material-map.ts"
     },
     {
@@ -4260,7 +4590,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "utils_material_map_materialrow",
-      "community": 5,
+      "community": 16,
       "norm_label": "materialrow"
     },
     {
@@ -4270,7 +4600,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "utils_material_map_toenginematerial",
-      "community": 5,
+      "community": 16,
       "norm_label": "toenginematerial()"
     },
     {
@@ -4290,7 +4620,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_pagination",
-      "community": 3,
+      "community": 4,
       "norm_label": "pagination.ts"
     },
     {
@@ -4300,7 +4630,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "utils_pagination_paginationquery",
-      "community": 3,
+      "community": 4,
       "norm_label": "paginationquery"
     },
     {
@@ -4310,7 +4640,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "utils_pagination_paginatedresult",
-      "community": 3,
+      "community": 4,
       "norm_label": "paginatedresult"
     },
     {
@@ -4320,7 +4650,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "utils_pagination_parsepagination",
-      "community": 3,
+      "community": 4,
       "norm_label": "parsepagination()"
     },
     {
@@ -4330,7 +4660,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "utils_pagination_paginate",
-      "community": 3,
+      "community": 4,
       "norm_label": "paginate()"
     },
     {
@@ -4340,7 +4670,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_pdf_proposal_kit",
-      "community": 4,
+      "community": 5,
       "norm_label": "pdf-proposal-kit.ts"
     },
     {
@@ -4350,7 +4680,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_pdf_proposal_kit_pdfproposalinput",
-      "community": 4,
+      "community": 5,
       "norm_label": "pdfproposalinput"
     },
     {
@@ -4360,7 +4690,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "utils_pdf_proposal_kit_renderbrandedpdfkitproposal",
-      "community": 4,
+      "community": 5,
       "norm_label": "renderbrandedpdfkitproposal()"
     },
     {
@@ -4410,7 +4740,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_resolve_solvent_cost",
-      "community": 6,
+      "community": 15,
       "norm_label": "resolve-solvent-cost.ts"
     },
     {
@@ -4420,7 +4750,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "utils_resolve_solvent_cost_solventmateriallike",
-      "community": 6,
+      "community": 15,
       "norm_label": "solventmateriallike"
     },
     {
@@ -4430,7 +4760,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "utils_resolve_solvent_cost_resolvesolventcostperkgusd",
-      "community": 6,
+      "community": 15,
       "norm_label": "resolvesolventcostperkgusd()"
     },
     {
@@ -4440,7 +4770,7 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "utils_resolve_solvent_cost_finddefaultsolventmaterialid",
-      "community": 6,
+      "community": 15,
       "norm_label": "finddefaultsolventmaterialid()"
     },
     {
@@ -4450,7 +4780,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_service_key_auth",
-      "community": 0,
+      "community": 11,
       "norm_label": "service-key-auth.ts"
     },
     {
@@ -4460,7 +4790,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "utils_service_key_auth_masterdatareaderauth",
-      "community": 0,
+      "community": 11,
       "norm_label": "masterdatareaderauth"
     },
     {
@@ -4470,7 +4800,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "utils_service_key_auth_toauditactor",
-      "community": 0,
+      "community": 11,
       "norm_label": "toauditactor()"
     },
     {
@@ -4480,7 +4810,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "utils_service_key_auth_authenticatemasterdatareader",
-      "community": 0,
+      "community": 11,
       "norm_label": "authenticatemasterdatareader()"
     },
     {
@@ -4740,14 +5070,14 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "utils_template_material_lookup_templatelookupmaterial",
-      "community": 2,
+      "community": 3,
       "norm_label": "templatelookupmaterial"
     },
     {
       "label": "TemplateLayerRef",
       "file_type": "code",
       "source_file": "utils/template-material-lookup.ts",
-      "source_location": "L12",
+      "source_location": "L14",
       "_origin": "ast",
       "id": "utils_template_material_lookup_templatelayerref",
       "community": 2,
@@ -4757,7 +5087,7 @@
       "label": "buildValidMaterialIdSet()",
       "file_type": "code",
       "source_file": "utils/template-material-lookup.ts",
-      "source_location": "L22",
+      "source_location": "L24",
       "_origin": "ast",
       "id": "utils_template_material_lookup_buildvalidmaterialidset",
       "community": 2,
@@ -4767,7 +5097,7 @@
       "label": "buildTemplateMaterialLookup()",
       "file_type": "code",
       "source_file": "utils/template-material-lookup.ts",
-      "source_location": "L26",
+      "source_location": "L28",
       "_origin": "ast",
       "id": "utils_template_material_lookup_buildtemplatemateriallookup",
       "community": 2,
@@ -4777,7 +5107,7 @@
       "label": "familyOf()",
       "file_type": "code",
       "source_file": "utils/template-material-lookup.ts",
-      "source_location": "L158",
+      "source_location": "L166",
       "_origin": "ast",
       "id": "utils_template_material_lookup_familyof",
       "community": 2,
@@ -4787,7 +5117,7 @@
       "label": "gradeOf()",
       "file_type": "code",
       "source_file": "utils/template-material-lookup.ts",
-      "source_location": "L162",
+      "source_location": "L170",
       "_origin": "ast",
       "id": "utils_template_material_lookup_gradeof",
       "community": 2,
@@ -4797,7 +5127,7 @@
       "label": "resolveLayerMaterialId()",
       "file_type": "code",
       "source_file": "utils/template-material-lookup.ts",
-      "source_location": "L166",
+      "source_location": "L174",
       "_origin": "ast",
       "id": "utils_template_material_lookup_resolvelayermaterialid",
       "community": 2,
@@ -4807,7 +5137,7 @@
       "label": "resolveTemplateLayers()",
       "file_type": "code",
       "source_file": "utils/template-material-lookup.ts",
-      "source_location": "L205",
+      "source_location": "L213",
       "_origin": "ast",
       "id": "utils_template_material_lookup_resolvetemplatelayers",
       "community": 2,
@@ -4820,7 +5150,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_usd",
-      "community": 3,
+      "community": 7,
       "norm_label": "usd.ts"
     },
     {
@@ -4830,7 +5160,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "utils_usd_roundusd",
-      "community": 3,
+      "community": 7,
       "norm_label": "roundusd()"
     },
     {
@@ -4930,7 +5260,7 @@
       "source_location": "L140",
       "_origin": "ast",
       "id": "utils_visibility_stripestimaterow",
-      "community": 5,
+      "community": 4,
       "norm_label": "stripestimaterow()"
     },
     {
@@ -4950,7 +5280,7 @@
       "source_location": "L212",
       "_origin": "ast",
       "id": "utils_visibility_stripcalculationresult",
-      "community": 5,
+      "community": 4,
       "norm_label": "stripcalculationresult()"
     }
   ],
@@ -5006,6 +5336,28 @@
       "confidence_score": 1.0,
       "source": "app",
       "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app.ts",
+      "source_location": "L15",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app",
+      "target": "routes_admin_platform_templates"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "app.ts",
+      "source_location": "L15",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app",
+      "target": "routes_admin_platform_templates_registeradminplatformtemplateroutes"
     },
     {
       "relation": "imports_from",
@@ -5330,6 +5682,17 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "test/admin-platform-templates.integration.test.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "test_admin_platform_templates_integration_test",
+      "target": "app"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "test/auth-estimates.integration.test.ts",
       "source_location": "L3",
       "weight": 1.0,
@@ -5347,6 +5710,17 @@
       "confidence_score": 1.0,
       "source": "test_smart_template_builder_integration_test",
       "target": "app"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app.ts",
+      "source_location": "L138",
+      "weight": 1.0,
+      "source": "app_buildapp",
+      "target": "routes_admin_platform_templates_registeradminplatformtemplateroutes"
     },
     {
       "relation": "calls",
@@ -5489,6 +5863,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "index",
+      "target": "app_buildapp"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/admin-platform-templates.integration.test.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "test_admin_platform_templates_integration_test",
       "target": "app_buildapp"
     },
     {
@@ -5666,6 +6051,17 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_platform_templates",
+      "target": "db_index"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "db/seed-slab-templates.ts",
       "source_location": "L2",
       "weight": 1.0,
@@ -5704,6 +6100,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "raw_cost_index_platformmasterprovider_getcostsusd",
+      "target": "db_index"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
       "target": "db_index"
     },
     {
@@ -5842,6 +6249,17 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "test/admin-platform-templates.integration.test.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "test_admin_platform_templates_integration_test",
+      "target": "db_index"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "test/auth-estimates.integration.test.ts",
       "source_location": "L5",
       "weight": 1.0,
@@ -5891,6 +6309,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "index_start",
+      "target": "db_index_initializedatabase"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/admin-platform-templates.integration.test.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "test_admin_platform_templates_integration_test",
       "target": "db_index_initializedatabase"
     },
     {
@@ -6120,9 +6549,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L297",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_refreshsolventcommonrow",
-      "target": "db_index_getdatabase",
-      "confidence_score": 1.0
+      "target": "db_index_getdatabase"
     },
     {
       "relation": "calls",
@@ -6370,6 +6799,39 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_platform_templates",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L78",
+      "weight": 1.0,
+      "source": "db_seed_platform_templates_bootstrapplatformstandardcatalog",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L107",
+      "weight": 1.0,
+      "source": "db_seed_platform_templates_listplatformstandards",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "db/seed-slab-templates.ts",
       "source_location": "L2",
       "weight": 1.0,
@@ -6419,6 +6881,17 @@
       "source_location": "L248",
       "weight": 1.0,
       "source": "db_seed_templates_ensuretemplatesfortenant",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-templates.ts",
+      "source_location": "L109",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_templates_loadplatformstandardsources",
       "target": "db_index_getdatabase"
     },
     {
@@ -6482,6 +6955,17 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "db/seed-templates.ts",
+      "source_location": "L233",
+      "weight": 1.0,
+      "source": "db_seed_templates_syncplatformstandardstotenant",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "db/seed-templates.ts",
       "source_location": "L201",
       "weight": 1.0,
       "source": "db_seed_templates_synctemplatekeysfortenant",
@@ -6496,6 +6980,116 @@
       "source_location": "L61",
       "weight": 1.0,
       "source": "raw_cost_index_platformmasterprovider_getcostsusd",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L350",
+      "weight": 1.0,
+      "source": "routes_admin_platform_templates_createplatformtemplateroute",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L644",
+      "weight": 1.0,
+      "source": "routes_admin_platform_templates_deleteplatformtemplatebykeyroute",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L568",
+      "weight": 1.0,
+      "source": "routes_admin_platform_templates_deleteplatformtemplateroute",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L321",
+      "weight": 1.0,
+      "source": "routes_admin_platform_templates_getplatformtemplateroute",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L301",
+      "weight": 1.0,
+      "source": "routes_admin_platform_templates_listplatformtemplatesroute",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L126",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_normalizelayerstorefkeys",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L531",
+      "weight": 1.0,
+      "source": "routes_admin_platform_templates_updateplatformtemplatebykeyroute",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L496",
+      "weight": 1.0,
+      "source": "routes_admin_platform_templates_updateplatformtemplateroute",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L220",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_validatedefinition",
       "target": "db_index_getdatabase"
     },
     {
@@ -7096,6 +7690,17 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "test/admin-platform-templates.integration.test.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "test_admin_platform_templates_integration_test",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "test/auth-estimates.integration.test.ts",
       "source_location": "L5",
       "weight": 1.0,
@@ -7112,6 +7717,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "index",
+      "target": "db_index_closedatabase"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/admin-platform-templates.integration.test.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "test_admin_platform_templates_integration_test",
       "target": "db_index_closedatabase"
     },
     {
@@ -7375,9 +7991,9 @@
       "source_file": "utils/solvent-common.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_solvent_common",
-      "target": "db_master_materials_io",
-      "confidence_score": 1.0
+      "target": "db_master_materials_io"
     },
     {
       "relation": "imports",
@@ -7463,9 +8079,9 @@
       "source_file": "utils/solvent-common.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_solvent_common",
-      "target": "db_master_materials_io_mastermaterial",
-      "confidence_score": 1.0
+      "target": "db_master_materials_io_mastermaterial"
     },
     {
       "relation": "imports",
@@ -7881,9 +8497,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L330",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_refreshsolventcommonrow",
-      "target": "db_platform_master_audit_materialauditsnapshot",
-      "confidence_score": 1.0
+      "target": "db_platform_master_audit_materialauditsnapshot"
     },
     {
       "relation": "calls",
@@ -8046,9 +8662,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L323",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_refreshsolventcommonrow",
-      "target": "db_platform_master_audit_appendmasterauditentries",
-      "confidence_score": 1.0
+      "target": "db_platform_master_audit_appendmasterauditentries"
     },
     {
       "relation": "calls",
@@ -8204,9 +8820,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L37",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_default_process_rows",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_default_process_rows"
     },
     {
       "relation": "contains",
@@ -8234,9 +8850,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L928",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_ensurelaminationadhesivesseeded",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensurelaminationadhesivesseeded"
     },
     {
       "relation": "contains",
@@ -8264,9 +8880,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L826",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_ensureprocessesseeded",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensureprocessesseeded"
     },
     {
       "relation": "contains",
@@ -8274,9 +8890,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L857",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_ensuresolventcatalogseeded",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensuresolventcatalogseeded"
     },
     {
       "relation": "contains",
@@ -8324,9 +8940,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L922",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_lamination_adhesive_keys",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_lamination_adhesive_keys"
     },
     {
       "relation": "contains",
@@ -8424,9 +9040,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L296",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_refreshsolventcommonrow",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_refreshsolventcommonrow"
     },
     {
       "relation": "contains",
@@ -8464,9 +9080,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L923",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_retired_adhesive_keys",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_retired_adhesive_keys"
     },
     {
       "relation": "contains",
@@ -8504,9 +9120,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L990",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_updatecostingdefaults",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_updatecostingdefaults"
     },
     {
       "relation": "contains",
@@ -8591,9 +9207,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "utils_solvent_common",
-      "confidence_score": 1.0
+      "target": "utils_solvent_common"
     },
     {
       "relation": "imports",
@@ -8602,9 +9218,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "utils_solvent_common_applysolventcommonaverage",
-      "confidence_score": 1.0
+      "target": "utils_solvent_common_applysolventcommonaverage"
     },
     {
       "relation": "imports",
@@ -8613,9 +9229,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "utils_solvent_common_computesolventcommonaverage",
-      "confidence_score": 1.0
+      "target": "utils_solvent_common_computesolventcommonaverage"
     },
     {
       "relation": "imports_from",
@@ -8701,9 +9317,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L475",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates_instantiatetemplateroute",
-      "target": "db_platform_master_data",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data"
     },
     {
       "relation": "imports_from",
@@ -8888,9 +9504,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L977",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensurelaminationadhesivesseeded",
-      "target": "db_platform_master_data_incrementmasterdataversion",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_incrementmasterdataversion"
     },
     {
       "relation": "calls",
@@ -8899,9 +9515,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L906",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensuresolventcatalogseeded",
-      "target": "db_platform_master_data_incrementmasterdataversion",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_incrementmasterdataversion"
     },
     {
       "relation": "calls",
@@ -8910,9 +9526,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L322",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_refreshsolventcommonrow",
-      "target": "db_platform_master_data_incrementmasterdataversion",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_incrementmasterdataversion"
     },
     {
       "relation": "calls",
@@ -8943,9 +9559,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1022",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_updatecostingdefaults",
-      "target": "db_platform_master_data_incrementmasterdataversion",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_incrementmasterdataversion"
     },
     {
       "relation": "calls",
@@ -9041,9 +9657,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L308",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_refreshsolventcommonrow",
-      "target": "db_platform_master_data_rowtomastermaterial",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_rowtomastermaterial"
     },
     {
       "relation": "calls",
@@ -9085,9 +9701,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L939",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensurelaminationadhesivesseeded",
-      "target": "db_platform_master_data_mastermaterialinputtodbvalues",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_mastermaterialinputtodbvalues"
     },
     {
       "relation": "calls",
@@ -9107,9 +9723,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L871",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensuresolventcatalogseeded",
-      "target": "db_platform_master_data_mastermaterialinputtodbvalues",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_mastermaterialinputtodbvalues"
     },
     {
       "relation": "calls",
@@ -9129,9 +9745,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L307",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_refreshsolventcommonrow",
-      "target": "db_platform_master_data_mastermaterialinputtodbvalues",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_mastermaterialinputtodbvalues"
     },
     {
       "relation": "calls",
@@ -9162,9 +9778,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L978",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensurelaminationadhesivesseeded",
-      "target": "db_platform_master_data_listplatformmastermaterials",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_listplatformmastermaterials"
     },
     {
       "relation": "calls",
@@ -9173,9 +9789,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L907",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensuresolventcatalogseeded",
-      "target": "db_platform_master_data_listplatformmastermaterials",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_listplatformmastermaterials"
     },
     {
       "relation": "calls",
@@ -9272,9 +9888,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L291",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_updateplatformmastermaterial",
-      "target": "db_platform_master_data_refreshsolventcommonrow",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_refreshsolventcommonrow"
     },
     {
       "relation": "imports",
@@ -9294,9 +9910,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L303",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_refreshsolventcommonrow",
-      "target": "utils_solvent_common_computesolventcommonaverage",
-      "confidence_score": 1.0
+      "target": "utils_solvent_common_computesolventcommonaverage"
     },
     {
       "relation": "imports",
@@ -9382,9 +9998,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L503",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_buildmasterdatareferencefromdb",
-      "target": "db_platform_master_data_loadreferencefromjson",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_loadreferencefromjson"
     },
     {
       "relation": "imports",
@@ -9426,9 +10042,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L836",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensureprocessesseeded",
-      "target": "db_platform_master_data_replaceplatformreferencecategory",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_replaceplatformreferencecategory"
     },
     {
       "relation": "calls",
@@ -9437,9 +10053,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L901",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensuresolventcatalogseeded",
-      "target": "db_platform_master_data_replaceplatformreferencecategory",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_replaceplatformreferencecategory"
     },
     {
       "relation": "calls",
@@ -9514,9 +10130,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L930",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensurelaminationadhesivesseeded",
-      "target": "db_platform_master_data_loadseedmaterialsfromjson",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_loadseedmaterialsfromjson"
     },
     {
       "relation": "calls",
@@ -9536,9 +10152,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L859",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensuresolventcatalogseeded",
-      "target": "db_platform_master_data_loadseedmaterialsfromjson",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_loadseedmaterialsfromjson"
     },
     {
       "relation": "calls",
@@ -9580,9 +10196,9 @@
       "source_file": "index.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "db_platform_master_data_ensureprocessesseeded",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensureprocessesseeded"
     },
     {
       "relation": "calls",
@@ -9591,9 +10207,9 @@
       "source_file": "index.ts",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index_start",
-      "target": "db_platform_master_data_ensureprocessesseeded",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensureprocessesseeded"
     },
     {
       "relation": "calls",
@@ -9613,9 +10229,9 @@
       "source_file": "index.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "db_platform_master_data_ensuresolventcatalogseeded",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensuresolventcatalogseeded"
     },
     {
       "relation": "calls",
@@ -9624,9 +10240,9 @@
       "source_file": "index.ts",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index_start",
-      "target": "db_platform_master_data_ensuresolventcatalogseeded",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensuresolventcatalogseeded"
     },
     {
       "relation": "calls",
@@ -9646,9 +10262,9 @@
       "source_file": "index.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "db_platform_master_data_ensurelaminationadhesivesseeded",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensurelaminationadhesivesseeded"
     },
     {
       "relation": "calls",
@@ -9657,9 +10273,9 @@
       "source_file": "index.ts",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index_start",
-      "target": "db_platform_master_data_ensurelaminationadhesivesseeded",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensurelaminationadhesivesseeded"
     },
     {
       "relation": "imports",
@@ -9668,9 +10284,9 @@
       "source_file": "routes/platform-master-data.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_platform_master_data",
-      "target": "db_platform_master_data_updatecostingdefaults",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_updatecostingdefaults"
     },
     {
       "relation": "contains",
@@ -10177,6 +10793,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "db/schema.ts",
+      "source_location": "L523",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_schema",
+      "target": "db_schema_platformstandardtemplates"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/schema.ts",
       "source_location": "L441",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -10371,9 +10997,9 @@
       "source_file": "utils/estimate-engine-input.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_estimate_engine_input",
-      "target": "db_schema",
-      "confidence_score": 1.0
+      "target": "db_schema"
     },
     {
       "relation": "imports_from",
@@ -10393,9 +11019,9 @@
       "source_file": "utils/estimate-engine-input.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_estimate_engine_input",
-      "target": "db_schema_materials",
-      "confidence_score": 1.0
+      "target": "db_schema_materials"
     },
     {
       "relation": "imports",
@@ -10415,9 +11041,9 @@
       "source_file": "utils/estimate-engine-input.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_estimate_engine_input",
-      "target": "db_schema_estimates",
-      "confidence_score": 1.0
+      "target": "db_schema_estimates"
     },
     {
       "relation": "imports",
@@ -10426,9 +11052,9 @@
       "source_file": "utils/estimate-engine-input.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_estimate_engine_input",
-      "target": "db_schema_layers",
-      "confidence_score": 1.0
+      "target": "db_schema_layers"
     },
     {
       "relation": "contains",
@@ -11352,6 +11978,155 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L77",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_platform_templates",
+      "target": "db_seed_platform_templates_bootstrapplatformstandardcatalog"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L43",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_platform_templates",
+      "target": "db_seed_platform_templates_entrytoinsertrow"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L106",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_platform_templates",
+      "target": "db_seed_platform_templates_listplatformstandards"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L26",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_platform_templates",
+      "target": "db_seed_platform_templates_seedentry"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L18",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_platform_templates",
+      "target": "db_seed_platform_templates_seedlayer"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_platform_templates",
+      "target": "utils_template_key"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_platform_templates",
+      "target": "utils_template_key_derivestandardtemplatekey"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "index.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "index",
+      "target": "db_seed_platform_templates"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/admin-platform-templates.integration.test.ts",
+      "source_location": "L19",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "test_admin_platform_templates_integration_test",
+      "target": "db_seed_platform_templates"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L83",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_platform_templates_bootstrapplatformstandardcatalog",
+      "target": "db_seed_platform_templates_entrytoinsertrow"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-platform-templates.ts",
+      "source_location": "L44",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_platform_templates_entrytoinsertrow",
+      "target": "utils_template_key_derivestandardtemplatekey"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "index.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "index",
+      "target": "db_seed_platform_templates_bootstrapplatformstandardcatalog"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "index.ts",
+      "source_location": "L22",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "index_start",
+      "target": "db_seed_platform_templates_bootstrapplatformstandardcatalog"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "test/admin-platform-templates.integration.test.ts",
+      "source_location": "L19",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "test_admin_platform_templates_integration_test",
+      "target": "db_seed_platform_templates_bootstrapplatformstandardcatalog"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "db/seed-slab-templates.ts",
       "source_location": "L4",
       "weight": 1.0,
@@ -11513,11 +12288,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "db/seed-templates.ts",
+      "source_location": "L108",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_templates",
+      "target": "db_seed_templates_loadplatformstandardsources"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-templates.ts",
       "source_location": "L76",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "db_seed_templates",
       "target": "db_seed_templates_loadtenantmaterials"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-templates.ts",
+      "source_location": "L45",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_templates",
+      "target": "db_seed_templates_platformstandardsource"
     },
     {
       "relation": "contains",
@@ -11543,11 +12338,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "db/seed-templates.ts",
+      "source_location": "L66",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_templates",
+      "target": "db_seed_templates_seedentrytosource"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-templates.ts",
       "source_location": "L84",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "db_seed_templates",
       "target": "db_seed_templates_seedtemplatesfortenant"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-templates.ts",
+      "source_location": "L155",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_templates",
+      "target": "db_seed_templates_sourcetotenantinsertrow"
     },
     {
       "relation": "contains",
@@ -11563,31 +12378,21 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "db/seed-templates.ts",
+      "source_location": "L232",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_templates",
+      "target": "db_seed_templates_syncplatformstandardstotenant"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-templates.ts",
       "source_location": "L200",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "db_seed_templates",
       "target": "db_seed_templates_synctemplatekeysfortenant"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "db/seed-templates.ts",
-      "source_location": "L50",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "db_seed_templates",
-      "target": "db_seed_templates_templateinsertrow"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "db/seed-templates.ts",
-      "source_location": "L41",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "db_seed_templates",
-      "target": "db_seed_templates_templatekeyfromseed"
     },
     {
       "relation": "contains",
@@ -11731,25 +12536,25 @@
       "target": "db_seed_templates"
     },
     {
-      "relation": "calls",
-      "context": "call",
+      "relation": "references",
+      "context": "field",
       "confidence": "EXTRACTED",
       "source_file": "db/seed-templates.ts",
-      "source_location": "L57",
+      "source_location": "L56",
       "weight": 1.0,
       "confidence_score": 1.0,
-      "source": "db_seed_templates_templateinsertrow",
-      "target": "db_seed_templates_templatekeyfromseed"
+      "source": "db_seed_templates_platformstandardsource",
+      "target": "utils_template_material_lookup_templatelayerref"
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "db/seed-templates.ts",
-      "source_location": "L42",
+      "source_location": "L68",
       "weight": 1.0,
       "confidence_score": 1.0,
-      "source": "db_seed_templates_templatekeyfromseed",
+      "source": "db_seed_templates_seedentrytosource",
       "target": "utils_template_key_derivestandardtemplatekey"
     },
     {
@@ -11784,6 +12589,50 @@
       "confidence_score": 1.0,
       "source": "db_seed_templates_syncmissingstandardtemplates",
       "target": "db_seed_templates_loadtenantmaterials"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-templates.ts",
+      "source_location": "L234",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_templates_syncplatformstandardstotenant",
+      "target": "db_seed_templates_loadtenantmaterials"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-templates.ts",
+      "source_location": "L194",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_templates_seedtemplatesfortenant",
+      "target": "db_seed_templates_loadplatformstandardsources"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-templates.ts",
+      "source_location": "L237",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_templates_syncplatformstandardstotenant",
+      "target": "db_seed_templates_loadplatformstandardsources"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-templates.ts",
+      "source_location": "L271",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_templates_syncplatformstandardstotenant",
+      "target": "db_seed_templates_sourcetotenantinsertrow"
     },
     {
       "relation": "calls",
@@ -11839,6 +12688,50 @@
       "weight": 1.0,
       "source": "routes_auth_registerroute",
       "target": "db_seed_templates_seedtemplatesfortenant"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/seed-templates.ts",
+      "source_location": "L347",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_seed_templates_syncmissingstandardtemplates",
+      "target": "db_seed_templates_syncplatformstandardstotenant"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "db/seed-templates.ts",
+      "source_location": "L235",
+      "weight": 1.0,
+      "source": "db_seed_templates_syncplatformstandardstotenant",
+      "target": "utils_template_material_lookup_buildtemplatemateriallookup"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "db/seed-templates.ts",
+      "source_location": "L236",
+      "weight": 1.0,
+      "source": "db_seed_templates_syncplatformstandardstotenant",
+      "target": "utils_template_material_lookup_buildvalidmaterialidset"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "db/seed-templates.ts",
+      "source_location": "L259",
+      "weight": 1.0,
+      "source": "db_seed_templates_syncplatformstandardstotenant",
+      "target": "utils_template_material_lookup_resolvetemplatelayers"
     },
     {
       "relation": "calls",
@@ -12068,6 +12961,592 @@
       "confidence_score": 1.0,
       "source": "index",
       "target": "index_start"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L659",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_applyplatformdelete"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L550",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_applyplatformupdate"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L250",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_buildplatformrow"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L332",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_createplatformtemplateroute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L43",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_createplatformtemplateschema"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L636",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_deleteplatformtemplatebykeyroute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L560",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_deleteplatformtemplateroute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L313",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_getplatformtemplateroute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L293",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_listplatformtemplatesroute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L108",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_normalizedlayer"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L122",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_normalizelayerstorefkeys"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L28",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_platformlayerschema"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L135",
+      "weight": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_refkeyformaterial",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L590",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_registeradminplatformtemplateroutes"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L84",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_requireplatformadmin"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L513",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_updateplatformtemplatebykeyroute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L478",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_updateplatformtemplateroute"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L60",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_updateplatformtemplateschema"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L187",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "routes_admin_platform_templates_validatedefinition"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L24",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "services_estimate_calculation"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "utils_auth"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "utils_auth_extractuserfromrequest"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "utils_auth_isplatformadmin"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "utils_auth_tokenpayload"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L24",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "utils_material_map_buildenginematerialmap"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L14",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "utils_template_key"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L14",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "utils_template_key_derivestandardtemplatekey"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L25",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "utils_template_material_lookup"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L25",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "utils_template_material_lookup_buildtemplatemateriallookup"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L25",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates",
+      "target": "utils_template_material_lookup_templatelookupmaterial"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
+      "source_location": "L577",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_templates_createtemplateroute",
+      "target": "routes_admin_platform_templates"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L337",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_createplatformtemplateroute",
+      "target": "routes_admin_platform_templates_requireplatformadmin"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L641",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_deleteplatformtemplatebykeyroute",
+      "target": "routes_admin_platform_templates_requireplatformadmin"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L565",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_deleteplatformtemplateroute",
+      "target": "routes_admin_platform_templates_requireplatformadmin"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L318",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_getplatformtemplateroute",
+      "target": "routes_admin_platform_templates_requireplatformadmin"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L298",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_listplatformtemplatesroute",
+      "target": "routes_admin_platform_templates_requireplatformadmin"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L94",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_requireplatformadmin",
+      "target": "utils_auth_extractuserfromrequest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L95",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_requireplatformadmin",
+      "target": "utils_auth_isplatformadmin"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L518",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_updateplatformtemplatebykeyroute",
+      "target": "routes_admin_platform_templates_requireplatformadmin"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L483",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_updateplatformtemplateroute",
+      "target": "routes_admin_platform_templates_requireplatformadmin"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L188",
+      "weight": 1.0,
+      "source": "routes_admin_platform_templates_normalizelayerstorefkeys",
+      "target": "routes_admin_platform_templates_refkeyformaterial",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L587",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_applyplatformupdate",
+      "target": "routes_admin_platform_templates_normalizelayerstorefkeys"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L395",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_createplatformtemplateroute",
+      "target": "routes_admin_platform_templates_normalizelayerstorefkeys"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L534",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_updateplatformtemplateroute",
+      "target": "routes_admin_platform_templates_normalizelayerstorefkeys"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L577",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_applyplatformupdate",
+      "target": "routes_admin_platform_templates_validatedefinition"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L384",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_createplatformtemplateroute",
+      "target": "routes_admin_platform_templates_validatedefinition"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L524",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_updateplatformtemplateroute",
+      "target": "routes_admin_platform_templates_validatedefinition"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L452",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_createplatformtemplateroute",
+      "target": "routes_admin_platform_templates_buildplatformrow"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L409",
+      "weight": 1.0,
+      "source": "routes_admin_platform_templates_createplatformtemplateroute",
+      "target": "utils_material_map_buildenginematerialmap"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L432",
+      "weight": 1.0,
+      "source": "routes_admin_platform_templates_createplatformtemplateroute",
+      "target": "utils_template_key_derivestandardtemplatekey"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "routes/templates.ts",
+      "source_location": "L590",
+      "weight": 1.0,
+      "source": "routes_templates_createtemplateroute",
+      "target": "routes_admin_platform_templates_createplatformtemplateroute"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L504",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_updateplatformtemplateroute",
+      "target": "routes_admin_platform_templates_applyplatformupdate"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L543",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_updateplatformtemplatebykeyroute",
+      "target": "routes_admin_platform_templates_applyplatformupdate"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L629",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_deleteplatformtemplateroute",
+      "target": "routes_admin_platform_templates_applyplatformdelete"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/admin-platform-templates.ts",
+      "source_location": "L656",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_admin_platform_templates_deleteplatformtemplatebykeyroute",
+      "target": "routes_admin_platform_templates_applyplatformdelete"
     },
     {
       "relation": "contains",
@@ -13160,9 +14639,9 @@
       "source_file": "routes/estimates.ts",
       "source_location": "L88",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_estimates",
-      "target": "routes_estimates_estimateupdateschema",
-      "confidence_score": 1.0
+      "target": "routes_estimates_estimateupdateschema"
     },
     {
       "relation": "contains",
@@ -13220,9 +14699,9 @@
       "source_file": "routes/estimates.ts",
       "source_location": "L31",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_estimates",
-      "target": "routes_estimates_laminationrecipecomponentschema",
-      "confidence_score": 1.0
+      "target": "routes_estimates_laminationrecipecomponentschema"
     },
     {
       "relation": "contains",
@@ -13230,9 +14709,9 @@
       "source_file": "routes/estimates.ts",
       "source_location": "L40",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_estimates",
-      "target": "routes_estimates_laminationrecipeschema",
-      "confidence_score": 1.0
+      "target": "routes_estimates_laminationrecipeschema"
     },
     {
       "relation": "contains",
@@ -14862,9 +16341,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L43",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates",
-      "target": "routes_templates_candeletemytemplate",
-      "confidence_score": 1.0
+      "target": "routes_templates_candeletemytemplate"
     },
     {
       "relation": "contains",
@@ -14872,9 +16351,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L53",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates",
-      "target": "routes_templates_caneditmytemplate",
-      "confidence_score": 1.0
+      "target": "routes_templates_caneditmytemplate"
     },
     {
       "relation": "contains",
@@ -14882,9 +16361,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L38",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates",
-      "target": "routes_templates_canmanagestandardtemplate",
-      "confidence_score": 1.0
+      "target": "routes_templates_canmanagestandardtemplate"
     },
     {
       "relation": "contains",
@@ -14892,9 +16371,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L60",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates",
-      "target": "routes_templates_canviewtemplate",
-      "confidence_score": 1.0
+      "target": "routes_templates_canviewtemplate"
     },
     {
       "relation": "contains",
@@ -15042,9 +16521,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L832",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates",
-      "target": "routes_templates_resolvemytemplateownership",
-      "confidence_score": 1.0
+      "target": "routes_templates_resolvemytemplateownership"
     },
     {
       "relation": "contains",
@@ -15072,9 +16551,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L35",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates",
-      "target": "routes_templates_templaterow",
-      "confidence_score": 1.0
+      "target": "routes_templates_templaterow"
     },
     {
       "relation": "contains",
@@ -15356,9 +16835,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L39",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates_canmanagestandardtemplate",
-      "target": "utils_auth_istenantadmin",
-      "confidence_score": 1.0
+      "target": "utils_auth_istenantadmin"
     },
     {
       "relation": "calls",
@@ -15367,9 +16846,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L977",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates_deletetemplateroute",
-      "target": "routes_templates_canmanagestandardtemplate",
-      "confidence_score": 1.0
+      "target": "routes_templates_canmanagestandardtemplate"
     },
     {
       "relation": "calls",
@@ -15378,9 +16857,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L49",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates_candeletemytemplate",
-      "target": "utils_auth_istenantadmin",
-      "confidence_score": 1.0
+      "target": "utils_auth_istenantadmin"
     },
     {
       "relation": "calls",
@@ -15389,9 +16868,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L57",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates_caneditmytemplate",
-      "target": "routes_templates_candeletemytemplate",
-      "confidence_score": 1.0
+      "target": "routes_templates_candeletemytemplate"
     },
     {
       "relation": "calls",
@@ -15400,9 +16879,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L987",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates_deletetemplateroute",
-      "target": "routes_templates_candeletemytemplate",
-      "confidence_score": 1.0
+      "target": "routes_templates_candeletemytemplate"
     },
     {
       "relation": "calls",
@@ -15411,9 +16890,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L894",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates_updatetemplateroute",
-      "target": "routes_templates_caneditmytemplate",
-      "confidence_score": 1.0
+      "target": "routes_templates_caneditmytemplate"
     },
     {
       "relation": "calls",
@@ -15422,9 +16901,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L67",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates_canviewtemplate",
-      "target": "utils_auth_istenantadmin",
-      "confidence_score": 1.0
+      "target": "utils_auth_istenantadmin"
     },
     {
       "relation": "calls",
@@ -15433,9 +16912,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L201",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates_gettemplatebyidroute",
-      "target": "routes_templates_canviewtemplate",
-      "confidence_score": 1.0
+      "target": "routes_templates_canviewtemplate"
     },
     {
       "relation": "calls",
@@ -15686,9 +17165,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L650",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates_createtemplatefromestimatehandler",
-      "target": "routes_templates_resolvemytemplateownership",
-      "confidence_score": 1.0
+      "target": "routes_templates_resolvemytemplateownership"
     },
     {
       "relation": "calls",
@@ -15730,9 +17209,9 @@
       "source_file": "routes/templates.ts",
       "source_location": "L795",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_templates_createtemplatefromdefinition",
-      "target": "routes_templates_resolvemytemplateownership",
-      "confidence_score": 1.0
+      "target": "routes_templates_resolvemytemplateownership"
     },
     {
       "relation": "calls",
@@ -16158,9 +17637,9 @@
       "source_file": "services/estimate-calculation.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_estimate_calculation",
-      "target": "utils_estimate_engine_input",
-      "confidence_score": 1.0
+      "target": "utils_estimate_engine_input"
     },
     {
       "relation": "imports",
@@ -16169,9 +17648,9 @@
       "source_file": "services/estimate-calculation.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_estimate_calculation",
-      "target": "utils_estimate_engine_input_buildengineestimatefromrows",
-      "confidence_score": 1.0
+      "target": "utils_estimate_engine_input_buildengineestimatefromrows"
     },
     {
       "relation": "imports_from",
@@ -16627,9 +18106,9 @@
       "source_file": "services/proposal-pdf.ts",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_proposal_pdf",
-      "target": "utils_estimate_engine_input",
-      "confidence_score": 1.0
+      "target": "utils_estimate_engine_input"
     },
     {
       "relation": "imports",
@@ -16638,9 +18117,9 @@
       "source_file": "services/proposal-pdf.ts",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_proposal_pdf",
-      "target": "utils_estimate_engine_input_calculateestimatefromrows",
-      "confidence_score": 1.0
+      "target": "utils_estimate_engine_input_calculateestimatefromrows"
     },
     {
       "relation": "imports_from",
@@ -17016,6 +18495,16 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "test/admin-platform-templates.integration.test.ts",
+      "source_location": "L21",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "test_admin_platform_templates_integration_test",
+      "target": "test_admin_platform_templates_integration_test_hasdatabase"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "test/auth-estimates.integration.test.ts",
       "source_location": "L7",
       "weight": 1.0,
@@ -17062,6 +18551,16 @@
       "confidence_score": 1.0,
       "source": "utils_auth",
       "target": "utils_auth_hashpassword"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "utils/auth.ts",
+      "source_location": "L39",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "utils_auth",
+      "target": "utils_auth_isplatformadmin"
     },
     {
       "relation": "contains",
@@ -17388,9 +18887,9 @@
       "source_file": "utils/estimate-engine-input.ts",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_estimate_engine_input",
-      "target": "utils_estimate_engine_input_buildengineestimatefromrows",
-      "confidence_score": 1.0
+      "target": "utils_estimate_engine_input_buildengineestimatefromrows"
     },
     {
       "relation": "contains",
@@ -17398,9 +18897,9 @@
       "source_file": "utils/estimate-engine-input.ts",
       "source_location": "L111",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_estimate_engine_input",
-      "target": "utils_estimate_engine_input_calculateestimatefromrows",
-      "confidence_score": 1.0
+      "target": "utils_estimate_engine_input_calculateestimatefromrows"
     },
     {
       "relation": "contains",
@@ -17408,9 +18907,9 @@
       "source_file": "utils/estimate-engine-input.ts",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_estimate_engine_input",
-      "target": "utils_estimate_engine_input_estimaterow",
-      "confidence_score": 1.0
+      "target": "utils_estimate_engine_input_estimaterow"
     },
     {
       "relation": "contains",
@@ -17418,9 +18917,9 @@
       "source_file": "utils/estimate-engine-input.ts",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_estimate_engine_input",
-      "target": "utils_estimate_engine_input_layerrow",
-      "confidence_score": 1.0
+      "target": "utils_estimate_engine_input_layerrow"
     },
     {
       "relation": "contains",
@@ -17428,9 +18927,9 @@
       "source_file": "utils/estimate-engine-input.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_estimate_engine_input",
-      "target": "utils_estimate_engine_input_materialrow",
-      "confidence_score": 1.0
+      "target": "utils_estimate_engine_input_materialrow"
     },
     {
       "relation": "contains",
@@ -17438,9 +18937,9 @@
       "source_file": "utils/estimate-engine-input.ts",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_estimate_engine_input",
-      "target": "utils_estimate_engine_input_processrow",
-      "confidence_score": 1.0
+      "target": "utils_estimate_engine_input_processrow"
     },
     {
       "relation": "contains",
@@ -17448,9 +18947,9 @@
       "source_file": "utils/estimate-engine-input.ts",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_estimate_engine_input",
-      "target": "utils_estimate_engine_input_slabrow",
-      "confidence_score": 1.0
+      "target": "utils_estimate_engine_input_slabrow"
     },
     {
       "relation": "imports_from",
@@ -17459,9 +18958,9 @@
       "source_file": "utils/estimate-engine-input.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_estimate_engine_input",
-      "target": "utils_material_map",
-      "confidence_score": 1.0
+      "target": "utils_material_map"
     },
     {
       "relation": "imports",
@@ -17470,9 +18969,9 @@
       "source_file": "utils/estimate-engine-input.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_estimate_engine_input",
-      "target": "utils_material_map_buildenginematerialmap",
-      "confidence_score": 1.0
+      "target": "utils_material_map_buildenginematerialmap"
     },
     {
       "relation": "imports_from",
@@ -17481,9 +18980,9 @@
       "source_file": "utils/estimate-engine-input.ts",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_estimate_engine_input",
-      "target": "utils_resolve_solvent_cost",
-      "confidence_score": 1.0
+      "target": "utils_resolve_solvent_cost"
     },
     {
       "relation": "imports",
@@ -17492,9 +18991,9 @@
       "source_file": "utils/estimate-engine-input.ts",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_estimate_engine_input",
-      "target": "utils_resolve_solvent_cost_resolvesolventcostperkgusd",
-      "confidence_score": 1.0
+      "target": "utils_resolve_solvent_cost_resolvesolventcostperkgusd"
     },
     {
       "relation": "calls",
@@ -17525,9 +19024,9 @@
       "source_file": "utils/estimate-engine-input.ts",
       "source_location": "L114",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_estimate_engine_input_calculateestimatefromrows",
-      "target": "utils_estimate_engine_input_buildengineestimatefromrows",
-      "confidence_score": 1.0
+      "target": "utils_estimate_engine_input_buildengineestimatefromrows"
     },
     {
       "relation": "contains",
@@ -18258,9 +19757,9 @@
       "source_file": "utils/resolve-solvent-cost.ts",
       "source_location": "L49",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_resolve_solvent_cost",
-      "target": "utils_resolve_solvent_cost_finddefaultsolventmaterialid",
-      "confidence_score": 1.0
+      "target": "utils_resolve_solvent_cost_finddefaultsolventmaterialid"
     },
     {
       "relation": "contains",
@@ -18268,9 +19767,9 @@
       "source_file": "utils/resolve-solvent-cost.ts",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_resolve_solvent_cost",
-      "target": "utils_resolve_solvent_cost_resolvesolventcostperkgusd",
-      "confidence_score": 1.0
+      "target": "utils_resolve_solvent_cost_resolvesolventcostperkgusd"
     },
     {
       "relation": "contains",
@@ -18278,9 +19777,9 @@
       "source_file": "utils/resolve-solvent-cost.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_resolve_solvent_cost",
-      "target": "utils_resolve_solvent_cost_solventmateriallike",
-      "confidence_score": 1.0
+      "target": "utils_resolve_solvent_cost_solventmateriallike"
     },
     {
       "relation": "contains",
@@ -18414,9 +19913,9 @@
       "source_file": "utils/solvent-common.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_solvent_common_test",
-      "target": "utils_solvent_common",
-      "confidence_score": 1.0
+      "target": "utils_solvent_common"
     },
     {
       "relation": "imports",
@@ -18425,9 +19924,9 @@
       "source_file": "utils/solvent-common.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_solvent_common_test",
-      "target": "utils_solvent_common_applysolventcommonaverage",
-      "confidence_score": 1.0
+      "target": "utils_solvent_common_applysolventcommonaverage"
     },
     {
       "relation": "imports",
@@ -18436,9 +19935,9 @@
       "source_file": "utils/solvent-common.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_solvent_common_test",
-      "target": "utils_solvent_common_computesolventcommonaverage",
-      "confidence_score": 1.0
+      "target": "utils_solvent_common_computesolventcommonaverage"
     },
     {
       "relation": "contains",
@@ -18446,9 +19945,9 @@
       "source_file": "utils/solvent-common.ts",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_solvent_common",
-      "target": "utils_solvent_common_applysolventcommonaverage",
-      "confidence_score": 1.0
+      "target": "utils_solvent_common_applysolventcommonaverage"
     },
     {
       "relation": "contains",
@@ -18456,9 +19955,9 @@
       "source_file": "utils/solvent-common.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_solvent_common",
-      "target": "utils_solvent_common_computesolventcommonaverage",
-      "confidence_score": 1.0
+      "target": "utils_solvent_common_computesolventcommonaverage"
     },
     {
       "relation": "calls",
@@ -18467,9 +19966,9 @@
       "source_file": "utils/solvent-common.ts",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_solvent_common_applysolventcommonaverage",
-      "target": "utils_solvent_common_computesolventcommonaverage",
-      "confidence_score": 1.0
+      "target": "utils_solvent_common_computesolventcommonaverage"
     },
     {
       "relation": "contains",
@@ -18865,9 +20364,9 @@
       "source_file": "utils/visibility.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_visibility_test",
-      "target": "utils_visibility_geteffectiveprofile",
-      "confidence_score": 1.0
+      "target": "utils_visibility_geteffectiveprofile"
     },
     {
       "relation": "contains",

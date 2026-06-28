@@ -260,16 +260,18 @@ function layerAppearance(layer: FilmLayer, inkIndex: number): LayerAppearance {
 function inkLabelClass(layer: FilmLayer): string {
   if (layer.type !== 'ink') return 'font-semibold';
   const variant = inkVariant(materialKey(layer));
-  if (variant === 'white') return 'font-semibold text-slate-600';
-  if (variant === 'black') return 'font-semibold text-slate-900';
+  if (variant === 'white') return 'font-semibold text-text-secondary';
+  if (variant === 'black') return 'font-semibold text-text-primary';
+  // Rainbow ink: the gradient itself is intentional domain art (represents
+  // multi-color CMYK printing), not a theme color — keep verbatim.
   return 'font-semibold bg-gradient-to-r from-rose-500 via-violet-500 to-cyan-500 bg-clip-text text-transparent';
 }
 
 function inkPctClass(layer: FilmLayer): string {
-  if (layer.type !== 'ink') return 'text-navy';
+  if (layer.type !== 'ink') return 'text-brand';
   const variant = inkVariant(materialKey(layer));
-  if (variant === 'rainbow') return 'text-violet-600';
-  return 'text-navy';
+  if (variant === 'rainbow') return 'text-accent-text';
+  return 'text-brand';
 }
 
 function layerThickness(l: FilmLayer): number {
@@ -341,8 +343,8 @@ export default function FilmStackVisualizer({ layers, webWidthMm, className }: P
 
   if (layerCount === 0) {
     return (
-      <div className={`flex h-full min-h-0 items-center justify-center bg-white ${className ?? ''}`}>
-        <p className="text-sm text-mist px-4 text-center">
+      <div className={`flex h-full min-h-0 items-center justify-center bg-surface-raised ${className ?? ''}`}>
+        <p className="text-sm text-text-secondary px-4 text-center">
           Add layers to preview build-up
           <span className="block text-xs mt-1">Up to 4 films · 3 adhesives · unlimited ink &amp; coating</span>
         </p>
@@ -353,10 +355,10 @@ export default function FilmStackVisualizer({ layers, webWidthMm, className }: P
   return (
     <>
       <style>{STACK_STYLES}</style>
-      <div className={`flex h-full w-full min-h-0 flex-col bg-white ${className ?? ''}`}>
+      <div className={`flex h-full w-full min-h-0 flex-col bg-surface-raised ${className ?? ''}`}>
         {showPlanView && (
           <div className="shrink-0 px-3 py-1.5 border-b border-border">
-            <p className="text-[10px] text-mist mb-1">Plan · {webWidthMm} mm web →</p>
+            <p className="text-[10px] text-text-secondary mb-1">Plan · {webWidthMm} mm web →</p>
             <div className="flex h-5 rounded overflow-hidden border border-border">
               {layers.map((layer, i) => {
                 const inkIdx = inkIndexById.get(layer.id) ?? 0;
@@ -373,7 +375,7 @@ export default function FilmStackVisualizer({ layers, webWidthMm, className }: P
           </div>
         )}
 
-        <div className="shrink-0 px-3 pt-2 pb-1 flex justify-between text-[10px] text-mist">
+        <div className="shrink-0 px-3 pt-2 pb-1 flex justify-between text-[10px] text-text-secondary">
           <span>Edge · thickness</span>
           <span>{layerCount} layers · {totalMicron.toFixed(1)} µ</span>
         </div>
@@ -381,7 +383,7 @@ export default function FilmStackVisualizer({ layers, webWidthMm, className }: P
         <div className="flex flex-1 min-h-0 px-2 pb-2 gap-2">
           <div className="w-5 shrink-0 flex items-center justify-center">
             <span
-              className="text-[9px] text-mist font-mono whitespace-nowrap"
+              className="text-[9px] text-text-secondary font-mono whitespace-nowrap"
               style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
             >
               {totalMicron.toFixed(1)} µ
@@ -412,13 +414,13 @@ export default function FilmStackVisualizer({ layers, webWidthMm, className }: P
                     aria-hidden
                   />
 
-                  <div className="flex-1 min-w-0 flex items-center justify-between gap-2 px-2 bg-white">
-                    <p className={`leading-tight text-navy min-w-0 ${dense ? 'text-[10px]' : 'text-xs'}`}>
-                      <span className="text-mist font-medium">{i + 1}.</span>{' '}
+                  <div className="flex-1 min-w-0 flex items-center justify-between gap-2 px-2 bg-surface-raised">
+                    <p className={`leading-tight text-brand min-w-0 ${dense ? 'text-[10px]' : 'text-xs'}`}>
+                      <span className="text-text-secondary font-medium">{i + 1}.</span>{' '}
                       <span className={inkLabelClass(layer)}>
                         {layerLabel(layer, i)}
                       </span>
-                      <span className="text-mist font-normal">
+                      <span className="text-text-secondary font-normal">
                         {' '}· {typeLabel(layer.type)}
                         {micron > 0 ? ` · ${micron}µ` : ''}
                         {gsm > 0 ? ` · ${gsm.toFixed(1)} gsm` : ''}

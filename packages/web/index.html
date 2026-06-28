@@ -4,13 +4,56 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <script>
+      // Pre-paint resolver: applies theme + density + reduced-motion BEFORE the
+      // first contentful paint so the painted UI matches the persisted prefs.
+      // localStorage on web; Capacitor's localStorage mirror keeps native in sync
+      // (the @capacitor/preferences-backed PreferenceStore mirrors writes here).
+      (function () {
+        try {
+          var THEME_KEY = 'es.theme';
+          var DENSITY_KEY = 'es.density';
+          var VALID_THEMES = ['light', 'dark', 'lagoon', 'ocean', 'aurora', 'midnight', 'forest', 'frost', 'classic'];
+          var VALID_DENSITY = ['comfortable', 'compact', 'spacious'];
+
+          // Theme
+          var t = localStorage.getItem(THEME_KEY);
+          if (VALID_THEMES.indexOf(t) === -1) {
+            t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          document.documentElement.dataset.theme = t;
+
+          // Density (defaults to comfortable)
+          var d = localStorage.getItem(DENSITY_KEY);
+          if (VALID_DENSITY.indexOf(d) === -1) {
+            d = 'comfortable';
+          }
+          document.documentElement.dataset.density = d;
+
+          // Reduced motion mirror
+          if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            document.documentElement.dataset.reducedMotion = 'true';
+          }
+        } catch (e) {
+          document.documentElement.dataset.theme = 'light';
+          document.documentElement.dataset.density = 'comfortable';
+        }
+      })();
+    </script>
     <title>ProPackHub Estimation Studio</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#1a2744">
     <link rel="apple-touch-icon" href="/icons/icon-192.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:ital,opsz,wght@0,9..40,100..900;1,9..40,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
+    <!--
+      Variable fonts: Inter and DM Sans expose continuous weight + optical-size
+      axes. Loading the full variable file unlocks weights like 438 / 615 for
+      typographic fine-tuning, OpenType stylistic sets (ss01, cv11), and proper
+      tabular-nums — at roughly the same network cost as 3-4 static weights.
+      JetBrains Mono kept for code/numerics.
+    -->
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
   </head>
   <body>
     <div id="root"></div>

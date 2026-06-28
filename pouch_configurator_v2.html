@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pouch Configurator — ProPackHub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#EFF1EE;
+    --paper:#FFFFFF;
+    --ink:#1C2024;
+    --muted:#787F7C;
+    --line:#DBDCD7;
+    --accent:#E2562B;
+    --accent-soft:#E2562B1A;
+    --teal:#136C66;
+    --teal-soft:#136C661A;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'IBM Plex Sans',sans-serif;
+    padding:0 0 70px;
+  }
+  .mono { font-family:'IBM Plex Mono',monospace; }
+
+  /* ---- header & laminate-strip signature ---- */
+  header {
+    max-width:1180px; margin:0 auto; padding:38px 24px 0;
+  }
+  .eyebrow {
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--accent); font-weight:600;
+  }
+  h1 {
+    font-family:'Space Grotesk',sans-serif; font-weight:700;
+    font-size:32px; margin:8px 0 6px; letter-spacing:-0.01em;
+  }
+  header p.lede {
+    font-size:13.5px; color:var(--muted); max-width:600px; line-height:1.55; margin:0 0 18px;
+  }
+  .laminate-strip {
+    height:7px; border-radius:4px; overflow:hidden; display:flex; margin-bottom:34px;
+  }
+  .laminate-strip span { flex:1; }
+
+  /* ---- layout ---- */
+  .layout {
+    max-width:1180px; margin:0 auto; padding:0 24px;
+    display:grid; grid-template-columns:360px 1fr; gap:20px;
+  }
+  @media (max-width:880px){ .layout{ grid-template-columns:1fr; } }
+
+  .card {
+    background:var(--paper); border:1px solid var(--line); border-radius:10px;
+    padding:18px 20px; box-shadow:0 1px 2px rgba(20,20,15,0.04), 0 10px 28px -16px rgba(20,20,15,0.18);
+  }
+  .card + .card { margin-top:18px; }
+  .card-head {
+    display:flex; align-items:center; gap:8px; margin-bottom:14px;
+  }
+  .card-head .tab {
+    width:6px; height:16px; border-radius:3px; background:var(--accent);
+  }
+  .card-head h3 {
+    font-family:'Space Grotesk',sans-serif; font-size:12.5px; letter-spacing:.06em;
+    text-transform:uppercase; margin:0; color:var(--ink); font-weight:600;
+  }
+
+  select#subtypeSelect {
+    width:100%; padding:11px 12px; font-family:'IBM Plex Sans',sans-serif; font-size:13.5px;
+    border:1px solid var(--line); border-radius:7px; background:var(--paper); color:var(--ink);
+    appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0L5 6L10 0' fill='%23787F7C'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 14px center;
+  }
+
+  /* ---- dimension fields ---- */
+  .field { margin:16px 0; }
+  .field label { display:flex; justify-content:space-between; align-items:baseline; font-size:12px; margin-bottom:7px; color:var(--ink); }
+  .field label .val { font-family:'IBM Plex Mono',monospace; color:var(--accent); font-weight:600; font-size:12.5px; }
+  .field .row { display:flex; gap:10px; align-items:center; }
+  .field input[type=range] {
+    flex:1; -webkit-appearance:none; height:4px; border-radius:2px; background:var(--line); outline:none;
+  }
+  .field input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+    background:var(--accent); border:3px solid var(--paper); box-shadow:0 0 0 1px var(--accent); cursor:pointer;
+  }
+  .field input[type=range]::-moz-range-thumb {
+    width:16px; height:16px; border-radius:50%; background:var(--accent); border:3px solid var(--paper);
+    box-shadow:0 0 0 1px var(--accent); cursor:pointer;
+  }
+  .field input[type=number] {
+    width:62px; padding:6px 7px; font-family:'IBM Plex Mono',monospace; font-size:12px;
+    border:1px solid var(--line); border-radius:6px; color:var(--ink);
+  }
+  .field .help { font-size:10.5px; color:var(--muted); margin-top:5px; line-height:1.4; }
+
+  /* ---- accessories ---- */
+  .acc-row { border-top:1px solid var(--line); padding:12px 0; }
+  .acc-row:first-child { border-top:none; padding-top:2px; }
+  .acc-toggle-line { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .acc-left { display:flex; align-items:center; gap:10px; }
+  .acc-icon { width:18px; height:18px; flex:none; color:var(--muted); }
+  .acc-row.disabled .acc-icon { opacity:.35; }
+  .acc-name { font-size:12.5px; font-weight:500; }
+  .acc-row.disabled .acc-name { color:#B6BAB6; }
+  .acc-na { font-size:10px; color:#B6BAB6; margin-left:6px; }
+
+  .switch { position:relative; width:36px; height:20px; flex:none; }
+  .switch input { opacity:0; width:0; height:0; }
+  .switch .slider {
+    position:absolute; inset:0; background:var(--line); border-radius:20px; cursor:pointer; transition:.15s;
+  }
+  .switch .slider::before {
+    content:''; position:absolute; width:14px; height:14px; left:3px; top:3px;
+    background:#fff; border-radius:50%; transition:.15s; box-shadow:0 1px 2px rgba(0,0,0,.25);
+  }
+  .switch input:checked + .slider { background:var(--accent); }
+  .switch input:checked + .slider::before { transform:translateX(16px); }
+  .switch input:disabled + .slider { cursor:not-allowed; opacity:.4; }
+
+  .acc-fields { margin:12px 0 0; display:none; padding-left:28px; }
+  .acc-row.open .acc-fields { display:block; }
+  .acc-fields .field { margin:9px 0; }
+  .acc-fields select, .acc-fields input[type=number] {
+    width:100%; padding:7px 8px; font-size:12px; border:1px solid var(--line); border-radius:6px; font-family:'IBM Plex Sans',sans-serif;
+  }
+
+  /* ---- stage ---- */
+  .stage-card { padding:20px; }
+  .canvas-wrap {
+    background:
+      radial-gradient(circle, var(--line) 1px, transparent 1px) 0 0/18px 18px,
+      #FCFCFB;
+    border:1px solid var(--line); border-radius:8px; padding:10px;
+  }
+  .canvas-wrap svg { width:100%; height:auto; display:block; }
+
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:18px; }
+  .stat {
+    background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px 12px;
+  }
+  .stat .label { font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:6px; }
+  .stat .value { font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:600; color:var(--ink); }
+  .stat .layers { display:flex; gap:2px; margin-top:6px; height:10px; }
+  .stat .layers span { flex:1; border-radius:2px; }
+  @media (max-width:540px){ .stats{ grid-template-columns:repeat(2,1fr); } }
+
+  .legend { display:flex; gap:18px; flex-wrap:wrap; font-size:10.5px; color:var(--muted); margin-top:14px; }
+  .legend span { display:inline-flex; align-items:center; gap:6px; }
+  .sw { width:16px; height:0; border-top:3px solid; display:inline-block; border-radius:2px; }
+  .sw.dash { border-top-style:dashed; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">ProPackHub · costing reference</div>
+  <h1>Pouch Configurator</h1>
+  <p class="lede">Pick a subtype, adjust dimensions, the diagram redraws live to true proportion. Tinted zones mark where film material commonly differs (gusset/bottom vs. front/back).</p>
+  <div class="laminate-strip">
+    <span style="background:#136C66"></span>
+    <span style="background:#1C2024"></span>
+    <span style="background:#E2562B"></span>
+    <span style="background:#DBDCD7"></span>
+    <span style="background:#136C66"></span>
+    <span style="background:#E2562B"></span>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="controls">
+    <div class="card">
+      <div class="card-head"><span class="tab"></span><h3>Subtype</h3></div>
+      <select id="subtypeSelect"></select>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="tab"></span><h3>Dimensions</h3></div>
+      <div id="dimFields"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="tab"></span><h3>Accessories</h3></div>
+      <div id="accFields"></div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="card stage-card">
+      <div class="card-head"><span class="tab"></span><h3>Live Diagram</h3></div>
+      <div class="canvas-wrap"><svg id="diagram" viewBox="0 0 320 380" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="legend">
+        <span><span class="sw dash" style="border-color:#9aa19e"></span>seal</span>
+        <span><span class="sw dash" style="border-color:#E2562B"></span>top/end seal</span>
+        <span><span class="sw dash" style="border-color:#136C66"></span>fold/secondary</span>
+        <span><span class="sw" style="border-color:#1C2024"></span>solid fold (no seal)</span>
+      </div>
+      <div class="stats" id="statsRow"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// Config — mirrors pouchTypes.ts (PouchSubtypeConfig / AccessoryConfig)
+// ---------------------------------------------------------------------------
+
+const PALETTE = ['#136C66','#E2562B','#1C2024','#7A9E98','#C9794F'];
+
+const DIMENSION_FIELDS = {
+  ThreeSideSeal: [
+    { key:'width',  label:'Width (W)',  unit:'mm', def:120, min:50,  max:400 },
+    { key:'height', label:'Height (H)', unit:'mm', def:180, min:50,  max:500 },
+  ],
+  CenterSeal: [
+    { key:'width',   label:'Width (W)',   unit:'mm', def:120, min:50, max:400 },
+    { key:'height',  label:'Height (H)',  unit:'mm', def:200, min:50, max:500 },
+    { key:'overlap', label:'Back-seal overlap', unit:'mm', def:10, min:6,  max:25 },
+  ],
+  FourSideSeal: [
+    { key:'width',  label:'Width (W)',  unit:'mm', def:130, min:50, max:400 },
+    { key:'height', label:'Height (H)', unit:'mm', def:180, min:50, max:500 },
+  ],
+  StandUpPouch: [
+    { key:'width',  label:'Width (W)',  unit:'mm', def:110, min:60, max:350 },
+    { key:'height', label:'Height (H)', unit:'mm', def:190, min:80, max:450 },
+    { key:'gusset', label:'Bottom gusset depth (G)', unit:'mm', def:50, min:20, max:130, help:'Carved from the bottom of H, not added on top.' },
+  ],
+  SideGussetPouch: [
+    { key:'width',  label:'Width (W)',  unit:'mm', def:110, min:60, max:350 },
+    { key:'height', label:'Height (H)', unit:'mm', def:190, min:80, max:450 },
+    { key:'gusset', label:'Side gusset depth (G)', unit:'mm', def:35, min:15, max:100, help:'Adds to flat WIDTH, folds inward on each side.' },
+  ],
+  FlatBottomPouch: [
+    { key:'width',       label:'Width (W)',  unit:'mm', def:110, min:60, max:350 },
+    { key:'height',      label:'Height (H)', unit:'mm', def:170, min:80, max:400 },
+    { key:'gusset',      label:'Side gusset depth (G)', unit:'mm', def:35, min:15, max:100 },
+    { key:'bottomDepth', label:'Bottom panel depth (D)', unit:'mm', def:45, min:15, max:120 },
+  ],
+};
+
+const SUBTYPE_META = {
+  ThreeSideSeal:    { label:'3-Side Seal',                  panels:1, seals:2 },
+  CenterSeal:       { label:'Center Seal (Pillow / VFFS)',  panels:1, seals:3 },
+  FourSideSeal:     { label:'4-Side Seal',                  panels:2, seals:4 },
+  StandUpPouch:     { label:'Stand-Up Pouch (Doypack)',     panels:3, seals:4 },
+  SideGussetPouch:  { label:'Side Gusset Pouch',            panels:4, seals:4 },
+  FlatBottomPouch:  { label:'Flat Bottom / Box Pouch',      panels:5, seals:5 },
+};
+
+const ICONS = {
+  Zipper: `<path d="M2 9h2l2-4 2 8 2-8 2 8 2-4h2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`,
+  Spout: `<circle cx="9" cy="9" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 4.5V2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>`,
+  DegassingValve: `<circle cx="9" cy="9" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 9l2.5-2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>`,
+  TearNotch: `<path d="M3 4l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`,
+  EuroSlot: `<circle cx="9" cy="9" r="3.5" fill="none" stroke="currentColor" stroke-width="1.6"/>`,
+  Window: `<rect x="3" y="4" width="12" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.5 2"/>`,
+};
+
+const ACCESSORIES = {
+  Zipper: {
+    label:'Zipper / Slider',
+    validOn:['ThreeSideSeal','FourSideSeal','StandUpPouch','SideGussetPouch','FlatBottomPouch'],
+    fields:[
+      { key:'positionFromTop', label:'Position from top', type:'number', unit:'mm', def:40, min:5, max:200 },
+      { key:'zipType', label:'Type', type:'select', options:['Push-Pull','Slider'], def:'Push-Pull' },
+    ],
+  },
+  Spout: {
+    label:'Spout + Cap',
+    validOn:['StandUpPouch','SideGussetPouch','FlatBottomPouch'],
+    fields:[
+      { key:'neckDiameter', label:'Neck diameter', type:'select', options:['6mm','8.6mm','10mm'], def:'8.6mm' },
+      { key:'position', label:'Position', type:'select', options:['Corner','Center'], def:'Corner' },
+    ],
+  },
+  DegassingValve: {
+    label:'Degassing Valve',
+    validOn:['StandUpPouch','FlatBottomPouch'],
+    fields:[
+      { key:'diameter', label:'Diameter', type:'select', options:['8mm','10mm','12mm'], def:'10mm' },
+    ],
+  },
+  TearNotch: {
+    label:'Tear Notch',
+    validOn:['ThreeSideSeal','CenterSeal','FourSideSeal','StandUpPouch','SideGussetPouch','FlatBottomPouch'],
+    fields:[
+      { key:'position', label:'Position', type:'select', options:['Left','Right'], def:'Right' },
+    ],
+  },
+  EuroSlot: {
+    label:'Euro Slot / Hang Hole',
+    validOn:['ThreeSideSeal','FourSideSeal','StandUpPouch'],
+    fields:[
+      { key:'offsetY', label:'Offset from top', type:'number', unit:'mm', def:8, min:3, max:40 },
+    ],
+  },
+  Window: {
+    label:'Window / Patch',
+    validOn:['ThreeSideSeal','FourSideSeal','StandUpPouch','SideGussetPouch','FlatBottomPouch'],
+    fields:[
+      { key:'width',  label:'Width',  type:'number', unit:'mm', def:50, min:10, max:200 },
+      { key:'height', label:'Height', type:'number', unit:'mm', def:50, min:10, max:200 },
+      { key:'offsetY', label:'Offset from top', type:'number', unit:'mm', def:50, min:0, max:300 },
+    ],
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Flat-area calc — same formulas as pouchTypes.ts calcFlatArea()
+// ---------------------------------------------------------------------------
+
+function calcFlatArea(subtype, d) {
+  switch (subtype) {
+    case 'ThreeSideSeal':
+      return { flatWidth:d.width, flatHeight:d.height*2, panels:1 };
+    case 'CenterSeal':
+      return { flatWidth:d.width+d.overlap, flatHeight:d.height, panels:1 };
+    case 'FourSideSeal':
+      return { flatWidth:d.width, flatHeight:d.height, panels:2 };
+    case 'StandUpPouch':
+      return { flatWidth:d.width, flatHeight:d.height+d.gusset/2, panels:2, extra:d.width*d.gusset };
+    case 'SideGussetPouch':
+      return { flatWidth:d.width+2*d.gusset, flatHeight:d.height, panels:4 };
+    case 'FlatBottomPouch':
+      return { flatWidth:d.width+2*d.gusset, flatHeight:d.height, panels:4, extra:d.width*d.bottomDepth };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Drawing — true-to-scale parametric SVG, with material-tinted fills:
+// teal tint = front/back panel, amber tint = gusset/bottom (often a
+// different laminate spec in real production).
+// ---------------------------------------------------------------------------
+
+const CANVAS_W = 320, MARGIN_TOP = 36, AVAIL_W = 250, AVAIL_H = 300;
+const CX = CANVAS_W/2;
+const INK = '#1C2024', SEAL = '#E2562B', FOLD = '#136C66', GREY = '#9aa19e';
+const FRONT_FILL = '#136C660D', GUSSET_FILL = '#E2562B14';
+
+function el(tag, attrs) { return `<${tag} ${Object.entries(attrs).map(([k,v])=>`${k}="${v}"`).join(' ')}/>`; }
+function text(x,y,size,anchor,content,extra='') { return `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" font-family="IBM Plex Mono, monospace" fill="${INK}" ${extra}>${content}</text>`; }
+
+function drawThreeSideSeal(d) {
+  const scale = Math.min(AVAIL_W/d.width, AVAIL_H/d.height);
+  const w = d.width*scale, h = d.height*scale;
+  const x0 = CX-w/2, y0 = MARGIN_TOP;
+  const seal = Math.max(3, 5*scale);
+  let s = '';
+  s += el('rect', {x:x0,y:y0,width:w,height:h,fill:FRONT_FILL,stroke:INK,'stroke-width':2,rx:2});
+  s += el('line', {x1:x0,y1:y0+h,x2:x0+w,y2:y0+h,stroke:INK,'stroke-width':4,'stroke-linecap':'round'});
+  s += el('line', {x1:x0+seal,y1:y0,x2:x0+seal,y2:y0+h,stroke:GREY,'stroke-width':2,'stroke-dasharray':'4 3'});
+  s += el('line', {x1:x0+w-seal,y1:y0,x2:x0+w-seal,y2:y0+h,stroke:GREY,'stroke-width':2,'stroke-dasharray':'4 3'});
+  s += el('line', {x1:x0,y1:y0+seal,x2:x0+w,y2:y0+seal,stroke:SEAL,'stroke-width':2.5,'stroke-dasharray':'4 3'});
+  s += text(CX, y0-10, 10.5, 'middle', 'TOP SEAL · after fill');
+  s += text(CX, y0+h+20, 11, 'middle', `W ${d.width}`);
+  s += text(x0-18, y0+h/2, 11, 'middle', `H ${d.height}`, `transform="rotate(-90 ${x0-18} ${y0+h/2})"`);
+  return { svg:s, frontX0:x0+seal, frontX1:x0+w-seal, topY:y0, bottomY:y0+h, scale };
+}
+
+function drawCenterSeal(d) {
+  const scale = Math.min(AVAIL_W/d.width, AVAIL_H/d.height);
+  const w = d.width*scale, h = d.height*scale, ov = Math.max(3, d.overlap*scale);
+  const x0 = CX-w/2, y0 = MARGIN_TOP;
+  const seal = Math.max(3, 5*scale);
+  let s = '';
+  s += el('rect', {x:x0,y:y0,width:w,height:h,fill:FRONT_FILL,stroke:INK,'stroke-width':2,rx:2});
+  s += el('rect', {x:x0+w,y:y0,width:ov,height:h,fill:GUSSET_FILL,stroke:GREY,'stroke-width':1.5,'stroke-dasharray':'3 2'});
+  s += el('line', {x1:x0,y1:y0+seal,x2:x0+w,y2:y0+seal,stroke:SEAL,'stroke-width':2.5,'stroke-dasharray':'4 3'});
+  s += el('line', {x1:x0,y1:y0+h-seal,x2:x0+w,y2:y0+h-seal,stroke:SEAL,'stroke-width':2.5,'stroke-dasharray':'4 3'});
+  s += el('line', {x1:x0+w/2,y1:y0,x2:x0+w/2,y2:y0+h,stroke:GREY,'stroke-width':1,'stroke-dasharray':'2 2'});
+  s += text(CX, y0-10, 10.5, 'middle', 'END SEAL · top + bottom');
+  s += text(x0+w+ov/2, y0+h+14, 8.5, 'middle', 'overlap');
+  s += text(CX, y0+h+22, 11, 'middle', `W ${d.width}`);
+  s += text(x0-18, y0+h/2, 11, 'middle', `H ${d.height}`, `transform="rotate(-90 ${x0-18} ${y0+h/2})"`);
+  return { svg:s, frontX0:x0, frontX1:x0+w, topY:y0, bottomY:y0+h, scale };
+}
+
+function drawFourSideSeal(d) {
+  const scale = Math.min(AVAIL_W/d.width, AVAIL_H/d.height);
+  const w = d.width*scale, h = d.height*scale;
+  const x0 = CX-w/2, y0 = MARGIN_TOP;
+  let s = '';
+  s += el('rect', {x:x0,y:y0,width:w,height:h,fill:FRONT_FILL,stroke:INK,'stroke-width':2,'stroke-dasharray':'5 4',rx:2});
+  s += text(CX, y0-10, 10.5, 'middle', 'SEAL · all 4 sides');
+  s += text(CX, y0+h+20, 11, 'middle', `W ${d.width}`);
+  s += text(x0-18, y0+h/2, 11, 'middle', `H ${d.height}`, `transform="rotate(-90 ${x0-18} ${y0+h/2})"`);
+  return { svg:s, frontX0:x0, frontX1:x0+w, topY:y0, bottomY:y0+h, scale };
+}
+
+function drawStandUpPouch(d) {
+  const scale = Math.min(AVAIL_W/d.width, AVAIL_H/d.height);
+  const w = d.width*scale, h = d.height*scale, g = d.gusset*scale;
+  const x0 = CX-w/2, y0 = MARGIN_TOP, bottomY = y0+h, gussetStartY = bottomY-g;
+  const seal = Math.max(3, 5*scale);
+  let s = '';
+  s += `<path d="M${x0},${y0} L${x0+w},${y0} L${x0+w},${gussetStartY} Q${x0+w},${bottomY} ${x0+w/2+w*0.18},${bottomY} L${x0+w/2-w*0.18},${bottomY} Q${x0},${bottomY} ${x0},${gussetStartY} Z" fill="${FRONT_FILL}" stroke="${INK}" stroke-width="2"/>`;
+  s += `<path d="M${x0},${gussetStartY} L${x0+w},${gussetStartY} L${x0+w},${bottomY-1} L${x0},${bottomY-1} Z" fill="${GUSSET_FILL}"/>`;
+  s += el('line', {x1:x0+seal,y1:y0,x2:x0+seal,y2:gussetStartY,stroke:GREY,'stroke-width':2,'stroke-dasharray':'4 3'});
+  s += el('line', {x1:x0+w-seal,y1:y0,x2:x0+w-seal,y2:gussetStartY,stroke:GREY,'stroke-width':2,'stroke-dasharray':'4 3'});
+  s += el('line', {x1:x0,y1:y0+seal,x2:x0+w,y2:y0+seal,stroke:SEAL,'stroke-width':2.5,'stroke-dasharray':'4 3'});
+  s += el('line', {x1:x0+w*0.15,y1:gussetStartY,x2:x0+w*0.85,y2:gussetStartY,stroke:FOLD,'stroke-width':2,'stroke-dasharray':'3 3'});
+  s += text(CX, y0-10, 10.5, 'middle', 'TOP SEAL');
+  s += text(CX, bottomY+20, 11, 'middle', `G ${d.gusset} · base`);
+  s += text(x0-18, y0+h/2, 11, 'middle', `H ${d.height}`, `transform="rotate(-90 ${x0-18} ${y0+h/2})"`);
+  s += text(CX, y0+h*0.4, 11, 'middle', `W ${d.width}`);
+  return { svg:s, frontX0:x0+seal, frontX1:x0+w-seal, topY:y0, bottomY:gussetStartY, scale };
+}
+
+function drawSideGussetPouch(d) {
+  const total = d.width+2*d.gusset;
+  const scale = Math.min(AVAIL_W/total, AVAIL_H/d.height);
+  const w = d.width*scale, h = d.height*scale, g = d.gusset*scale;
+  const totalPx = w+2*g, x0 = CX-totalPx/2, y0 = MARGIN_TOP, bottomY = y0+h;
+  const seal = Math.max(3, 5*scale);
+  let s = '';
+  s += el('rect', {x:x0,y:y0,width:g,height:h,fill:GUSSET_FILL,stroke:GREY,'stroke-width':1.5,'stroke-dasharray':'3 2'});
+  s += el('rect', {x:x0+g+w,y:y0,width:g,height:h,fill:GUSSET_FILL,stroke:GREY,'stroke-width':1.5,'stroke-dasharray':'3 2'});
+  s += el('rect', {x:x0+g,y:y0,width:w,height:h,fill:FRONT_FILL,stroke:INK,'stroke-width':2});
+  s += el('line', {x1:x0+g/2,y1:y0,x2:x0+g/2,y2:bottomY,stroke:GREY,'stroke-width':1,'stroke-dasharray':'2 2'});
+  s += el('line', {x1:x0+g+w+g/2,y1:y0,x2:x0+g+w+g/2,y2:bottomY,stroke:GREY,'stroke-width':1,'stroke-dasharray':'2 2'});
+  s += el('line', {x1:x0,y1:y0+seal,x2:x0+totalPx,y2:y0+seal,stroke:SEAL,'stroke-width':2.5,'stroke-dasharray':'4 3'});
+  s += el('line', {x1:x0,y1:bottomY-seal,x2:x0+totalPx,y2:bottomY-seal,stroke:SEAL,'stroke-width':2.5,'stroke-dasharray':'4 3'});
+  s += text(CX, y0-10, 10.5, 'middle', 'TOP SEAL');
+  s += text(CX, bottomY+20, 11, 'middle', `W ${d.width} · G ${d.gusset}×2`);
+  s += text(x0-18, y0+h/2, 11, 'middle', `H ${d.height}`, `transform="rotate(-90 ${x0-18} ${y0+h/2})"`);
+  return { svg:s, frontX0:x0+g, frontX1:x0+g+w, topY:y0, bottomY:bottomY, scale };
+}
+
+function drawFlatBottomPouch(d) {
+  const total = d.width+2*d.gusset, totalH = d.height+d.bottomDepth;
+  const scale = Math.min(AVAIL_W/total, AVAIL_H/totalH);
+  const w = d.width*scale, h = d.height*scale, g = d.gusset*scale, bd = d.bottomDepth*scale;
+  const totalPx = w+2*g, x0 = CX-totalPx/2, y0 = MARGIN_TOP, frontBottomY = y0+h, panelBottomY = frontBottomY+bd;
+  const seal = Math.max(3, 5*scale);
+  let s = '';
+  s += el('rect', {x:x0,y:y0,width:g,height:h,fill:GUSSET_FILL,stroke:GREY,'stroke-width':1.5,'stroke-dasharray':'3 2'});
+  s += el('rect', {x:x0+g+w,y:y0,width:g,height:h,fill:GUSSET_FILL,stroke:GREY,'stroke-width':1.5,'stroke-dasharray':'3 2'});
+  s += el('rect', {x:x0+g,y:y0,width:w,height:h,fill:FRONT_FILL,stroke:INK,'stroke-width':2});
+  s += el('rect', {x:x0+g,y:frontBottomY,width:w,height:bd,fill:GUSSET_FILL,stroke:FOLD,'stroke-width':1.5,'stroke-dasharray':'3 2'});
+  s += el('line', {x1:x0,y1:y0+seal,x2:x0+totalPx,y2:y0+seal,stroke:SEAL,'stroke-width':2.5,'stroke-dasharray':'4 3'});
+  s += text(CX, y0-10, 10.5, 'middle', 'TOP SEAL');
+  s += text(CX, panelBottomY+20, 11, 'middle', `D ${d.bottomDepth} · flat base`);
+  s += text(CX, frontBottomY+13, 9.5, 'middle', `W ${d.width} · G ${d.gusset}×2`);
+  s += text(x0-18, y0+h/2, 11, 'middle', `H ${d.height}`, `transform="rotate(-90 ${x0-18} ${y0+h/2})"`);
+  return { svg:s, frontX0:x0+g, frontX1:x0+g+w, topY:y0, bottomY:frontBottomY, scale };
+}
+
+const DRAW_FNS = {
+  ThreeSideSeal: drawThreeSideSeal,
+  CenterSeal: drawCenterSeal,
+  FourSideSeal: drawFourSideSeal,
+  StandUpPouch: drawStandUpPouch,
+  SideGussetPouch: drawSideGussetPouch,
+  FlatBottomPouch: drawFlatBottomPouch,
+};
+
+// ---------------------------------------------------------------------------
+// Accessory overlay
+// ---------------------------------------------------------------------------
+
+function overlayAccessories(layout, accState) {
+  let s = '';
+  const { frontX0:fx0, frontX1:fx1, topY, bottomY, scale } = layout;
+  const midX = (fx0+fx1)/2;
+
+  if (accState.Zipper?.enabled) {
+    const y = topY + accState.Zipper.fields.positionFromTop*scale;
+    s += el('line', {x1:fx0,y1:y,x2:fx1,y2:y,stroke:'#7AA34A','stroke-width':2.5,'stroke-dasharray':'2 2'});
+    s += text(fx1+8, y+3, 9, 'start', 'ZIP');
+  }
+  if (accState.Spout?.enabled) {
+    const pos = accState.Spout.fields.position;
+    const cx = pos==='Center' ? midX : fx1-12;
+    s += el('circle', {cx:cx,cy:topY+10,r:6,fill:'#fff',stroke:INK,'stroke-width':2});
+    s += text(cx, topY-6, 8.5, 'middle', 'SPOUT');
+  }
+  if (accState.DegassingValve?.enabled) {
+    s += el('circle', {cx:midX,cy:(topY+bottomY)/2,r:6,fill:'#fff',stroke:'#7A4A1F','stroke-width':2,'stroke-dasharray':'2 1'});
+    s += text(midX, (topY+bottomY)/2+18, 8.5, 'middle', 'VALVE');
+  }
+  if (accState.TearNotch?.enabled) {
+    const side = accState.TearNotch.fields.position;
+    const nx = side==='Left' ? fx0 : fx1;
+    const dir = side==='Left' ? 1 : -1;
+    s += `<polygon points="${nx},${topY+14} ${nx+dir*7},${topY+19} ${nx},${topY+24}" fill="${INK}"/>`;
+  }
+  if (accState.EuroSlot?.enabled) {
+    const y = topY + accState.EuroSlot.fields.offsetY*scale;
+    s += el('circle', {cx:midX,cy:y,r:4,fill:'#fff',stroke:INK,'stroke-width':1.5});
+  }
+  if (accState.Window?.enabled) {
+    const f = accState.Window.fields;
+    const wW = f.width*scale, wH = f.height*scale, wY = topY+f.offsetY*scale;
+    s += el('rect', {x:midX-wW/2,y:wY,width:wW,height:wH,fill:'#E2562B12',stroke:FOLD,'stroke-width':1.5,'stroke-dasharray':'3 2'});
+  }
+  return s;
+}
+
+// ---------------------------------------------------------------------------
+// UI wiring
+// ---------------------------------------------------------------------------
+
+let currentSubtype = 'StandUpPouch';
+const dims = {};
+const accState = {};
+
+const subtypeSelect = document.getElementById('subtypeSelect');
+Object.entries(SUBTYPE_META).forEach(([key,meta])=>{
+  const opt = document.createElement('option');
+  opt.value = key; opt.textContent = meta.label;
+  subtypeSelect.appendChild(opt);
+});
+subtypeSelect.value = currentSubtype;
+subtypeSelect.addEventListener('change', ()=>{
+  currentSubtype = subtypeSelect.value;
+  buildDimFields();
+  buildAccFields();
+  updateAll();
+});
+
+function buildDimFields() {
+  const container = document.getElementById('dimFields');
+  container.innerHTML = '';
+  DIMENSION_FIELDS[currentSubtype].forEach(f=>{
+    dims[f.key] = f.def;
+    const wrap = document.createElement('div');
+    wrap.className = 'field';
+    wrap.innerHTML = `
+      <label>${f.label} <span class="val" data-valfor="${f.key}">${f.def}${f.unit}</span></label>
+      <div class="row">
+        <input type="range" min="${f.min}" max="${f.max}" value="${f.def}" data-dim="${f.key}" data-kind="range">
+        <input type="number" min="${f.min}" max="${f.max}" value="${f.def}" data-dim="${f.key}" data-kind="number">
+      </div>
+      ${f.help ? `<div class="help">${f.help}</div>` : ''}
+    `;
+    container.appendChild(wrap);
+  });
+  container.querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const key = inp.dataset.dim;
+      const val = Number(inp.value);
+      dims[key] = val;
+      container.querySelectorAll(`input[data-dim="${key}"]`).forEach(other=>{ if(other!==inp) other.value = val; });
+      container.querySelector(`[data-valfor="${key}"]`).textContent = val + 'mm';
+      updateAll();
+    });
+  });
+}
+
+function buildAccFields() {
+  const container = document.getElementById('accFields');
+  container.innerHTML = '';
+  Object.keys(accState).forEach(k=>delete accState[k]);
+  Object.entries(ACCESSORIES).forEach(([key,cfg])=>{
+    const valid = cfg.validOn.includes(currentSubtype);
+    accState[key] = { enabled:false, fields:{} };
+    cfg.fields.forEach(f=>accState[key].fields[f.key]=f.def);
+
+    const row = document.createElement('div');
+    row.className = 'acc-row' + (valid ? '' : ' disabled');
+    row.innerHTML = `
+      <div class="acc-toggle-line">
+        <div class="acc-left">
+          <svg class="acc-icon" viewBox="0 0 18 18">${ICONS[key]}</svg>
+          <span class="acc-name">${cfg.label}</span>
+          ${valid ? '' : '<span class="acc-na">n/a</span>'}
+        </div>
+        <label class="switch">
+          <input type="checkbox" data-acc="${key}" ${valid ? '' : 'disabled'}>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="acc-fields">
+        ${cfg.fields.map(f=>{
+          if (f.type==='select') {
+            return `<div class="field"><label>${f.label}</label>
+              <select data-acc="${key}" data-accfield="${f.key}">
+                ${f.options.map(o=>`<option value="${o}" ${o===f.def?'selected':''}>${o}</option>`).join('')}
+              </select></div>`;
+          }
+          return `<div class="field"><label>${f.label} ${f.unit||''}</label>
+            <input type="number" data-acc="${key}" data-accfield="${f.key}" value="${f.def}" min="${f.min||0}" max="${f.max||999}"></div>`;
+        }).join('')}
+      </div>
+    `;
+    container.appendChild(row);
+
+    const checkbox = row.querySelector('input[type=checkbox]');
+    checkbox.addEventListener('change', ()=>{
+      accState[key].enabled = checkbox.checked;
+      row.classList.toggle('open', checkbox.checked);
+      updateAll();
+    });
+    row.querySelectorAll('[data-accfield]').forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        const val = inp.tagName==='SELECT' ? inp.value : Number(inp.value);
+        accState[key].fields[inp.dataset.accfield] = val;
+        updateAll();
+      });
+    });
+  });
+}
+
+function layerStripHtml(n) {
+  let bars = '';
+  for (let i=0;i<n;i++) bars += `<span style="background:${PALETTE[i % PALETTE.length]}"></span>`;
+  return `<div class="layers">${bars}</div>`;
+}
+
+function updateAll() {
+  const layout = DRAW_FNS[currentSubtype](dims);
+  const overlay = overlayAccessories(layout, accState);
+  document.getElementById('diagram').innerHTML = layout.svg + overlay;
+
+  const flat = calcFlatArea(currentSubtype, dims);
+  const meta = SUBTYPE_META[currentSubtype];
+  const stats = [
+    { label:'Panels / webs', value:meta.panels, layers:true },
+    { label:'Seal count', value:meta.seals },
+    { label:'Flat width', value:flat.flatWidth.toFixed(0)+'mm' },
+    { label:'Flat height', value:flat.flatHeight.toFixed(0)+'mm' },
+  ];
+  if (flat.extra) stats.push({ label:'Extra panel area', value:flat.extra.toFixed(0)+' mm²' });
+
+  document.getElementById('statsRow').innerHTML = stats.map(s=>`
+    <div class="stat">
+      <div class="label">${s.label}</div>
+      <div class="value">${s.value}</div>
+      ${s.layers ? layerStripHtml(s.value) : ''}
+    </div>
+  `).join('');
+}
+
+buildDimFields();
+buildAccFields();
+updateAll();
+</script>
+
+</body>
+</html>

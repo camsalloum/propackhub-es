@@ -38,23 +38,39 @@ interface TemplateSeedEntry {
   substrate_options?: string[];
 }
 
-function templateKeyFromSeed(t: TemplateSeedEntry): string {
-  return deriveStandardTemplateKey({
-    pebiParentPg: t.pebi_parent_pg,
-    name: t.name,
-    materialClass: t.material_class,
-    structureType: t.structure_type,
-  });
+/**
+ * Row shape consumed by tenant-projection logic. Platform rows and seed-JSON
+ * entries are both normalized into this shape before projecting into a tenant.
+ */
+interface PlatformStandardSource {
+  templateKey: string;
+  name: string;
+  pebiParentPg: string;
+  productType: 'roll' | 'sleeve' | 'pouch';
+  productSubtype?: string | null;
+  materialClass: string | null;
+  structureType: string | null;
+  substrateOrigin: string | null;
+  displayOrder: number;
+  defaultDimensions: Record<string, any>;
+  defaultLayers: TemplateLayerRef[];
+  defaultProcesses: { process_key: string; enabled: boolean }[];
+  defaultPrintingWebClass: 'wide_web' | 'narrow_web';
+  solventMixEnabled: boolean;
+  inkSystemOptions: string[] | null;
+  substrateOptions: string[] | null;
+  isActive: boolean;
+  updatedAt: Date | null;
 }
 
-function templateInsertRow(
-  tenantId: string,
-  t: TemplateSeedEntry,
-  resolvedLayers: ReturnType<typeof resolveTemplateLayers>
-) {
+function seedEntryToSource(t: TemplateSeedEntry): PlatformStandardSource {
   return {
-    tenantId,
-    templateKey: templateKeyFromSeed(t),
+    templateKey: deriveStandardTemplateKey({
+      pebiParentPg: t.pebi_parent_pg,
+      name: t.name,
+      materialClass: t.material_class,
+      structureType: t.structure_type,
+    }),
     name: t.name,
     pebiParentPg: t.pebi_parent_pg,
     productType: t.product_type,
@@ -63,13 +79,16 @@ function templateInsertRow(
     substrateOrigin: t.substrate_origin,
     displayOrder: t.display_order,
     defaultDimensions: t.default_dimensions || {},
-    defaultLayers: resolvedLayers,
+    defaultLayers: t.default_layers.map((l) => ({ ...l })) as TemplateLayerRef[],
     defaultProcesses: t.default_processes || [],
-    defaultPrintingWebClass: (t.default_printing_web_class || 'wide_web') as 'wide_web' | 'narrow_web',
+    defaultPrintingWebClass: (t.default_printing_web_class || 'wide_web') as
+      | 'wide_web'
+      | 'narrow_web',
     solventMixEnabled: t.solvent_mix_enabled || false,
     inkSystemOptions: t.ink_system_options || ['SB'],
     substrateOptions: t.substrate_options || null,
-    isStandard: true,
+    isActive: true,
+    updatedAt: null,
   };
 }
 
@@ -81,6 +100,98 @@ async function loadTenantMaterials(tenantId: string) {
     .where(eq(schema.materials.tenantId, tenantId));
 }
 
+/**
+ * Read the canonical platform-standards catalog. Falls back to the seed JSON
+ * when the platform table is empty or unreadable (e.g. before the boot
+ * bootstrap has run, or in dev environments where the table doesn't exist).
+ *
+ * IMPORTANT: this function must never throw. Callers (sync, ensure) depend on
+ * always getting a usable source list so the templates endpoint doesn't 500.
+ */
+async function loadPlatformStandardSources(): Promise<PlatformStandardSource[]> {
+  const db = getDatabase();
+  try {
+    const rows = await db
+      .select()
+      .from(schema.platformStandardTemplates)
+      .orderBy(asc(schema.platformStandardTemplates.displayOrder));
+
+    if (rows.length > 0) {
+      return rows.map(
+        (r: (typeof rows)[number]): PlatformStandardSource => ({
+          templateKey: r.templateKey,
+          name: r.name,
+          pebiParentPg: r.pebiParentPg,
+          productType: r.productType as 'roll' | 'sleeve' | 'pouch',
+          productSubtype: r.productSubtype ?? null,
+          materialClass: r.materialClass,
+          structureType: r.structureType,
+          substrateOrigin: r.substrateOrigin,
+          displayOrder: r.displayOrder,
+          defaultDimensions:
+            (r.defaultDimensions as Record<string, any> | null) || {},
+          defaultLayers:
+            (r.defaultLayers as TemplateLayerRef[] | null) || [],
+          defaultProcesses:
+            (r.defaultProcesses as { process_key: string; enabled: boolean }[] | null) || [],
+          defaultPrintingWebClass:
+            (r.defaultPrintingWebClass as 'wide_web' | 'narrow_web' | null) || 'wide_web',
+          solventMixEnabled: r.solventMixEnabled ?? false,
+          inkSystemOptions: (r.inkSystemOptions as string[] | null) || null,
+          substrateOptions: (r.substrateOptions as string[] | null) || null,
+          isActive: r.isActive ?? true,
+          updatedAt: r.updatedAt ?? null,
+        })
+      );
+    }
+  } catch (err) {
+    // Table may not exist yet on first-time boot of a fresh dev DB.
+    console.warn(
+      '⚠  platform_standard_templates not readable, falling back to seed JSON:',
+      (err as Error).message
+    );
+  }
+
+  try {
+    return (templateSeed as { templates: TemplateSeedEntry[] }).templates.map(seedEntryToSource);
+  } catch (err) {
+    console.error('⚠  Seed JSON fallback failed:', err);
+    return [];
+  }
+}
+
+function sourceToTenantInsertRow(
+  tenantId: string,
+  source: PlatformStandardSource,
+  resolvedLayers: ReturnType<typeof resolveTemplateLayers>
+) {
+  return {
+    tenantId,
+    templateKey: source.templateKey,
+    name: source.name,
+    pebiParentPg: source.pebiParentPg,
+    productType: source.productType,
+    productSubtype: source.productSubtype ?? null,
+    materialClass: source.materialClass,
+    structureType: source.structureType,
+    substrateOrigin: source.substrateOrigin,
+    displayOrder: source.displayOrder,
+    defaultDimensions: source.defaultDimensions,
+    defaultLayers: resolvedLayers,
+    defaultProcesses: source.defaultProcesses,
+    defaultPrintingWebClass: source.defaultPrintingWebClass,
+    solventMixEnabled: source.solventMixEnabled,
+    inkSystemOptions: source.inkSystemOptions ?? ['SB'],
+    substrateOptions: source.substrateOptions,
+    isStandard: true,
+    isActive: source.isActive,
+  };
+}
+
+/**
+ * First-time seed for a brand-new tenant. Inserts a row per platform standard.
+ * Layers are resolved from `ref_material_key` to the tenant's own `materials.id`.
+ */
 export async function seedTemplatesForTenant(tenantId: string): Promise<number> {
   const db = getDatabase();
 
@@ -88,20 +199,25 @@ export async function seedTemplatesForTenant(tenantId: string): Promise<number> 
     const materials = await loadTenantMaterials(tenantId);
     const materialLookup = buildTemplateMaterialLookup(materials);
     const validIds = buildValidMaterialIdSet(materials);
-    const templates = (templateSeed as any).templates as TemplateSeedEntry[];
+    const sources = await loadPlatformStandardSources();
 
-    const templatesToInsert = templates.map((t) => {
+    if (sources.length === 0) {
+      console.log(`⚠  No platform standards available to seed for tenant ${tenantId}`);
+      return 0;
+    }
+
+    const rowsToInsert = sources.map((source) => {
       const resolvedLayers = resolveTemplateLayers(
-        t.default_layers.map((layer) => ({ ...layer })),
+        source.defaultLayers.map((layer) => ({ ...layer })),
         materialLookup,
         validIds
       );
-      return templateInsertRow(tenantId, t, resolvedLayers);
+      return sourceToTenantInsertRow(tenantId, source, resolvedLayers);
     });
 
     const inserted = await db
       .insert(schema.structureTemplates)
-      .values(templatesToInsert)
+      .values(rowsToInsert)
       .returning();
 
     console.log(`✓ Seeded ${inserted.length} structure templates for tenant ${tenantId}`);
@@ -112,49 +228,131 @@ export async function seedTemplatesForTenant(tenantId: string): Promise<number> 
   }
 }
 
-/** Insert any standard templates from seed that are missing by name (e.g. new laminate tiers). */
-export async function syncMissingStandardTemplates(tenantId: string): Promise<number> {
+/**
+ * Reconcile a tenant's `structure_templates` rows against the platform catalog:
+ *   - missing copies inserted
+ *   - stale copies refreshed in place (id preserved so estimates keep working)
+ *   - upstream-inactive copies marked inactive
+ *   - "orphan" tenant copies (no longer in catalog) marked inactive
+ *
+ * Returns the number of rows touched.
+ */
+export async function syncPlatformStandardsToTenant(tenantId: string): Promise<number> {
   const db = getDatabase();
   const materials = await loadTenantMaterials(tenantId);
   const materialLookup = buildTemplateMaterialLookup(materials);
   const validIds = buildValidMaterialIdSet(materials);
-  const templates = (templateSeed as { templates: TemplateSeedEntry[] }).templates;
+  const sources = await loadPlatformStandardSources();
 
-  const existing = await db
-    .select({ id: schema.structureTemplates.id, name: schema.structureTemplates.name })
+  const tenantCopies = await db
+    .select()
     .from(schema.structureTemplates)
-    .where(eq(schema.structureTemplates.tenantId, tenantId));
-  const existingNames = new Set(existing.map((r: (typeof existing)[number]) => r.name));
+    .where(
+      and(
+        eq(schema.structureTemplates.tenantId, tenantId),
+        eq(schema.structureTemplates.isStandard, true)
+      )
+    );
 
-  const legacyLaminates = existing.find((r: (typeof existing)[number]) => r.name === 'Laminates');
-  if (legacyLaminates && !existingNames.has('Laminates · Duplex')) {
-    await db
-      .update(schema.structureTemplates)
-      .set({ name: 'Laminates · Duplex', updatedAt: new Date() })
-      .where(eq(schema.structureTemplates.id, legacyLaminates.id));
-    existingNames.delete('Laminates');
-    existingNames.add('Laminates · Duplex');
+  const copiesByKey = new Map<string, (typeof tenantCopies)[number]>();
+  for (const c of tenantCopies) {
+    if (c.templateKey) copiesByKey.set(c.templateKey, c);
   }
 
-  const missing = templates.filter((t) => !existingNames.has(t.name));
-  if (missing.length === 0) return 0;
+  let touched = 0;
+  const sourceKeys = new Set<string>();
 
-  const rows = missing.map((t) => {
+  for (const source of sources) {
+    sourceKeys.add(source.templateKey);
     const resolvedLayers = resolveTemplateLayers(
-      t.default_layers.map((layer) => ({ ...layer })),
+      source.defaultLayers.map((layer) => ({ ...layer })),
       materialLookup,
       validIds
     );
-    return templateInsertRow(tenantId, t, resolvedLayers);
-  });
 
-  await db.insert(schema.structureTemplates).values(rows);
-  console.log(`✓ Synced ${rows.length} missing standard templates for tenant ${tenantId}`);
-  const pruned = await pruneDuplicateStandardTemplates(tenantId);
-  if (pruned > 0) {
-    console.log(`✓ Deactivated ${pruned} duplicate standard templates for tenant ${tenantId}`);
+    const existing = copiesByKey.get(source.templateKey);
+
+    if (!existing) {
+      if (!source.isActive) continue; // never insert an inactive standard
+      await db
+        .insert(schema.structureTemplates)
+        .values(sourceToTenantInsertRow(tenantId, source, resolvedLayers));
+      touched++;
+      continue;
+    }
+
+    // Upstream deactivation: mirror to tenant copy.
+    if (!source.isActive && existing.isActive) {
+      await db
+        .update(schema.structureTemplates)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(schema.structureTemplates.id, existing.id));
+      touched++;
+      continue;
+    }
+
+    // Upstream reactivation or content drift: refresh tenant copy in place.
+    const upstreamNewer =
+      source.updatedAt && existing.updatedAt
+        ? source.updatedAt.getTime() > existing.updatedAt.getTime()
+        : false;
+    const reactivate = source.isActive && !existing.isActive;
+
+    if (upstreamNewer || reactivate) {
+      await db
+        .update(schema.structureTemplates)
+        .set({
+          name: source.name,
+          pebiParentPg: source.pebiParentPg,
+          productType: source.productType,
+          productSubtype: source.productSubtype ?? null,
+          materialClass: source.materialClass,
+          structureType: source.structureType,
+          substrateOrigin: source.substrateOrigin,
+          displayOrder: source.displayOrder,
+          defaultDimensions: source.defaultDimensions,
+          defaultLayers: resolvedLayers,
+          defaultProcesses: source.defaultProcesses,
+          defaultPrintingWebClass: source.defaultPrintingWebClass,
+          solventMixEnabled: source.solventMixEnabled,
+          inkSystemOptions: source.inkSystemOptions ?? ['SB'],
+          substrateOptions: source.substrateOptions,
+          isActive: source.isActive,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.structureTemplates.id, existing.id));
+      touched++;
+    }
   }
-  return rows.length;
+
+  // Orphans: tenant copies whose key no longer exists upstream → deactivate.
+  for (const c of tenantCopies) {
+    if (!c.templateKey) continue;
+    if (sourceKeys.has(c.templateKey)) continue;
+    if (!c.isActive) continue;
+    await db
+      .update(schema.structureTemplates)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(schema.structureTemplates.id, c.id));
+    touched++;
+  }
+
+  if (touched > 0) {
+    console.log(`✓ Synced ${touched} platform standards into tenant ${tenantId}`);
+  }
+  return touched;
+}
+
+/**
+ * Legacy compatibility wrapper. Older callers used this name to mean
+ * "insert any standard templates from the JSON seed that are missing in
+ * the tenant." The platform-templates feature replaces the JSON-driven
+ * sync with `syncPlatformStandardsToTenant`, which has the same effect
+ * (and more): inserts missing copies, refreshes stale ones, deactivates
+ * removed ones.
+ */
+export async function syncMissingStandardTemplates(tenantId: string): Promise<number> {
+  return syncPlatformStandardsToTenant(tenantId);
 }
 
 /** Keep one active standard template per name (lowest display_order wins). */
@@ -243,7 +441,7 @@ export async function syncTemplateKeysForTenant(tenantId: string): Promise<numbe
   return toUpdate.length;
 }
 
-/** Idempotent — seeds 13 parent PG templates only when tenant has none (e.g. pre-Phase C accounts). */
+/** Idempotent — seeds platform standards into a tenant only when tenant has none. */
 export async function ensureTemplatesForTenant(tenantId: string): Promise<number> {
   const db = getDatabase();
   const existing = await db

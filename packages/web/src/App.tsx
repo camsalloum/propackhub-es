@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { MasterDataProvider } from './contexts/MasterDataContext';
+import { ThemeProvider } from './theme/ThemeProvider';
+import { ThemeStatusToast } from './theme/ThemeStatusToast';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import EstimateEditor from './pages/EstimateEditor';
@@ -8,7 +10,6 @@ import TemplatePicker from './pages/TemplatePicker';
 import EstimatesList from './pages/EstimatesList';
 import CustomerDetail from './pages/CustomerDetail';
 import CustomersList from './pages/CustomersList';
-import Library from './pages/Library';
 import Settings from './pages/Settings';
 import StandardTemplates from './pages/StandardTemplates';
 import MasterData from './pages/MasterData';
@@ -20,10 +21,21 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold mx-auto mb-4"></div>
-          <p className="text-mist">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-surface-base relative overflow-hidden">
+        <div className="auth-mesh" aria-hidden="true" />
+        <div className="auth-mesh auth-mesh-2" aria-hidden="true" />
+        <div className="text-center relative">
+          <div
+            className="w-14 h-14 rounded-2xl mx-auto mb-5 brand-mark flex items-center justify-center"
+            style={{
+              background: 'linear-gradient(135deg, rgb(var(--color-accent)) 0%, rgb(var(--accent-9)) 100%)',
+              boxShadow: 'var(--glow-accent-strong)',
+            }}
+          >
+            <span className="font-display font-bold text-lg text-text-on-accent">ES</span>
+          </div>
+          <div className="spinner h-6 w-6 mx-auto mb-3" />
+          <p className="text-sm text-text-secondary">Loading…</p>
         </div>
       </div>
     );
@@ -38,8 +50,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <Routes>
+    <ThemeProvider>
+      <ThemeStatusToast />
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route
@@ -73,7 +87,8 @@ function App() {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
-    </Router>
+      </Router>
+    </ThemeProvider>
   );
 }
 

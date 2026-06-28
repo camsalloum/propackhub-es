@@ -10,6 +10,7 @@ import { BagConfigurator } from '../components/BagConfigurator';
 import {
   configuratorTypeForBagSubtype,
   seedBagDimensionPatch,
+  canonicalBagSubtype,
 } from '../lib/bagConfiguratorCatalog';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -556,7 +557,7 @@ const EstimateEditor = () => {
           return normalizeProductType(data.productType, productTypeOptions);
         })()
       );
-      setProductSubtype(data.productSubtype ?? null);
+      setProductSubtype(canonicalBagSubtype(data.productSubtype));
       setJobName(data.jobName || '');
       setCustomerId(data.customerId || '');
       setMarkupPercent(parseFloat(data.markupPercent) || 15);
@@ -1463,7 +1464,9 @@ const EstimateEditor = () => {
           productType={productFamily}
           onProductTypeChange={(next) => {
             setProductType(next);
-            setProductSubtype(defaultSubtypeForFamily(next as ProductFamily));
+            // Bag: leave the subtype unselected ("Select type…") so the user picks from the
+            // list. Other families keep their first subtype as a sensible default.
+            setProductSubtype(next === 'bag' ? null : defaultSubtypeForFamily(next as ProductFamily));
           }}
           productTypeOptions={productTypeOptions}
           productTypeLocked={structureLocked}
@@ -1496,8 +1499,6 @@ const EstimateEditor = () => {
                 productSubtype={productSubtype}
                 dimensions={dimensions}
                 onDimensionsChange={(patch) => setDimensions((prev) => ({ ...prev, ...patch }))}
-                totalGsm={clientCalcResult?.estimate?.totalGsm}
-                piecesPerKg={clientCalcResult?.estimate?.piecesPerKg}
               />
             ) : undefined
           }

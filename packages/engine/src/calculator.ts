@@ -330,6 +330,10 @@ function calculateProductMetrics(
       // See bag-flat-sheet.ts. Falls back to face area if subtype unresolved.
       const bag = calculateBagFlatSheetAreaM2(dimensions);
       if (bag.areaM2 > 0) {
+        // Weight comes from the STRUCTURE: gramsPerPiece = flatArea × totalGsm,
+        // where totalGsm is derived from the layer stack + ink (see step 2 above).
+        // The reinforcement patch (patch subtype) is cut from the same film, so it is
+        // weighed at the same structure GSM — its area is already included in bag.areaM2.
         // pieces_per_kg = 1000 / (areaM2 × totalGsm)
         result.piecesPerKg = 1000 / (bag.areaM2 * totalGsm);
         result.gramsPerPiece = 1000 / result.piecesPerKg;

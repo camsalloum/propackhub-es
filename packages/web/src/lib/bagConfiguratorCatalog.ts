@@ -4,6 +4,7 @@
  */
 
 export type BagConfiguratorType =
+  | 'gusseted'
   | 'bottom-gusset'
   | 'side-gusset'
   | 'courier'
@@ -32,11 +33,13 @@ export interface BagConfiguratorConfig {
 }
 
 export const BAG_SUBTYPE_TO_CONFIGURATOR: Record<string, BagConfiguratorType> = {
+  bag_gusseted_shopping: 'gusseted',
+  // Industrial bag = flat / side-gusseted tube → unified gusseted formula.
+  bag_industrial: 'gusseted',
   bag_bottom_gusset_shopping: 'bottom-gusset',
   bag_side_gusset_shopping: 'side-gusset',
   bag_courier: 'courier',
   bag_diaper: 'diaper',
-  bag_industrial: 'industrial',
   bag_loop_handle: 'loop',
   bag_patch_handle: 'patch',
   bag_punch_handle: 'punch',
@@ -58,6 +61,7 @@ export const BAG_CONFIGURATOR_DIMENSION_KEYS = new Set([
   'bagVentHoleMm',
   'bagValveMm',
   'bagHandleWidthMm',
+  'bagLoopWelded',
   'bagPatchWidthMm',
   'bagPatchHeightMm',
   'bagHandleHoleMm',
@@ -80,6 +84,17 @@ const field = (
 ): BagConfiguratorField => ({ id, label, unit, hint, dimensionKey, defaultVal });
 
 export const BAG_CONFIGURATOR_CATALOG: Record<BagConfiguratorType, BagConfiguratorConfig> = {
+  gusseted: {
+    type: 'gusseted',
+    label: 'Gusseted shopping bag',
+    desc: 'Unified bag: bottom gusset and/or side gussets (or flat). Tick the gussets you need. Blank: (2W + 4·SG) × (H + BG + SA).',
+    fields: [
+      field('W', 'Width (W)', 'openWidthMm', 'mm', 400, 'Front panel width (one face)'),
+      field('H', 'Height (H)', 'openHeightMm', 'mm', 500, 'Mouth to bottom fold (excl. gusset)'),
+      field('G', 'Bottom gusset (BG)', 'bottomGussetMm', 'mm', 120, 'Standing depth · 0 = none'),
+      field('SG', 'Side gusset (SG)', 'sideGussetMm', 'mm', 0, 'Per side; depth = 2×SG · 0 = none'),
+    ],
+  },
   'bottom-gusset': {
     type: 'bottom-gusset',
     label: 'Bottom-gusset shopping',
@@ -109,7 +124,7 @@ export const BAG_CONFIGURATOR_CATALOG: Record<BagConfiguratorType, BagConfigurat
     fields: [
       field('W', 'Width (W)', 'openWidthMm', 'mm', 250, 'Bag width'),
       field('L', 'Length (L)', 'openHeightMm', 'mm', 350, 'Full bag length'),
-      field('FL', 'Flap/seal (FL)', 'flapMm', 'mm', 50, 'Adhesive closure area'),
+      field('FL', 'Flap/seal (FL)', 'flapMm', 'mm', 40, 'Peel-seal flap depth (~25–40mm)'),
       field('POD', 'POD pocket', 'bagPodHeightMm', 'mm', 80, '0 = no POD pocket'),
     ],
   },
@@ -118,7 +133,7 @@ export const BAG_CONFIGURATOR_CATALOG: Record<BagConfiguratorType, BagConfigurat
     label: 'Diaper bag',
     desc: 'W × H × G (bottom) + neck cut NC. Often with handle & vent holes.',
     fields: [
-      field('W', 'Width (W)', 'openWidthMm', 'mm', 500, 'Bag width flat'),
+      field('W', 'Width (W)', 'openWidthMm', 'mm', 500, 'Front panel width (one face)'),
       field('H', 'Height (H)', 'openHeightMm', 'mm', 650, 'Total height'),
       field('G', 'Bottom gusset (G)', 'bottomGussetMm', 'mm', 180, 'Depth for bulky product'),
       field('F', 'Top fold (F)', 'bagTopFoldMm', 'mm', 50, 'Perforation / seal zone at top'),
@@ -140,23 +155,23 @@ export const BAG_CONFIGURATOR_CATALOG: Record<BagConfiguratorType, BagConfigurat
   loop: {
     type: 'loop',
     label: 'Loop handle',
-    desc: 'W × H × G + loop handle HL × HW.',
+    desc: 'W × H × G + loop handle HL × HW. Welded strip adds handle film; die-cut does not.',
     fields: [
-      field('W', 'Width (W)', 'openWidthMm', 'mm', 300, 'Bag body width'),
+      field('W', 'Width (W)', 'openWidthMm', 'mm', 300, 'Front panel width (one face)'),
       field('H', 'Height (H)', 'openHeightMm', 'mm', 380, 'Bag body height'),
-      field('G', 'Gusset (G)', 'bottomGussetMm', 'mm', 80, 'Bottom or side gusset'),
+      field('G', 'Bottom gusset (BG)', 'bottomGussetMm', 'mm', 80, 'Standing depth · 0 = none'),
       field('HL', 'Handle length (HL)', 'handleLengthMm', 'mm', 260, 'Loop length'),
-      field('HW', 'Handle width (HW)', 'bagHandleWidthMm', 'mm', 25, 'Loop width'),
+      field('HW', 'Handle width (HW)', 'bagHandleWidthMm', 'mm', 25, 'Ribbon width (~15–40mm)'),
     ],
   },
   patch: {
     type: 'patch',
     label: 'Patch handle',
-    desc: 'W × H + patch PW × PH and handle hole HD.',
+    desc: 'Bottom-gusset (or flat/side) body + reinforcement patch PW × PH and handle hole HD.',
     fields: [
-      field('W', 'Width (W)', 'openWidthMm', 'mm', 320, 'Bag width'),
+      field('W', 'Width (W)', 'openWidthMm', 'mm', 320, 'Front panel width (one face)'),
       field('H', 'Height (H)', 'openHeightMm', 'mm', 400, 'Bag height'),
-      field('G', 'Gusset (G)', 'sideGussetMm', 'mm', 60, 'Side or bottom gusset'),
+      field('G', 'Bottom gusset (BG)', 'bottomGussetMm', 'mm', 80, 'Standing depth · 0 = flat'),
       field('PW', 'Patch width (PW)', 'bagPatchWidthMm', 'mm', 120, 'Reinforcement patch W'),
       field('PH', 'Patch height (PH)', 'bagPatchHeightMm', 'mm', 80, 'Reinforcement patch H'),
       field('HD', 'Handle hole (HD)', 'bagHandleHoleMm', 'mm', 30, 'Punched hole diameter'),
@@ -202,9 +217,29 @@ export function bagFieldValuesFromDimensions(
   const vals: Record<string, number> = {};
   for (const f of config.fields) {
     const stored = dimensions[f.dimensionKey];
-    vals[f.id] = stored != null && Number.isFinite(stored) ? stored : f.defaultVal;
+    // Body dimensions (W/H/L) must always be a positive size — fall back to the logical
+    // default when missing, non-finite, or 0 (a 0-width/height bag is never valid).
+    const isBody = f.id === 'W' || f.id === 'H' || f.id === 'L';
+    const ok =
+      stored != null && Number.isFinite(stored) && (!isBody || stored > 0);
+    vals[f.id] = ok ? (stored as number) : f.defaultVal;
   }
   return vals;
+}
+
+/**
+ * Legacy bag subtype codes → unified canonical code. Existing estimates/templates that
+ * stored the split gusset subtypes resolve to the merged "Gusseted Shopping Bag" so the
+ * picker shows the right (active) option instead of falling back to "Select type…".
+ */
+export const LEGACY_BAG_SUBTYPE_ALIASES: Record<string, string> = {
+  bag_bottom_gusset_shopping: 'bag_gusseted_shopping',
+  bag_side_gusset_shopping: 'bag_gusseted_shopping',
+};
+
+export function canonicalBagSubtype(code: string | null | undefined): string | null {
+  if (!code) return code ?? null;
+  return LEGACY_BAG_SUBTYPE_ALIASES[code] ?? code;
 }
 
 /** One-time / subtype-change seeding only — never use while displaying user edits. */

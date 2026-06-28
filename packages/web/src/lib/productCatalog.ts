@@ -134,16 +134,24 @@ export const BAG_SUBTYPES: ProductSubtype[] = [
   { key: 'bag_punch_handle', label: 'Punch Handle', family: 'bag', group: 'Commercial Bags', dimensionFields: BAG_BASE },
   { key: 'bag_loop_handle', label: 'Loop Handle', family: 'bag', group: 'Commercial Bags', dimensionFields: [...BAG_BASE, F.handleLength] },
   { key: 'bag_patch_handle', label: 'Patch Handle', family: 'bag', group: 'Commercial Bags', dimensionFields: [...BAG_BASE, F.handleLength] },
-  { key: 'bag_side_gusset_shopping', label: 'Side-Gusset Shopping Bag', family: 'bag', group: 'Commercial Bags', dimensionFields: [...BAG_BASE, F.sideGusset] },
-  { key: 'bag_bottom_gusset_shopping', label: 'Bottom-Gusset Shopping Bag', family: 'bag', group: 'Commercial Bags', dimensionFields: [...BAG_BASE, F.bottomGusset] },
+  { key: 'bag_gusseted_shopping', label: 'Gusseted Shopping Bag', family: 'bag', group: 'Commercial Bags', dimensionFields: [...BAG_BASE, F.bottomGusset, F.sideGusset] },
   // Other bags
-  { key: 'bag_industrial', label: 'Industrial Bag', family: 'bag', group: 'Industrial', dimensionFields: [...BAG_BASE, F.sideGusset] },
+  { key: 'bag_industrial', label: 'Industrial Bag', family: 'bag', group: 'Industrial', dimensionFields: [...BAG_BASE, F.bottomGusset, F.sideGusset] },
   { key: 'bag_courier', label: 'Courier Bag', family: 'bag', group: 'Other', dimensionFields: [...BAG_BASE, F.flap] },
   { key: 'bag_diaper', label: 'Diaper Bag', family: 'bag', group: 'Other', dimensionFields: BAG_BASE },
   { key: 'bag_wicket', label: 'Wicket Bag', family: 'bag', group: 'Other', dimensionFields: [...BAG_BASE, F.wicket] },
 ];
 
-export const ALL_SUBTYPES: ProductSubtype[] = [...POUCH_SUBTYPES, ...BAG_SUBTYPES];
+/**
+ * Legacy bag subtypes — superseded by the unified `bag_gusseted_shopping`. Kept out of the
+ * picker but still resolvable so existing estimates (and their family/parent lookups) work.
+ */
+export const LEGACY_BAG_SUBTYPES: ProductSubtype[] = [
+  { key: 'bag_side_gusset_shopping', label: 'Side-Gusset Shopping Bag', family: 'bag', group: 'Commercial Bags', dimensionFields: [...BAG_BASE, F.sideGusset] },
+  { key: 'bag_bottom_gusset_shopping', label: 'Bottom-Gusset Shopping Bag', family: 'bag', group: 'Commercial Bags', dimensionFields: [...BAG_BASE, F.bottomGusset] },
+];
+
+export const ALL_SUBTYPES: ProductSubtype[] = [...POUCH_SUBTYPES, ...BAG_SUBTYPES, ...LEGACY_BAG_SUBTYPES];
 
 const SUBTYPE_BY_KEY = new Map<string, ProductSubtype>(ALL_SUBTYPES.map((s) => [s.key, s]));
 

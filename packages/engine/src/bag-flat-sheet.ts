@@ -13,6 +13,7 @@ import type { EstimateDimensions } from './types';
  */
 
 export type BagConfiguratorType =
+  | 'gusseted'
   | 'bottom-gusset'
   | 'side-gusset'
   | 'courier'
@@ -26,13 +27,20 @@ export type BagConfiguratorType =
 /**
  * Maps estimate.productSubtype codes (stored in DB) → configurator type.
  * Single source of truth — web/server import this to avoid drift.
+ *
+ * `bag_gusseted_shopping` is the unified shopping-bag subtype (bottom and/or side
+ * gusset, or flat). The legacy `bag_bottom_gusset_shopping` / `bag_side_gusset_shopping`
+ * codes remain mapped for backward compatibility with existing estimates; new
+ * estimates use `bag_gusseted_shopping`.
  */
 export const BAG_SUBTYPE_TO_CONFIGURATOR: Record<string, BagConfiguratorType> = {
+  bag_gusseted_shopping: 'gusseted',
+  // Industrial bag = flat / side-gusseted tube → unified gusseted formula.
+  bag_industrial: 'gusseted',
   bag_bottom_gusset_shopping: 'bottom-gusset',
   bag_side_gusset_shopping: 'side-gusset',
   bag_courier: 'courier',
   bag_diaper: 'diaper',
-  bag_industrial: 'industrial',
   bag_loop_handle: 'loop',
   bag_patch_handle: 'patch',
   bag_punch_handle: 'punch',
@@ -73,7 +81,7 @@ export function resolveBagConfiguratorType(
 }
 
 const BAG_SUBTYPE_VALUES = new Set<BagConfiguratorType>([
-  'bottom-gusset', 'side-gusset', 'courier', 'diaper', 'industrial',
+  'gusseted', 'bottom-gusset', 'side-gusset', 'courier', 'diaper', 'industrial',
   'loop', 'patch', 'punch', 'wicket',
 ]);
 
@@ -97,6 +105,8 @@ export function calculateBagFlatSheetAreaM2(
   const PW = dimensions.bagPatchWidthMm ?? 0;
   const PH = dimensions.bagPatchHeightMm ?? 0;
   const LH = dimensions.bagWicketLipMm ?? 0;
+  const TF = dimensions.bagTopFoldMm ?? 0;
+  const POD = dimensions.bagPodHeightMm ?? 0;
   const SA = dimensions.sealAllowanceMm ?? DEFAULT_BAG_SEAL_ALLOWANCE_MM;
 
   let area = 0; // total film area in mm²
@@ -105,6 +115,28 @@ export function calculateBagFlatSheetAreaM2(
   let patchAreaM2 = 0;
 
   switch (type) {
+    case 'gusseted': {
+      // UNIFIED gusseted shopping bag — supersedes separate bottom-gusset / side-gusset.
+      // W = one face (front panel). Two-web / lay-flat-tube construction.
+      // The gusset state is driven purely by which depths are entered:
+      //   - BG > 0  → bottom gusset present (gusset closes the base → ONE top seal)
+      //   - SG > 0  → side gussets present  (each unfolds to 2·SG → +4·SG on width)
+      //
+      //   width  = 2W + (SG > 0 ? 4·SG : 0)
+      //   length = BG > 0 ? (H + BG + SA)   // bottom gusset closes base, single top seal
+      //                   : (H + 2·SA)       // flat / side-only → bottom + top seal
+      //
+      // Numerically identical to the legacy types for the single-gusset cases:
+      //   BG>0,SG=0 → bottom-gusset | BG=0,SG>0 → side-gusset | BG=0,SG=0 → flat tube
+      //   BG>0,SG>0 → block-bottom / quad-seal (the previously missing combination).
+      const widthMm = 2 * W + (SG > 0 ? 4 * SG : 0);
+      const lengthMm = BG > 0 ? H + BG + SA : H + 2 * SA;
+      area = widthMm * lengthMm;
+      webWidth = widthMm;
+      cutLength = lengthMm;
+      break;
+    }
+
     case 'bottom-gusset': {
       // BG = FORMED depth (bag stands BG tall at bottom when filled).
       // Two-web construction: blankWidth = 2W (front+back side-by-side).
@@ -130,20 +162,25 @@ export function calculateBagFlatSheetAreaM2(
 
     case 'courier': {
       // Single-web wraparound: web width = W, length = 2H + flap + top seal.
-      area = W * (2 * H + FL + SA);
+      // FL = adhesive/peel flap (the courier closure strip — set FL to the real
+      // peel-seal depth, typically 25–40 mm, not the generic SA).
+      // POD = optional proof-of-delivery document pocket: an extra W×POD film panel
+      // welded to the face. Adds film weight (0 = no pocket).
+      area = W * (2 * H + FL + SA) + W * POD;
       webWidth = W;
-      cutLength = 2 * H + FL + SA;
+      cutLength = 2 * H + FL + SA + POD;
       break;
     }
 
     case 'diaper': {
-      // BG = FORMED bottom-gusset depth + top flap (FL) full width.
-      // Same two-web construction as bottom-gusset: gusset film = W × 2BG spread
-      // across 2W → adds BG (not 2BG) to length.
-      // Area = 2W × (H + BG + FL + SA).
-      area = 2 * W * (H + BG + FL + SA);
+      // BG = FORMED bottom-gusset depth. TF = top fold/hem (bagTopFoldMm).
+      // Two-web construction: gusset film = W × 2BG spread across 2W → adds BG.
+      // Neck cut (bagNeckCutMm) and vent holes are die-cut from the blank → no net
+      // film removed for weight (blank is still purchased full), so not subtracted.
+      // Area = 2W × (H + BG + TF + SA).
+      area = 2 * W * (H + BG + TF + SA);
       webWidth = 2 * W;
-      cutLength = H + BG + FL + SA;
+      cutLength = H + BG + TF + SA;
       break;
     }
 
@@ -158,19 +195,18 @@ export function calculateBagFlatSheetAreaM2(
 
     case 'loop': {
       // Loop handle is the SAME material as the body (cut from the same film web).
-      // Handle weight is averaged into the total bag weight: body area + handle area,
-      // all multiplied by totalGsm downstream → total weight per bag.
-      // BG = FORMED bottom-gusset depth. Two-web construction: gusset adds BG
-      // (not 2BG) to length.
-      // 2 handle strips, each HW wide × HL long (HW defaults to W if omitted).
-      // NOTE: handle addition assumes WELDED-ON strip handles. For DIE-CUT loop
-      // handles (punched from the body panel), handle material is already in the
-      // body area and the +2·HW·HL term should be DROPPED. Pending converter
-      // confirmation on which construction the loop subtype represents — see
-      // docs/BAG_COSTING_RESEARCH.md §7A point F (new N-point).
-      const handleWidth = HW > 0 ? HW : W;
+      // BG = FORMED bottom-gusset depth. Two-web construction: gusset adds BG to length.
+      //
+      // Handle construction (bagLoopWelded):
+      //   1 = WELDED-ON strip (default): 2 ribbon strips, each HW wide × HL long, are
+      //       extra film welded to the mouth → add 2·HW·HL to the area.
+      //   0 = DIE-CUT loop (punched from the body panel): NO extra film — the handle is
+      //       part of the body blank, so the handle term is dropped.
+      // HW = ribbon width (default 25 mm). NEVER inherits W (a full-width handle is wrong).
+      const welded = (dimensions.bagLoopWelded ?? 1) !== 0;
+      const handleWidth = HW > 0 ? HW : 25;
       const bodyArea = 2 * W * (H + BG + SA);
-      const handleArea = 2 * handleWidth * HL;
+      const handleArea = welded ? 2 * handleWidth * HL : 0;
       area = bodyArea + handleArea;
       webWidth = 2 * W;
       cutLength = H + BG + SA; // body blank; handle weight averaged in via area
@@ -178,19 +214,18 @@ export function calculateBagFlatSheetAreaM2(
     }
 
     case 'patch': {
-      // Base body + reinforcement patch (separate piece, same GSM assumption).
-      // Catalog maps patch G → sideGussetMm (SG, formed depth) by default.
-      if (BG > 0 && SG === 0) {
-        // Bottom-gusset base (rare for patch): two-web → adds BG (not 2BG) to length.
-        area = 2 * W * (H + BG + SA);
-        webWidth = 2 * W;
-        cutLength = H + BG + SA;
-      } else {
-        // Side-gusset base (catalog default): SG formed → 4SG
-        area = (2 * W + 4 * SG) * (H + 2 * SA);
-        webWidth = 2 * W + 4 * SG;
-        cutLength = H + 2 * SA;
-      }
+      // Base body uses the SAME unified gusset logic as 'gusseted' (flat / bottom /
+      // side / both), plus a separate reinforcement patch piece (PW × PH).
+      // Catalog default maps the patch base gusset to bottomGussetMm (bottom-gusset is
+      // the common patch-handle body), but side/both are supported if entered.
+      // The patch is cut from the same film as the body, so it is weighed at the body's
+      // structure GSM (its area is included in areaM2). A genuinely heavier-gauge patch
+      // would need its own structure — out of scope here (see audit §3.1).
+      const widthMm = 2 * W + (SG > 0 ? 4 * SG : 0);
+      const lengthMm = BG > 0 ? H + BG + SA : H + 2 * SA;
+      area = widthMm * lengthMm;
+      webWidth = widthMm;
+      cutLength = lengthMm;
       patchAreaM2 = (PW * PH) / 1e6;
       break;
     }

@@ -1,140 +1,57 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import type { BagConfiguratorType } from '../lib/bagConfiguratorCatalog';
 import { bagDrawDimsFromFields, type BagDrawDims } from '../lib/bagDrawDims';
+import { C, dimLbl, mkT, DimH, DimV, Grid, useDrawAreaSize } from './bagSvgPrimitives';
 
-const C = {
-  bagFill: '#ddeeff',
-  bagFold: '#c8dcf0',
-  bagGusset: '#b8cfe8',
-  bagDark: '#a0c0e0',
-  bagStroke: '#2a6090',
-  sw: 1.4,
-  foldDash: '5,3',
-  gussetDash: '4,3',
-  dimLine: '#3d4a60',
-  dimText: '#1c2333',
-  dimFs: 11,
-  arrow: 6,
-  dimOff: 30,
-  dimStep: 32,
-};
-
-/** Dimension label with mm value — matches legacy configurator format. */
-function dimLbl(id: string, mm: number) {
-  return `${id}=${Math.round(mm)}mm`;
-}
-
-function mkT(W: number, H: number, vw: number, vh: number) {
-  const m = 0.22;
-  const s = Math.min((vw * (1 - m * 2)) / Math.max(W, 1), (vh * (1 - m * 2)) / Math.max(H, 1));
-  const ox = (vw - W * s) / 2;
-  const oy = (vh - H * s) / 2;
-  return {
-    s,
-    ox,
-    oy,
-    px: (x: number) => ox + x * s,
-    py: (y: number) => oy + y * s,
-    sc: (v: number) => v * s,
-  };
-}
-
-function DimH({
-  x1,
-  x2,
-  yB,
-  off,
-  lbl,
-  above = true,
-}: {
-  x1: number;
-  x2: number;
-  yB: number;
-  off: number;
-  lbl: string;
-  above?: boolean;
-}) {
-  const yD = yB + (above ? -off : off);
-  const a = C.arrow;
-  const eS = yB + (above ? -4 : 4);
-  const eE = yD + (above ? -6 : 6);
-  const mx = (x1 + x2) / 2;
-  return (
-    <g opacity={0.92}>
-      <line x1={x1} y1={eS} x2={x1} y2={eE} stroke={C.dimLine} strokeWidth={0.8} />
-      <line x1={x2} y1={eS} x2={x2} y2={eE} stroke={C.dimLine} strokeWidth={0.8} />
-      <line x1={x1} y1={yD} x2={x2} y2={yD} stroke={C.dimLine} strokeWidth={0.8} />
-      <polygon points={`${x1},${yD} ${x1 + a},${yD - a / 2} ${x1 + a},${yD + a / 2}`} fill={C.dimLine} />
-      <polygon points={`${x2},${yD} ${x2 - a},${yD - a / 2} ${x2 - a},${yD + a / 2}`} fill={C.dimLine} />
-      <text
-        x={mx}
-        y={yD + (above ? -5 : 14)}
-        textAnchor="middle"
-        fontFamily="Segoe UI, system-ui, sans-serif"
-        fontSize={C.dimFs}
-        fontWeight={700}
-        fill={C.dimText}
-      >
-        {lbl}
-      </text>
-    </g>
-  );
-}
-
-function DimV({
-  y1,
-  y2,
-  xB,
-  off,
-  lbl,
-  left = true,
-}: {
-  y1: number;
-  y2: number;
-  xB: number;
-  off: number;
-  lbl: string;
-  left?: boolean;
-}) {
-  const xD = xB + (left ? -off : off);
-  const a = C.arrow;
-  const eS = xB + (left ? -4 : 4);
-  const eE = xD + (left ? -6 : 6);
-  const my = (y1 + y2) / 2;
-  const lx = xD + (left ? -6 : 6);
-  return (
-    <g opacity={0.92}>
-      <line x1={eS} y1={y1} x2={eE} y2={y1} stroke={C.dimLine} strokeWidth={0.8} />
-      <line x1={eS} y1={y2} x2={eE} y2={y2} stroke={C.dimLine} strokeWidth={0.8} />
-      <line x1={xD} y1={y1} x2={xD} y2={y2} stroke={C.dimLine} strokeWidth={0.8} />
-      <polygon points={`${xD},${y1} ${xD - a / 2},${y1 + a} ${xD + a / 2},${y1 + a}`} fill={C.dimLine} />
-      <polygon points={`${xD},${y2} ${xD - a / 2},${y2 - a} ${xD + a / 2},${y2 - a}`} fill={C.dimLine} />
-      <text
-        x={lx}
-        y={my}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontFamily="Segoe UI, system-ui, sans-serif"
-        fontSize={C.dimFs}
-        fontWeight={700}
-        fill={C.dimText}
-        transform={`rotate(-90, ${lx}, ${my})`}
-      >
-        {lbl}
-      </text>
-    </g>
-  );
-}
-
-function Grid({ w, h }: { w: number; h: number }) {
+function DrawGusseted({ d, vw, vh }: { d: BagDrawDims; vw: number; vh: number }) {
+  const { W, H, G, F, SG } = d;
+  const t = mkT(W, H, vw, vh);
+  const x0 = t.px(0);
+  const x1 = t.px(W);
+  const y0 = t.py(0);
+  const y1 = t.py(H);
+  const yF = t.py(F);
+  const yG = t.py(H - G / 2);
+  const bW = x1 - x0;
+  const sg = t.sc(SG);
+  const gOff = Math.min(t.sc(G / 2) * 0.5, t.sc(W * 0.12));
   return (
     <>
-      <defs>
-        <pattern id="bag-bg-grid" width={20} height={20} patternUnits="userSpaceOnUse">
-          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e2e8f0" strokeWidth={0.5} />
-        </pattern>
-      </defs>
-      <rect width={w} height={h} fill="url(#bag-bg-grid)" />
+      <g>
+        <rect x={x0} y={y0} width={bW} height={y1 - y0} fill={C.bagFill} stroke={C.bagStroke} strokeWidth={C.sw} rx={1} />
+        {F > 0 && (
+          <>
+            <rect x={x0} y={y0} width={bW} height={yF - y0} fill={C.bagFold} stroke="none" />
+            <line x1={x0} y1={yF} x2={x1} y2={yF} stroke={C.bagStroke} strokeWidth={1} strokeDasharray={C.foldDash} />
+          </>
+        )}
+        {SG > 0 && (
+          <>
+            <rect x={x0} y={y0} width={sg} height={y1 - y0} fill={C.bagGusset} opacity={0.5} />
+            <rect x={x1 - sg} y={y0} width={sg} height={y1 - y0} fill={C.bagGusset} opacity={0.5} />
+            <line x1={x0 + sg} y1={y0} x2={x0 + sg} y2={y1} stroke={C.bagStroke} strokeWidth={1} strokeDasharray={C.gussetDash} />
+            <line x1={x1 - sg} y1={y0} x2={x1 - sg} y2={y1} stroke={C.bagStroke} strokeWidth={1} strokeDasharray={C.gussetDash} />
+          </>
+        )}
+        {G > 0 && (
+          <>
+            <path
+              d={`M${x0},${y1} L${x0 + gOff},${yG} L${x1 - gOff},${yG} L${x1},${y1}Z`}
+              fill={C.bagGusset}
+              stroke="none"
+            />
+            <line x1={x0} y1={y1} x2={x1} y2={yG} stroke={C.bagStroke} strokeWidth={1} strokeDasharray={C.gussetDash} />
+            <line x1={x0} y1={y1} x2={x0 + gOff} y2={yG} stroke={C.bagStroke} strokeWidth={C.sw} />
+            <line x1={x1} y1={y1} x2={x1 - gOff} y2={yG} stroke={C.bagStroke} strokeWidth={C.sw} />
+          </>
+        )}
+        <rect x={x0} y={y0} width={bW} height={y1 - y0} fill="none" stroke={C.bagStroke} strokeWidth={C.sw} rx={1} />
+      </g>
+      <DimH x1={x0} x2={x1} yB={y0} off={C.dimOff} lbl={dimLbl('W', W)} />
+      <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl={dimLbl('H', H)} />
+      {SG > 0 && <DimH x1={x0} x2={x0 + sg} yB={y1} off={C.dimOff} lbl={dimLbl('SG', SG)} above={false} />}
+      {G > 0 && <DimV y1={yG} y2={y1} xB={x1} off={C.dimOff} lbl={dimLbl('BG', G)} left={false} />}
+      {F > 0 && <DimV y1={y0} y2={yF} xB={x0} off={C.dimOff + C.dimStep} lbl={dimLbl('F', F)} />}
     </>
   );
 }
@@ -508,6 +425,7 @@ function DrawWicket({ d, vw, vh }: { d: BagDrawDims; vw: number; vh: number }) {
 }
 
 const DRAWERS: Record<BagConfiguratorType, React.FC<{ d: BagDrawDims; vw: number; vh: number }>> = {
+  gusseted: DrawGusseted,
   'bottom-gusset': DrawBottomGusset,
   'side-gusset': DrawSideGusset,
   courier: DrawCourier,
@@ -519,27 +437,9 @@ const DRAWERS: Record<BagConfiguratorType, React.FC<{ d: BagDrawDims; vw: number
   wicket: DrawWicket,
 };
 
-function useDrawAreaSize() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ w: 900, h: 360 });
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const measure = () => {
-      const r = el.getBoundingClientRect();
-      setSize({ w: Math.max(r.width, 320), h: Math.max(r.height, 280) });
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  return { ref, ...size };
-}
-
 /** Live 2D bag preview — dimension labels only; values edited in the input row above. */
 export function BagSchematic({ type, vals }: { type: BagConfiguratorType; vals: Record<string, number> }) {
-  const { ref, w: vw, h: vh } = useDrawAreaSize();
+  const { ref, w: vw, h: vh } = useDrawAreaSize(320, 360);
   const d = useMemo(() => bagDrawDimsFromFields(vals), [vals]);
   const Drawer = DRAWERS[type];
 

@@ -59,8 +59,14 @@ export interface EstimateDimensions {
   flapMm?: number;
   handleLengthMm?: number;
   bagHandleWidthMm?: number;
+  /** Loop handle construction: 1 = welded-on strip (adds handle film), 0 = die-cut (no extra film). Default 1. */
+  bagLoopWelded?: number;
   bagPatchWidthMm?: number;
   bagPatchHeightMm?: number;
+  /** Top fold/hem or header seal added to the cut length (mm) — e.g. diaper top fold. */
+  bagTopFoldMm?: number;
+  /** Courier POD (proof-of-delivery) document pocket height (mm). Adds a W×POD film panel. 0 = none. */
+  bagPodHeightMm?: number;
   /** Wicket lip/header strip height (mm). Added to length on top of the body. */
   bagWicketLipMm?: number;
   /** Seal allowance per cut (mm). Default 10 mm when omitted. */

@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 export interface MasterMaterial {
   key: string;
   name: string;
-  type: 'substrate' | 'ink' | 'adhesive' | 'solvent';
+  type: 'substrate' | 'ink' | 'adhesive' | 'solvent' | 'accessory';
   solidPercent: number;
   density: number;
   costPerKgUsd: number;
@@ -26,6 +26,13 @@ export interface MasterMaterial {
   marketPriceUsd: number | null;
   /** GP/MP/HP lamination formula (binder + hardener + EA parts). */
   laminationRecipe?: Record<string, unknown> | null;
+  // Accessory pricing (type='accessory' rows only).
+  /** 'zipper' | 'spout' | 'valve' | 'handle' | 'window'. */
+  accessoryKind?: string | null;
+  costPerMeterUsd?: number | null;
+  costPerPieceUsd?: number | null;
+  weightGramPerMeter?: number | null;
+  weightGramPerPiece?: number | null;
 }
 
 export interface ProductTypeRow {
@@ -40,10 +47,24 @@ export interface PrintingWebRow {
   solidPercent?: number | null;
 }
 
+/** Order-quantity unit basis (mirrors engine UnitBasis). */
+export type UnitBasis = 'kg' | 'pieces' | 'sqm' | 'lm';
+
+export interface UnitRow {
+  label: string;
+  code: string;
+  /** Conversion basis (engine-fixed). */
+  basis: UnitBasis;
+  /** Base physical units per entered unit (e.g. Kpcs → 1000). */
+  multiplier: number;
+}
+
 export interface MasterDataReference {
   productTypes: string[];
   productTypeRows: ProductTypeRow[];
   units: string[];
+  /** Units with their conversion basis + multiplier (drives order-qty → kg). */
+  unitRows?: UnitRow[];
   rmTypes: string[];
   /** Same list as rmTypes but with codes for filter/save mapping */
   rmTypeRows?: Array<{ label: string; code: string }>;
@@ -74,6 +95,29 @@ export interface MasterDataReference {
 
 export const PACKAGING_FAMILY = 'Packaging';
 export const SOLVENT_FAMILY = 'Solvent';
+
+/**
+ * Default order-quantity units shipped by the platform owner. Each carries a
+ * conversion basis + multiplier so the engine can convert to kg. 'lm' uses the
+ * finished (reel) product width — see engine unit-conversion.ts.
+ */
+export const DEFAULT_UNIT_ROWS: UnitRow[] = [
+  { label: 'Kgs', code: 'kgs', basis: 'kg', multiplier: 1 },
+  { label: 'Kpcs', code: 'kpcs', basis: 'pieces', multiplier: 1000 },
+  { label: 'SQM', code: 'sqm', basis: 'sqm', multiplier: 1 },
+  { label: 'LM', code: 'lm', basis: 'lm', multiplier: 1 },
+  { label: 'Roll 500 LM', code: 'roll_500_lm', basis: 'lm', multiplier: 500 },
+];
+
+/** Legacy unit code → basis/multiplier, for units stored without metadata. */
+export const LEGACY_UNIT_METADATA: Record<string, { basis: UnitBasis; multiplier: number }> = {
+  kgs: { basis: 'kg', multiplier: 1 },
+  kg: { basis: 'kg', multiplier: 1 },
+  kpcs: { basis: 'pieces', multiplier: 1000 },
+  sqm: { basis: 'sqm', multiplier: 1 },
+  lm: { basis: 'lm', multiplier: 1 },
+  roll_500_lm: { basis: 'lm', multiplier: 500 },
+};
 
 /** Template ref_material_key → master seed `key`. */
 export const TEMPLATE_REF_TO_MASTER_KEY: Record<string, string> = {
@@ -128,6 +172,7 @@ export function normalizeReferenceShape(ref: Partial<MasterDataReference>): Mast
     productTypes,
     productTypeRows,
     units: ref.units ?? [],
+    unitRows: ref.unitRows ?? [],
     rmTypes: ref.rmTypes ?? [],
     packaging: ref.packaging ?? [],
     inkCoating: ref.inkCoating ?? [],

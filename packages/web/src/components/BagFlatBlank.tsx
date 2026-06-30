@@ -103,7 +103,7 @@ function fillFor(kind: Band['kind'] | Panel['kind']): string {
   }
 }
 
-/** Courier single-web flat blank: width = W, length = FL + H + H + SA + POD. */
+/** Courier single-web flat blank: length = FL + H + H + SA + POD, drawn landscape. */
 function CourierBlank({ d, vw, vh }: { d: EstimateDimensions; vw: number; vh: number }) {
   const W = d.openWidthMm ?? 0;
   const H = d.openHeightMm ?? 0;
@@ -118,36 +118,37 @@ function CourierBlank({ d, vw, vh }: { d: EstimateDimensions; vw: number; vh: nu
     { h: POD, kind: 'pocket', label: 'POD' },
   ] as Band[]).filter((b) => b.h > 0);
   const totalL = bands.reduce((s, b) => s + b.h, 0);
-  const t = mkT(W, totalL, vw, vh);
-  const x0 = t.px(0);
-  const x1 = t.px(W);
-  let yAcc = 0;
+  // Landscape: length runs horizontally (machine direction), width vertically.
+  const t = mkT(totalL, W, vw, vh);
+  const y0 = t.py(0);
+  const y1 = t.py(W);
+  let xAcc = 0;
   const segs = bands.map((b) => {
-    const yTop = yAcc;
-    yAcc += b.h;
-    return { b, yTop, yBot: yAcc };
+    const xLeft = xAcc;
+    xAcc += b.h;
+    return { b, xLeft, xRight: xAcc };
   });
-  // Fold line sits between the two body panels (back/front).
-  const foldY = FL + H;
+  // Fold line sits between the two body panels (back/front) — now vertical.
+  const foldX = FL + H;
   return (
     <>
       {segs.map((s, i) => (
         <rect
           key={i}
-          x={x0}
-          y={t.py(s.yTop)}
-          width={x1 - x0}
-          height={t.sc(s.b.h)}
+          x={t.px(s.xLeft)}
+          y={y0}
+          width={t.sc(s.b.h)}
+          height={y1 - y0}
           fill={fillFor(s.b.kind)}
           opacity={s.b.kind === 'body' ? 1 : 0.85}
         />
       ))}
-      <line x1={x0} y1={t.py(foldY)} x2={x1} y2={t.py(foldY)} stroke={C.bagStroke} strokeWidth={1} strokeDasharray={C.foldDash} />
-      <rect x={x0} y={t.py(0)} width={x1 - x0} height={t.sc(totalL)} fill="none" stroke={C.cutStroke} strokeWidth={C.sw} />
-      <DimH x1={x0} x2={x1} yB={t.py(0)} off={C.dimOff} lbl={dimLbl('W', W)} />
-      <DimV y1={t.py(0)} y2={t.py(totalL)} xB={x0} off={C.dimOff} lbl={`Blank L=${Math.round(totalL)}mm`} />
-      {FL > 0 && <DimV y1={t.py(0)} y2={t.py(FL)} xB={x1} off={C.dimOff} lbl={dimLbl('FL', FL)} left={false} />}
-      {POD > 0 && <DimV y1={t.py(totalL - POD)} y2={t.py(totalL)} xB={x1} off={C.dimOff} lbl={dimLbl('POD', POD)} left={false} />}
+      <line x1={t.px(foldX)} y1={y0} x2={t.px(foldX)} y2={y1} stroke={C.bagStroke} strokeWidth={1} strokeDasharray={C.foldDash} />
+      <rect x={t.px(0)} y={y0} width={t.sc(totalL)} height={y1 - y0} fill="none" stroke={C.cutStroke} strokeWidth={C.sw} />
+      <DimV y1={y0} y2={y1} xB={t.px(0)} off={C.dimOff} lbl={dimLbl('W', W)} />
+      <DimH x1={t.px(0)} x2={t.px(totalL)} yB={y1} off={C.dimOff} lbl={`Blank L=${Math.round(totalL)}mm`} above={false} />
+      {FL > 0 && <DimH x1={t.px(0)} x2={t.px(FL)} yB={y0} off={C.dimOff} lbl={dimLbl('FL', FL)} />}
+      {POD > 0 && <DimH x1={t.px(totalL - POD)} x2={t.px(totalL)} yB={y0} off={C.dimOff} lbl={dimLbl('POD', POD)} />}
     </>
   );
 }

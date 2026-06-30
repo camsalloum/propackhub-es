@@ -10,6 +10,7 @@ import {
   type BagConfiguratorConfig,
 } from '../lib/bagConfiguratorCatalog';
 import { bagDrawDimsFromFields, bagFaceAreaCm2, bagFlatSheetLabel } from '../lib/bagDrawDims';
+import { selectOnFocus } from '../lib/inputs';
 
 function BagInputField({
   field,
@@ -58,6 +59,7 @@ function BagInputField({
               setDraft(Number.isFinite(value) ? String(value) : '');
             }
           }}
+          onFocus={selectOnFocus}
         />
         <span className="bg-accent/15 border-l border-accent/40 px-2 py-1.5 text-[11px] font-semibold text-accent-text flex items-center">
           {field.unit}
@@ -227,11 +229,17 @@ export function BagConfigurator({
       {/* Views: finished bag + flat blank die-line (two-up, stacks on narrow screens) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 bg-[#f8f9fb] divide-y lg:divide-y-0 lg:divide-x divide-slate">
         <div className="flex flex-col min-h-[360px]">
+          <p className="px-3 pt-2 text-[11px] font-semibold text-navy/70 text-center capitalize">
+            {configType.replace(/[-_]/g, ' ')} bag — open view
+          </p>
           <div className="flex-1 min-h-[320px]">
             <BagSchematic type={configType} vals={fieldVals} />
           </div>
         </div>
         <div className="flex flex-col min-h-[360px]">
+          <p className="px-3 pt-2 text-[11px] font-semibold text-navy/70 text-center capitalize">
+            {configType.replace(/[-_]/g, ' ')} bag — flat blank
+          </p>
           <div className="flex-1 min-h-[320px]">
             <BagFlatBlank type={configType} dims={engineDims} />
           </div>

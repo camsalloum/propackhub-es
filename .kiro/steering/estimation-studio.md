@@ -21,6 +21,32 @@ inclusion: always
 - **Sales rep UI:** selling price only — no markup/RM/cost breakdown (Decision #20)
 - Admin: Settings → Team & visibility per user
 
+## Number inputs (app-wide rule)
+
+Numeric inputs that carry a default value (commonly `0`) MUST select-all on focus
+so the user types over the default instead of manually deleting it first. Attach
+`onFocus={selectOnFocus}` from `lib/inputs.ts`. Applies to dimensions (reel width,
+cutoff, pouch/bag fields), order quantity, markup/plates/delivery, slab qty/price,
+layer micron/gsm/cost, and solvent fields.
+
+## UI copy (app-wide rule)
+
+**Instructional / clarification helper text MUST NOT be rendered as visible inline body copy.**
+Attach it to the nearest heading/label via `components/SectionTitle.tsx`, which shows
+the copy only on hover (native tooltip) behind a small info icon.
+
+- Applies to every page and component (estimate editor, lists, dashboard, settings,
+  master data, etc.) — not one screen.
+- **Convert:** "how to use" sentences, section descriptions, clarifying subtitles
+  (e.g. "pick a customer, then Save", "Within the next 7 days", "Structure yield per web unit").
+- **Keep visible (exempt):** data + counts (e.g. "12 customers"), field/column labels,
+  status/feedback text, input placeholders, error/validation messages, and the
+  Login/marketing hero tagline.
+- **Field-level helper** directly under a single input may stay, but prefer moving it
+  to the label via `SectionTitle as="label"`.
+- New sections: add the title with `<SectionTitle hint="…">` from day one; do not add a
+  separate `<p>` of guidance under a heading.
+
 ## Docs
 
 - Build spec: [docs/ES_PRD_v3_FINAL_BUILD_SPEC.md](docs/ES_PRD_v3_FINAL_BUILD_SPEC.md)

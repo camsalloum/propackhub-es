@@ -8,6 +8,9 @@ import {
   costingKeyForMasterKey,
   normalizeReferenceShape,
   resolveMasterDataReferencePath,
+  LEGACY_UNIT_METADATA,
+  DEFAULT_UNIT_ROWS,
+  type UnitBasis,
 } from './master-materials-io';
 import { roundUsd } from '../utils/usd';
 import { syncMaterialsForTenant } from './seed-materials';
@@ -144,6 +147,11 @@ function rowToMasterMaterial(row: typeof schema.platformMasterMaterials.$inferSe
     hoover: row.hoover,
     marketPriceUsd: row.marketPriceUsd != null ? Number(row.marketPriceUsd) : null,
     laminationRecipe: (row.laminationRecipe as MasterMaterial['laminationRecipe']) ?? null,
+    accessoryKind: row.accessoryKind ?? null,
+    costPerMeterUsd: row.costPerMeterUsd != null ? Number(row.costPerMeterUsd) : null,
+    costPerPieceUsd: row.costPerPieceUsd != null ? Number(row.costPerPieceUsd) : null,
+    weightGramPerMeter: row.weightGramPerMeter != null ? Number(row.weightGramPerMeter) : null,
+    weightGramPerPiece: row.weightGramPerPiece != null ? Number(row.weightGramPerPiece) : null,
   };
 }
 
@@ -155,7 +163,7 @@ export function masterMaterialInputToDbValues(
   return {
     key: m.key,
     name: m.name,
-    type: m.type as 'substrate' | 'ink' | 'adhesive' | 'solvent',
+    type: m.type as 'substrate' | 'ink' | 'adhesive' | 'solvent' | 'accessory',
     solidPercent: m.solidPercent,
     density: m.density.toString(),
     costPerKgUsd: cost.toFixed(2),
@@ -172,6 +180,11 @@ export function masterMaterialInputToDbValues(
     externalId: m.externalId ?? null,
     externalSource: m.externalSource ?? null,
     laminationRecipe: m.laminationRecipe ?? null,
+    accessoryKind: m.accessoryKind ?? null,
+    costPerMeterUsd: m.costPerMeterUsd != null ? Number(m.costPerMeterUsd).toString() : null,
+    costPerPieceUsd: m.costPerPieceUsd != null ? Number(m.costPerPieceUsd).toString() : null,
+    weightGramPerMeter: m.weightGramPerMeter != null ? Number(m.weightGramPerMeter).toString() : null,
+    weightGramPerPiece: m.weightGramPerPiece != null ? Number(m.weightGramPerPiece).toString() : null,
     updatedAt: new Date(),
   };
 }
@@ -514,6 +527,28 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
       parent: ((i.metadata || {}) as { parent?: string }).parent || '',
     }));
 
+  // Units carry { basis, multiplier } metadata so order quantities convert to kg.
+  // Rows saved before this metadata existed fall back to the legacy code map.
+  const unitRows = items
+    .filter((i: PlatformReferenceItemRow) => i.category === 'unit')
+    .map((i: PlatformReferenceItemRow) => {
+      const meta = (i.metadata || {}) as { basis?: UnitBasis; multiplier?: number };
+      const code =
+        (i.code || '').trim() ||
+        i.label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      const legacy =
+        LEGACY_UNIT_METADATA[code] ??
+        LEGACY_UNIT_METADATA[i.label.trim().toLowerCase()] ??
+        { basis: 'kg' as UnitBasis, multiplier: 1 };
+      const basis: UnitBasis =
+        meta.basis === 'kg' || meta.basis === 'pieces' || meta.basis === 'sqm' || meta.basis === 'lm'
+          ? meta.basis
+          : legacy.basis;
+      const multiplier =
+        typeof meta.multiplier === 'number' && meta.multiplier > 0 ? meta.multiplier : legacy.multiplier;
+      return { label: i.label, code, basis, multiplier };
+    });
+
   const processRows = items
     .filter((i: PlatformReferenceItemRow) => i.category === 'process')
     .map((i: PlatformReferenceItemRow) => {
@@ -551,6 +586,7 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
     productTypes: productTypeRows.map((r: { label: string; code: string }) => r.label),
     productTypeRows,
     units: byCategory('unit'),
+    unitRows,
     rmTypes: rmTypeRows.map((r: { label: string; code: string }) => r.label),
     rmTypeRows: rmTypeRows.map(({ metadata: _m, ...r }) => r),
     packaging: byCategory('packaging'),
@@ -775,7 +811,23 @@ export async function ensurePlatformMasterSeeded(): Promise<{ materials: number;
           (r) => ({ label: r.label, code: r.code })
         ),
       },
-      { category: 'unit', items: ref.units.map((l) => ({ label: l })) },
+      {
+        category: 'unit',
+        items: (ref.units.length
+          ? ref.units.map((l) => {
+              const key = l.trim().toLowerCase();
+              const match = DEFAULT_UNIT_ROWS.find((u) => u.label.toLowerCase() === key || u.code === key);
+              const legacy = LEGACY_UNIT_METADATA[key];
+              const basis = match?.basis ?? legacy?.basis ?? 'kg';
+              const multiplier = match?.multiplier ?? legacy?.multiplier ?? 1;
+              return { label: l, code: match?.code, metadata: { basis, multiplier } };
+            })
+          : DEFAULT_UNIT_ROWS.map((u) => ({
+              label: u.label,
+              code: u.code,
+              metadata: { basis: u.basis, multiplier: u.multiplier },
+            }))),
+      },
       { category: 'rm_type', items: ref.rmTypes.map((l) => ({
         label: l,
         code: l.trim().toLowerCase() === 'solvent' ? 'solvent' : undefined,

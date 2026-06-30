@@ -18,6 +18,8 @@ export interface PrintingWebOption {
 export interface UnitOption {
   label: string;
   value: string;
+  /** Conversion basis — used to filter units by product family (lm/sqm hidden for bag/pouch). */
+  basis?: 'kg' | 'pieces' | 'sqm' | 'lm';
 }
 
 /**
@@ -129,11 +131,11 @@ export const DEFAULT_MASTER_REFERENCE: MasterDataReferenceState = {
     },
   ],
   unitOptions: [
-    { label: 'Kgs', value: 'kgs' },
-    { label: 'Kpcs', value: 'kpcs' },
-    { label: 'SQM', value: 'sqm' },
-    { label: 'LM', value: 'lm' },
-    { label: 'Roll 500 LM', value: 'roll_500_lm' },
+    { label: 'Kgs', value: 'kgs', basis: 'kg' },
+    { label: 'Kpcs', value: 'kpcs', basis: 'pieces' },
+    { label: 'SQM', value: 'sqm', basis: 'sqm' },
+    { label: 'LM', value: 'lm', basis: 'lm' },
+    { label: 'Roll 500 LM', value: 'roll_500_lm', basis: 'lm' },
   ],
   rmTypeOptions: DEFAULT_RM_TYPE_OPTIONS,
   productSubtypeOptions: DEFAULT_PRODUCT_SUBTYPE_OPTIONS,

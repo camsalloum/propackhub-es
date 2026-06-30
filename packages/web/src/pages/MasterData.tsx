@@ -12,6 +12,7 @@ import {
 } from '../lib/api';
 import { DEFAULT_PRODUCT_SUBTYPE_OPTIONS } from '../lib/masterDataReference';
 import LaminationFormulaModal from '../components/LaminationFormulaModal';
+import { SectionTitle } from '../components/SectionTitle';
 import { deriveBinderConcentrateStats, type LaminationRecipe } from '@es/engine';
 
 type MaterialTab = string; // now dynamic — any rm_type code can be a material tab
@@ -38,13 +39,28 @@ const STANDARD_MATERIAL_TABS = [
   { id: 'adhesive', label: 'Adhesive' },
   { id: 'solvent', label: 'Solvent' },
   { id: 'packaging', label: 'Packaging' },
+  { id: 'accessory', label: 'Accessories' },
 ];
 
+/** Accessory kinds + their rate basis (mirrors engine pouch-accessories.ts). */
+const ACCESSORY_KIND_OPTIONS: { value: string; label: string; basis: 'per_meter' | 'per_piece' }[] = [
+  { value: 'zipper', label: 'Zipper', basis: 'per_meter' },
+  { value: 'spout', label: 'Spout + cap', basis: 'per_piece' },
+  { value: 'valve', label: 'Degassing valve', basis: 'per_piece' },
+  { value: 'handle', label: 'Handle', basis: 'per_piece' },
+  { value: 'window', label: 'Window patch', basis: 'per_piece' },
+];
+
+function accessoryBasis(kind: string | null | undefined): 'per_meter' | 'per_piece' {
+  return ACCESSORY_KIND_OPTIONS.find((o) => o.value === kind)?.basis ?? 'per_piece';
+}
+
 /** Map an RM type to the DB type field used for new rows */
-function dbTypeForRmCode(code: string): 'substrate' | 'ink' | 'adhesive' | 'solvent' {
+function dbTypeForRmCode(code: string): 'substrate' | 'ink' | 'adhesive' | 'solvent' | 'accessory' {
   if (code === 'ink') return 'ink';
   if (code === 'adhesive') return 'adhesive';
   if (code === 'solvent') return 'solvent';
+  if (code === 'accessory') return 'accessory';
   return 'substrate'; // custom types map to substrate with substrateFamily = label
 }
 
@@ -52,6 +68,7 @@ function dbTypeForRmCode(code: string): 'substrate' | 'ink' | 'adhesive' | 'solv
 function defaultFamilyForRmCode(code: string, label: string): string {
   if (code === 'packaging') return PACKAGING_FAMILY;
   if (code === 'solvent') return 'Solvent';
+  if (code === 'accessory') return 'Accessory';
   if (code === 'substrate') return 'BOPP';
   if (code === 'ink') return 'Ink & Coating';
   if (code === 'adhesive') return 'Adhesive';
@@ -91,6 +108,9 @@ function filterMaterialsForTab(
   if (tabCode === 'solvent') {
     return rows.filter((m) => m.type === 'solvent');
   }
+  if (tabCode === 'accessory') {
+    return rows.filter((m) => m.type === 'accessory');
+  }
   // Custom RM type: match by substrateFamily = tab label
   return rows.filter((m) => m.type === 'substrate' && m.substrateFamily === tabLabel);
 }
@@ -100,6 +120,31 @@ function newMaterialRow(tabCode: string, tabLabel: string): PlatformMasterMateri
   const dbType = dbTypeForRmCode(tabCode);
   const family = defaultFamilyForRmCode(tabCode, tabLabel);
   const defaultCost = tabCode === 'ink' ? 12 : tabCode === 'adhesive' ? 8 : 3;
+  if (tabCode === 'accessory') {
+    return {
+      id: `new-${Date.now()}`,
+      key: '',
+      name: 'New accessory',
+      type: 'accessory',
+      solidPercent: 100,
+      density: 1,
+      costPerKgUsd: 0,
+      liquidCostUsd: 0,
+      wastePercent: 0,
+      isSolventBased: false,
+      substrateFamily: family,
+      substrateGrade: '',
+      hoover: '',
+      marketPriceUsd: null,
+      externalId: null,
+      externalSource: null,
+      accessoryKind: 'zipper',
+      costPerMeterUsd: 0.05,
+      costPerPieceUsd: null,
+      weightGramPerMeter: 3,
+      weightGramPerPiece: null,
+    };
+  }
   return {
     id: `new-${Date.now()}`,
     key: '',
@@ -196,7 +241,13 @@ const MasterData = () => {
           ? rows.map((r) => ({ label: r.label, code: r.code }))
           : DEFAULT_PRODUCT_SUBTYPE_OPTIONS.map((s) => ({ label: s.label, code: s.code }));
       })(),
-      unit: (ref.units ?? []).map((l) => ({ label: l })),
+      unit: (ref.unitRows && ref.unitRows.length > 0
+        ? ref.unitRows.map((u) => ({
+            label: u.label,
+            code: u.code,
+            metadata: { basis: u.basis, multiplier: u.multiplier } as Record<string, unknown>,
+          }))
+        : (ref.units ?? []).map((l) => ({ label: l }))),
       rm_type: (ref.rmTypeRows ?? ref.rmTypes ?? []).map((r) =>
         typeof r === 'string'
           ? { label: r, code: '' }
@@ -206,11 +257,18 @@ const MasterData = () => {
     };
 
     // Build dynamic material tabs from RM types.
-    // Standard types always present; custom types (code not in standard set) added after packaging.
-    const STANDARD_CODES = new Set(['substrate', 'ink', 'adhesive', 'packaging']);
+    // Standard types always present; custom types (id not already a standard tab)
+    // are appended. Exclude every standard tab id — including 'solvent' and
+    // 'accessory' — and de-dupe custom ids so two rows can't collide on a React key.
+    const STANDARD_CODES = new Set(STANDARD_MATERIAL_TABS.map((t) => t.id.toLowerCase()));
+    const seenCustom = new Set<string>();
     const customRmTabs = map.rm_type
-      .filter((r) => r.label.trim() && !STANDARD_CODES.has((r.code || r.label).toLowerCase()))
-      .map((r) => ({ id: (r.code || slugKey(r.label)).toLowerCase(), label: r.label }));
+      .map((r) => ({ id: (r.code || slugKey(r.label)).toLowerCase(), label: r.label.trim() }))
+      .filter((t) => {
+        if (!t.label || STANDARD_CODES.has(t.id) || seenCustom.has(t.id)) return false;
+        seenCustom.add(t.id);
+        return true;
+      });
     setRmTypeTabs([...STANDARD_MATERIAL_TABS, ...customRmTabs]);
     setCleaningDefaultKg(
       (ref as { costingDefaults?: { cleaningSolventKgPerJob?: number } }).costingDefaults
@@ -272,6 +330,15 @@ const MasterData = () => {
     const currentTab = rmTypeTabs.find((t) => t.id === tab);
     return filterMaterialsForTab(tab, currentTab?.label ?? tab, materials, rmTypeTabs);
   }, [tab, materials, rmTypeTabs]);
+
+  // Drag-and-drop reordering state — hoisted above the early returns below so
+  // the hook order stays identical on every render (Rules of Hooks).
+  const [ptDragFrom, setPtDragFrom] = useState<number | null>(null);
+  const [ptDragHover, setPtDragHover] = useState<number | null>(null);
+  const [subDragFrom, setSubDragFrom] = useState<number | null>(null);
+  const [subDragHover, setSubDragHover] = useState<number | null>(null);
+  const [procDragFrom, setProcDragFrom] = useState<number | null>(null);
+  const [procDragHover, setProcDragHover] = useState<number | null>(null);
 
   if (isLoading) {
     return (
@@ -429,8 +496,6 @@ const MasterData = () => {
   };
 
   // ── Drag-and-drop reordering (product types) ───────────────────────────────
-  const [ptDragFrom, setPtDragFrom] = useState<number | null>(null);
-  const [ptDragHover, setPtDragHover] = useState<number | null>(null);
   const reorderProductType = (from: number, to: number) => {
     if (from === to || from < 0 || to < 0 || from >= refItems.length || to >= refItems.length) return;
     setRefItems((prev) => {
@@ -475,8 +540,6 @@ const MasterData = () => {
   };
 
   // ── Drag-and-drop reordering (subtypes — constrained to same parent) ────────
-  const [subDragFrom, setSubDragFrom] = useState<number | null>(null);
-  const [subDragHover, setSubDragHover] = useState<number | null>(null);
   const commitSubDrag = () => {
     if (
       subDragFrom !== null &&
@@ -498,8 +561,6 @@ const MasterData = () => {
   };
 
   // ── Drag-and-drop reordering (processes) ────────────────────────────────────
-  const [procDragFrom, setProcDragFrom] = useState<number | null>(null);
-  const [procDragHover, setProcDragHover] = useState<number | null>(null);
   const commitProcDrag = () => {
     if (procDragFrom !== null && procDragHover !== null && procDragFrom !== procDragHover) {
       setProcessRows((prev) => {
@@ -656,6 +717,107 @@ const MasterData = () => {
               </button>
             )}
           </div>
+          {tab === 'accessory' ? (
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Kind</th>
+                    <th className="text-right">Cost / m ($)</th>
+                    <th className="text-right">Weight (g/m)</th>
+                    <th className="text-right">Cost / pc ($)</th>
+                    <th className="text-right">Weight (g/pc)</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleMaterials.map((row) => {
+                    const basis = accessoryBasis(row.accessoryKind);
+                    return (
+                      <tr key={row.id}>
+                        <td>
+                          <input
+                            className="cell-input w-full min-w-0"
+                            value={row.name}
+                            disabled={!canEdit}
+                            onChange={(e) => updateMaterialRow(row.id, { name: e.target.value })}
+                          />
+                        </td>
+                        <td>
+                          <select
+                            className="cell-input w-full"
+                            value={row.accessoryKind ?? 'zipper'}
+                            disabled={!canEdit}
+                            onChange={(e) =>
+                              updateMaterialRow(row.id, {
+                                accessoryKind: e.target.value as PlatformMasterMaterialRow['accessoryKind'],
+                              })
+                            }
+                          >
+                            {ACCESSORY_KIND_OPTIONS.map((o) => (
+                              <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>
+                          {basis === 'per_meter' ? (
+                            <input
+                              type="number" step="0.001" className="cell-input cell-num w-[80px]"
+                              value={row.costPerMeterUsd ?? 0} disabled={!canEdit}
+                              onChange={(e) => updateMaterialRow(row.id, { costPerMeterUsd: Number(e.target.value) })}
+                            />
+                          ) : <span className="text-mist">—</span>}
+                        </td>
+                        <td>
+                          {basis === 'per_meter' ? (
+                            <input
+                              type="number" step="0.01" className="cell-input cell-num w-[80px]"
+                              value={row.weightGramPerMeter ?? 0} disabled={!canEdit}
+                              onChange={(e) => updateMaterialRow(row.id, { weightGramPerMeter: Number(e.target.value) })}
+                            />
+                          ) : <span className="text-mist">—</span>}
+                        </td>
+                        <td>
+                          {basis === 'per_piece' ? (
+                            <input
+                              type="number" step="0.001" className="cell-input cell-num w-[80px]"
+                              value={row.costPerPieceUsd ?? 0} disabled={!canEdit}
+                              onChange={(e) => updateMaterialRow(row.id, { costPerPieceUsd: Number(e.target.value) })}
+                            />
+                          ) : <span className="text-mist">—</span>}
+                        </td>
+                        <td>
+                          {basis === 'per_piece' ? (
+                            <input
+                              type="number" step="0.01" className="cell-input cell-num w-[80px]"
+                              value={row.weightGramPerPiece ?? 0} disabled={!canEdit}
+                              onChange={(e) => updateMaterialRow(row.id, { weightGramPerPiece: Number(e.target.value) })}
+                            />
+                          ) : <span className="text-mist">—</span>}
+                        </td>
+                        <td className="text-center">
+                          {canEdit && (
+                            <button
+                              type="button"
+                              className="p-1.5 text-danger hover:bg-danger/10 rounded transition-colors duration-micro ease-micro"
+                              onClick={() => removeMaterialRow(row)}
+                              aria-label="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {visibleMaterials.length === 0 && (
+                    <tr><td colSpan={7} className="text-center text-mist py-4 text-sm">No accessories yet — click “Add row”. Used by the Pouch configurator (zipper/spout/valve/window/handle).</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
           <div className="table-wrap">
             <table className="data-table">
               <thead>
@@ -806,21 +968,22 @@ const MasterData = () => {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       ) : tab === 'product_type' ? (
         <div className="card p-3 space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-mist">{refItems.length} product type(s)</span>
+            <SectionTitle
+              as="span"
+              className="text-sm text-mist"
+              hint="Each product type has its own code (e.g. pouch, bag). Subtypes nest under a type with a parentcode_subtype code (e.g. bag_wicket) — they drive the estimate dropdowns."
+            >
+              {refItems.length} product type(s)
+            </SectionTitle>
             <button type="button" className="btn-secondary text-sm flex items-center gap-1 py-1.5" onClick={addProductType}>
               <Plus className="w-4 h-4" /> Add product type
             </button>
           </div>
-          <p className="text-xs text-mist">
-            Each product type has its own code (e.g. <code className="bg-slate rounded px-1">pouch</code>,{' '}
-            <code className="bg-slate rounded px-1">bag</code>). Subtypes nest under a type with a{' '}
-            <code className="bg-slate rounded px-1">parentcode_subtype</code> code (e.g.{' '}
-            <code className="bg-slate rounded px-1">bag_wicket</code>) — they drive the estimate dropdowns.
-          </p>
           {refItems.map((pt, i) => {
             const ptCode = (pt.code ?? '').toLowerCase();
             return (
@@ -962,7 +1125,13 @@ const MasterData = () => {
       ) : tab === 'process' ? (
         <div className="card p-3 space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-mist">{processRows.length} process(es)</span>
+            <SectionTitle
+              as="span"
+              className="text-sm text-mist"
+              hint="Processes drive template selection and estimate instantiation defaults (cost/hour, speed, setup). The code (e.g. pouch_making) is the stable key stored in templates."
+            >
+              {processRows.length} process(es)
+            </SectionTitle>
             <button
               type="button"
               className="btn-secondary text-sm flex items-center gap-1 py-1.5"
@@ -971,10 +1140,6 @@ const MasterData = () => {
               <Plus className="w-4 h-4" /> Add process
             </button>
           </div>
-          <p className="text-xs text-mist">
-            Processes drive template selection and estimate instantiation defaults (cost/hour, speed, setup).
-            The <strong>code</strong> (e.g. <code className="bg-slate rounded px-1">pouch_making</code>) is the stable key stored in templates.
-          </p>
           <div className="space-y-2">
             {processRows.map((proc, i) => {
               const groupIdxCount = processRows.length;
@@ -1047,11 +1212,25 @@ const MasterData = () => {
             <button
               type="button"
               className="btn-secondary text-sm flex items-center gap-1 py-1.5"
-              onClick={() => setRefItems((prev) => [...prev, { label: '', code: '' }])}
+              onClick={() =>
+                setRefItems((prev) => [
+                  ...prev,
+                  tab === 'unit'
+                    ? { label: '', code: '', metadata: { basis: 'kg', multiplier: 1 } }
+                    : { label: '', code: '' },
+                ])
+              }
             >
               <Plus className="w-4 h-4" /> Add
             </button>
           </div>
+          {tab === 'unit' && (
+            <p className="text-xs text-mist mb-2">
+              Each unit converts the order quantity to kg via a <strong>basis</strong> (kg, pieces, m²,
+              or reel-width linear metre) times a <strong>multiplier</strong>. E.g. Kpcs = pieces × 1000,
+              Roll 500 LM = linear metre × 500, 1 MT = kg × 1000.
+            </p>
+          )}
           {tab === 'product_subtype' && (
             <p className="text-xs text-mist mb-2">
               <strong>Code</strong> sets the family + dimension fields: prefix{' '}
@@ -1071,6 +1250,12 @@ const MasterData = () => {
                     <th>
                       Code{tab === 'rm_type' && <span className="normal-case tracking-normal text-mist/70 ml-1">(DB type)</span>}
                     </th>
+                  )}
+                  {tab === 'unit' && (
+                    <>
+                      <th>Basis</th>
+                      <th className="text-right">Multiplier</th>
+                    </>
                   )}
                   <th />
                 </tr>
@@ -1103,6 +1288,47 @@ const MasterData = () => {
                           }}
                         />
                       </td>
+                    )}
+                    {tab === 'unit' && (
+                      <>
+                        <td>
+                          <select
+                            className="cell-input w-full min-w-[150px]"
+                            value={(item.metadata?.basis as string) ?? 'kg'}
+                            onChange={(e) => {
+                              const next = [...refItems];
+                              next[i] = {
+                                ...next[i],
+                                metadata: { ...(next[i].metadata ?? {}), basis: e.target.value },
+                              };
+                              setRefItems(next);
+                            }}
+                          >
+                            <option value="kg">Kg (weight)</option>
+                            <option value="pieces">Pieces</option>
+                            <option value="sqm">m² (area)</option>
+                            <option value="lm">Linear metre (reel width)</option>
+                          </select>
+                        </td>
+                        <td className="text-right">
+                          <input
+                            type="number"
+                            step="any"
+                            min={0}
+                            className="cell-input w-24 text-right font-mono"
+                            title="Base units per entered unit (e.g. Kpcs = 1000)"
+                            value={String((item.metadata?.multiplier as number) ?? 1)}
+                            onChange={(e) => {
+                              const next = [...refItems];
+                              next[i] = {
+                                ...next[i],
+                                metadata: { ...(next[i].metadata ?? {}), multiplier: Number(e.target.value) || 0 },
+                              };
+                              setRefItems(next);
+                            }}
+                          />
+                        </td>
+                      </>
                     )}
                     <td className="text-center">
                       <button

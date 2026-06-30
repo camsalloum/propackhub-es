@@ -12,6 +12,34 @@ function isMaterialAdmin(role: string): boolean {
   return role === 'tenant_admin' || role === 'platform_admin';
 }
 
+/**
+ * Who may edit a tenant's own master data:
+ *  - platform_admin / tenant_admin (group admin): always
+ *  - a plain 'user': only when the tenant is an individual account (single
+ *    owner who fully controls their own materials). In a company/group tenant,
+ *    regular members are read-only and must go through the group admin.
+ */
+async function canManageTenantMaterials(
+  db: ReturnType<typeof getDatabase>,
+  tenantId: string,
+  role: string
+): Promise<boolean> {
+  if (isMaterialAdmin(role)) return true;
+  const [tenant] = await db
+    .select({ type: schema.tenants.type })
+    .from(schema.tenants)
+    .where(eq(schema.tenants.id, tenantId));
+  return tenant?.type === 'individual';
+}
+
+const MASTER_DATA_FORBIDDEN = {
+  error: {
+    code: 'FORBIDDEN',
+    message:
+      'Only your group administrator can change master data. Contact your admin to add or edit materials.',
+  },
+} as const;
+
 function normalizeMaterialPrices<T extends { costPerKgUsd?: number; marketPriceUsd?: number | null }>(
   data: T
 ): T {
@@ -27,7 +55,7 @@ function normalizeMaterialPrices<T extends { costPerKgUsd?: number; marketPriceU
 
 const MaterialSchema = z.object({
   name: z.string().min(1),
-  type: z.enum(['substrate', 'ink', 'adhesive', 'solvent']),
+  type: z.enum(['substrate', 'ink', 'adhesive', 'solvent', 'accessory']),
   solidPercent: z.number().min(0).max(100),
   density: z.number().positive(),
   costPerKgUsd: z.number().nonnegative(),
@@ -37,6 +65,12 @@ const MaterialSchema = z.object({
   hoover: z.string().nullable().optional(),
   marketPriceUsd: z.number().nonnegative().nullable().optional(),
   itemClass: z.string().max(64).nullable().optional(),
+  // Accessory pricing (type='accessory' rows).
+  accessoryKind: z.enum(['zipper', 'spout', 'valve', 'handle', 'window']).nullable().optional(),
+  costPerMeterUsd: z.number().nonnegative().nullable().optional(),
+  costPerPieceUsd: z.number().nonnegative().nullable().optional(),
+  weightGramPerMeter: z.number().nonnegative().nullable().optional(),
+  weightGramPerPiece: z.number().nonnegative().nullable().optional(),
 });
 
 export async function getMaterialsRoute(
@@ -96,13 +130,12 @@ export async function createMaterialRoute(
   try {
     await request.jwtVerify();
     const user = extractUserFromRequest(request);
-    if (!isMaterialAdmin(user.role)) {
-      return reply.status(403).send({ error: 'Admin only' });
-    }
     const tenantId = extractTenantFromRequest(request);
-    const data = normalizeMaterialPrices(MaterialSchema.parse(request.body));
-
     const db = getDatabase();
+    if (!(await canManageTenantMaterials(db, tenantId, user.role))) {
+      return reply.status(403).send(MASTER_DATA_FORBIDDEN);
+    }
+    const data = normalizeMaterialPrices(MaterialSchema.parse(request.body));
 
     const [material] = await db
       .insert(schema.materials)
@@ -119,7 +152,12 @@ export async function createMaterialRoute(
         substrateGrade: data.substrateGrade ?? null,
         hoover: data.hoover ?? null,
         marketPriceUsd: String(roundUsd(data.marketPriceUsd ?? data.costPerKgUsd)),
-        itemClass: data.itemClass ?? null,
+        itemClass: data.itemClass ?? (data.type === 'accessory' ? 'accessory' : null),
+        accessoryKind: data.accessoryKind ?? null,
+        costPerMeterUsd: data.costPerMeterUsd != null ? String(data.costPerMeterUsd) : null,
+        costPerPieceUsd: data.costPerPieceUsd != null ? String(data.costPerPieceUsd) : null,
+        weightGramPerMeter: data.weightGramPerMeter != null ? String(data.weightGramPerMeter) : null,
+        weightGramPerPiece: data.weightGramPerPiece != null ? String(data.weightGramPerPiece) : null,
         priceSource: 'manual',
         isTenantOnly: true,
       })
@@ -143,16 +181,15 @@ export async function updateMaterialRoute(
   try {
     await request.jwtVerify();
     const user = extractUserFromRequest(request);
-    if (!isMaterialAdmin(user.role)) {
-      return reply.status(403).send({ error: 'Admin only' });
-    }
     const tenantId = extractTenantFromRequest(request);
     const { id } = request.params;
+    const db = getDatabase();
+    if (!(await canManageTenantMaterials(db, tenantId, user.role))) {
+      return reply.status(403).send(MASTER_DATA_FORBIDDEN);
+    }
     const data = normalizeMaterialPrices(MaterialSchema.partial().parse(request.body));
 
-    const db = getDatabase();
-
-    const { marketPriceUsd, costPerKgUsd, ...rest } = data;
+    const { marketPriceUsd, costPerKgUsd, costPerMeterUsd, costPerPieceUsd, weightGramPerMeter, weightGramPerPiece, ...rest } = data;
     const patch: Record<string, unknown> = { ...rest, updatedAt: new Date() };
     if (marketPriceUsd !== undefined) {
       patch.marketPriceUsd = marketPriceUsd;
@@ -163,6 +200,11 @@ export async function updateMaterialRoute(
     if (costPerKgUsd !== undefined) {
       patch.costPerKgUsd = costPerKgUsd;
     }
+    // Accessory pricing (decimal columns take strings).
+    if (costPerMeterUsd !== undefined) patch.costPerMeterUsd = costPerMeterUsd != null ? String(costPerMeterUsd) : null;
+    if (costPerPieceUsd !== undefined) patch.costPerPieceUsd = costPerPieceUsd != null ? String(costPerPieceUsd) : null;
+    if (weightGramPerMeter !== undefined) patch.weightGramPerMeter = weightGramPerMeter != null ? String(weightGramPerMeter) : null;
+    if (weightGramPerPiece !== undefined) patch.weightGramPerPiece = weightGramPerPiece != null ? String(weightGramPerPiece) : null;
 
     const [material] = await db
       .update(schema.materials)
@@ -192,13 +234,13 @@ export async function deleteMaterialRoute(
   try {
     await request.jwtVerify();
     const user = extractUserFromRequest(request);
-    if (!isMaterialAdmin(user.role)) {
-      return reply.status(403).send({ error: 'Admin only' });
-    }
     const tenantId = extractTenantFromRequest(request);
     const { id } = request.params;
 
     const db = getDatabase();
+    if (!(await canManageTenantMaterials(db, tenantId, user.role))) {
+      return reply.status(403).send(MASTER_DATA_FORBIDDEN);
+    }
 
     const layerUsage = await db
       .select({ id: schema.layers.id })

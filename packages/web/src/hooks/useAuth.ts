@@ -11,6 +11,7 @@ export interface AuthUser {
 export interface AuthTenant {
   id: string;
   name: string;
+  type: 'individual' | 'company';
   displayCurrency: string;
 }
 
@@ -35,6 +36,13 @@ export function useAuth() {
 
   // Check if user is already logged in; attempt refresh if access token expired
   useEffect(() => {
+    // When the ApiClient's transparent refresh fails mid-session, drop to a
+    // clean logged-out state so the router can route back to the login screen
+    // instead of leaving the user stuck on failing actions.
+    apiClient.onAuthFailure = () => {
+      setState({ isLoading: false, isAuthenticated: false, user: null, tenant: null, error: null });
+    };
+
     const checkAuth = async () => {
       // Phase 4: hydrate tokens from secure storage (no-op on web, reads Keychain on native)
       await apiClient.init();
@@ -70,6 +78,10 @@ export function useAuth() {
     };
 
     checkAuth();
+
+    return () => {
+      apiClient.onAuthFailure = null;
+    };
   }, []);
 
   const register = async (

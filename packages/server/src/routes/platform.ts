@@ -1,11 +1,12 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { extractUserFromRequest } from '../utils/auth';
+import { extractUserFromRequest, isPlatformAdmin } from '../utils/auth';
 import { getMasterMaterialsList } from '../db/seed-materials';
 
-function requireMasterDataAdmin(request: FastifyRequest, reply: FastifyReply): boolean {
+// The platform master catalog is the app owner's global source of truth.
+function requirePlatformAdmin(request: FastifyRequest, reply: FastifyReply): boolean {
   const user = extractUserFromRequest(request);
-  if (user.role !== 'tenant_admin' && user.role !== 'platform_admin') {
-    reply.status(403).send({ error: 'Admin only' });
+  if (!isPlatformAdmin(user.role)) {
+    reply.status(403).send({ error: 'Platform admin only' });
     return false;
   }
   return true;
@@ -15,7 +16,7 @@ export async function registerPlatformRoutes(fastify: FastifyInstance) {
   fastify.get('/api/v1/platform/master-materials', async (request, reply) => {
     try {
       await request.jwtVerify();
-      if (!requireMasterDataAdmin(request, reply)) return;
+      if (!requirePlatformAdmin(request, reply)) return;
       return reply.send(await getMasterMaterialsList());
     } catch (error) {
       console.error('Get master materials error:', error);

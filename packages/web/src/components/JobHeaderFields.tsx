@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import CustomerAutocomplete from './CustomerAutocomplete';
 import type { ProductTypeOption, UnitOption } from '../lib/masterDataReference';
 import type { DimensionFieldDef } from '../lib/productCatalog';
+import { selectOnFocus } from '../lib/inputs';
 
 const fieldClass = 'input input-compact w-full min-w-0';
 const labelClass = 'block text-xs font-medium text-navy mb-1 text-center truncate px-0.5';
@@ -203,6 +204,7 @@ export function JobHeaderFields({
                     step={1}
                     value={Number.isFinite(orderQuantity) ? orderQuantity : ''}
                     onChange={(e) => onOrderQuantityChange(Number(e.target.value) || 0)}
+                    onFocus={selectOnFocus}
                     className="input input-compact w-full text-center tabular-nums"
                   />
                 </SpecField>
@@ -253,6 +255,7 @@ export function JobHeaderFields({
                       }`}
                       value={dimensions[f.key] ?? 0}
                       onChange={(e) => onDimensionChange(f.key, Number(e.target.value))}
+                      onFocus={selectOnFocus}
                     />
                   </SpecField>
                 )

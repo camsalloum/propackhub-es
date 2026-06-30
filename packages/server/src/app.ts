@@ -32,7 +32,17 @@ export type BuildAppOptions = {
 const CAPACITOR_ORIGINS = ['capacitor://localhost', 'https://localhost', 'http://localhost'];
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
-  const jwtSecret = options.jwtSecret ?? process.env.JWT_SECRET ?? 'dev-secret-key-change-in-production';
+  const DEFAULT_DEV_JWT_SECRET = 'dev-secret-key-change-in-production';
+  const jwtSecret = options.jwtSecret ?? process.env.JWT_SECRET ?? DEFAULT_DEV_JWT_SECRET;
+
+  // Refuse to start in production with the public default secret. This secret
+  // signs access/refresh tokens AND peppers platform service-key hashes, so a
+  // silent fallback would let anyone forge tokens or predict key hashes.
+  if (process.env.NODE_ENV === 'production' && jwtSecret === DEFAULT_DEV_JWT_SECRET) {
+    throw new Error(
+      'JWT_SECRET must be set to a strong, non-default value in production. Refusing to start with the built-in development secret.'
+    );
+  }
 
   // Build allowed-origin list: web dev + any extra from env + capacitor native origins
   const envOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:5000';

@@ -15,6 +15,8 @@ import { useViewTransition } from '../hooks/useViewTransition';
 import NumberTicker from '../components/NumberTicker';
 import Sparkline, { type SparklineTone } from '../components/Sparkline';
 import EmptyState from '../components/EmptyState';
+import { SectionTitle } from '../components/SectionTitle';
+import { MES_OUTCOME_ENABLED } from '../lib/estimateStatus';
 
 interface SummaryEstimate {
   id: string;
@@ -66,20 +68,26 @@ const STAT_DEFS: StatDef[] = [
   },
   {
     key: 'sent',
-    label: 'Sent',
+    label: 'Saved',
     icon: TrendingUp,
     tone: 'info',
-    series: (e) => e.status === 'sent',
-    getValue: (s) => s.sent,
+    series: (e) => e.status === 'sent' || e.status === 'won' || e.status === 'lost',
+    getValue: (s) => s.sent + s.won,
   },
-  {
-    key: 'won',
-    label: 'Won',
-    icon: Users,
-    tone: 'success',
-    series: (e) => e.status === 'won',
-    getValue: (s) => s.won,
-  },
+  // Won — only surfaced once the MES outcome flow is wired. Until then the tile
+  // stays hidden; the code is kept for the MES integration to flip on.
+  ...(MES_OUTCOME_ENABLED
+    ? ([
+        {
+          key: 'won',
+          label: 'Won',
+          icon: Users,
+          tone: 'success' as SparklineTone,
+          series: (e: SummaryEstimate) => e.status === 'won',
+          getValue: (s: DashboardSummary) => s.won,
+        },
+      ] satisfies StatDef[])
+    : []),
 ];
 
 type ResolvedStat = { ok: true; value: number; series: number[] } | { ok: false };
@@ -283,8 +291,9 @@ const Dashboard = () => {
               <AlertTriangle className="w-4 h-4 text-warning" />
             </div>
             <div>
-              <h2 className="section-title">Expiring proposals</h2>
-              <p className="text-xs text-text-secondary mt-0.5">Within the next 7 days</p>
+              <SectionTitle as="h2" className="section-title" hint="Within the next 7 days">
+                Expiring proposals
+              </SectionTitle>
             </div>
           </div>
           <div className="space-y-3">
@@ -321,8 +330,9 @@ const Dashboard = () => {
         <EntranceCard delay={sectionDelay} className="card !p-0 overflow-hidden">
           <div className="flex items-center justify-between p-6 pb-4">
             <div>
-              <h2 className="section-title">Recent estimates</h2>
-              <p className="text-xs text-text-secondary mt-0.5">Latest quotes across your workspace</p>
+              <SectionTitle as="h2" className="section-title" hint="Latest quotes across your workspace">
+                Recent estimates
+              </SectionTitle>
             </div>
             <Link to="/estimates" className="text-sm text-accent-text font-medium hover:underline inline-flex items-center gap-1">
               View all

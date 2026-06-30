@@ -86,10 +86,13 @@ export function PouchFlatBlank({ type, dims }: { type: PouchConfiguratorType; di
   const blankW = result.blankWidthMm;
   const blankL = result.blankLengthMm;
 
-  // Compose a layout box wide enough to also fit any extras alongside
-  const extraW = extras.reduce((s, e) => s + e.widthMm + 16, 0); // 16mm gap each
-  const modelW = blankW + (extraW > 0 ? 24 + extraW : 0); // 24mm gap before extras
-  const modelH = Math.max(blankL, ...extras.map((e) => e.lengthMm));
+  // Landscape orientation: the blank LENGTH runs horizontally (machine direction)
+  // and the WIDTH runs vertically. The elongated film blank reads like an
+  // unrolled web and fills the side-by-side panel far better than a tall portrait
+  // strip. Extras (e.g. the flat-bottom panel) stack underneath the body blank.
+  const extrasStackH = extras.reduce((s, e) => s + e.lengthMm + 16, 0); // 16mm gap each
+  const modelW = Math.max(blankL, ...extras.map((e) => e.widthMm));
+  const modelH = blankW + (extrasStackH > 0 ? 24 + extrasStackH : 0); // 24mm gap before extras
 
   if (blankW <= 0 || blankL <= 0) {
     return (
@@ -102,21 +105,59 @@ export function PouchFlatBlank({ type, dims }: { type: PouchConfiguratorType; di
   const t = mkT(modelW, modelH, vw, vh);
   const bands = lengthBands(type, dims, blankL);
 
+  const accKinds = new Set(
+    (dims.accessories ?? []).filter((a) => a.enabled !== false).map((a) => a.kind)
+  );
+  const accStroke = '#7c3aed';
+  const SA = dims.sealAllowanceMm ?? SA_DEFAULT;
+
+  let extraAcc = 0;
+
   return (
     <div ref={ref} className="w-full h-full min-h-[300px] bg-[#f8f9fb] relative">
       <svg width="100%" height="100%" viewBox={`0 0 ${vw} ${vh}`} preserveAspectRatio="xMidYMid meet">
         <Grid w={vw} h={vh} id="pouch-blank-grid" />
 
-        {/* Body blank rectangle */}
-        <BlankRect t={t} xMm={0} yMm={0} wMm={blankW} hMm={blankL} bands={bands} subtype={type} />
+        {/* Body blank rectangle — length horizontal, width vertical */}
+        <BlankRect t={t} xMm={0} yMm={0} lengthMm={blankL} widthMm={blankW} bands={bands} subtype={type} />
 
-        {/* Extras (e.g. flat-bottom bottom panel) */}
+        {/* Accessory glyphs on the blank: zipper (just inside the top seal) + window patch */}
+        {accKinds.has('zipper') && (
+          <g aria-hidden>
+            <line
+              x1={t.px(SA + 8)} y1={t.py(0)} x2={t.px(SA + 8)} y2={t.py(blankW)}
+              stroke={accStroke} strokeWidth={2} strokeDasharray="4 3"
+            />
+            <text x={t.px(SA + 8)} y={t.py(0) - 4} textAnchor="middle" fontSize={9} fontWeight={700} fontFamily="Segoe UI, system-ui, sans-serif" fill={accStroke}>zipper</text>
+          </g>
+        )}
+        {(() => {
+          const win = (dims.accessories ?? []).find((a) => a.kind === 'window' && a.enabled !== false);
+          if (!win) return null;
+          const wW = blankL * 0.18;
+          const wH = blankW * 0.4;
+          const cxMm = blankL * ((win.windowPosXPct ?? 50) / 100);
+          const cyMm = blankW * ((win.windowPosYPct ?? 50) / 100);
+          const xMm = Math.min(Math.max(cxMm - wW / 2, 0), Math.max(0, blankL - wW));
+          const yMm = Math.min(Math.max(cyMm - wH / 2, 0), Math.max(0, blankW - wH));
+          return (
+            <rect
+              x={t.px(xMm)} y={t.py(yMm)}
+              width={t.sc(wW)} height={t.sc(wH)}
+              rx={4} fill="#ffffff" fillOpacity={0.35} stroke={accStroke} strokeWidth={1.4} strokeDasharray="4 3"
+            />
+          );
+        })()}
+
+
+        {/* Extras (e.g. flat-bottom bottom panel) stacked below the body blank */}
         {extras.map((e, i) => {
-          const xOff = blankW + 24 + extras.slice(0, i).reduce((s, p) => s + p.widthMm + 16, 0);
+          const yOff = blankW + 24 + extraAcc;
+          extraAcc += e.lengthMm + 16;
           return (
             <g key={i}>
-              <BlankRect t={t} xMm={xOff} yMm={0} wMm={e.widthMm} hMm={e.lengthMm} bands={[]} subtype={type} dashed />
-              <text x={t.px(xOff + e.widthMm / 2)} y={t.py(0) - 6} fontSize={10} fontWeight={600} fontFamily="Segoe UI, system-ui, sans-serif" textAnchor="middle" fill={C.dimText}>
+              <BlankRect t={t} xMm={0} yMm={yOff} lengthMm={e.widthMm} widthMm={e.lengthMm} bands={[]} subtype={type} dashed showDims={false} />
+              <text x={t.px(e.widthMm / 2)} y={t.py(yOff) - 6} fontSize={10} fontWeight={600} fontFamily="Segoe UI, system-ui, sans-serif" textAnchor="middle" fill={C.dimText}>
                 {e.label} {Math.round(e.widthMm)}×{Math.round(e.lengthMm)}
               </text>
             </g>
@@ -131,22 +172,26 @@ function BlankRect({
   t,
   xMm,
   yMm,
-  wMm,
-  hMm,
+  lengthMm,
+  widthMm,
   bands,
   subtype,
   dashed,
+  showDims = true,
 }: {
   t: ReturnType<typeof mkT>;
   xMm: number;
   yMm: number;
-  wMm: number;
-  hMm: number;
+  /** Extent along the horizontal (machine-direction) axis. */
+  lengthMm: number;
+  /** Extent along the vertical axis. */
+  widthMm: number;
   bands: Band[];
   subtype: PouchConfiguratorType;
   dashed?: boolean;
+  showDims?: boolean;
 }) {
-  const x0 = t.px(xMm), y0 = t.py(yMm), x1 = t.px(xMm + wMm), y1 = t.py(yMm + hMm);
+  const x0 = t.px(xMm), y0 = t.py(yMm), x1 = t.px(xMm + lengthMm), y1 = t.py(yMm + widthMm);
   const blankColor = subtype === 'four-side-seal' ? '#e6efff' : C.blankFill;
   return (
     <g>
@@ -160,28 +205,42 @@ function BlankRect({
         strokeWidth={1.6}
         strokeDasharray={dashed ? '5 3' : undefined}
       />
-      {/* Bands */}
+      {/* Bands run along the length (horizontal) axis */}
       {bands.map((b, i) => {
-        const yb0 = t.py(yMm + b.fromMm);
-        const yb1 = t.py(yMm + b.toMm);
+        const xb0 = t.px(xMm + b.fromMm);
+        const xb1 = t.px(xMm + b.toMm);
         if (b.kind === 'seal') {
+          const cx = (xb0 + xb1) / 2;
+          const cy = (y0 + y1) / 2;
           return (
             <g key={i}>
-              <rect x={x0} y={yb0} width={x1 - x0} height={Math.max(2, yb1 - yb0)} fill={C.sealBand} stroke={C.sealStroke} strokeWidth={0.6} opacity={0.85} />
-              <text x={(x0 + x1) / 2} y={(yb0 + yb1) / 2 + 3} textAnchor="middle" fontSize={9} fontWeight={600} fontFamily="Segoe UI, system-ui, sans-serif" fill={C.dimText}>{b.label}</text>
+              <rect x={xb0} y={y0} width={Math.max(2, xb1 - xb0)} height={y1 - y0} fill={C.sealBand} stroke={C.sealStroke} strokeWidth={0.6} opacity={0.85} />
+              <text
+                x={cx}
+                y={cy}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={9}
+                fontWeight={600}
+                fontFamily="Segoe UI, system-ui, sans-serif"
+                fill={C.dimText}
+                transform={`rotate(-90, ${cx}, ${cy})`}
+              >
+                {b.label}
+              </text>
             </g>
           );
         }
         return (
           <g key={i}>
-            <line x1={x0} y1={yb0} x2={x1} y2={yb0} stroke={C.bagStroke} strokeWidth={1.2} strokeDasharray={C.foldDash} />
-            <text x={(x0 + x1) / 2} y={yb0 - 4} textAnchor="middle" fontSize={9} fontFamily="Segoe UI, system-ui, sans-serif" fill={C.dimText}>{b.label}</text>
+            <line x1={xb0} y1={y0} x2={xb0} y2={y1} stroke={C.bagStroke} strokeWidth={1.2} strokeDasharray={C.foldDash} />
+            <text x={xb0} y={y0 - 4} textAnchor="middle" fontSize={9} fontFamily="Segoe UI, system-ui, sans-serif" fill={C.dimText}>{b.label}</text>
           </g>
         );
       })}
-      {/* Dim arrows */}
-      <DimH x1={x0} x2={x1} yB={y1} off={C.dimOff} lbl={dimLbl('blank W', wMm)} above={false} />
-      <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl={dimLbl('blank L', hMm)} />
+      {/* Dim arrows — length along the bottom, width up the left edge */}
+      {showDims && <DimH x1={x0} x2={x1} yB={y1} off={C.dimOff} lbl={dimLbl('blank L', lengthMm)} above={false} />}
+      {showDims && <DimV y1={y0} y2={y1} xB={x0} off={C.dimOff} lbl={dimLbl('blank W', widthMm)} />}
     </g>
   );
 }

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { PouchConfiguratorType } from '../lib/pouchConfiguratorCatalog';
+import type { PouchAccessorySelection } from '@es/engine';
 import { pouchDrawDimsFromFields, type PouchDrawDims } from '../lib/pouchDrawDims';
 import { C, dimLbl, mkT, DimH, DimV, Grid, useDrawAreaSize } from './bagSvgPrimitives';
 
@@ -15,20 +16,96 @@ import { C, dimLbl, mkT, DimH, DimV, Grid, useDrawAreaSize } from './bagSvgPrimi
 export function PouchSchematic({
   type,
   vals,
+  accessories = [],
 }: {
   type: PouchConfiguratorType;
   vals: Record<string, number>;
+  accessories?: PouchAccessorySelection[];
 }) {
   const { ref, w: vw, h: vh } = useDrawAreaSize(280, 320);
   const d = useMemo(() => pouchDrawDimsFromFields(vals), [vals]);
+  const enabledKinds = useMemo(
+    () => new Set(accessories.filter((a) => a.enabled !== false).map((a) => a.kind)),
+    [accessories]
+  );
+  const windowSel = useMemo(
+    () => accessories.find((a) => a.kind === 'window' && a.enabled !== false),
+    [accessories]
+  );
 
   return (
     <div ref={ref} className="w-full h-full min-h-[300px] bg-[#f8f9fb] relative">
       <svg width="100%" height="100%" viewBox={`0 0 ${vw} ${vh}`} preserveAspectRatio="xMidYMid meet">
         <Grid w={vw} h={vh} id="pouch-bg-grid" />
-        {renderSubtype(type, d, vw, vh)}
+        {/* Open/finished pouch drawn in LANDSCAPE: the silhouette is laid out in a
+            portrait space (vh×vw) then rotated 90° so the pouch reads horizontally,
+            matching the flat-blank view beside it. */}
+        <g transform={`translate(${vw} 0) rotate(90)`}>
+          {renderSubtype(type, d, vh, vw)}
+          <AccessoryGlyphs
+            kinds={enabledKinds}
+            vw={vh}
+            vh={vw}
+            winX={windowSel?.windowPosXPct ?? 50}
+            winY={windowSel?.windowPosYPct ?? 50}
+          />
+        </g>
       </svg>
     </div>
+  );
+}
+
+/**
+ * Accessory overlay — draws zipper / spout / valve / window / handle glyphs over
+ * the centred pouch. Anchored in viewport space (the pouch always sits in the
+ * central ~56% due to the mkT margin), so it works for every subtype without
+ * coupling to each one's local geometry.
+ */
+function AccessoryGlyphs({ kinds, vw, vh, winX = 50, winY = 50 }: { kinds: Set<string>; vw: number; vh: number; winX?: number; winY?: number }) {
+  if (kinds.size === 0) return null;
+  const fx0 = vw * 0.24, fx1 = vw * 0.76;
+  const fy0 = vh * 0.24, fy1 = vh * 0.76;
+  const pw = fx1 - fx0, ph = fy1 - fy0;
+  const cx = (fx0 + fx1) / 2;
+  const stroke = '#7c3aed'; // distinct accent so glyphs read against the blue pouch
+  return (
+    <g aria-hidden>
+      {/* Zipper — dashed line near the top with a "zip" tag */}
+      {kinds.has('zipper') && (
+        <g>
+          <line x1={fx0 + 6} y1={fy0 + ph * 0.14} x2={fx1 - 6} y2={fy0 + ph * 0.14} stroke={stroke} strokeWidth={2} strokeDasharray="3 2" />
+          <text x={fx1 - 6} y={fy0 + ph * 0.14 - 4} textAnchor="end" fontSize={8} fontWeight={700} fontFamily="Segoe UI, system-ui, sans-serif" fill={stroke}>zip</text>
+        </g>
+      )}
+      {/* Spout — neck + cap at top centre */}
+      {kinds.has('spout') && (
+        <g>
+          <rect x={cx - 5} y={fy0 - 16} width={10} height={16} rx={2} fill="#ffffff" stroke={stroke} strokeWidth={1.6} />
+          <rect x={cx - 7} y={fy0 - 22} width={14} height={7} rx={2} fill={stroke} />
+        </g>
+      )}
+      {/* Degassing valve — small circle near top-right */}
+      {kinds.has('valve') && (
+        <g>
+          <circle cx={fx1 - 16} cy={fy0 + ph * 0.26} r={6} fill="#ffffff" stroke={stroke} strokeWidth={1.6} />
+          <circle cx={fx1 - 16} cy={fy0 + ph * 0.26} r={2} fill={stroke} />
+        </g>
+      )}
+      {/* Window — dashed rounded rect positioned by the chosen X/Y % of the face */}
+      {kinds.has('window') && (() => {
+        const winW = pw * 0.4;
+        const winH = ph * 0.3;
+        const cxw = Math.min(Math.max(fx0 + pw * (winX / 100) - winW / 2, fx0), fx1 - winW);
+        const cyw = Math.min(Math.max(fy0 + ph * (winY / 100) - winH / 2, fy0), fy1 - winH);
+        return (
+          <rect x={cxw} y={cyw} width={winW} height={winH} rx={4} fill="#ffffff" fillOpacity={0.35} stroke={stroke} strokeWidth={1.4} strokeDasharray="4 3" />
+        );
+      })()}
+      {/* Handle — slot cut-out near the top */}
+      {kinds.has('handle') && (
+        <rect x={cx - pw * 0.12} y={fy0 + ph * 0.05} width={pw * 0.24} height={6} rx={3} fill="#ffffff" stroke={stroke} strokeWidth={1.4} />
+      )}
+    </g>
   );
 }
 

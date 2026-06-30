@@ -4,6 +4,7 @@ import { schema } from '../db';
 import { buildEngineMaterialMap, type MaterialRow } from '../utils/material-map';
 import { snapshotsFromMaterial, toMaterialLineageSource } from '../utils/layer-lineage';
 import { getMasterDataVersion } from '../db/platform-master-data';
+import { resolveOrderUnitDef } from '../db/tenant-reference-data';
 import { buildEngineEstimateFromRows } from '../utils/estimate-engine-input';
 
 type Db = ReturnType<typeof import('../db').getDatabase>;
@@ -62,6 +63,7 @@ export async function calculateAndPersistEstimate(
     processes,
     slabs,
     layerPriceOverrides,
+    orderQuantityUnitDef: await resolveOrderUnitDef(tenantId, estimate.orderQuantityUnit),
   });
 
   const layerRefs = layers.map((l) => ({

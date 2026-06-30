@@ -7,6 +7,7 @@ import { ensureTemplatesForTenant, relinkTemplatesForTenant, syncMissingStandard
 import { quantitiesForSlabTemplateKey } from '../db/seed-slab-templates';
 import { derivePrintingWebClass, stackNeedsSolventMix, resolveTemplateStoreClassification, tierToStructureType } from '@es/engine';
 import { buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
+import { generateRefNumber } from './estimates';
 import { getMasterDataVersion } from '../db/platform-master-data';
 
 type EstimateRow = typeof schema.estimates.$inferSelect;
@@ -304,6 +305,9 @@ export async function instantiateTemplateRoute(
       jobName?: string;
       orderQuantityKg?: number;
       orderQuantityUnit?: string;
+      /** When true, resolve the template but DO NOT persist — return the data so the
+       *  editor can open a new (unsaved) estimate. Nothing is written until the user saves. */
+      preview?: boolean;
     };
   }>,
   reply: FastifyReply
@@ -312,7 +316,7 @@ export async function instantiateTemplateRoute(
     await request.jwtVerify();
     const tenantId = extractTenantFromRequest(request);
     const { id } = request.params;
-    const { customerId, jobName, orderQuantityKg, orderQuantityUnit } = request.body || {};
+    const { customerId, jobName, orderQuantityKg, orderQuantityUnit, preview } = request.body || {};
     const db = getDatabase();
 
     await relinkTemplatesForTenant(tenantId);
@@ -367,13 +371,8 @@ export async function instantiateTemplateRoute(
       });
     }
 
-    const year = new Date().getFullYear();
-    const countResult = await db
-      .select({ count: schema.estimates.id })
-      .from(schema.estimates)
-      .where(eq(schema.estimates.tenantId, tenantId));
-    const count = countResult.length;
-    const refNumber = `QT-${year}-${String(count + 1).padStart(5, '0')}`;
+    // Shared helper: year-bucketed, soft-delete aware, collision-safe (BUG-11).
+    const refNumber = await generateRefNumber(db, tenantId);
 
     const dimensions: Record<string, any> = {
       configureFromTemplate: true,
@@ -428,6 +427,50 @@ export async function instantiateTemplateRoute(
     const materialById = new Map<string, MaterialRow>(
       materials.map((m: MaterialRow) => [m.id, m])
     );
+
+    // Preview mode: return the resolved estimate + layers WITHOUT persisting. The
+    // editor opens these as a new (unsaved) draft; nothing hits the DB until Save.
+    if (preview) {
+      const PREVIEW_MICRON_BY_TYPE: Record<string, number> = { substrate: 25, ink: 2, adhesive: 3 };
+      const previewLayers = defaultLayers.map((layer, i) => {
+        const materialId = resolveLayerMaterialId(layer, materialLookup, validIds)!;
+        const mat = materialById.get(materialId);
+        const micron =
+          layer.default_micron && layer.default_micron > 0
+            ? layer.default_micron
+            : PREVIEW_MICRON_BY_TYPE[layer.layer_type ?? 'substrate'] ?? 10;
+        return {
+          materialId,
+          materialName: mat?.name ?? '',
+          materialType: mat?.type ?? layer.layer_type ?? 'substrate',
+          micron,
+          costPerKgUsd: mat ? Number(mat.costPerKgUsd) : 0,
+          isSolventBased: Boolean(mat?.isSolventBased),
+          hoover: mat?.hoover ?? null,
+          position: i,
+        };
+      });
+      const slabQtys = quantitiesForSlabTemplateKey(tenant.defaultSlabTemplate || 'standard');
+      return reply.send({
+        preview: true,
+        estimate: {
+          jobName: jobName || template.name,
+          productType: template.productType,
+          productSubtype: template.productSubtype ?? null,
+          printingWebClass,
+          dimensions,
+          markupPercent: tenant.defaultMarkupPercent || '15.00',
+          displayCurrency: tenant.displayCurrency,
+          exchangeRateUsdToDisplay: tenant.exchangeRateUsdToDisplay,
+          orderQuantityKg: orderQuantityKg != null ? String(orderQuantityKg) : null,
+          orderQuantityUnit: orderQuantityUnit ?? 'kgs',
+          sourceTemplateKey,
+          masterDataVersion,
+        },
+        layers: previewLayers,
+        slabs: slabQtys.map((q) => ({ quantityKg: q, pricePerKg: 0 })),
+      });
+    }
 
     const [estimate] = (await db
       .insert(schema.estimates)

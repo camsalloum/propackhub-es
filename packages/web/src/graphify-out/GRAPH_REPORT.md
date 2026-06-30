@@ -1,11 +1,11 @@
-# Graph Report - apps\estimation-studio\packages\web\src  (2026-06-28)
+# Graph Report - apps\estimation-studio\packages\web\src  (2026-06-29)
 
 ## Corpus Check
-- 86 files · ~75,851 words
+- 91 files · ~86,666 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 616 nodes · 1287 edges · 27 communities (25 shown, 2 thin omitted)
+- 661 nodes · 1379 edges · 31 communities (29 shown, 2 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
@@ -28,20 +28,24 @@
 - [[_COMMUNITY_Community 16|Community 16]]
 - [[_COMMUNITY_Community 17|Community 17]]
 - [[_COMMUNITY_Community 18|Community 18]]
-- [[_COMMUNITY_Community 19|Community 19]]
 - [[_COMMUNITY_Community 20|Community 20]]
 - [[_COMMUNITY_Community 21|Community 21]]
 - [[_COMMUNITY_Community 22|Community 22]]
+- [[_COMMUNITY_Community 23|Community 23]]
 - [[_COMMUNITY_Community 24|Community 24]]
-- [[_COMMUNITY_Community 34|Community 34]]
+- [[_COMMUNITY_Community 27|Community 27]]
+- [[_COMMUNITY_Community 30|Community 30]]
+- [[_COMMUNITY_Community 32|Community 32]]
+- [[_COMMUNITY_Community 33|Community 33]]
 - [[_COMMUNITY_Community 35|Community 35]]
+- [[_COMMUNITY_Community 36|Community 36]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `ApiClient` - 92 edges
+1. `ApiClient` - 98 edges
 2. `useEntrance()` - 25 edges
 3. `dimLbl()` - 24 edges
 4. `mkT()` - 24 edges
-5. `useAuth()` - 19 edges
+5. `useAuth()` - 22 edges
 6. `useReducedMotion()` - 15 edges
 7. `EstimateEditor()` - 14 edges
 8. `ThemeId` - 11 edges
@@ -49,133 +53,149 @@
 10. `useDrawAreaSize()` - 9 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `ProtectedRoute()` --calls--> `useAuth()`  [EXTRACTED]
-  App.tsx → hooks/useAuth.ts
 - `Layout()` --calls--> `useAuth()`  [EXTRACTED]
   components/Layout.tsx → hooks/useAuth.ts
+- `ProtectedRoute()` --calls--> `useAuth()`  [EXTRACTED]
+  App.tsx → hooks/useAuth.ts
+- `PlatformAdminRoute()` --calls--> `useAuth()`  [EXTRACTED]
+  App.tsx → hooks/useAuth.ts
+- `PouchConfigurator()` --calls--> `configuratorTypeForPouchSubtype()`  [EXTRACTED]
+  components/PouchConfigurator.tsx → lib/pouchConfiguratorCatalog.ts
 - `QuickThemeSwitcher()` --calls--> `useTheme()`  [EXTRACTED]
   components/QuickThemeSwitcher.tsx → theme/ThemeProvider.tsx
-- `RouteTransition()` --calls--> `useReducedMotion()`  [EXTRACTED]
-  components/RouteTransition.tsx → hooks/useReducedMotion.ts
-- `TemplateBuilderProps` --references--> `ProductSubtypeOption`  [EXTRACTED]
-  components/TemplateBuilder.tsx → lib/masterDataReference.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (27 total, 2 thin omitted)
+## Communities (31 total, 2 thin omitted)
+
+### Community 1 - "Community 1"
+Cohesion: 0.22
+Nodes (4): ACCESSORY_KINDS, MaterialRow, TabId, TABS
 
 ### Community 2 - "Community 2"
-Cohesion: 0.07
-Nodes (19): BottomSheet(), BottomSheetProps, LaminationFormulaModalProps, ROLES, NumberTicker(), NumberTickerProps, FOCUSABLE_SELECTOR, Overlay() (+11 more)
+Cohesion: 0.05
+Nodes (26): BottomSheet(), BottomSheetProps, ConfirmDialog(), ConfirmDialogProps, LaminationFormulaModalProps, ROLES, Layout(), NumberTicker() (+18 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.16
 Nodes (10): BuilderLayer, buildMaterialOptions(), FamilyGroup, groupByFamily(), MaterialOption, MaterialSelect(), STRUCTURE_TIERS, TemplateBuilderProps (+2 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.07
-Nodes (59): BagConfigurator(), BagFlatBlank(), Band, CourierBlank(), ExtraPiece, extraPieces(), lengthBands(), Panel (+51 more)
+Cohesion: 0.06
+Nodes (60): BagConfigurator(), BagFlatBlank(), Band, CourierBlank(), ExtraPiece, extraPieces(), lengthBands(), Panel (+52 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.13
-Nodes (17): formatPrice(), roundUsd(), RmTypeOption, CategoryNode, DEFAULT_SUBSTRATE_FAMILIES, deriveSubstrateFamilies(), deriveSubstrateGrades(), groupMaterialsForPicker() (+9 more)
+Cohesion: 0.11
+Nodes (20): displayToUsd(), formatPrice(), roundUsd(), usdToDisplay(), usdToDisplayPrecise(), RmTypeOption, CategoryNode, DEFAULT_SUBSTRATE_FAMILIES (+12 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.15
-Nodes (17): TemplateBuilder(), TemplateCardLayer, TemplateStructureCard(), structureTierLabel(), cardMetaLine(), catalogInput(), classificationContext(), classificationTag() (+9 more)
+Cohesion: 0.16
+Nodes (16): defaultUnitValue(), normalizeUnitValue(), structureTierLabel(), cardMetaLine(), catalogInput(), classificationContext(), classificationTag(), _MATERIAL_CLASS_OPTIONS (+8 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.21
-Nodes (14): deriveStructureTierFromSubstrates(), deriveTemplateCatalogKey(), EstimateClassificationSnapshot, getEstimateClassification(), getTemplateClassification(), isPrintedTemplate(), matchesCatalogFilter(), matchesClassFilter() (+6 more)
+Cohesion: 0.40
+Nodes (3): isNative, KEYS, tokenStore
 
 ### Community 9 - "Community 9"
-Cohesion: 0.13
-Nodes (16): useDensity(), UseDensityResult, ADMIN_PROFILE, SALES_REP_PROFILE, useVisibilityProfile(), VISIBILITY_KEYS, Settings(), applyDensityAttribute() (+8 more)
+Cohesion: 0.19
+Nodes (10): UseDensityResult, applyDensityAttribute(), DENSITIES, Density, persistDensity(), resolveDensity(), createPreferenceStore(), nativeStore (+2 more)
 
 ### Community 10 - "Community 10"
 Cohesion: 0.20
 Nodes (13): FilmLayer, FilmStackVisualizer(), inkLabelClass(), inkPctClass(), inkVariant(), isMetallizedName(), isNaturalName(), isPaperName() (+5 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.28
-Nodes (6): CLASS_FILTER_ROWS, ClassFilterPanel(), ClassFilterPanelProps, EMPTY_CLASS_FILTER, ClassFilter, TemplateStructureTier
+Cohesion: 0.14
+Nodes (14): TemplateBuilder(), dimensionsForSave(), estimateNeedsConfiguration(), normalizeProcessesForSave(), PERSISTABLE_PRODUCT_TYPES, PersistableProductType, PROCESS_SPEED_BASES, ProcessSpeedBasis (+6 more)
 
 ### Community 12 - "Community 12"
 Cohesion: 0.70
 Nodes (4): clearWorkingEstimateForTemplate(), getWorkingEstimateForTemplate(), key(), setWorkingEstimateForTemplate()
 
 ### Community 13 - "Community 13"
-Cohesion: 0.29
-Nodes (4): Layer, layerShare(), layerThickness(), Props
+Cohesion: 0.20
+Nodes (6): Layer, layerShare(), layerThickness(), Props, TemplateCardLayer, TemplateStructureCard()
 
 ### Community 14 - "Community 14"
-Cohesion: 0.15
-Nodes (17): PouchConfigurator(), canonicalPouchSubtype(), configuratorTypeForPouchSubtype(), LEGACY_POUCH_SUBTYPE_ALIASES, POUCH_CONFIGURATOR_CATALOG, POUCH_CONFIGURATOR_DIMENSION_KEYS, POUCH_SUBTYPE_TO_CONFIGURATOR, PouchConfiguratorConfig (+9 more)
+Cohesion: 0.11
+Nodes (23): AccessoryMaterialOption, POUCH_TYPE_LABEL, PouchConfigurator(), accessoriesForPouchType(), ACCESSORY_APPLICABILITY, canonicalPouchSubtype(), LEGACY_POUCH_SUBTYPE_ALIASES, POUCH_ACCESSORY_META (+15 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.16
-Nodes (15): EmptyStateProps, useEntrance(), UseEntranceOptions, UseEntranceResult, DocumentWithViewTransition, useViewTransition(), ESTIMATE_STATUS_FILTERS, EstimateStatus (+7 more)
+Cohesion: 0.15
+Nodes (11): DEFAULT_PRODUCT_SUBTYPE_OPTIONS, ACCESSORY_KIND_OPTIONS, dbTypeForRmCode(), defaultFamilyForRmCode(), MaterialTab, newMaterialRow(), REF_TAB_IDS, REF_TABS (+3 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.40
-Nodes (3): isNative, KEYS, tokenStore
-
-### Community 17 - "Community 17"
-Cohesion: 0.13
-Nodes (17): SkeletonCard(), SkeletonDashboard(), SkeletonTableRows(), Sparkline(), SparklineProps, SparklineTone, toneVar(), useStagger() (+9 more)
+Cohesion: 0.28
+Nodes (6): CLASS_FILTER_ROWS, ClassFilterPanel(), ClassFilterPanelProps, EMPTY_CLASS_FILTER, ClassFilter, TemplateStructureTier
 
 ### Community 18 - "Community 18"
-Cohesion: 0.18
-Nodes (16): MasterDataContext, MasterDataContextValue, MasterDataProvider(), useMasterDataContextOptional(), useMasterDataReference(), DEFAULT_MASTER_REFERENCE, DEFAULT_PROCESS_OPTIONS, DEFAULT_RM_TYPE_OPTIONS (+8 more)
-
-### Community 19 - "Community 19"
-Cohesion: 0.43
-Nodes (7): channelToLinear(), clampChannel(), contrastRatio(), expandShortHex(), parseColor(), relativeLuminance(), Rgb
+Cohesion: 0.26
+Nodes (11): MasterDataContext, MasterDataContextValue, useMasterDataContextOptional(), useMasterDataReference(), DEFAULT_MASTER_REFERENCE, DEFAULT_PROCESS_OPTIONS, DEFAULT_RM_TYPE_OPTIONS, MasterDataReferenceState (+3 more)
 
 ### Community 20 - "Community 20"
-Cohesion: 0.11
-Nodes (18): useMasterDataContext(), API_BASE_URL, PlatformMasterMaterialInput, PlatformMasterMaterialRow, PlatformReferenceCategory, PlatformReferenceItemInput, TenantSyncResult, DEFAULT_PRODUCT_SUBTYPE_OPTIONS (+10 more)
+Cohesion: 0.20
+Nodes (8): API_BASE_URL, PlatformMasterMaterialInput, PlatformMasterMaterialRow, PlatformReferenceCategory, PlatformReferenceItemInput, TenantSyncResult, UnitBasis, UnitRow
 
 ### Community 21 - "Community 21"
 Cohesion: 0.05
-Nodes (55): LayerCard(), LayerCardLayer, LayerCardProps, GradeOption, Props, StructureGradeSelect(), displayToUsd(), usdToDisplay() (+47 more)
+Nodes (52): PlatformAdminRoute(), ProtectedRoute(), EmptyStateProps, SectionTitle(), SectionTitleProps, SkeletonCard(), SkeletonDashboard(), SkeletonTableRows() (+44 more)
 
 ### Community 22 - "Community 22"
 Cohesion: 0.07
-Nodes (42): QuickThemeSwitcher(), QuickThemeSwitcherProps, IDS, AURORA_OVERRIDES, CLASSIC_OVERRIDES, DARK_OVERRIDES, FOREST_OVERRIDES, FROST_OVERRIDES (+34 more)
+Nodes (43): QuickThemeSwitcher(), QuickThemeSwitcherProps, IDS, AURORA_OVERRIDES, CLASSIC_OVERRIDES, DARK_OVERRIDES, FOREST_OVERRIDES, FROST_OVERRIDES (+35 more)
+
+### Community 23 - "Community 23"
+Cohesion: 0.20
+Nodes (9): Cat, CATS, Row, TenantReferenceEditor(), UNIT_BASES, useMasterDataContext(), MasterDataReferencePayload, MasterData() (+1 more)
 
 ### Community 24 - "Community 24"
 Cohesion: 0.60
 Nodes (4): MotionToken, NON_ESSENTIAL_MOTION_TOKENS, NORMAL_MOTION_DURATIONS, resolveMotionDurations()
 
-### Community 34 - "Community 34"
+### Community 27 - "Community 27"
+Cohesion: 0.43
+Nodes (7): channelToLinear(), clampChannel(), contrastRatio(), expandShortHex(), parseColor(), relativeLuminance(), Rgb
+
+### Community 30 - "Community 30"
 Cohesion: 0.12
-Nodes (15): ProtectedRoute(), Layout(), RouteTransition(), RouteTransitionProps, AuthState, AuthTenant, AuthUser, initialState (+7 more)
+Nodes (21): configuratorTypeForPouchSubtype(), ALL_SUBTYPES, BAG_BASE, BAG_SUBTYPES, defaultSubtypeForFamily(), dimensionFieldsFor(), dimensionFieldsForEstimation(), EngineProductType (+13 more)
+
+### Community 32 - "Community 32"
+Cohesion: 0.21
+Nodes (14): deriveStructureTierFromSubstrates(), deriveTemplateCatalogKey(), EstimateClassificationSnapshot, getEstimateClassification(), getTemplateClassification(), isPrintedTemplate(), matchesCatalogFilter(), matchesClassFilter() (+6 more)
+
+### Community 33 - "Community 33"
+Cohesion: 0.33
+Nodes (6): ClientCalcInput, ClientCalcMaterial, ClientCalcProcess, effectiveMarginPercent(), runClientCalculation(), toMaterial()
 
 ### Community 35 - "Community 35"
+Cohesion: 0.13
+Nodes (16): LayerCard(), LayerCardLayer, LayerCardProps, GradeOption, Props, StructureGradeSelect(), findDefaultSolventMaterialId(), listSolventMaterials() (+8 more)
+
+### Community 36 - "Community 36"
 Cohesion: 0.18
 Nodes (7): CustomerAutocompleteProps, CustomerOption, JobHeaderFields(), ProductTypeOption, ProductTypeValue, UnitOption, DimensionFieldDef
 
 ## Knowledge Gaps
-- **137 isolated node(s):** `Band`, `Panel`, `ExtraPiece`, `DRAWERS`, `BottomSheetProps` (+132 more)
+- **155 isolated node(s):** `Band`, `Panel`, `ExtraPiece`, `DRAWERS`, `BottomSheetProps` (+150 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **2 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `ApiClient` connect `Community 0` to `Community 1`, `Community 34`, `Community 3`, `Community 5`, `Community 6`, `Community 9`, `Community 15`, `Community 17`, `Community 18`, `Community 20`, `Community 21`?**
-  _High betweenness centrality (0.249) - this node is a cross-community bridge._
-- **Why does `useAuth()` connect `Community 34` to `Community 9`, `Community 20`, `Community 21`, `Community 6`?**
-  _High betweenness centrality (0.025) - this node is a cross-community bridge._
-- **Why does `useEntrance()` connect `Community 15` to `Community 2`, `Community 34`, `Community 5`, `Community 6`, `Community 9`, `Community 17`, `Community 20`?**
-  _High betweenness centrality (0.022) - this node is a cross-community bridge._
+- **Why does `ApiClient` connect `Community 0` to `Community 1`, `Community 3`, `Community 35`, `Community 5`, `Community 6`, `Community 15`, `Community 17`, `Community 18`, `Community 20`, `Community 21`, `Community 23`?**
+  _High betweenness centrality (0.252) - this node is a cross-community bridge._
+- **Why does `useAuth()` connect `Community 21` to `Community 1`, `Community 2`, `Community 35`, `Community 6`, `Community 15`, `Community 23`, `Community 30`?**
+  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+- **Why does `useEntrance()` connect `Community 21` to `Community 2`, `Community 5`, `Community 6`, `Community 15`, `Community 23`?**
+  _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **What connects `Band`, `Panel`, `ExtraPiece` to the rest of the system?**
-  _137 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _155 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.055534987041836355 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.053946053946053944 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.06707317073170732 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05297532656023222 - nodes in this community are weakly interconnected._
 - **Should `Community 4` be split into smaller, more focused modules?**
-  _Cohesion score 0.06690140845070422 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06306306306306306 - nodes in this community are weakly interconnected._

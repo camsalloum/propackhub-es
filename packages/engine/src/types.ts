@@ -3,6 +3,8 @@
 
 import type { LaminationRecipe } from './lamination-recipe';
 import type { InkPrintingProcess } from './ink-printing';
+import type { PouchAccessorySelection } from './pouch-accessories';
+import type { UnitDef } from './unit-conversion';
 
 export type LayerType = 'substrate' | 'ink' | 'adhesive' | 'solvent';
 
@@ -22,6 +24,18 @@ export interface Material {
   /** GP/MP/HP lamination formula (binder + hardener + EA parts). */
   laminationRecipe?: LaminationRecipe | null;
   laminationTier?: string | null;
+  // Accessory pricing (zipper / spout / valve / handle / window). Only populated
+  // for accessory rows (itemClass='accessory'); null on film/ink/adhesive rows.
+  /** USD per linear metre — zipper tape. */
+  costPerMeterUsd?: number | null;
+  /** USD per piece — spout / valve / handle. */
+  costPerPieceUsd?: number | null;
+  /** Grams per linear metre — zipper tape. */
+  weightGramPerMeter?: number | null;
+  /** Grams per piece — spout / valve / handle. */
+  weightGramPerPiece?: number | null;
+  /** Accessory class: 'zipper' | 'spout' | 'valve' | 'handle' | 'window'. */
+  accessoryKind?: string | null;
 }
 
 export interface Layer {
@@ -55,6 +69,8 @@ export interface EstimateDimensions {
   centerSealOverlapMm?: number;
   /** Flat-bottom (box) pouch bottom-panel depth (mm). Adds a separate W×D panel. */
   bottomDepthMm?: number;
+  /** Pouch accessories (zipper / spout / valve / window / handle). Empty/undefined = none. */
+  accessories?: PouchAccessorySelection[];
   // Bag fields (flat-sheet area model — see bag-flat-sheet.ts)
   /** Configurator type: 'bottom-gusset' | 'side-gusset' | 'courier' | 'diaper' | 'industrial' | 'loop' | 'patch' | 'punch' | 'wicket'. */
   bagSubtype?: string;
@@ -160,6 +176,10 @@ export interface Estimate {
   rmCostPerM2?: number;
   markupAmountPerKg?: number;
   operationCostPerKg?: number;
+  /** Pouch accessory hardware cost per kg (zipper/spout/valve/handle/window) — pass-through, outside markup. */
+  accessoryCostPerKg?: number;
+  /** Extra grams added per piece by accessories (hardware + window film). */
+  accessoryWeightGramPerPiece?: number;
   salePricePerKg?: number;
 
   // Solvent mix (when SB ink/adhesive present)
@@ -180,6 +200,10 @@ export interface Estimate {
   /** Unit the user entered `orderQuantityKg` in: 'kgs' | 'kpcs' | 'sqm' | 'lm' | 'roll_500_lm'.
    *  'kgs' is the default (no conversion). All others are converted to true kg using productMetrics. */
   orderQuantityUnit?: string;
+  /** Resolved {basis, multiplier} for `orderQuantityUnit`, looked up from the tenant's
+   *  effective unit list. Takes precedence over `orderQuantityUnit` when present; enables
+   *  custom/tenant-defined units. Falls back to the legacy code map when omitted. */
+  orderQuantityUnitDef?: UnitDef;
   orderQuantityKpcs?: number;
   orderQuantitySqm?: number;
   orderQuantityMeters?: number;
@@ -193,6 +217,8 @@ export interface CalculationResult {
     wastePercent: number;
     markupPercent: number;
     processPercent: number;
+    /** Accessory hardware share of total cost (pouch zipper/spout/valve/etc.). */
+    accessoryPercent?: number;
   };
   warnings: string[];
 }

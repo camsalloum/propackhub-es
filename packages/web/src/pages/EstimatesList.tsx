@@ -1,9 +1,11 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, RefreshCw, Loader2, FileText } from 'lucide-react';
+import { Search, RefreshCw, Loader2, FileText, Trash2 } from 'lucide-react';
 import { useEntrance } from '../hooks/useEntrance';
 import { useViewTransition } from '../hooks/useViewTransition';
 import EmptyState from '../components/EmptyState';
+import { SectionTitle } from '../components/SectionTitle';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { apiClient } from '../lib/api';
 import {
   ClassFilterPanel,
@@ -36,6 +38,27 @@ const EstimatesList = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [classFilter, setClassFilter] = useState<ClassFilter>(EMPTY_CLASS_FILTER);
   const [requotingId, setRequotingId] = useState<string | null>(null);
+  /** Estimate pending delete confirmation (null when dialog closed). */
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  /**
+   * One-shot flash notice surfaced by the editor's Back button when the user
+   * tried to leave a brand-new estimate with no savable content. We read it
+   * once on mount, render it as a dismissible banner, and clear sessionStorage
+   * so the same notice never appears twice.
+   */
+  const [flashNotice, setFlashNotice] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const note = sessionStorage.getItem('es:flashNotice');
+      if (note) {
+        setFlashNotice(note);
+        sessionStorage.removeItem('es:flashNotice');
+      }
+    } catch {
+      /* sessionStorage may be unavailable — silent skip */
+    }
+  }, []);
 
   const fetchEstimates = useCallback(async () => {
     try {
@@ -81,10 +104,13 @@ const EstimatesList = () => {
         !customerFilter.trim() ||
         (e.customerName || '').toLowerCase().includes(customerFilter.trim().toLowerCase());
 
+      // Status filters: 'draft' = working drafts, 'sent' = committed (Saved).
+      // Until the MES outcome flag flips, won/lost rows are treated as 'sent' so
+      // they aren't orphaned from the user's view.
       const matchesStatus =
         statusFilter === 'all' ||
         e.status === statusFilter ||
-        (statusFilter === 'draft' && e.status === 'sent');
+        (statusFilter === 'sent' && (e.status === 'won' || e.status === 'lost'));
 
       const matchesClass =
         isAllClassFiltersActive || matchesEstimateClassFilter(e, classFilter);
@@ -109,6 +135,20 @@ const EstimatesList = () => {
       alert('Failed to create re-quote with updated prices.');
     } finally {
       setRequotingId(null);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await apiClient.deleteEstimate(pendingDelete.id);
+      setEstimates((prev) => prev.filter((e) => e.id !== pendingDelete.id));
+      setPendingDelete(null);
+    } catch {
+      alert('Failed to delete estimate. Please try again.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -142,10 +182,31 @@ const EstimatesList = () => {
 
   return (
     <div ref={entranceRef} className="pb-4 max-w-7xl mx-auto">
+      {flashNotice && (
+        <div
+          role="status"
+          className="card border-warning/40 bg-warning-soft text-text-primary mb-4 flex items-start gap-3"
+        >
+          <span className="text-sm flex-1">{flashNotice}</span>
+          <button
+            type="button"
+            onClick={() => setFlashNotice(null)}
+            className="text-xs text-text-secondary hover:text-text-primary shrink-0"
+            aria-label="Dismiss notice"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-display font-bold text-navy">Estimates</h1>
-          <p className="text-sm text-mist mt-1">Search past quotes, filter by structure, re-quote with new prices.</p>
+          <SectionTitle
+            as="h1"
+            className="text-2xl lg:text-3xl font-display font-bold text-navy"
+            hint="Search past quotes, filter by structure, re-quote with new prices."
+          >
+            Estimates
+          </SectionTitle>
         </div>
         <Link to="/templates" className="btn-primary text-center w-full sm:w-auto">
           New estimate
@@ -281,6 +342,14 @@ const EstimatesList = () => {
                     )}
                     Re-quote
                   </button>
+                  <button
+                    type="button"
+                    className="btn-secondary text-sm py-2 px-3 inline-flex items-center justify-center text-danger"
+                    aria-label={`Delete estimate ${e.refNumber}`}
+                    onClick={() => setPendingDelete({ id: e.id, label: `${e.refNumber} — ${e.jobName || 'Untitled'}` })}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -340,6 +409,15 @@ const EstimatesList = () => {
                             )}
                             Re-quote
                           </button>
+                          <button
+                            type="button"
+                            className="text-sm text-mist hover:text-danger inline-flex items-center gap-1"
+                            aria-label={`Delete estimate ${e.refNumber}`}
+                            onClick={() => setPendingDelete({ id: e.id, label: `${e.refNumber} — ${e.jobName || 'Untitled'}` })}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -350,6 +428,23 @@ const EstimatesList = () => {
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete estimate?"
+        message={
+          <>
+            This permanently removes{' '}
+            <strong className="text-text-primary">{pendingDelete?.label}</strong> from your
+            estimates list. This can&apos;t be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        destructive
+        busy={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 };

@@ -13,6 +13,7 @@ export * from './ink-printing';
 export * from './structure-metrics';
 export * from './bag-flat-sheet';
 export * from './pouch-flat-sheet';
+export * from './pouch-accessories';
 export * from './unit-conversion';
 
 // Re-export for convenience

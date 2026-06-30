@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "start": "node dist/index.js",
     "db:migrate": "tsx scripts/run-migrations.ts",
+    "db:purge-estimates": "tsx scripts/cleanup-estimates.ts",
     "test:migration": "tsx scripts/test-migration-fresh.ts",
     "db:push": "drizzle-kit push:pg",
     "db:seed-templates": "tsx scripts/seed-templates-backfill.ts",

@@ -35,7 +35,7 @@ export interface ClientCalcInput {
   materials: ClientCalcMaterial[];
   processes?: ClientCalcProcess[];
   productType: 'roll' | 'sleeve' | 'pouch' | 'bag';
-  dimensions: Record<string, number | undefined>;
+  dimensions: Record<string, unknown>;
   markupPercent: number;
   platesPerKg: number;
   deliveryPerKg: number;
@@ -48,6 +48,9 @@ export interface ClientCalcInput {
   inkPrintingProcess?: 'flexo' | 'rotogravure' | null;
   inkSolventRatio?: number;
   orderQuantityKg?: number;
+  /** Order-quantity unit code + its resolved {basis, multiplier} (for live preview parity with the server). */
+  orderQuantityUnit?: string;
+  orderQuantityUnitDef?: { basis: 'kg' | 'pieces' | 'sqm' | 'lm'; multiplier: number };
 }
 
 function toMaterial(m: ClientCalcMaterial): Material {
@@ -122,6 +125,8 @@ export function runClientCalculation(input: ClientCalcInput) {
     displayCurrencyCode: input.displayCurrency,
     exchangeRateUsdToDisplay: input.exchangeRateUsdToDisplay,
     orderQuantityKg: orderQty,
+    orderQuantityUnit: input.orderQuantityUnit ?? 'kgs',
+    orderQuantityUnitDef: input.orderQuantityUnitDef,
     solventCostPerKgUsd: needsSolvent ? input.solventCostPerKgUsd : undefined,
     laminationRecipeOverrides: input.laminationRecipeOverrides,
     cleaningSolventKgPerJob: input.cleaningSolventKgPerJob ?? DEFAULT_CLEANING_SOLVENT_KG_PER_JOB,

@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { extractUserFromRequest } from '../utils/auth';
+import { extractUserFromRequest, isPlatformAdmin } from '../utils/auth';
 import {
   listPlatformMasterMaterialsWithIds,
   createPlatformMasterMaterial,
@@ -27,10 +27,15 @@ import { checkRateLimit } from '../utils/rate-limit';
 import { enrichMasterDataReference } from '../utils/master-data-normalize';
 import type { MasterMaterial } from '../db/master-materials-io';
 
-function requireMasterDataAdmin(request: FastifyRequest, reply: FastifyReply): boolean {
+// The platform master catalog (materials + reference taxonomy) and service keys
+// are the app owner's global source of truth — the seed every tenant is
+// provisioned from, and the future PEBI master-data link point. Only the
+// platform owner may read or mutate them. Tenants edit their OWN tenant-scoped
+// materials via /api/v1/materials instead.
+function requirePlatformAdmin(request: FastifyRequest, reply: FastifyReply): boolean {
   const user = extractUserFromRequest(request);
-  if (user.role !== 'tenant_admin' && user.role !== 'platform_admin') {
-    reply.status(403).send({ error: 'Admin only' });
+  if (!isPlatformAdmin(user.role)) {
+    reply.status(403).send({ error: 'Platform admin only' });
     return false;
   }
   return true;
@@ -44,7 +49,7 @@ function auditActorFromRequest(request: FastifyRequest): AuditActor {
 const MaterialBodySchema = z.object({
   key: z.string().min(1).max(128),
   name: z.string().min(1).max(255),
-  type: z.enum(['substrate', 'ink', 'adhesive', 'solvent']),
+  type: z.enum(['substrate', 'ink', 'adhesive', 'solvent', 'accessory']),
   solidPercent: z.number().int().min(0).max(100),
   density: z.number().positive(),
   costPerKgUsd: z.number().min(0),
@@ -58,6 +63,12 @@ const MaterialBodySchema = z.object({
   externalId: z.string().max(128).nullable().optional(),
   externalSource: z.string().max(64).nullable().optional(),
   laminationRecipe: z.record(z.unknown()).nullable().optional(),
+  // Accessory pricing (type='accessory').
+  accessoryKind: z.enum(['zipper', 'spout', 'valve', 'handle', 'window']).nullable().optional(),
+  costPerMeterUsd: z.number().min(0).nullable().optional(),
+  costPerPieceUsd: z.number().min(0).nullable().optional(),
+  weightGramPerMeter: z.number().min(0).nullable().optional(),
+  weightGramPerPiece: z.number().min(0).nullable().optional(),
 });
 
 const ReferenceCategorySchema = z.enum([
@@ -86,7 +97,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
   fastify.get('/api/v1/platform/master-data/materials', async (request, reply) => {
     try {
       await request.jwtVerify();
-      if (!requireMasterDataAdmin(request, reply)) return;
+      if (!requirePlatformAdmin(request, reply)) return;
       const rows = await listPlatformMasterMaterialsWithIds();
       return reply.send(
         rows.map((r: Awaited<ReturnType<typeof listPlatformMasterMaterialsWithIds>>[number]) => ({
@@ -108,6 +119,11 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
           externalId: r.externalId,
           externalSource: r.externalSource,
           laminationRecipe: r.laminationRecipe ?? null,
+          accessoryKind: r.accessoryKind ?? null,
+          costPerMeterUsd: r.costPerMeterUsd != null ? Number(r.costPerMeterUsd) : null,
+          costPerPieceUsd: r.costPerPieceUsd != null ? Number(r.costPerPieceUsd) : null,
+          weightGramPerMeter: r.weightGramPerMeter != null ? Number(r.weightGramPerMeter) : null,
+          weightGramPerPiece: r.weightGramPerPiece != null ? Number(r.weightGramPerPiece) : null,
         }))
       );
     } catch (error) {
@@ -121,7 +137,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
     async (request, reply) => {
       try {
         await request.jwtVerify();
-        if (!requireMasterDataAdmin(request, reply)) return;
+        if (!requirePlatformAdmin(request, reply)) return;
         const body = MaterialBodySchema.parse(request.body);
         const created = await createPlatformMasterMaterial(body as MasterMaterial, auditActorFromRequest(request));
         const sync = await afterPlatformMutation();
@@ -138,7 +154,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
     async (request, reply) => {
       try {
         await request.jwtVerify();
-        if (!requireMasterDataAdmin(request, reply)) return;
+        if (!requirePlatformAdmin(request, reply)) return;
         const body = MaterialBodySchema.partial().parse(request.body);
         const updated = await updatePlatformMasterMaterial(
           request.params.id,
@@ -160,7 +176,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
     async (request, reply) => {
       try {
         await request.jwtVerify();
-        if (!requireMasterDataAdmin(request, reply)) return;
+        if (!requirePlatformAdmin(request, reply)) return;
         const ok = await deletePlatformMasterMaterial(request.params.id, auditActorFromRequest(request));
         if (!ok) return reply.status(404).send({ error: 'Material not found' });
         const sync = await afterPlatformMutation();
@@ -177,7 +193,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
     async (request, reply) => {
       try {
         await request.jwtVerify();
-        if (!requireMasterDataAdmin(request, reply)) return;
+        if (!requirePlatformAdmin(request, reply)) return;
         const body = z.array(MaterialBodySchema).parse(request.body);
         const materials = await replacePlatformMasterMaterials(
           body as MasterMaterial[],
@@ -195,7 +211,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
   fastify.get('/api/v1/platform/master-data/reference', async (request, reply) => {
     try {
       await request.jwtVerify();
-      if (!requireMasterDataAdmin(request, reply)) return;
+      if (!requirePlatformAdmin(request, reply)) return;
       const ref = await buildMasterDataReferenceFromDb();
       const masterDataVersion = await getMasterDataVersion();
       return reply.send({ ...enrichMasterDataReference(ref), masterDataVersion });
@@ -211,7 +227,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
   }>('/api/v1/platform/master-data/reference/:category', async (request, reply) => {
     try {
       await request.jwtVerify();
-      if (!requireMasterDataAdmin(request, reply)) return;
+      if (!requirePlatformAdmin(request, reply)) return;
       const category = ReferenceCategorySchema.parse(request.params.category);
       const items = z.array(ReferenceItemSchema).parse(request.body);
       const saved = await replacePlatformReferenceCategory(
@@ -245,7 +261,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
     async (request, reply) => {
       try {
         await request.jwtVerify();
-        if (!requireMasterDataAdmin(request, reply)) return;
+        if (!requirePlatformAdmin(request, reply)) return;
         const cleaningSolventKgPerJob = z.coerce
           .number()
           .nonnegative()
@@ -262,7 +278,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
   fastify.post('/api/v1/platform/master-data/sync-tenants', async (request, reply) => {
     try {
       await request.jwtVerify();
-      if (!requireMasterDataAdmin(request, reply)) return;
+      if (!requirePlatformAdmin(request, reply)) return;
       const sync = await syncPlatformMasterToAllTenants({ pruneOrphans: true });
       return reply.send(sync);
     } catch (error) {
@@ -324,7 +340,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
   fastify.get('/api/v1/platform/service-keys', async (request, reply) => {
     try {
       await request.jwtVerify();
-      if (!requireMasterDataAdmin(request, reply)) return;
+      if (!requirePlatformAdmin(request, reply)) return;
       const keys = await listPlatformServiceKeys();
       return reply.send(keys);
     } catch (error) {
@@ -338,7 +354,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
     async (request, reply) => {
       try {
         await request.jwtVerify();
-        if (!requireMasterDataAdmin(request, reply)) return;
+        if (!requirePlatformAdmin(request, reply)) return;
         const { label, scopes, expiresAt } = request.body ?? {};
         if (!label?.trim()) {
           return reply.status(400).send({ error: 'label is required' });
@@ -365,7 +381,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
     async (request, reply) => {
       try {
         await request.jwtVerify();
-        if (!requireMasterDataAdmin(request, reply)) return;
+        if (!requirePlatformAdmin(request, reply)) return;
         const ok = await revokePlatformServiceKey(request.params.id);
         if (!ok) return reply.status(404).send({ error: 'Service key not found' });
         return reply.send({ ok: true });

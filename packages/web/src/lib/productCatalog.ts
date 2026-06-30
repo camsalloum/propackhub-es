@@ -133,16 +133,17 @@ const BAG_BASE: DimensionFieldDef[] = [F.bagWidth, F.bagHeight, F.numberOfUps, F
 
 export const POUCH_SUBTYPES: ProductSubtype[] = [
   { key: 'pouch_3_side_seal', label: '3-Side Seal', family: 'pouch', dimensionFields: POUCH_BASE },
-  { key: 'pouch_3_side_seal_zip', label: '3-Side Seal + Zipper', family: 'pouch', dimensionFields: [...POUCH_BASE, F.zipper] },
   { key: 'pouch_stand_up', label: 'Stand-up Pouch', family: 'pouch', dimensionFields: [...POUCH_BASE, F.bottomGusset] },
-  { key: 'pouch_stand_up_zip', label: 'Stand-up Pouch + Zipper', family: 'pouch', dimensionFields: [...POUCH_BASE, F.bottomGusset, F.zipper] },
   { key: 'pouch_kseal_stand_up', label: 'K-Seal Stand-up Pouch', family: 'pouch', dimensionFields: [...POUCH_BASE, F.bottomGusset] },
-  { key: 'pouch_kseal_stand_up_zip', label: 'K-Seal Stand-up Pouch + Zipper', family: 'pouch', dimensionFields: [...POUCH_BASE, F.bottomGusset, F.zipper] },
   { key: 'pouch_center_seal', label: 'Center-Seal Pouch', family: 'pouch', dimensionFields: POUCH_BASE },
   { key: 'pouch_gusset', label: 'Gusset Pouch', family: 'pouch', dimensionFields: [...POUCH_BASE, F.sideGusset] },
   { key: 'pouch_4_side_seal', label: '4-Side Seal Pouch', family: 'pouch', dimensionFields: POUCH_BASE },
   { key: 'pouch_flat_bottom', label: 'Flat-Bottom (Box) Pouch', family: 'pouch', dimensionFields: [...POUCH_BASE, F.sideGusset] },
 ];
+// NOTE: Zipper is no longer a separate subtype. It (and spout/valve/window/handle)
+// is now an Accessory toggle in the PouchConfigurator that adds real weight + cost
+// via the engine (pouch-accessories.ts). Legacy `_zip` subtype codes are migrated
+// to their base subtype + a zipper accessory by 0008/migrate-pouch-zip-accessory.
 
 export const BAG_SUBTYPES: ProductSubtype[] = [
   // Commercial bags

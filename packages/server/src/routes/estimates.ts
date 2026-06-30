@@ -87,7 +87,7 @@ const EstimateCreateSchema = z.object({
 /** PATCH accepts any subset of the create fields. */
 const EstimateUpdateSchema = EstimateCreateSchema.partial();
 
-async function generateRefNumber(db: Database, tenantId: string): Promise<string> {
+export async function generateRefNumber(db: Database, tenantId: string): Promise<string> {
   const year = new Date().getFullYear();
   // BUG-11: retry loop guards against race conditions where two concurrent
   // requests grab the same COUNT and try to insert the same ref number.
@@ -253,7 +253,8 @@ export async function createEstimateRoute(
         deliveryPerKg: data.deliveryPerKg.toString(),
         displayCurrency: tenant.displayCurrency,
         exchangeRateUsdToDisplay: tenant.exchangeRateUsdToDisplay.toString(),
-        status: 'draft',
+        status: data.status ?? 'draft',
+        notes: data.notes ?? undefined,
         masterDataVersion,
         orderQuantityKg: data.orderQuantityKg != null ? String(data.orderQuantityKg) : undefined,
         orderQuantityUnit: data.orderQuantityUnit ?? 'kgs',

@@ -8,7 +8,7 @@ export function toEngineMaterial(m: MaterialRow): Material {
   return {
     id: m.id,
     name: m.name,
-    type: m.type,
+    type: m.type as Material['type'],
     solidPercent: m.solidPercent,
     density: parseFloat(m.density),
     costPerKgUsd: parseFloat(m.costPerKgUsd),
@@ -20,6 +20,11 @@ export function toEngineMaterial(m: MaterialRow): Material {
     marketPriceUsd: m.marketPriceUsd ? parseFloat(m.marketPriceUsd) : null,
     laminationRecipe: (m.laminationRecipe as LaminationRecipe | null) ?? null,
     laminationTier: (m.laminationRecipe as LaminationRecipe | null)?.tier ?? null,
+    accessoryKind: m.accessoryKind ?? null,
+    costPerMeterUsd: m.costPerMeterUsd != null ? parseFloat(m.costPerMeterUsd) : null,
+    costPerPieceUsd: m.costPerPieceUsd != null ? parseFloat(m.costPerPieceUsd) : null,
+    weightGramPerMeter: m.weightGramPerMeter != null ? parseFloat(m.weightGramPerMeter) : null,
+    weightGramPerPiece: m.weightGramPerPiece != null ? parseFloat(m.weightGramPerPiece) : null,
   };
 }
 

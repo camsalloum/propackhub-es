@@ -148,7 +148,7 @@ export async function registerRoute(
       token: accessToken,
       refreshToken,
       user: { id: user.id, email: user.email, displayName, role: user.role },
-      tenant: { id: tenant.id, name: tenant.name },
+      tenant: { id: tenant.id, name: tenant.name, type: tenant.type },
     });
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
@@ -205,6 +205,7 @@ export async function loginRoute(
       tenant: {
         id: tenant.id,
         name: tenant.name,
+        type: tenant.type,
         displayCurrency: tenant.displayCurrency,
         exchangeRateUsdToDisplay: tenant.exchangeRateUsdToDisplay,
       },
@@ -359,6 +360,7 @@ export async function meRoute(
       tenant: {
         id: tenantData.id,
         name: tenantData.name,
+        type: tenantData.type,
         displayCurrency: tenantData.displayCurrency,
       },
     });

@@ -1,145 +1,194 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-06-28 (Login/Register contrast fix — text-inverse + text-on-accent Dark theme overrides + LaminateVisualizer)
-**Session focus:** Fix invisible "Estimation Studio" / "Sign in" / tagline / demo creds on the Light theme Login (and Register) — token-coloured headings now follow theme.
+**Last updated:** 2026-06-29 (Multi-tenant security hardening + data-driven units + tenant reference layer + UI fixes)
+**Session focus:** External audit review, platform/tenant role separation, engine unit refactor, layered tenant reference model, UX fixes.
 
 ---
 
 ## Where we stopped (read this first next session)
 
-### Latest fix — auth screen contrast ✅
+### Session 2026-06-29 — Full summary
 
-User report: "the Estimation Studio / Flexible-packaging cost estimation, refined / Sign in" was unreadable on the Light theme Login screen.
+External agent gave a thorough code review. We verified every claim against the actual code and implemented fixes + new features across engine, server, and web.
 
-**Root cause:** `Login.tsx` and `Register.tsx` painted the headings/tagline/demo creds with inline `style={{ color: 'rgb(var(--color-text-inverse))' }}`. `text-inverse` is white in light themes — but `.auth-shell` background is `surface-base` (warm off-white in Light). White on cream = invisible. The original design assumed a dark hero surface, but the Premium v2 reset made `.auth-shell` use `surface-base` directly.
+---
 
-**Fixes:**
-- `pages/Login.tsx` — heading "Estimation Studio" → `text-text-primary`; tagline → `text-text-secondary`; eyebrow → `text-accent-text`; logo "ES" → `text-text-on-accent`; demo credentials wrapper + `<code>` chips → `text-text-secondary` + `bg-accent-soft text-accent-text`.
-- `pages/Register.tsx` — same set of replacements.
-- `components/LaminateVisualizer.tsx` — 8× `fill="rgb(var(--color-text-inverse))"` → `fill="#FFFFFF"` (the bar colors are fixed hex `#1D5FA3` / `#9B4CA0` / etc. regardless of theme, so labels need to be plain white in every theme — they're a matched pair).
-- `theme/registry.ts` + `index.css` `[data-theme="dark"]` — Dark theme was also missing `--color-text-inverse` override (same root pattern as the `text-on-accent` miss earlier). Added `'text-inverse': '#0F0F12'` so `bg-brand text-text-inverse` (e.g. `TemplateBuilder` numbered pills) reads dark-on-near-white instead of white-on-near-white.
+## Fixes from external audit (all verified & implemented)
 
-**Property test extended.** Added `text-inverse on brand ≥ 4.5:1` to `theme/themeTokens.test.ts`. The new test caught the Dark regression on first run (would have been ~1.0:1 with white-on-white).
+### 🔴 Critical: platform catalog access control
 
-**Verified:** `npm run test` → **28/28 passed** · `npm run build` → green (CSS 75.05 kB / 13.69 kB gz, JS 907.10 kB / 263.71 kB gz).
+**Problem:** `requireMasterDataAdmin` in `platform-master-data.ts` allowed `tenant_admin` to write the global platform catalog + mint/revoke service keys. Registration sets `role: 'tenant_admin'`, so any self-registered tenant could mutate the shared master catalog affecting everyone.
 
-### Previous fix carried — surface×text contrast on accent
+**Fix:**
+- All platform routes (materials CRUD, reference categories, costing defaults, sync, service keys, change-feed JWT path) now gate on `isPlatformAdmin()` only.
+- `platform.ts` `/platform/master-materials` also tightened.
+- `service-key-auth.ts` JWT path tightened.
+- `/library` page repointed to tenant-scoped `RawMaterials.tsx` (new page); platform editor moved to `/platform/master-data` (gated by `PlatformAdminRoute` in router + nav).
 
-Three root causes were producing white-on-light foreground:
+### 🟠 High: Dashboard soft-delete leak
 
-1. **Dark theme didn't override `--color-text-on-accent`** → it inherited Light's `#FFFFFF`, so white was painted on Dark's lavender accent `#B275F0` and near-white brand `#F4F4F5` (logo letters, `.btn-primary` labels, accent badges, selected nav pills, layer-type icons). Fixed: `DARK_OVERRIDES` and `[data-theme="dark"]` CSS scope now set `text-on-accent: #0F0F12`.
-2. **Hardcoded `text-white` on logo "ES" tiles** (3× in `Layout.tsx` + 1× in `App.tsx`). The logo gradient `--color-accent → --accent-9` is *light* in Dark/Lagoon/Ocean/Midnight themes (their accent ramps trend light), making white letters invisible. Replaced with `text-text-on-accent`.
-3. **Hardcoded `bg-white` in 4 components** (`BagConfigurator`, `PouchConfigurator`, `CustomerAutocomplete` dropdown, `StructureGradeSelect` menu). Background stayed white in dark themes but child text inherited `--color-text-primary` (which is *white* in dark themes) → white-on-white. Replaced with `bg-surface-raised`; nearby `border-slate` → `border-border`, `bg-slate/10` → `bg-surface-sunken`.
+`dashboard.ts` queried estimates without `isNull(deletedAt)` → deleted estimates inflated counts and leaked into Recent/Expiring. Fixed with `and(eq(tenantId), isNull(deletedAt))`.
 
-**Property test strengthened.** Added two new contrast assertions to `theme/themeTokens.test.ts`:
-- `text-on-accent` on `accent` ≥ 3.0:1 across all 9 themes
-- `text-on-accent` on `brand` ≥ 3.0:1 across all 9 themes
+### 🟠 High: Ref-number race in template instantiate
 
-Threshold is 3.0:1 (WCAG 2.1 §1.4.3 large-text / §1.4.11 UI-components) because every consumer of `text-on-accent` paints bold/large UI text (logo letters, `font-semibold` button labels, `font-medium` badges, selected nav pills). This test caught the Dark theme regression at 1.92:1 on first run.
+`templates.ts` had its own inline ref-number generator (no year-filter, no soft-delete filter, no collision protection). Exported `generateRefNumber` from `estimates.ts` and replaced the inline version.
 
-**Verified:** `npm run test` → **27/27 passed** · `npm run build` → green (CSS 74.74 kB / 13.66 kB gz, JS 907.55 kB / 263.74 kB gz).
+### 🟠 High: JWT secret prod hard-fail
 
-### Theme set (unchanged — 9 themes)
+`app.ts` now throws on startup if `NODE_ENV=production` and the JWT secret is the built-in dev default. Same string peppers service-key hashes (`platform-service-keys.ts`).
 
-### Theme set (unchanged — 9 themes)
+### 🟠 High: 401 refresh-and-retry interceptor
 
-User explicitly disliked the gold/orange in the prior Sunset, asked for a "dark
-blue + green of the layers" mix, and asked for **all PEBI themes**. Result: the
-registry grew from 4 to **9 themes**, all genuinely distinct, all WCAG AA across
-text/accent/focus pairings (verified by property tests).
+`api.ts request()` now catches 401 → single-flight `ensureRefreshed()` → retries once. On refresh failure: clears tokens, fires `onAuthFailure` → `useAuth` drops to logged-out. Long-open editors no longer fail after 30-min token expiry.
 
-**Themes — final set:**
+### 🟠 High: Offline draft was write-only (dead end)
 
-| ID | Kind | Identity | Source |
-|----|------|----------|--------|
-| `light`    | light | clean editorial near-black + violet on warm white | preserved |
-| `dark`     | dark  | Linear-esque deep ink + violet | preserved |
-| `lagoon`   | dark  | **dark blue + emerald-green mix** on deep navy `#0F2540` (NEW) | in-house, replaces orange Sunset |
-| `ocean`    | dark  | teal/cyan on deep teal, dark-tuned elevation | PEBI "Ocean Depths" |
-| `aurora`   | light | vibrant violet + pink on lavender white | PEBI "Aurora Gradient" |
-| `midnight` | dark  | deep indigo `#1E1B4B` with violet accents | PEBI "Midnight Purple" |
-| `forest`   | light | natural emerald & green on mint white | PEBI "Forest Green" |
-| `frost`    | light | indigo glassmorphism on indigo-tinted white | PEBI "Frosted Glass" |
-| `classic`  | light | professional neutral gray | PEBI "Classic Corporate" |
+`EstimateEditor.tsx` offline-save now timestamps, uses a real `flushOfflineDraft()` on `online` event + next load, honest messaging.
 
-PEBI's orange `sunset` and luxury-gold `gold` themes are **intentionally NOT
-imported** — the user explicitly dislikes orange/gold accents.
+### MasterData.tsx Rules-of-Hooks crash
 
-**Legacy persisted ids** (`indigo`, `emerald`, the interim `sunset`) fail the
-registry check → resolved as invalid → OS default applied + stored value
-overwritten (R4.5). No manual user reset required.
+6 `useState` hooks (drag-and-drop reorder state) were declared after early `return` statements → hook-count mismatch on re-render. Hoisted above all returns. Also fixed duplicate React key `solvent` in the tab bar (excluded all standard codes from the custom-RM-type filter).
 
-**Property tests still passing for all 9 themes:**
-- Property 3 (token completeness) — every theme defines every `REQUIRED_TOKEN_KEYS`.
-- Property 4 (WCAG AA contrast) — every theme: text-primary ≥ 4.5:1, accent-text ≥ 4.5:1, text-secondary ≥ 3:1, focus-ring ≥ 3:1 against `surface-raised`.
+---
 
-**Verified:** `npm run test` → **25/25 passed** · `npm run build` → green (CSS 74.65 kB / 13.67 kB gz, JS 905 kB / 263.3 kB gz; CSS grew ~6 kB due to 7 colorful theme scopes).
+## New features implemented
 
-### Spec & docs reconciled
+### 1. Tenant role model (materials)
 
-- `requirements.md` — R1.4 rewritten (Premium v2 reset acknowledged), R1.7 at 95%
-- `design.md` — architecture diagram, ThemeId type, pre-paint script, registry block, **and all 9 per-theme token tables** updated with measured AA contrast
-- `phase-1.5-premium.md` — Block E rewritten to describe 9 themes, OKLCH anchor table updated, ThemeId/THEMES code blocks updated, legacy-id migration list extended to include `sunset`
-- `tasks.md` — 3.2 scope list updated to all 9 theme scopes; 22.2/22.3 reworked + new 22.3a for the 5 PEBI imports
+`materials.ts` CRUD now uses `canManageTenantMaterials(db, tenantId, role)`:
+- `platform_admin` / `tenant_admin` → always.
+- `user` → only on an **individual** tenant (`.type === 'individual'`).
+- Company/group members are read-only (FORBIDDEN error with clear message).
 
-### Premium v2 visuals carried over
+Tenant `type` threaded through auth responses (`/me`, login, register) → frontend `AuthTenant.type`.
 
-- Violet gradient buttons with shine-sweep + glow shadow + scale press
-- Cards with multi-layer shadow + accent ring on hover (translateY -4px spring)
-- Sidebar: glowing logo tile, sliding accent indicator on active nav, labeled pill theme switcher (now lists 9 themes)
-- Mobile chrome: glass `backdrop-filter` blur on header + bottom nav
-- Auth screens: animated mesh-gradient background, drifting page-ambient blob
-- Sparklines (Recharts) + spring-physics NumberTicker on every dashboard KPI
-- Reusable `<EmptyState>` on Dashboard / EstimatesList / CustomersList
-- Native View Transitions API on list → detail navigation
-- Density toggle (Comfortable / Compact / Spacious) in Settings → General
-- All motion reduced-motion guarded (media query + `data-reduced-motion` attribute + zeroed motion tokens)
+### 2. Tenant-scoped Raw Materials page (`/library`)
 
-### Foundation primitives (all wired, tested where pure)
+New `RawMaterials.tsx`: tenant-scoped CRUD on `/api/v1/materials`, tabbed by type, inline editing, sync-from-platform, role-gated. Replaced the platform `MasterData.tsx` (moved to `/platform/master-data`, platform_admin only).
 
-```text
-src/index.css                                    Token Layer (9 themes), reduced-motion CSS, view-transitions, component classes
-src/tailwind.config.js                           Tokens → utilities (semantic + 12-step ramps + fluid type)
-src/theme/registry.ts                            9 themes (2 base + 7 colorful)
-src/theme/resolveTheme.ts                        Pure theme resolver  ✓ property-tested
-src/theme/contrast.ts                            WCAG luminance + contrast  ✓ asserts in DEV
-src/theme/ThemeProvider.tsx                      Context, pre-paint reconcile, OS-color-scheme follow
-src/theme/ThemeSwitcher.tsx                      Settings full radio-group (auto-lists all 9 themes)
-src/components/QuickThemeSwitcher.tsx            Sidebar/header labeled pill popover (auto-lists all 9 themes)
-src/preferences/PreferenceStore.ts               Web + native (Capacitor) + sync localStorage mirror  ✓ property-tested
-src/preferences/densityStore.ts                  Density persistence + resolver
-src/hooks/useReducedMotion.ts                    matchMedia listener → data-reduced-motion sync
-src/hooks/useEntrance.ts                         motion library spring
-src/hooks/useStagger.ts                          --motion-stagger-step driven cascade
-src/hooks/useViewTransition.ts                   document.startViewTransition wrapper
-src/hooks/useDensity.ts                          Density preference React hook
-src/motion/resolveMotionDurations.ts             Pure motion-mode resolver  ✓ property-tested
-src/components/Overlay.tsx                       Portal + scrim + WAAPI + focus trap  ✓ property-tested
-src/components/RouteTransition.tsx               Path-keyed cross-fade
-src/components/NumberTicker.tsx                  motion library spring count-up
-src/components/Sparkline.tsx                     Recharts area/line
-src/components/EmptyState.tsx                    Reusable empty surface
-src/components/Layout.tsx                        Chrome (sidebar/drawer/bottom nav) + RouteTransition
-src/components/BottomSheet.tsx                   Built on <Overlay>
-src/components/LaminationFormulaModal.tsx        Built on <Overlay>
-src/components/TemplateBuilder.tsx               Built on <Overlay>
-index.html                                       Pre-paint script (theme + density + reduced-motion, all 9 theme ids valid)
-```
+### 3. Data-driven order-quantity unit conversion (engine)
 
-### Open follow-ups (optional, not blocking)
+`unit-conversion.ts` rewritten. Every unit = `{ basis, multiplier }`:
+- Bases (engine-fixed): `kg`, `pieces`, `sqm`, `lm` (finished/reel width — **NOT** the press/web width).
+- `lm` uses `linearMPerKgReel` (confirmed correction from old `linearMPerKgWeb`).
+- `LEGACY_UNIT_MAP` keeps existing saved estimates converting unchanged.
+- `UnitDef` on `EstimateInput.orderQuantityUnitDef` preferred over legacy code.
+- 158 engine tests pass (18 unit-conversion tests).
 
-- [ ] Property test for `useDensity` resolution (Phase 1.5 Property 8)
-- [ ] Property test for `NumberTicker` termination (Phase 1.5 Property 9)
-- [ ] Shared-element view transitions (assign `view-transition-name` on list rows + detail headers)
-- [ ] Optional regression suites in tasks.md (20.2 responsive/CLS; 20.3 skeleton failure path) — `*`-marked, lower priority
-- [ ] Apply `useHoverSpring` to dashboard `StatCard` for physical-feeling hover
+### 4. Layered tenant reference model
 
-### Prior session work (still valid)
+**New table:** `tenant_reference_items` (migration `0010_tenant_reference_items.sql`).
+
+**Architecture:** platform_reference_items = owner defaults. tenant_reference_items = tenant overlay. `buildMasterDataReferenceForTenant(tenantId)` merges both (tenant wins by code).
+
+**Tenant-extensible categories (Class A):** rm_type, process, product_subtype, unit, packaging, ink_coating, adhesive.
+
+**NOT tenant-extensible (engine structural):** product_type, printing_web.
+
+**Routes:**
+- `GET /api/v1/master-data/reference` → merged view for the tenant.
+- `GET /api/v1/master-data/reference/custom` → tenant's own rows.
+- `PUT /api/v1/master-data/reference/:category` → tenant save (role-gated).
+
+**UI:** Tenant `RawMaterials.tsx` has a "Custom Lists" toggle → `TenantReferenceEditor` with tabs for RM Types, Units (basis + multiplier), Subtypes, Processes.
+
+### 5. Unit metadata + admin editor
+
+`unit` reference items carry `metadata: { basis, multiplier }`. `enrichMasterDataReference` emits `unitOptions` with `basis` field. Admin "Platform Master > Units" has Basis dropdown + Multiplier input per unit row.
+
+### 6. Product-family-aware unit filtering
+
+Unit dropdown in estimate editor filtered by product family:
+- roll/sleeve → kg, pieces, sqm, lm (+ multiplier variants).
+- pouch/bag → kg, pieces only. LM/SQM hidden.
+- Auto-resets to kg if switching product invalidates the current unit.
+- Filtering keys on `o.basis` (carried on each option from server), with legacy fallback map.
+
+### 7. Template instantiate → no auto-persist
+
+**Old:** picking a template called `instantiateTemplate` which INSERT-ed immediately.
+**New:** calls `preview: true` mode → resolves template layers but writes nothing. Editor opens as a genuine new (unsaved) draft, persists only on Save.
+
+Purged 281 accumulated junk drafts via `npm run db:purge-estimates -- --all`.
+
+### 8. Sticky top action bar + deduplicated controls
+
+Top bar (Back · Cancel · Save · Calculate · PDF) made `sticky top-0 z-30`. Bottom panel Save/Calculate duplicates removed (kept unique actions: Save to My Templates, Duplicate for re-quote).
+
+### 9. Pouch/bag dimensions — header fields removed
+
+Pouch/bag dimensions are entered only in their design-panel configurator. The inline header dimension fields (`Open width` / `Open height`) no longer show for pouch/bag (were leaking before a type was chosen or from stale template subtypes).
+
+### 10. Window patch — any substrate, cost model A
+
+- Window accessory picker now lists **substrate materials** (excluding Packaging family).
+- Added **thickness (µ)** input.
+- Cost = patch area (W×H) × (µ × density ÷ 1000 × $/kg). Patch weighed/priced by its own film, not folded into structure GSM.
+- Legacy patches (no material) fall back to structure-GSM behaviour.
+- 3 new engine tests.
+
+### 11. Window patch position (X% / Y%)
+
+Window patch position controllable via two % inputs (horizontal/vertical centre of the pouch face). Affects drawing in both open view and flat-blank view. Cosmetic only — no cost/weight impact. Default 50/50 = centre.
+
+### 12. Pouch open view → horizontal
+
+`PouchSchematic.tsx` silhouette rotated 90° into a landscape frame so the finished pouch reads horizontally, matching the flat-blank die-line beside it.
+
+### 13. View-type captions
+
+Both pouch and bag configurators now label each diagram: "{Subtype Name} — open view" / "… — flat blank".
+
+### 14. Film stack plan-view strip removed
+
+"Plan · 800 mm web →" strip removed from `FilmStackVisualizer`. Web width is a production/MES decision, not an estimation concern. `printWebWidth` and the `webWidthMm` prop removed.
+
+### 15. Solvent row background gap fixed
+
+Solvent row, detail rows, and Total/tfoot in the structure table had their trailing cell gated on `showLayerActionsCol` instead of `showLayerControlsCol` → missing `<td>` in locked mode → white gap. Fixed all three.
+
+### 16. Raw Materials decimal display
+
+Tenant page now formats numeric columns (density, cost, market) to 2 decimals on load, widened inputs, step=0.01.
+
+---
+
+## To-do / known open items
+
+- [ ] Run `npm run db:migrate` to create `tenant_reference_items` table (migration 0010).
+- [ ] Verify pouch open-view dimension labels read correctly after landscape rotation (may need label re-anchoring).
+- [ ] Existing platform units in DB may lack `metadata: { basis, multiplier }` — the code falls back via `LEGACY_UNIT_METADATA`, but a one-time backfill script would make admin edits save cleanly.
+- [ ] `Settings.tsx:35` still defaults `exchangeRateUsdToDisplay` to 3.6725 (AED) instead of reading from tenant. Low priority.
+- [ ] Price-scraper maps paper → LDPE resin futures (misleading but not costing-critical).
+- [ ] Native `alert()`/`confirm()` in EstimateEditor (≈5 spots) should use the design system overlay. Low priority.
+- [ ] Server has 10 pre-existing TS errors in `templates.ts`, `proposal-pdf.ts`, 2 test files — none in files we edited.
+
+---
+
+## Architecture decisions (carry forward)
+
+| Decision | Rationale |
+|----------|-----------|
+| Platform catalog = owner-only | Tenants edit their OWN materials + reference, never the global seed. |
+| product_type / printing_web = NOT tenant-extensible | Engine structural — each has bespoke geometry/costing code. New ones need engine work. |
+| Unit basis catalog is engine-fixed (4 bases) | Each basis maps to a real formula metric. Admin defines unit labels/multipliers; neither admin nor tenant can invent a new basis. |
+| LM basis = linearMPerKgReel (finished/reel width) | The costing unit is the delivered product metre. Press-web LM is for MES/later. |
+| Window patch = substrate film (cost model A) | patch $/piece = area × µ × density ÷ 1000 × $/kg. Separate from structure GSM. |
+| Template pick = no persist | Editor opens an unsaved draft from a preview payload; DB row written only on Save. |
+| Tenant type `individual` → user can edit materials/reference; `company` → only group admin | First registrant is always `tenant_admin`. |
+
+---
+
+## Prior session work (still valid)
 
 | Area | Status |
 |------|--------|
-| Bag configurator 2D | ✅ All 9 subtypes |
-| Template ink controls | ✅ 4% column vertical `+▲▼✕`; structure lock = stack only |
-| Engine SB/UV | ✅ Layer `isSolventBased`; 86 engine tests |
-| Master Data Excel sync | ✅ All sheets → materials + reference API |
-
+| Theme system (9 themes, AA contrast) | ✅ |
+| Auth screen contrast fixes | ✅ |
+| Bag configurator 2D (9 subtypes) | ✅ |
+| Pouch configurator + flat blank | ✅ |
+| Template ink controls | ✅ |
+| Engine SB/UV + solvent costing | ✅ |
+| Master Data Excel sync → platform DB | ✅ |
+| Admin platform templates | ✅ |
+| Smart Template Builder | ✅ |

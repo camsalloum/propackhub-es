@@ -17,7 +17,7 @@ import { relations } from 'drizzle-orm';
 // Enums
 export const userRoleEnum = pgEnum('user_role', ['user', 'tenant_admin', 'platform_admin']);
 export const estimateStatusEnum = pgEnum('estimate_status', ['draft', 'sent', 'won', 'lost']);
-export const layerTypeEnum = pgEnum('layer_type', ['substrate', 'ink', 'adhesive', 'solvent']);
+export const layerTypeEnum = pgEnum('layer_type', ['substrate', 'ink', 'adhesive', 'solvent', 'accessory']);
 export const productTypeEnum = pgEnum('product_type', ['roll', 'sleeve', 'pouch', 'bag']);
 export const tenantTypeEnum = pgEnum('tenant_type', ['individual', 'company']);
 export const printingWebClassEnum = pgEnum('printing_web_class', ['wide_web', 'narrow_web']);
@@ -61,6 +61,12 @@ export const platformMasterMaterials = pgTable(
     externalSource: varchar('external_source', { length: 64 }),
     /** GP/MP/HP lamination formula (binder + hardener + EA parts). */
     laminationRecipe: jsonb('lamination_recipe'),
+    // Accessory pricing (zipper/spout/valve/handle/window) — null on film/ink/adhesive rows.
+    costPerMeterUsd: decimal('cost_per_meter_usd', { precision: 12, scale: 4 }),
+    costPerPieceUsd: decimal('cost_per_piece_usd', { precision: 12, scale: 4 }),
+    weightGramPerMeter: decimal('weight_g_per_meter', { precision: 10, scale: 4 }),
+    weightGramPerPiece: decimal('weight_g_per_piece', { precision: 10, scale: 4 }),
+    accessoryKind: varchar('accessory_kind', { length: 32 }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
@@ -185,6 +191,37 @@ export const users = pgTable('users', {
   tenantIdIdx: index('users_tenant_id_idx').on(table.tenantId),
 }));
 
+/**
+ * Tenant-scoped reference overlay (rm_type, process, product_subtype, units …).
+ * platform_reference_items is the owner-shipped default; rows here are a tenant's
+ * own additions/overrides. Effective reference = platform defaults merged with
+ * these by code. product_type / printing_web are NOT tenant-extensible (engine
+ * structural), so they are never written here.
+ */
+export const tenantReferenceItems = pgTable(
+  'tenant_reference_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    category: platformReferenceCategoryEnum('category').notNull(),
+    label: varchar('label', { length: 255 }).notNull(),
+    code: varchar('code', { length: 64 }),
+    metadata: jsonb('metadata'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  },
+  (table) => ({
+    tenantCategoryIdx: index('tenant_reference_items_tenant_category_idx').on(
+      table.tenantId,
+      table.category
+    ),
+  })
+);
+
 // Material categories (B1) — defined before materials for FK reference
 export const categories = pgTable('categories', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -243,6 +280,12 @@ export const materials = pgTable('materials', {
   externalId: varchar('external_id', { length: 128 }),
   externalSource: varchar('external_source', { length: 64 }),
   laminationRecipe: jsonb('lamination_recipe'),
+  // Accessory pricing (zipper/spout/valve/handle/window) — null on film/ink/adhesive rows.
+  costPerMeterUsd: decimal('cost_per_meter_usd', { precision: 12, scale: 4 }),
+  costPerPieceUsd: decimal('cost_per_piece_usd', { precision: 12, scale: 4 }),
+  weightGramPerMeter: decimal('weight_g_per_meter', { precision: 10, scale: 4 }),
+  weightGramPerPiece: decimal('weight_g_per_piece', { precision: 10, scale: 4 }),
+  accessoryKind: varchar('accessory_kind', { length: 32 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({

@@ -13,6 +13,7 @@ import CustomersList from './pages/CustomersList';
 import Settings from './pages/Settings';
 import StandardTemplates from './pages/StandardTemplates';
 import MasterData from './pages/MasterData';
+import RawMaterials from './pages/RawMaterials';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
@@ -48,6 +49,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** Restricts a route to the platform owner (app admin). Others go to /library. */
+function PlatformAdminRoute({ children }: { children: React.ReactNode }) {
+  const { isLoading, user } = useAuth();
+  if (isLoading) return null;
+  if (user?.role !== 'platform_admin') {
+    return <Navigate to="/library" replace />;
+  }
+  return <>{children}</>;
+}
+
 function App() {
   return (
     <ThemeProvider>
@@ -80,10 +91,17 @@ function App() {
           <Route path="estimates" element={<EstimatesList />} />
           <Route path="customers" element={<CustomersList />} />
           <Route path="customers/:id" element={<CustomerDetail />} />
-          <Route path="library" element={<MasterData />} />
+          <Route path="library" element={<RawMaterials />} />
           <Route path="settings" element={<Settings />} />
-          <Route path="platform/master-data" element={<Navigate to="/library" replace />} />
-          <Route path="platform/master-library" element={<Navigate to="/library" replace />} />
+          <Route
+            path="platform/master-data"
+            element={
+              <PlatformAdminRoute>
+                <MasterData />
+              </PlatformAdminRoute>
+            }
+          />
+          <Route path="platform/master-library" element={<Navigate to="/platform/master-data" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>

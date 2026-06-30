@@ -11,7 +11,6 @@ export type FilmLayer = {
 
 type Props = {
   layers: FilmLayer[];
-  webWidthMm?: number | null;
   className?: string;
 };
 
@@ -310,7 +309,7 @@ function formatPercentLabels(shares: number[]): string[] {
   return adjusted.map((t) => `${(t / SCALE).toFixed(1)}%`);
 }
 
-export default function FilmStackVisualizer({ layers, webWidthMm, className }: Props) {
+export default function FilmStackVisualizer({ layers, className }: Props) {
   const inkIndexById = useMemo(() => {
     const map = new Map<string | number, number>();
     let n = 0;
@@ -338,7 +337,6 @@ export default function FilmStackVisualizer({ layers, webWidthMm, className }: P
     };
   }, [layers]);
 
-  const showPlanView = webWidthMm != null && webWidthMm > 0;
   const dense = layerCount > 5;
 
   if (layerCount === 0) {
@@ -356,25 +354,6 @@ export default function FilmStackVisualizer({ layers, webWidthMm, className }: P
     <>
       <style>{STACK_STYLES}</style>
       <div className={`flex h-full w-full min-h-0 flex-col bg-surface-raised ${className ?? ''}`}>
-        {showPlanView && (
-          <div className="shrink-0 px-3 py-1.5 border-b border-border">
-            <p className="text-[10px] text-text-secondary mb-1">Plan · {webWidthMm} mm web →</p>
-            <div className="flex h-5 rounded overflow-hidden border border-border">
-              {layers.map((layer, i) => {
-                const inkIdx = inkIndexById.get(layer.id) ?? 0;
-                const appearance = layerAppearance(layer, inkIdx);
-                return (
-                  <div
-                    key={`plan-${String(layer.id)}`}
-                    className={`h-full min-w-[1px] relative overflow-hidden ${appearance.className}`}
-                    style={{ width: `${shares[i] * 100}%`, ...appearance.style }}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         <div className="shrink-0 px-3 pt-2 pb-1 flex justify-between text-[10px] text-text-secondary">
           <span>Edge · thickness</span>
           <span>{layerCount} layers · {totalMicron.toFixed(1)} µ</span>
@@ -390,7 +369,7 @@ export default function FilmStackVisualizer({ layers, webWidthMm, className }: P
             </span>
           </div>
 
-          <div className="flex flex-col flex-1 min-h-0 min-w-0 border border-border/60 rounded-md overflow-hidden shadow-sm">
+          <div className="flex flex-col flex-1 min-h-0 min-w-0 border border-border/60 rounded-md overflow-y-auto shadow-sm">
             {layers.map((layer, i) => {
               const micron = Number(layer.micron || 0);
               const gsm = Number(layer.gsm || 0);
@@ -401,9 +380,18 @@ export default function FilmStackVisualizer({ layers, webWidthMm, className }: P
               return (
                 <div
                   key={String(layer.id)}
-                  className="film-stack-row flex min-h-0 items-stretch border-b border-border/50 last:border-b-0 transition-[flex-grow] duration-500 ease-out"
+                  className="film-stack-row flex items-stretch border-b border-border/50 last:border-b-0 transition-[flex-grow] duration-500 ease-out"
                   style={{
-                    flex: `${shares[i]} 1 0`,
+                    // Grow proportionally to share, but never shrink below the
+                    // label's natural height (flex-shrink:0 + basis:auto) so thin
+                    // layers (e.g. 3% ink) can't collapse and overlap the next row.
+                    // The container scrolls (overflow-y-auto) if the stack is taller
+                    // than the panel. This keeps the cross-section accurate for thick
+                    // layers while guaranteeing legible, non-overlapping labels at any
+                    // zoom or screen size.
+                    flexGrow: shares[i],
+                    flexShrink: 0,
+                    flexBasis: 'auto',
                     animationDelay: `${i * 0.05}s`,
                   }}
                   title={layerLabel(layer, i)}
@@ -414,7 +402,7 @@ export default function FilmStackVisualizer({ layers, webWidthMm, className }: P
                     aria-hidden
                   />
 
-                  <div className="flex-1 min-w-0 flex items-center justify-between gap-2 px-2 bg-surface-raised">
+                  <div className="flex-1 min-w-0 flex items-center justify-between gap-2 px-2 py-1 bg-surface-raised">
                     <p className={`leading-tight text-brand min-w-0 ${dense ? 'text-[10px]' : 'text-xs'}`}>
                       <span className="text-text-secondary font-medium">{i + 1}.</span>{' '}
                       <span className={inkLabelClass(layer)}>

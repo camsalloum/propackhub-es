@@ -171,6 +171,29 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 
 ## Session log
 
+### 2026-06-29 — Draft/Saved estimates, Back auto-save, Notes, hover-only helper copy
+
+- **Status vocabulary:** ES UI now shows **Draft** (`status='draft'`) vs **Saved**
+  (`sent|won|lost`). DB enum unchanged (`draft|sent|won|lost`) for MES reuse.
+  Won/Lost hidden behind `VITE_ENABLE_MES_OUTCOME` (default off) — editor Outcome
+  panel + dashboard "Won" tile gated; code preserved for MES.
+- **Back button bug fixed:** old `handleCancel` showed "your draft stays in the list"
+  but never saved (new estimates were lost). Now `handleBack` silently auto-saves as
+  draft (preserves status for already-saved rows), no confirm dialog. If nothing is
+  savable (new estimate, no layer/material) it drops a one-shot `es:flashNotice` into
+  sessionStorage and EstimatesList shows it as a dismissible banner.
+- **Save controls:** explicit **Save draft** (status=draft, minimal guards) and **Save**
+  (status=sent, full `validateConfiguredEstimate`). `persistEstimate(mode)` with
+  `'draft'|'final'|'silent'`. Calculate uses `'silent'` (no status change).
+- **Notes:** free-text textarea (≤2000 chars) in Job details card → `estimates.notes`
+  (server already accepted it). Always sent so clearing round-trips.
+- **UI copy rule (app-wide):** instructional/clarification text is no longer inline —
+  moved to hover tooltips via new `components/SectionTitle.tsx` (heading + info icon,
+  `title`/`aria-label`). Converted EstimateEditor, EstimatesList, Dashboard,
+  ThemeSwitcher, MasterData. Exemptions: data/counts, field labels, status, placeholders,
+  Login hero. **Rule recorded in `.kiro/steering/estimation-studio.md` → "UI copy".**
+- Spec: requirements.md Req 17 extended (criteria 7-12). web + server builds green.
+
 ### 2026-06-11 — PRD + platform scope
 
 - ES standalone SaaS; individual-first tenant

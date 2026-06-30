@@ -3,6 +3,7 @@ import type { MasterMaterial } from '../db/master-materials-io';
 
 /** RM type code for platform-synced materials (MES Phase C). */
 export function itemClassForMasterMaterial(m: MasterMaterial): string {
+  if (m.type === 'accessory') return 'accessory';
   if (m.type === 'ink') return 'ink';
   if (m.type === 'adhesive') return 'adhesive';
   if (m.type === 'solvent') return 'solvent';

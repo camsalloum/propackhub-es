@@ -31,8 +31,10 @@ export function buildEngineEstimateFromRows(opts: {
   processes: ProcessRow[];
   slabs: SlabRow[];
   layerPriceOverrides?: Map<string, number>;
+  /** Resolved {basis, multiplier} for the estimate's order-quantity unit (custom/tenant units). */
+  orderQuantityUnitDef?: import('@es/engine').UnitDef;
 }): { estimateForEngine: EngineEstimate; materialMap: Map<string, import('@es/engine').Material> } {
-  const { estimate, tenantId, layers, materials, processes, slabs, layerPriceOverrides } = opts;
+  const { estimate, tenantId, layers, materials, processes, slabs, layerPriceOverrides, orderQuantityUnitDef } = opts;
   const materialMap = buildEngineMaterialMap(materials);
   const patchedMaterialMap = new Map(materialMap);
 
@@ -96,6 +98,7 @@ export function buildEngineEstimateFromRows(opts: {
         : 1000,
     // Unit the user entered orderQuantityKg in; engine converts to true kg.
     orderQuantityUnit: estimate.orderQuantityUnit ?? 'kgs',
+    orderQuantityUnitDef,
     solventCostPerKgUsd: resolveSolventCostPerKgUsd(materials, {
       solventMaterialId: estimate.solventMaterialId,
       solventCostPerKgUsd: estimate.solventCostPerKgUsd

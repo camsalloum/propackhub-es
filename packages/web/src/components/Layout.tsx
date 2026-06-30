@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Home,
   FileText,
@@ -11,11 +11,16 @@ import {
   LogOut,
   PlusCircle,
   LayoutTemplate,
+  ChevronsLeft,
+  ChevronsRight,
+  Database,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import QuickThemeSwitcher from './QuickThemeSwitcher';
 import Overlay from './Overlay';
 import RouteTransition from './RouteTransition';
+
+const SIDEBAR_COLLAPSE_KEY = 'es:sidebarCollapsed';
 
 const Layout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -29,6 +34,10 @@ const Layout = () => {
     { name: 'Templates', href: '/templates', icon: LayoutTemplate },
     { name: 'Customers', href: '/customers', icon: Users },
     { name: 'Raw Materials', href: '/library', icon: FolderOpen },
+    // Platform owner only — curates the global master catalog that seeds every tenant.
+    ...(user?.role === 'platform_admin'
+      ? [{ name: 'Platform Master', href: '/platform/master-data', icon: Database }]
+      : []),
     { name: 'Settings', href: '/settings', icon: SettingsIcon },
   ];
 
@@ -39,6 +48,32 @@ const Layout = () => {
     location.pathname.startsWith('/estimate/') && !location.pathname.startsWith('/estimate/choose');
 
   const hideMobileBottomNav = isEstimateEditor;
+
+  // Desktop sidebar collapse — narrower icon rail. Persisted preference, with
+  // an auto-collapse when entering the width-critical estimate editor route.
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1';
+  });
+
+  // Auto-collapse on the estimate editor (where horizontal space matters most);
+  // restore the saved preference elsewhere. The manual toggle still overrides
+  // while the user stays on the page.
+  useEffect(() => {
+    if (isEstimateEditor) {
+      setCollapsed(true);
+    } else {
+      setCollapsed(window.localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1');
+    }
+  }, [isEstimateEditor]);
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      window.localStorage.setItem(SIDEBAR_COLLAPSE_KEY, next ? '1' : '0');
+      return next;
+    });
+  };
 
   const handleLogout = () => {
     logout();
@@ -127,12 +162,21 @@ const Layout = () => {
       </Overlay>
 
       <div className="lg:flex">
-        {/* Desktop sidebar */}
-        <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:border-r lg:border-border lg:bg-surface-raised z-30">
-          <div className="flex items-center min-h-16 px-5 py-5 border-b border-border">
-            <Link to="/dashboard" className="flex items-center gap-3 group">
+        {/* Desktop sidebar — narrower, collapsible icon rail */}
+        <aside
+          className={`hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:border-r lg:border-border lg:bg-surface-raised z-30 transition-[width] duration-200 ease-out ${
+            collapsed ? 'lg:w-16' : 'lg:w-56'
+          }`}
+        >
+          {/* Header: brand + collapse toggle */}
+          <div
+            className={`min-h-16 border-b border-border ${
+              collapsed ? 'flex flex-col items-center gap-2 py-3' : 'flex items-center justify-between gap-2 px-4 py-5'
+            }`}
+          >
+            <Link to="/dashboard" className="flex items-center gap-3 group min-w-0">
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center brand-mark"
+                className="w-10 h-10 rounded-xl flex items-center justify-center brand-mark shrink-0"
                 style={{
                   background: 'linear-gradient(135deg, rgb(var(--color-accent)) 0%, rgb(var(--accent-9)) 100%)',
                   boxShadow: 'var(--glow-accent)',
@@ -140,21 +184,33 @@ const Layout = () => {
               >
                 <span className="font-display font-bold text-base text-text-on-accent tracking-tight">ES</span>
               </div>
-              <div>
-                <h1 className="font-display font-bold text-base text-text-primary tracking-tight leading-tight">
-                  Estimation
-                </h1>
-                <p className="font-display font-bold text-base text-text-primary tracking-tight leading-tight">
-                  Studio
-                </p>
-                <p className="text-[10px] text-text-secondary mt-0.5 tracking-wide">
-                  Flexible Packaging Cost Estimator
-                </p>
-              </div>
+              {!collapsed && (
+                <div className="min-w-0">
+                  <h1 className="font-display font-bold text-base text-text-primary tracking-tight leading-tight">
+                    Estimation
+                  </h1>
+                  <p className="font-display font-bold text-base text-text-primary tracking-tight leading-tight">
+                    Studio
+                  </p>
+                  <p className="text-[10px] text-text-secondary mt-0.5 tracking-wide">
+                    Flexible Packaging Cost Estimator
+                  </p>
+                </div>
+              )}
             </Link>
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-base transition-colors shrink-0"
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-pressed={collapsed}
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {collapsed ? <ChevronsRight className="w-4 h-4" /> : <ChevronsLeft className="w-4 h-4" />}
+            </button>
           </div>
 
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          <nav className={`flex-1 py-4 space-y-1 overflow-y-auto ${collapsed ? 'px-2' : 'px-4'}`}>
             {navigation.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
@@ -164,21 +220,40 @@ const Layout = () => {
                   to={item.href}
                   aria-current={active ? 'page' : undefined}
                   data-active={active}
-                  className="nav-item"
+                  className={`nav-item ${collapsed ? 'justify-center px-0' : ''}`}
+                  title={collapsed ? item.name : undefined}
                 >
                   <Icon className="w-[18px] h-[18px] shrink-0" />
-                  <span>{item.name}</span>
+                  <span className={collapsed ? 'sr-only' : ''}>{item.name}</span>
                 </Link>
               );
             })}
           </nav>
 
-          <div className="p-4 border-t border-border space-y-3">
-            <QuickThemeSwitcher placement="sidebar" />
+          <div className={`border-t border-border space-y-3 ${collapsed ? 'p-2' : 'p-4'}`}>
+            {!collapsed && <QuickThemeSwitcher placement="sidebar" />}
 
-            <div className="flex items-center gap-3 px-2 py-1.5">
+            {!collapsed ? (
+              <div className="flex items-center gap-3 px-2 py-1.5">
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                  style={{
+                    background: 'linear-gradient(135deg, rgb(var(--color-accent-soft)) 0%, rgb(var(--accent-3)) 100%)',
+                  }}
+                >
+                  <span className="font-display font-semibold text-sm text-accent-text">
+                    {user?.displayName?.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-sm truncate text-text-primary">{user?.displayName}</p>
+                  <p className="text-xs text-text-secondary truncate">{user?.role}</p>
+                </div>
+              </div>
+            ) : (
               <div
-                className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                className="w-9 h-9 mx-auto rounded-full flex items-center justify-center"
+                title={`${user?.displayName ?? ''} · ${user?.role ?? ''}`}
                 style={{
                   background: 'linear-gradient(135deg, rgb(var(--color-accent-soft)) 0%, rgb(var(--accent-3)) 100%)',
                 }}
@@ -187,24 +262,28 @@ const Layout = () => {
                   {user?.displayName?.charAt(0).toUpperCase()}
                 </span>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-medium text-sm truncate text-text-primary">{user?.displayName}</p>
-                <p className="text-xs text-text-secondary truncate">{user?.role}</p>
-              </div>
-            </div>
+            )}
 
             <button
               type="button"
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 min-h-[40px] rounded-lg text-danger hover:bg-danger-soft text-sm font-medium transition-colors"
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2 min-h-[40px] rounded-lg text-danger hover:bg-danger-soft text-sm font-medium transition-colors ${
+                collapsed ? 'px-0' : ''
+              }`}
+              aria-label="Sign out"
+              title={collapsed ? 'Sign out' : undefined}
             >
               <LogOut className="w-4 h-4" />
-              <span>Sign out</span>
+              {!collapsed && <span>Sign out</span>}
             </button>
           </div>
         </aside>
 
-        <div className="lg:pl-64 flex-1 flex flex-col min-h-screen">
+        <div
+          className={`flex-1 flex flex-col min-h-screen transition-[padding] duration-200 ease-out ${
+            collapsed ? 'lg:pl-16' : 'lg:pl-56'
+          }`}
+        >
           {/* Mobile header — sticky with backdrop blur */}
           <header className="lg:hidden sticky top-0 z-40 safe-area-pt"
             style={{

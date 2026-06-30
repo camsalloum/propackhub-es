@@ -16,6 +16,7 @@
 
 import { Check } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
+import { SectionTitle } from '../components/SectionTitle';
 import type { ThemeId } from './types';
 
 /**
@@ -53,12 +54,13 @@ export function ThemeSwitcher() {
   return (
     <div>
       <fieldset>
-        <legend className="block text-sm font-medium text-text-primary mb-3">
+        <SectionTitle
+          as="legend"
+          className="block text-sm font-medium text-text-primary mb-3"
+          hint="Choose how Estimation Studio looks. Your selection is saved for next time."
+        >
           Theme
-        </legend>
-        <p className="text-sm text-text-secondary mb-4">
-          Choose how Estimation Studio looks. Your selection is saved for next time.
-        </p>
+        </SectionTitle>
 
         <div
           role="radiogroup"

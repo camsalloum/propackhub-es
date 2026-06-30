@@ -15,7 +15,7 @@ function mapMasterToDbRow(tenantId: string, material: MasterMaterial) {
   return {
     tenantId,
     name: material.name,
-    type: material.type as 'substrate' | 'ink' | 'adhesive' | 'solvent',
+    type: material.type as 'substrate' | 'ink' | 'adhesive' | 'solvent' | 'accessory',
     solidPercent: material.solidPercent,
     density: material.density.toString(),
     costPerKgUsd: roundUsd(material.costPerKgUsd).toFixed(2),
@@ -32,6 +32,12 @@ function mapMasterToDbRow(tenantId: string, material: MasterMaterial) {
     priceSource: 'platform' as const,
     isTenantOnly: false,
     laminationRecipe: material.laminationRecipe ?? null,
+    // Accessory pricing (null for film/ink/adhesive rows).
+    accessoryKind: material.accessoryKind ?? null,
+    costPerMeterUsd: material.costPerMeterUsd != null ? material.costPerMeterUsd.toString() : null,
+    costPerPieceUsd: material.costPerPieceUsd != null ? material.costPerPieceUsd.toString() : null,
+    weightGramPerMeter: material.weightGramPerMeter != null ? material.weightGramPerMeter.toString() : null,
+    weightGramPerPiece: material.weightGramPerPiece != null ? material.weightGramPerPiece.toString() : null,
   };
 }
 
@@ -242,6 +248,13 @@ export async function syncMaterialsForTenant(
       if (material.laminationRecipe !== undefined) {
         patch.laminationRecipe = material.laminationRecipe ?? null;
       }
+
+      // Accessory pricing fields (platform is source of truth).
+      patch.accessoryKind = row.accessoryKind;
+      patch.costPerMeterUsd = row.costPerMeterUsd;
+      patch.costPerPieceUsd = row.costPerPieceUsd;
+      patch.weightGramPerMeter = row.weightGramPerMeter;
+      patch.weightGramPerPiece = row.weightGramPerPiece;
 
       // Single source of truth: platform master always overwrites tenant prices.
       // Temporary overrides live only in estimate layer unit_cost_snapshot_usd, not in the library.

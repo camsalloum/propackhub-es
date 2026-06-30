@@ -36,8 +36,8 @@ export async function authenticateMasterDataReader(
   try {
     await request.jwtVerify();
     const user = extractUserFromRequest(request);
-    if (user.role !== 'platform_admin' && user.role !== 'tenant_admin') {
-      reply.status(403).send({ error: 'Admin only' });
+    if (user.role !== 'platform_admin') {
+      reply.status(403).send({ error: 'Platform admin only' });
       return null;
     }
     return { kind: 'user', userId: user.userId, role: user.role };

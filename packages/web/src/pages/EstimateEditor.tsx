@@ -6,6 +6,7 @@ import BottomSheet from '../components/BottomSheet';
 import FilmStackVisualizer from '../components/FilmStackVisualizer';
 import StructureGradeSelect from '../components/StructureGradeSelect';
 import { JobHeaderFields } from '../components/JobHeaderFields';
+import { SectionTitle } from '../components/SectionTitle';
 import { BagConfigurator } from '../components/BagConfigurator';
 import { PouchConfigurator } from '../components/PouchConfigurator';
 import NumberTicker from '../components/NumberTicker';
@@ -32,9 +33,10 @@ import {
   validateConfiguredEstimate,
 } from '../lib/estimateConfigure';
 import { setWorkingEstimateForTemplate } from '../lib/estimateSession';
-import { estimateStatusLabel } from '../lib/estimateStatus';
+import { selectOnFocus } from '../lib/inputs';
+import { estimateStatusLabel, MES_OUTCOME_ENABLED } from '../lib/estimateStatus';
 import { groupMaterialsForPicker, type CategoryNode } from '../lib/materialTaxonomy';
-import { stackNeedsSolventMix, stackHasSbInk, defaultInkPrintingProcess, inkSolventRatioForProcess, materialAllowedForTemplateLayer, DEFAULT_CLEANING_SOLVENT_KG_PER_JOB, type LaminationRecipe, type InkPrintingProcess } from '@es/engine';
+import { stackNeedsSolventMix, stackHasSbInk, defaultInkPrintingProcess, inkSolventRatioForProcess, materialAllowedForTemplateLayer, DEFAULT_CLEANING_SOLVENT_KG_PER_JOB, type LaminationRecipe, type InkPrintingProcess, type PouchAccessorySelection } from '@es/engine';
 import LaminationFormulaModal from '../components/LaminationFormulaModal';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
 import {
@@ -64,6 +66,12 @@ interface MaterialItem {
   hoover?: string | null; substrateFamily?: string | null; subcategoryId?: string | null;
   platformMasterKey?: string | null;
   laminationRecipe?: LaminationRecipe | null;
+  // Accessory pricing (type='accessory' rows). Strings from the API decimal columns.
+  accessoryKind?: string | null;
+  costPerMeterUsd?: string | null;
+  costPerPieceUsd?: string | null;
+  weightGramPerMeter?: string | null;
+  weightGramPerPiece?: string | null;
 }
 
 interface LayerItem {
@@ -84,6 +92,11 @@ interface DimensionState {
 
 const DEFAULT_PRODUCT_TYPE_OPTIONS = DEFAULT_MASTER_REFERENCE.productTypeOptions;
 const DEFAULT_UNIT_OPTIONS = DEFAULT_MASTER_REFERENCE.unitOptions;
+
+/** Fallback unit-code → basis for legacy units stored without metadata. */
+const LEGACY_UNIT_BASIS: Record<string, string> = {
+  kgs: 'kg', kg: 'kg', kpcs: 'pieces', sqm: 'sqm', lm: 'lm', roll_500_lm: 'lm',
+};
 
 const LAYER_TYPE_LABELS: Record<string, string> = {
   substrate: 'Substrate',
@@ -133,6 +146,10 @@ const EstimateEditor = () => {
   const [jobName, setJobName] = useState('New estimate');
   const [customerId, setCustomerId] = useState<string>('');
   const [customerDraftName, setCustomerDraftName] = useState('');
+  /** Free-text note captured on the estimate (sales context, follow-ups, etc.).
+   * Lives in `estimates.notes` (TEXT). MES will use this column for outcome
+   * commentary once the won/lost flow lands. */
+  const [notes, setNotes] = useState<string>('');
   const [markupPercent, setMarkupPercent] = useState(15);
   const [platesPerKg, setPlatesPerKg] = useState(0);
   const [deliveryPerKg, setDeliveryPerKg] = useState(0);
@@ -148,6 +165,8 @@ const EstimateEditor = () => {
     reelWidthMm: 800, cutoffMm: 600, numberOfUps: 1,
     extraPrintingTrimMm: 0, piecesPerCut: 1, openWidthMm: 200, openHeightMm: 250,
   });
+  // Pouch accessories (zipper/spout/valve/window/handle) — stored in dimensions JSONB on save.
+  const [accessories, setAccessories] = useState<PouchAccessorySelection[]>([]);
   const [layerSheetOpen, setLayerSheetOpen] = useState(false);
   const [addLayerSheetOpen, setAddLayerSheetOpen] = useState(false);
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
@@ -377,11 +396,79 @@ const EstimateEditor = () => {
   // `productType` state holds the Master-Data product-type CODE (family): roll/sleeve/pouch/bag/custom.
   // The engine costing type is derived (bag → pouch). Subtypes link to a family by `parent`.
   const productFamily: ProductFamily = productType;
+
+  // Order-quantity units must match how the product is physically sold:
+  //   roll / sleeve (continuous web) → kg, pieces, area (sqm), linear metre (lm)
+  //   pouch / bag   (discrete items) → kg, pieces only (LM/SQM are not sales units)
+  const allowedUnitBases = useMemo<Set<string>>(
+    () =>
+      productFamily === 'pouch' || productFamily === 'bag'
+        ? new Set(['kg', 'pieces'])
+        : new Set(['kg', 'pieces', 'sqm', 'lm']),
+    [productFamily]
+  );
+  const availableUnitOptions = useMemo(
+    () =>
+      unitOptions.filter((o) => {
+        // Filter on the unit's BASIS (kg/pieces/sqm/lm) — not the unit name. The basis
+        // travels on each option; fall back to the legacy code map only for old units.
+        const basis = o.basis ?? LEGACY_UNIT_BASIS[o.value] ?? 'kg';
+        return allowedUnitBases.has(basis);
+      }),
+    [unitOptions, allowedUnitBases]
+  );
+  // If the selected unit isn't valid for the current product (e.g. switched to a
+  // bag while LM was selected), fall back to kg.
+  useEffect(() => {
+    if (availableUnitOptions.length === 0) return;
+    if (!availableUnitOptions.some((o) => o.value === orderQuantityUnit)) {
+      const fallback = availableUnitOptions.find((o) => o.value === 'kgs') ?? availableUnitOptions[0];
+      setOrderQuantityUnit(fallback.value);
+    }
+  }, [availableUnitOptions, orderQuantityUnit]);
+
   const estimationDimensionFields = dimensionFieldsForEstimation(productFamily, productSubtype);
   const bagConfiguratorType = configuratorTypeForBagSubtype(productSubtype);
   const bagConfiguratorActive = productFamily === 'bag' && bagConfiguratorType != null;
   const pouchConfiguratorType = configuratorTypeForPouchSubtype(productSubtype);
   const pouchConfiguratorActive = productFamily === 'pouch' && pouchConfiguratorType != null;
+
+  // Accessory materials for the pouch configurator dropdowns.
+  // Hardware (zipper/spout/valve/handle) comes from accessory-typed rows; the
+  // window patch can be cut from ANY substrate, so substrates are exposed as
+  // 'window' options carrying density + $/kg for film pricing.
+  const accessoryMaterialOptions = useMemo(
+    () => {
+      const hardware = materials
+        .filter((m) => m.type === 'accessory' || (m.accessoryKind != null && m.accessoryKind !== ''))
+        .map((m) => ({
+          id: m.id,
+          name: m.name,
+          accessoryKind: m.accessoryKind ?? null,
+          costPerMeterUsd: m.costPerMeterUsd != null ? parseFloat(m.costPerMeterUsd) : null,
+          costPerPieceUsd: m.costPerPieceUsd != null ? parseFloat(m.costPerPieceUsd) : null,
+          weightGramPerMeter: m.weightGramPerMeter != null ? parseFloat(m.weightGramPerMeter) : null,
+          weightGramPerPiece: m.weightGramPerPiece != null ? parseFloat(m.weightGramPerPiece) : null,
+          density: null as number | null,
+          costPerKgUsd: null as number | null,
+        }));
+      const windowSubstrates = materials
+        .filter((m) => m.type === 'substrate' && (m.substrateFamily ?? '').toLowerCase() !== 'packaging')
+        .map((m) => ({
+          id: m.id,
+          name: m.name,
+          accessoryKind: 'window' as string | null,
+          costPerMeterUsd: null as number | null,
+          costPerPieceUsd: null as number | null,
+          weightGramPerMeter: null as number | null,
+          weightGramPerPiece: null as number | null,
+          density: m.density != null ? parseFloat(m.density) : null,
+          costPerKgUsd: m.costPerKgUsd != null ? parseFloat(m.costPerKgUsd) : null,
+        }));
+      return [...hardware, ...windowSubstrates];
+    },
+    [materials]
+  );
 
   // Subtype list — driven by Master Data (productSubtypeOptions), not the static catalog.
   // Fall back to static catalog only when Master Data hasn't loaded yet.
@@ -451,6 +538,16 @@ const EstimateEditor = () => {
 
         if (id) {
           await fetchEstimate(id);
+          await flushOfflineDraft(id);
+        } else if ((location.state as { instantiated?: { estimate?: unknown } } | null)?.instantiated?.estimate) {
+          // New estimate pre-filled from a template preview — nothing saved yet.
+          hydrateFromInstantiated(
+            (location.state as { instantiated: Parameters<typeof hydrateFromInstantiated>[0] }).instantiated,
+            mats || []
+          );
+          const statePriceChanges = (location.state as { priceChanges?: unknown[] } | null)?.priceChanges;
+          if (statePriceChanges) setPriceChanges(statePriceChanges as never[]);
+          setLoading(false);
         } else {
           const templateId = searchParams.get('template') ? Number(searchParams.get('template')) : null;
           const paramCustomer = searchParams.get('customer') || '';
@@ -494,6 +591,14 @@ const EstimateEditor = () => {
     if (fromUrl && !customerId) setCustomerId(fromUrl);
   }, [searchParams, customerId]);
 
+  // When connectivity returns, sync any draft saved while offline.
+  useEffect(() => {
+    if (!estimate?.id) return;
+    const onOnline = () => { void flushOfflineDraft(estimate.id as string); };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [estimate?.id]);
+
   useEffect(() => {
     if (masterDataVersion === 0) return;
     loadBaseData();
@@ -526,6 +631,106 @@ const EstimateEditor = () => {
       toLayer(defaultSubstrate, 'substrate', 30, 0),
       toLayer(defaultInk, 'ink', 5, 1),
     ];
+  }
+
+  /**
+   * Hydrate the editor as a NEW (unsaved) estimate from a template preview payload
+   * (server resolved the layers but persisted nothing). The estimate is written to
+   * the DB only when the user clicks Save.
+   */
+  function hydrateFromInstantiated(
+    instantiated: {
+      estimate: {
+        jobName: string;
+        productType: string;
+        productSubtype: string | null;
+        printingWebClass: string;
+        dimensions: Record<string, unknown>;
+        markupPercent: string;
+        displayCurrency: string;
+        exchangeRateUsdToDisplay: string;
+        orderQuantityKg: string | null;
+        orderQuantityUnit: string;
+        sourceTemplateKey: string | null;
+      };
+      layers: Array<{
+        materialId: string;
+        materialName: string;
+        materialType: string;
+        micron: number;
+        costPerKgUsd: number;
+        isSolventBased: boolean;
+        hoover: string | null;
+        position: number;
+      }>;
+      slabs?: Array<{ quantityKg: number; pricePerKg: number }>;
+    },
+    mats: MaterialItem[]
+  ) {
+    const pe = instantiated.estimate;
+    const matById = new Map(mats.map((m) => [m.id, m]));
+    const hydratedLayers: LayerItem[] = (instantiated.layers || []).map((l, i) => {
+      const mat = matById.get(l.materialId);
+      const density = mat?.density ? parseFloat(mat.density) : 0.9;
+      const isSub = (l.materialType || 'substrate') === 'substrate';
+      return {
+        id: crypto.randomUUID(),
+        materialId: l.materialId,
+        materialName: l.materialName || mat?.name || 'Material',
+        materialType: l.materialType || 'substrate',
+        micron: l.micron,
+        gsm: isSub ? l.micron * density : l.micron,
+        costPerKgUsd: l.costPerKgUsd ?? (mat ? parseFloat(mat.costPerKgUsd) : 0),
+        isSolventBased: Boolean(l.isSolventBased),
+        position: i,
+        hoover: l.hoover ?? null,
+      };
+    });
+
+    setJobName(pe.jobName || 'New estimate');
+    setProductType(
+      (() => {
+        if (pe.productSubtype) {
+          const staticEntry = ALL_SUBTYPES.find((s) => s.key === pe.productSubtype);
+          if (staticEntry) return staticEntry.family;
+        }
+        return normalizeProductType(pe.productType, productTypeOptions);
+      })()
+    );
+    setProductSubtype(canonicalBagSubtype(canonicalPouchSubtype(pe.productSubtype)));
+    setDimensions({
+      reelWidthMm: 800, cutoffMm: 600, numberOfUps: 1,
+      extraPrintingTrimMm: 0, piecesPerCut: 1, openWidthMm: 200, openHeightMm: 250,
+      ...(pe.dimensions as Partial<DimensionState>),
+    });
+    setLayers(hydratedLayers);
+    setMarkupPercent(parseFloat(pe.markupPercent) || 15);
+    if (pe.orderQuantityKg) setOrderQuantity(parseFloat(pe.orderQuantityKg));
+    if (pe.orderQuantityUnit) setOrderQuantityUnit(normalizeUnitValue(pe.orderQuantityUnit, unitOptions));
+    setSlabsState(
+      (instantiated.slabs && instantiated.slabs.length > 0
+        ? instantiated.slabs
+        : [{ quantityKg: 1000, pricePerKg: 0 }, { quantityKg: 2000, pricePerKg: 0 }, { quantityKg: 5000, pricePerKg: 0 }]
+      ).map((s) => ({ quantityKg: s.quantityKg, pricePerKgUsd: 0, pricePerKg: 0, total: 0 }))
+    );
+    setEstimate({
+      id: undefined,
+      status: 'draft',
+      productType: pe.productType,
+      productSubtype: pe.productSubtype ?? undefined,
+      printingWebClass: pe.printingWebClass,
+      sourceTemplateKey: pe.sourceTemplateKey ?? undefined,
+      displayCurrency: pe.displayCurrency || 'USD',
+      exchangeRateUsdToDisplay: pe.exchangeRateUsdToDisplay || '1',
+      salePricePerKg: 0,
+      materialCostPerKg: 0,
+      totalGsm: 0,
+      totalMicron: 0,
+    });
+    if (estimateNeedsConfiguration(pe.dimensions as Record<string, unknown>)) {
+      setNeedsConfiguration(true);
+      setActiveSection('structure');
+    }
   }
 
   const fetchEstimate = async (estimateId: string, options?: { silent?: boolean }) => {
@@ -579,6 +784,7 @@ const EstimateEditor = () => {
       setProductSubtype(canonicalBagSubtype(canonicalPouchSubtype(data.productSubtype)));
       setJobName(data.jobName || '');
       setCustomerId(data.customerId || '');
+      setNotes(typeof data.notes === 'string' ? data.notes : '');
       setMarkupPercent(parseFloat(data.markupPercent) || 15);
       setPlatesPerKg(parseFloat(data.platesPerKg) || 0);
       setDeliveryPerKg(parseFloat(data.deliveryPerKg) || 0);
@@ -667,6 +873,11 @@ const EstimateEditor = () => {
           ...(data.dimensions as Partial<DimensionState>),
         });
       }
+      setAccessories(
+        Array.isArray((data.dimensions as { accessories?: unknown })?.accessories)
+          ? ((data.dimensions as { accessories?: PouchAccessorySelection[] }).accessories as PouchAccessorySelection[])
+          : []
+      );
       if (
         !options?.silent &&
         !fromTemplate &&
@@ -729,9 +940,14 @@ const EstimateEditor = () => {
     const payload: Record<string, unknown> = {
       jobName,
       customerId: linkedCustomer || undefined,
+      // notes is always sent so clearing the field round-trips correctly
+      notes: notes.trim() ? notes.trim() : '',
       productType: productTypeForSave(estimate?.productType, productType, productTypeOptions),
       productSubtype: productSubtype ?? undefined,
-      dimensions: dimensionsForSave(dimensions as Record<string, unknown>),
+      dimensions: {
+        ...dimensionsForSave(dimensions as Record<string, unknown>),
+        accessories: productFamily === 'pouch' ? accessories : [],
+      },
       markupPercent,
       platesPerKg,
       deliveryPerKg,
@@ -764,7 +980,7 @@ const EstimateEditor = () => {
       }));
     }
     return payload;
-  }, [jobName, customerId, estimate?.productType, productType, productTypeOptions, productSubtype, needsSolventMix, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, markupPercent, platesPerKg, deliveryPerKg, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
+  }, [jobName, customerId, notes, estimate?.productType, productType, productTypeOptions, productSubtype, needsSolventMix, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   /** Link estimate to a customer row — create customer record if user typed a new name. */
   const ensureCustomerForSave = async (): Promise<string | undefined> => {
@@ -808,13 +1024,19 @@ const EstimateEditor = () => {
         layers: layerMaterialIds,
         materials: patchedMaterials,
         productType: productType as 'roll' | 'sleeve' | 'pouch' | 'bag',
-        dimensions: { ...dimensions },
+        dimensions: { ...dimensions, accessories },
         markupPercent,
         platesPerKg,
         deliveryPerKg,
         slabs: slabsState,
         processes: processesState,
         orderQuantityKg: orderQuantity,
+        orderQuantityUnit,
+        orderQuantityUnitDef: (
+          masterReference as {
+            unitRows?: Array<{ code: string; basis: 'kg' | 'pieces' | 'sqm' | 'lm'; multiplier: number }>;
+          } | null
+        )?.unitRows?.find((u) => u.code === orderQuantityUnit),
         displayCurrency: estimate?.displayCurrency || 'USD',
         exchangeRateUsdToDisplay: parseFloat(estimate?.exchangeRateUsdToDisplay) || 1,
         solventCostPerKgUsd: resolvedSolventCostPerKgUsd,
@@ -831,7 +1053,7 @@ const EstimateEditor = () => {
     markupPercent, platesPerKg, deliveryPerKg, slabQuantitiesKey,
     estimate?.displayCurrency, estimate?.exchangeRateUsdToDisplay,
     solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob,
-    hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, layers.length,
+    hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, layers.length, accessories,
   ]);
 
   const solventCostLines = useMemo(() => {
@@ -980,25 +1202,86 @@ const EstimateEditor = () => {
     activeSection,
   ]);
 
-  const persistEstimate = async (): Promise<boolean> => {
+  // Replay a draft that was saved while offline back to the server once we're
+  // online again. This is the restore path for the offline save above — the
+  // work is recovered by re-submitting it, not silently dropped.
+  const flushOfflineDraft = async (estimateId: string): Promise<void> => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+    const draftKey = `offlineDraft:${estimateId}`;
+    const raw = localStorage.getItem(draftKey);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as { payload?: unknown };
+      const payload = parsed?.payload ?? parsed; // tolerate legacy (bare payload) entries
+      if (!payload) {
+        localStorage.removeItem(draftKey);
+        return;
+      }
+      await apiClient.updateEstimate(estimateId, payload);
+      localStorage.removeItem(draftKey);
+      setSaveNotice('Offline changes synced.');
+      await fetchEstimate(estimateId, { silent: true });
+    } catch (err) {
+      // Keep the draft so we can retry on the next load / reconnect.
+      console.error('Failed to sync offline draft:', err);
+    }
+  };
+
+  /**
+   * Save modes:
+   *  - 'draft'   → explicit Save Draft button: status='draft', shows success toast.
+   *  - 'final'   → explicit Save Final button: status='sent' (DB enum), validated.
+   *  - 'silent'  → Back-button auto-save: keeps current status, no success toast.
+   *
+   * Returns true when a save actually reached the server.
+   */
+  type SaveMode = 'draft' | 'final' | 'silent';
+  const persistEstimate = async (mode: SaveMode = 'draft'): Promise<boolean> => {
     if (saving) return false;
     if (layers.length === 0) {
-      alert('Add at least one layer before saving.');
+      if (mode !== 'silent') alert('Add at least one layer before saving.');
       return false;
     }
     if (layers.some((l) => !l.materialId)) {
-      alert('Select a material for every layer before saving.');
+      if (mode !== 'silent') alert('Select a material for every layer before saving.');
       return false;
+    }
+    if (mode === 'final') {
+      // Final save must satisfy the full configurator validation (dimensions etc.).
+      // For draft and silent we let the user save partial work — that's the whole
+      // point of a draft.
+      const validationError = validateConfiguredEstimate({
+        layers,
+        productType,
+        dimensions: dimensions as Record<string, unknown>,
+      });
+      if (validationError) {
+        alert(validationError);
+        setActiveSection('structure');
+        return false;
+      }
     }
 
     setSaving(true);
-    setSaveNotice(null);
+    if (mode !== 'silent') setSaveNotice(null);
     try {
       const linkedCustomerId = await ensureCustomerForSave();
       const payload = buildSavePayload(linkedCustomerId);
+      // Explicit status transitions. Silent (Back) preserves whatever the row
+      // already had — we don't downgrade a 'sent' estimate to 'draft' just
+      // because the user clicked Back.
+      if (mode === 'draft') payload.status = 'draft';
+      else if (mode === 'final') payload.status = 'sent';
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        localStorage.setItem(`offlineDraft:${estimate?.id || 'new'}`, JSON.stringify(payload));
-        alert('Offline — draft saved locally');
+        const draftKey = `offlineDraft:${estimate?.id || 'new'}`;
+        localStorage.setItem(draftKey, JSON.stringify({ payload, savedAt: Date.now() }));
+        if (mode !== 'silent') {
+          setSaveNotice(
+            estimate?.id
+              ? 'You are offline. Your changes are saved on this device and will sync automatically when the connection returns.'
+              : 'You are offline. This new estimate is saved on this device, but new estimates can only sync once you reconnect and save again.'
+          );
+        }
         return false;
       }
       if (estimate?.id) {
@@ -1009,7 +1292,8 @@ const EstimateEditor = () => {
         }
         setNeedsConfiguration(false);
         await fetchEstimate(estimate.id, { silent: true });
-        setSaveNotice('Changes saved.');
+        if (mode === 'draft') setSaveNotice('Draft saved.');
+        else if (mode === 'final') setSaveNotice('Saved.');
         return true;
       }
       const saved = await apiClient.createEstimate(payload);
@@ -1018,11 +1302,14 @@ const EstimateEditor = () => {
         setWorkingEstimateForTemplate(templateKey, saved.id);
       }
       navigate(`/estimate/${saved.id}`, { replace: true });
-      setSaveNotice('Changes saved.');
+      if (mode === 'draft') setSaveNotice('Draft saved.');
+      else if (mode === 'final') setSaveNotice('Saved.');
       return true;
     } catch (err: any) {
       console.error('Save failed:', err);
-      alert(`Save failed: ${err.message || 'Unknown error'}`);
+      // Silent saves (Back) shouldn't blast the user with a modal — log + carry
+      // on; the user is leaving anyway. Explicit Save buttons still alert.
+      if (mode !== 'silent') alert(`Save failed: ${err.message || 'Unknown error'}`);
       return false;
     } finally {
       setSaving(false);
@@ -1053,7 +1340,10 @@ const EstimateEditor = () => {
     setCalculating(true);
     setSaveNotice(null);
     try {
-      const saved = await persistEstimate();
+      // Calculate persists current state without changing the status (Save Draft
+      // and Save Final are the explicit state-changing actions). We've already
+      // validated above, so 'silent' is safe here.
+      const saved = await persistEstimate('silent');
       if (!saved) return;
       const result = await apiClient.calculateEstimate(estimate.id);
       applyCalculationResult(estimate, result);
@@ -1067,18 +1357,47 @@ const EstimateEditor = () => {
     }
   };
 
-  const handleCancel = () => {
-    const leaving =
-      needsConfiguration ||
-      jobName.trim() !== (estimate?.jobName || '').trim() ||
-      customerId !== (estimate?.customerId || '');
-    if (leaving && !window.confirm('Leave this estimate? Your draft stays in the estimates list.')) {
+  /**
+   * Back / Cancel: silent auto-save as draft (or preserve current status if
+   * already saved), then navigate. Decision: agreed with user 2026-06-29 —
+   * Back never throws away work and never opens a confirm dialog.
+   *
+   * Edge case: when there's nothing savable yet (no layers / no material picked
+   * on a brand-new estimate) we surface a one-time toast so the user knows their
+   * intent was understood but couldn't be persisted, then still navigate away.
+   */
+  const handleBack = async () => {
+    // Nothing to save → just go. Common case when the user opened "New estimate"
+    // and clicked Back without doing anything.
+    const hasNothingToSave =
+      layers.length === 0 || layers.some((l) => !l.materialId);
+    if (hasNothingToSave) {
+      if (!estimate?.id) {
+        // Brand-new estimate, never persisted — let the user know nothing was
+        // saved before they leave. Toast lives on the destination via session
+        // storage so it survives the navigate().
+        try {
+          sessionStorage.setItem(
+            'es:flashNotice',
+            'Nothing saved yet — add at least one layer to save a draft.'
+          );
+        } catch {
+          /* sessionStorage unavailable (private mode etc.) — best effort */
+        }
+      }
+      navigate(returnTo);
       return;
     }
+    // Existing estimate or new one with at least one valid layer: silent save.
+    // Status is preserved (draft stays draft, saved stays saved). Failures are
+    // logged inside persistEstimate; we navigate regardless because the user
+    // expressed intent to leave.
+    await persistEstimate('silent');
     navigate(returnTo);
   };
 
-  const handleSave = () => void persistEstimate();
+  const handleSaveDraft = () => void persistEstimate('draft');
+  const handleSaveFinal = () => void persistEstimate('final');
 
   const handleRequote = async () => {
     if (!estimate?.id) return;
@@ -1271,7 +1590,6 @@ const EstimateEditor = () => {
     clientCalcResult?.estimate.sqmPerKg ?? (totalGsm > 0 ? 1000 / totalGsm : null);
   const showWebTotals =
     can('filmDensity') || can('rmCostPerKg') || (yieldSqmPerKg != null && totalGsm > 0);
-  const printWebWidth = (dimensions.reelWidthMm * dimensions.numberOfUps) + dimensions.extraPrintingTrimMm;
   const fxRate = parseFloat(estimate?.exchangeRateUsdToDisplay) || 1;
   const displaySalePrice = estimate?.salePriceDisplay ?? usdToDisplay(Number(estimate?.salePricePerKg) || 0, fxRate);
   const solventConfigBar = canConfigureSolvent && (hasSbInk || needsSolventMix) ? (
@@ -1319,6 +1637,7 @@ const EstimateEditor = () => {
                 const v = parseFloat(e.target.value);
                 setInkSolventRatioOverride(Number.isFinite(v) && v > 0 ? v : null);
               }}
+              onFocus={selectOnFocus}
             />
           </label>
           {needsSolventMix && <span className="hidden sm:inline text-warning">|</span>}
@@ -1355,6 +1674,7 @@ const EstimateEditor = () => {
                 const displayVal = parseFloat(e.target.value) || 0;
                 setSolventCostOverrideUsd(fxRate > 0 ? displayVal / fxRate : displayVal);
               }}
+              onFocus={selectOnFocus}
             />
           </label>
           <label className="inline-flex items-center gap-1 shrink-0">
@@ -1367,6 +1687,7 @@ const EstimateEditor = () => {
               className="input py-1 px-2 w-14 text-xs font-mono bg-surface-raised"
               value={cleaningSolventKgPerJob}
               onChange={(e) => setCleaningSolventKgPerJob(Number(e.target.value) || 0)}
+              onFocus={selectOnFocus}
             />
             <span className="text-xs text-mist">kg</span>
           </label>
@@ -1416,21 +1737,24 @@ const EstimateEditor = () => {
           )}
         </div>
       )}
-      {/* Compact estimate header — refined typography + breadcrumb-style eyebrow */}
-      <div className="flex items-center justify-between gap-3 mb-6">
+      {/* Compact estimate header — sticky so Save/Calculate stay reachable while scrolling */}
+      <div className="sticky top-0 z-30 -mx-4 lg:-mx-8 px-4 lg:px-8 py-3 mb-6 bg-surface-base/95 backdrop-blur border-b border-border flex items-center justify-between gap-3">
         {/* Left: Back + title */}
         <div className="flex items-center gap-3 min-w-0">
           <button
             type="button"
-            onClick={handleCancel}
+            onClick={handleBack}
             className="btn-secondary inline-flex items-center gap-2 shrink-0"
+            title="Back — saves your work as a draft"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="hidden sm:inline">Back</span>
           </button>
           <div className="min-w-0">
             <p className="eyebrow font-mono leading-none truncate">
-              {estimate?.refNumber || 'Draft estimate'}
+              {estimate?.refNumber
+                ? `${estimate.refNumber} · ${estimateStatusLabel(estimate?.status)}${needsConfiguration ? ' · Needs configuration' : ''}`
+                : `Draft estimate${needsConfiguration ? ' · Needs configuration' : ''}`}
             </p>
             <h1 className="font-display font-semibold text-brand leading-tight truncate text-lg sm:text-xl">
               {jobName}
@@ -1442,14 +1766,29 @@ const EstimateEditor = () => {
         <div className="flex flex-wrap gap-2 shrink-0">
           <button
             type="button"
-            onClick={handleCancel}
+            onClick={handleBack}
             className="btn-secondary inline-flex items-center space-x-2"
+            title="Close — saves your work as a draft"
           >
             <X className="w-4 h-4" />
-            <span>Cancel</span>
+            <span>Close</span>
           </button>
-          <button onClick={handleSave} disabled={saving} className="btn-primary inline-flex items-center space-x-2">
+          <button
+            onClick={handleSaveDraft}
+            disabled={saving}
+            className="btn-secondary inline-flex items-center space-x-2"
+            title="Save your in-progress work — you can come back to finish it later"
+          >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            <span>{saving ? 'Saving...' : 'Save draft'}</span>
+          </button>
+          <button
+            onClick={handleSaveFinal}
+            disabled={saving}
+            className="btn-primary inline-flex items-center space-x-2"
+            title="Save the completed estimate — validates dimensions, layers, and structure"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
             <span>{saving ? 'Saving...' : 'Save'}</span>
           </button>
           <button onClick={handleCalculate} disabled={saving || calculating} className="btn-secondary inline-flex items-center space-x-2">
@@ -1463,16 +1802,13 @@ const EstimateEditor = () => {
       </div>
 
       <div className="card mb-6 py-3 px-4 sm:px-5">
-        <h3 className="text-sm font-semibold text-brand mb-1">Job details</h3>
-        <p className="text-xs text-text-secondary mb-3">
-          Estimate <span className="font-mono text-text-primary">{estimate?.refNumber || 'draft'}</span> — pick
-          an existing customer, click <strong className="text-text-primary">+ Add customer</strong> for a new
-          one, then Save. The quote appears under{' '}
-          <Link to="/estimates" className="text-accent-text hover:underline">
-            Estimates
-          </Link>{' '}
-          and on that customer&apos;s page.
-        </p>
+        <SectionTitle
+          as="h3"
+          className="text-sm font-semibold text-brand mb-3"
+          hint={`Estimate ${estimate?.refNumber || 'draft'} — pick an existing customer, click + Add customer for a new one. Use Save draft to keep working later, or Save when the estimate is complete. It appears under Estimates and on that customer's page.`}
+        >
+          Job details
+        </SectionTitle>
         <JobHeaderFields
           customerId={customerId}
           onCustomerChange={(id) => {
@@ -1511,7 +1847,13 @@ const EstimateEditor = () => {
           }}
           subtypeLabel={`${PRODUCT_FAMILY_LABELS[productFamily] ?? productFamily} type`}
           availableSubtypes={availableSubtypes}
-          dimensionFields={bagConfiguratorActive || pouchConfiguratorActive ? [] : estimationDimensionFields}
+          dimensionFields={
+            // Pouch/bag dimensions are entered only in the design panel (every
+            // subtype has a configurator). Roll/sleeve use the inline header fields.
+            productFamily === 'pouch' || productFamily === 'bag'
+              ? []
+              : estimationDimensionFields
+          }
           dimensions={dimensions}
           onDimensionChange={(key, value) =>
             setDimensions((prev) => ({ ...prev, [key]: value }))
@@ -1520,7 +1862,7 @@ const EstimateEditor = () => {
           onOrderQuantityChange={setOrderQuantity}
           orderQuantityUnit={orderQuantityUnit}
           onOrderQuantityUnitChange={setOrderQuantityUnit}
-          unitOptions={unitOptions}
+          unitOptions={availableUnitOptions}
           bagDimensionsPanel={
             bagConfiguratorActive ? (
               <BagConfigurator
@@ -1533,10 +1875,35 @@ const EstimateEditor = () => {
                 productSubtype={productSubtype}
                 dimensions={dimensions}
                 onDimensionsChange={(patch) => setDimensions((prev) => ({ ...prev, ...patch }))}
+                accessories={accessories}
+                onAccessoriesChange={setAccessories}
+                accessoryMaterials={accessoryMaterialOptions}
               />
             ) : undefined
           }
         />
+
+        {/* Notes — free-text capture (customer asks, special requirements, follow-ups).
+            Stored in estimates.notes (TEXT). MES will reuse this column for outcome
+            commentary once won/lost is wired. Kept inside Job details so it's part of
+            the standard intake flow. */}
+        <div className="mt-4">
+          <label
+            htmlFor="estimate-notes"
+            className="block text-xs font-medium text-text-secondary mb-1"
+          >
+            Notes (optional)
+          </label>
+          <textarea
+            id="estimate-notes"
+            className="input w-full font-sans text-sm"
+            rows={3}
+            maxLength={2000}
+            placeholder="Capture customer requests, follow-ups, or anything that doesn't fit elsewhere."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="min-w-0 max-w-full overflow-x-hidden">
@@ -1560,16 +1927,26 @@ const EstimateEditor = () => {
               <div className="card p-0 overflow-hidden shadow-md">
                 <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] border-b border-border bg-surface-raised">
                   <div className="px-5 py-3.5 lg:border-r border-border">
-                    <h3 className="text-lg font-display font-semibold text-navy tracking-tight">{stackLabel}</h3>
-                    <p className="text-xs text-mist mt-0.5">
-                      {structureLocked
-                        ? 'Template quote — films & adhesives are fixed; edit grades, thickness (µ/gsm), costs, and ink & coating rows'
-                        : 'Layers, grades & RM costs'}
-                    </p>
+                    <SectionTitle
+                      as="h3"
+                      className="text-lg font-display font-semibold text-navy tracking-tight"
+                      hint={
+                        structureLocked
+                          ? 'Template quote — films & adhesives are fixed; edit grades, thickness (µ/gsm), costs, and ink & coating rows'
+                          : 'Layers, grades & RM costs'
+                      }
+                    >
+                      {stackLabel}
+                    </SectionTitle>
                   </div>
                   <div className="px-5 py-3.5 hidden lg:block border-l border-border bg-slate/20">
-                    <h3 className="text-lg font-display font-semibold text-navy tracking-tight">Layer build-up</h3>
-                    <p className="text-xs text-mist mt-0.5">Cross-section · up to 4 films, 3 adhesives, unlimited ink &amp; coating</p>
+                    <SectionTitle
+                      as="h3"
+                      className="text-lg font-display font-semibold text-navy tracking-tight"
+                      hint="Cross-section · up to 4 films, 3 adhesives, unlimited ink & coating"
+                    >
+                      Layer build-up
+                    </SectionTitle>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
@@ -1588,13 +1965,6 @@ const EstimateEditor = () => {
                     <div className="py-2">
                       <FilmStackVisualizer
                         layers={visualizerLayers}
-                        webWidthMm={
-                          printWebWidth > 0
-                            ? printWebWidth
-                            : dimensions.reelWidthMm > 0
-                              ? dimensions.reelWidthMm
-                              : null
-                        }
                       />
                     </div>
                   )}
@@ -1948,6 +2318,7 @@ const EstimateEditor = () => {
                                     }}
                                     className={`cell-input w-14 font-mono text-sm text-center px-1 ${layer.micron === 0 ? 'bg-warning/10 border-warning/30' : ''}`}
                                     inputMode="decimal"
+                                    onFocus={selectOnFocus}
                                   />
                                   <span className="text-xs text-mist w-7 shrink-0 text-left">{unitLabel}</span>
                                 </div>
@@ -1978,6 +2349,7 @@ const EstimateEditor = () => {
                                   className="cell-input w-full max-w-[5.5rem] ml-auto font-mono text-[11px] text-right px-1"
                                   inputMode="decimal"
                                   aria-label={`Cost per kg for ${layer.materialName}`}
+                                  onFocus={selectOnFocus}
                                 />
                               </td>
                               <td className="py-2 px-2 font-mono text-[11px] text-right tabular-nums text-navy align-middle">
@@ -2078,7 +2450,7 @@ const EstimateEditor = () => {
                                 </td>
                               </>
                             )}
-                            {showLayerActionsCol && <td className="py-2 px-1" />}
+                            {showLayerControlsCol && <td className="py-2 px-1" />}
                           </tr>
                           {solventDetailsExpanded &&
                             solventCostLines.map((line) => (
@@ -2099,7 +2471,7 @@ const EstimateEditor = () => {
                                     </td>
                                   </>
                                 )}
-                                {showLayerActionsCol && <td className="py-1.5 px-1" />}
+                                {showLayerControlsCol && <td className="py-1.5 px-1" />}
                               </tr>
                             ))}
                         </>
@@ -2137,7 +2509,7 @@ const EstimateEditor = () => {
                             </td>
                           </>
                         )}
-                        {showLayerActionsCol && <td className="py-3 px-1" />}
+                        {showLayerControlsCol && <td className="py-3 px-1" />}
                       </tr>
                     </tfoot>
                   </table>
@@ -2154,13 +2526,6 @@ const EstimateEditor = () => {
                   >
                     <FilmStackVisualizer
                       layers={visualizerLayers}
-                      webWidthMm={
-                        printWebWidth > 0
-                          ? printWebWidth
-                          : dimensions.reelWidthMm > 0
-                            ? dimensions.reelWidthMm
-                            : null
-                      }
                       className="h-full w-full"
                     />
                   </div>
@@ -2194,8 +2559,13 @@ const EstimateEditor = () => {
 
               {showWebTotals && (
                 <div className="card">
-                  <h3 className="font-display font-semibold text-navy mb-1">Web Totals</h3>
-                  <p className="text-xs text-mist mb-4">Structure yield and material cost per web unit</p>
+                  <SectionTitle
+                    as="h3"
+                    className="font-display font-semibold text-navy mb-4"
+                    hint="Structure yield and material cost per web unit"
+                  >
+                    Web Totals
+                  </SectionTitle>
                   <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
                     {can('filmDensity') && (
                       <>
@@ -2283,8 +2653,8 @@ const EstimateEditor = () => {
                   <tbody>
                     {displaySlabs.map((slab: any, index: number) => (
                       <tr key={index} className="border-b border-border last:border-0 hover:bg-slate/50">
-                        <td className="py-4 px-4">{can('markupPercent') ? <input type="number" value={slab.quantityKg} onChange={(e) => { const v = Number(e.target.value); setSlabsState((prev) => prev.map((s, i) => i === index ? { ...s, quantityKg: v, total: v * s.pricePerKg } : s)); }} className="input w-32 font-mono" /> : <span className="font-mono">{slab.quantityKg}</span>}</td>
-                        <td className="py-4 px-4">{can('markupPercent') ? <input type="number" value={slab.pricePerKg} step="0.01" onChange={(e) => { const v = Number(e.target.value); const usd = displayToUsd(v, fxRate); setSlabsState((prev) => prev.map((s, i) => i === index ? { ...s, pricePerKg: v, pricePerKgUsd: usd, total: v * s.quantityKg } : s)); }} className="input w-32 font-mono" /> : <span className="font-mono">{slab.pricePerKg.toFixed(2)}</span>}</td>
+                        <td className="py-4 px-4">{can('markupPercent') ? <input type="number" value={slab.quantityKg} onChange={(e) => { const v = Number(e.target.value); setSlabsState((prev) => prev.map((s, i) => i === index ? { ...s, quantityKg: v, total: v * s.pricePerKg } : s)); }} onFocus={selectOnFocus} className="input w-32 font-mono" /> : <span className="font-mono">{slab.quantityKg}</span>}</td>
+                        <td className="py-4 px-4">{can('markupPercent') ? <input type="number" value={slab.pricePerKg} step="0.01" onChange={(e) => { const v = Number(e.target.value); const usd = displayToUsd(v, fxRate); setSlabsState((prev) => prev.map((s, i) => i === index ? { ...s, pricePerKg: v, pricePerKgUsd: usd, total: v * s.quantityKg } : s)); }} onFocus={selectOnFocus} className="input w-32 font-mono" /> : <span className="font-mono">{slab.pricePerKg.toFixed(2)}</span>}</td>
                         <td className="py-4 px-4 font-display font-semibold">{estimate?.displayCurrency || 'USD'} {Number((slab.quantityKg || 0) * (slab.pricePerKg || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                         {can('markupPercent') && <td className="py-4 px-4"><button onClick={() => setSlabsState((prev) => prev.filter((_, i) => i !== index))} className="text-sm text-mist hover:text-danger">Remove</button></td>}
                       </tr>
@@ -2301,10 +2671,10 @@ const EstimateEditor = () => {
             <div className="card space-y-6">
               <h3 className="text-lg font-display font-semibold text-navy">Markup & Additional Costs</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div><label className="block text-sm font-medium text-navy mb-2">Markup % (on material)</label><input type="number" value={markupPercent} onChange={(e) => setMarkupPercent(Number(e.target.value))} className="input w-full" /></div>
+                <div><label className="block text-sm font-medium text-navy mb-2">Markup % (on material)</label><input type="number" value={markupPercent} onChange={(e) => setMarkupPercent(Number(e.target.value))} onFocus={selectOnFocus} className="input w-full" /></div>
                 <div><label className="block text-sm font-medium text-navy mb-2">Effective margin % (on sale price)</label><p className="input w-full bg-slate font-mono">{effectiveMarginPercent(Number(estimate?.materialCostPerKg) || 0, markupPercent, Number(estimate?.salePricePerKg) || 1).toFixed(1)}%</p></div>
-                <div><label className="block text-sm font-medium text-navy mb-2">Plates/kg ({estimate?.displayCurrency || 'USD'})</label><input type="number" value={platesPerKg} onChange={(e) => setPlatesPerKg(Number(e.target.value))} step="0.01" className="input w-full" /></div>
-                <div><label className="block text-sm font-medium text-navy mb-2">Delivery/kg ({estimate?.displayCurrency || 'USD'})</label><input type="number" value={deliveryPerKg} onChange={(e) => setDeliveryPerKg(Number(e.target.value))} step="0.01" className="input w-full" /></div>
+                <div><label className="block text-sm font-medium text-navy mb-2">Plates/kg ({estimate?.displayCurrency || 'USD'})</label><input type="number" value={platesPerKg} onChange={(e) => setPlatesPerKg(Number(e.target.value))} onFocus={selectOnFocus} step="0.01" className="input w-full" /></div>
+                <div><label className="block text-sm font-medium text-navy mb-2">Delivery/kg ({estimate?.displayCurrency || 'USD'})</label><input type="number" value={deliveryPerKg} onChange={(e) => setDeliveryPerKg(Number(e.target.value))} onFocus={selectOnFocus} step="0.01" className="input w-full" /></div>
               </div>
             </div>
           )}
@@ -2450,12 +2820,6 @@ const EstimateEditor = () => {
             )}
 
             <div className="card space-y-2">
-              <button onClick={handleSave} disabled={saving} className="btn-primary w-full">
-                {saving ? 'Saving...' : 'Save'}
-              </button>
-              <button onClick={handleCalculate} disabled={saving || calculating} className="btn-secondary w-full">
-                {calculating ? 'Calculating...' : 'Calculate'}
-              </button>
               <button onClick={handleSaveAsTemplate} className="btn-secondary w-full">
                 Save structure to My Templates
               </button>
@@ -2465,26 +2829,39 @@ const EstimateEditor = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             <div className="card">
-              <h4 className="font-display font-semibold text-navy mb-2">Send to customer</h4>
-              <p className="text-xs text-mist mb-3">
-                Save and Calculate, then download the PDF. Share it by email, WhatsApp, or any
-                channel you use — the app does not send on your behalf.
-              </p>
+              <SectionTitle
+                as="h4"
+                className="font-display font-semibold text-navy mb-3"
+                hint="Save and Calculate, then download the PDF. Share it by email, WhatsApp, or any channel you use — the app does not send on your behalf."
+              >
+                Send to customer
+              </SectionTitle>
               <button onClick={downloadProposalPdf} className="btn-primary w-full">
                 Download proposal PDF
               </button>
 
-              <h4 className="font-display font-semibold text-navy mt-5 mb-2">Outcome (optional)</h4>
-              <p className="text-xs text-mist mb-2">
-                Track if the customer accepted or declined — only if you use this for reporting.
-              </p>
-              <div className="flex space-x-2">
-                <button onClick={() => changeStatus('won')} className="btn-success flex-1">Mark Won</button>
-                <button onClick={() => changeStatus('lost')} className="btn-danger flex-1">Mark Lost</button>
-              </div>
-              <div className="mt-3 text-sm text-mist">
-                Current: <strong>{estimateStatusLabel(estimate?.status)}</strong>
-              </div>
+              <SectionTitle
+                as="h4"
+                className="font-display font-semibold text-navy mt-5 mb-2"
+                hint={
+                  MES_OUTCOME_ENABLED
+                    ? 'Track if the customer accepted or declined — only if you use this for reporting.'
+                    : 'Won / Lost tracking moves to the MES integration. For now, use the Notes field in Job details to capture sales context.'
+                }
+              >
+                Outcome (optional)
+              </SectionTitle>
+              {MES_OUTCOME_ENABLED ? (
+                <>
+                  <div className="flex space-x-2">
+                    <button onClick={() => changeStatus('won')} className="btn-success flex-1">Mark Won</button>
+                    <button onClick={() => changeStatus('lost')} className="btn-danger flex-1">Mark Lost</button>
+                  </div>
+                  <div className="mt-3 text-sm text-mist">
+                    Current: <strong>{estimateStatusLabel(estimate?.status)}</strong>
+                  </div>
+                </>
+              ) : null}
             </div>
 
             {proposals.length > 0 && (
@@ -2543,7 +2920,7 @@ const EstimateEditor = () => {
               />
             </p>
           </div>
-          <button onClick={handleSave} disabled={saving} className="btn-primary px-4 py-2 text-sm min-h-[48px]">
+          <button onClick={handleSaveFinal} disabled={saving} className="btn-primary px-4 py-2 text-sm min-h-[48px]">
             {saving ? 'Saving...' : 'Save'}
           </button>
         </div>
@@ -2606,6 +2983,7 @@ const EstimateEditor = () => {
                     gsm: isSubstrate ? micron * densityForMaterial(l.materialId) : micron,
                   } : l));
                 }}
+                onFocus={selectOnFocus}
                 className="input w-full min-h-[48px] font-mono text-lg"
               />
             </div>

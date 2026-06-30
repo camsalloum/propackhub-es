@@ -10,6 +10,7 @@ import {
 } from './structure-metrics';
 import { calculateBagFlatSheetAreaM2 } from './bag-flat-sheet';
 import { calculatePouchFlatSheetAreaM2 } from './pouch-flat-sheet';
+import { calculatePouchAccessories } from './pouch-accessories';
 import { convertOrderQuantityToKg } from './unit-conversion';
 
 /**
@@ -57,13 +58,17 @@ export function calculateEstimate(
   const printingWebWidthMm = calculatePrintingWebWidth(estimate.dimensions);
 
   // Step 6: Calculate product-specific metrics
-  const productMetrics = calculateProductMetrics(estimate.dimensions, totalGsm, filmDensity, printingWebWidthMm);
+  const productMetrics = calculateProductMetrics(estimate.dimensions, totalGsm, filmDensity, printingWebWidthMm, materials);
+
+  // Step 6a: Accessory hardware cost per kg (pouch zipper/spout/valve/handle/window).
+  // Per-piece cost × pieces/kg → per-kg pass-through term (outside markup).
+  const accessoryCostPerKg = (productMetrics.accessoryCostUsdPerPiece || 0) * (productMetrics.piecesPerKg || 0);
 
   // Step 6b: Convert user-entered order quantity (in `orderQuantityUnit`) to true kg.
   // productMetrics are independent of order quantity, so no circular dependency.
   const trueOrderQuantityKg = convertOrderQuantityToKg(
     estimate.orderQuantityKg,
-    estimate.orderQuantityUnit,
+    estimate.orderQuantityUnitDef ?? estimate.orderQuantityUnit,
     {
       piecesPerKg: productMetrics.piecesPerKg,
       sqmPerKg,
@@ -90,7 +95,8 @@ export function calculateEstimate(
     estimate.markupPercent,
     estimate.platesPerKg,
     estimate.deliveryPerKg,
-    processResults.operationCostPerKg
+    processResults.operationCostPerKg,
+    accessoryCostPerKg
   );
 
   // Step 10: Calculate per‑slab prices and totals
@@ -108,7 +114,8 @@ export function calculateEstimate(
       estimate.markupPercent,
       estimate.platesPerKg,
       estimate.deliveryPerKg,
-      slabProcessResults.operationCostPerKg
+      slabProcessResults.operationCostPerKg,
+      accessoryCostPerKg
     );
 
     return {
@@ -123,7 +130,7 @@ export function calculateEstimate(
   const rmCostPerM2 = totalCostM2 + solventDetail.totalCostPerM2;
   const markupAmount = materialCost * (estimate.markupPercent / 100);
   const totalCost = materialCost + markupAmount + estimate.platesPerKg +
-    estimate.deliveryPerKg + processResults.operationCostPerKg;
+    estimate.deliveryPerKg + processResults.operationCostPerKg + accessoryCostPerKg;
 
   // Calculate waste cost impact: sum of (cost_m2 × waste/100) across all layers, converted to per-kg
   let totalWasteCostPerM2 = 0;
@@ -148,7 +155,8 @@ export function calculateEstimate(
     materialPercent: totalCost > 0 ? (materialCost / totalCost) * 100 : 0,
     wastePercent: totalCost > 0 ? (wasteCostPerKg / totalCost) * 100 : 0,
     markupPercent: totalCost > 0 ? (markupAmount / totalCost) * 100 : 0,
-    processPercent: totalCost > 0 ? (processResults.operationCostPerKg / totalCost) * 100 : 0
+    processPercent: totalCost > 0 ? (processResults.operationCostPerKg / totalCost) * 100 : 0,
+    accessoryPercent: totalCost > 0 ? (accessoryCostPerKg / totalCost) * 100 : 0
   };
 
   // Update estimate with calculated fields
@@ -167,6 +175,8 @@ export function calculateEstimate(
     rmCostPerM2,
     markupAmountPerKg: markupAmount,
     operationCostPerKg: processResults.operationCostPerKg,
+    accessoryCostPerKg,
+    accessoryWeightGramPerPiece: productMetrics.accessoryWeightGramPerPiece,
     salePricePerKg,
     solventMixCostPerKg: solventCostPerKg,
     solventMixCostPerM2: solventDetail.totalCostPerM2,
@@ -260,13 +270,16 @@ function calculateProductMetrics(
   dimensions: EstimateDimensions,
   totalGsm: number,
   _filmDensity: number,
-  printingWebWidthMm: number
+  printingWebWidthMm: number,
+  materials: Map<string, Material>
 ) {
   const result = {
     piecesPerKg: 0,
     gramsPerPiece: 0,
     linearMPerKgWeb: 0,
-    linearMPerKgReel: 0
+    linearMPerKgReel: 0,
+    accessoryCostUsdPerPiece: 0,
+    accessoryWeightGramPerPiece: 0
   };
 
   if (totalGsm === 0) return result;
@@ -312,12 +325,16 @@ function calculateProductMetrics(
       // Pouch: flat-sheet blank area model (front + back + gussets + seals).
       // See pouch-flat-sheet.ts. Falls back to legacy face-area when the subtype
       // is unresolved (existing estimates created before subtype tagging).
+      // Accessories (zipper/spout/valve/window/handle) add weight, film area, and cost.
       const pouch = calculatePouchFlatSheetAreaM2(dimensions);
+      const acc = calculatePouchAccessories(dimensions, materials);
+      result.accessoryCostUsdPerPiece = acc.costUsdPerPiece;
+      result.accessoryWeightGramPerPiece = acc.weightGramPerPiece;
+
       if (pouch.areaM2 > 0) {
-        // gramsPerPiece = flatArea × totalGsm
-        // pieces_per_kg = 1000 / (areaM2 × totalGsm)
-        result.piecesPerKg = 1000 / (pouch.areaM2 * totalGsm);
-        result.gramsPerPiece = 1000 / result.piecesPerKg;
+        // gramsPerPiece = (blankArea + accessory film) × totalGsm + accessory hardware weight
+        result.gramsPerPiece = (pouch.areaM2 + acc.filmAreaM2) * totalGsm + acc.weightGramPerPiece;
+        result.piecesPerKg = result.gramsPerPiece > 0 ? 1000 / result.gramsPerPiece : 0;
 
         if (printingWebWidthMm > 0) {
           result.linearMPerKgWeb = (sqmPerKg / printingWebWidthMm) * 1000;
@@ -330,9 +347,9 @@ function calculateProductMetrics(
       } else if (dimensions.openWidthMm && dimensions.openHeightMm) {
         // Fallback: legacy face-area pouch model (one face only).
         // Kept for backward compatibility with pre-subtype estimates.
-        // pieces_per_kg = 1000 / (openWidthMm × openHeightMm × totalGsm × 1e-6)
-        result.piecesPerKg = (1000 / (dimensions.openWidthMm * dimensions.openHeightMm * totalGsm * 1e-6)) * 1;
-        result.gramsPerPiece = 1000 / result.piecesPerKg;
+        const faceAreaM2 = dimensions.openWidthMm * dimensions.openHeightMm * 1e-6;
+        result.gramsPerPiece = (faceAreaM2 + acc.filmAreaM2) * totalGsm + acc.weightGramPerPiece;
+        result.piecesPerKg = result.gramsPerPiece > 0 ? 1000 / result.gramsPerPiece : 0;
 
         if (printingWebWidthMm > 0) {
           result.linearMPerKgWeb = (sqmPerKg / printingWebWidthMm) * 1000;
@@ -441,15 +458,18 @@ function calculateProcessCosts(
 
 /**
  * Calculate sale price per kg using Laravel additive formula
- * sale_price_kg = rm_kg + (rm_kg × markup% / 100) + plates_kg + delivery_kg + operation_kg
+ * sale_price_kg = rm_kg + (rm_kg × markup% / 100) + plates_kg + delivery_kg + operation_kg + accessory_kg
+ * Accessory hardware (zipper/spout/valve/etc.) is a pass-through component cost,
+ * added outside the markup like plates and delivery.
  */
 function calculateSalePrice(
   materialCostPerKg: number,
   markupPercent: number,
   platesPerKg: number,
   deliveryPerKg: number,
-  operationPerKg: number
+  operationPerKg: number,
+  accessoryPerKg: number = 0
 ): number {
   const markupAmount = materialCostPerKg * (markupPercent / 100);
-  return materialCostPerKg + markupAmount + platesPerKg + deliveryPerKg + operationPerKg;
+  return materialCostPerKg + markupAmount + platesPerKg + deliveryPerKg + operationPerKg + accessoryPerKg;
 }

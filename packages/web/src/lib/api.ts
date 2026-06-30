@@ -56,10 +56,62 @@ export type PlatformReferenceItemInput = {
   metadata?: Record<string, unknown> | null;
 };
 
+/** Order-quantity unit basis (mirrors engine UnitBasis). */
+export type UnitBasis = 'kg' | 'pieces' | 'sqm' | 'lm';
+
+export type UnitRow = {
+  label: string;
+  code: string;
+  basis: UnitBasis;
+  multiplier: number;
+};
+
+/** Shape returned by both the tenant (`/master-data/reference`) and platform reference endpoints. */
+export type MasterDataReferencePayload = {
+  productTypes: string[];
+  productTypeRows?: Array<{ label: string; code: string }>;
+  units: string[];
+  unitRows?: UnitRow[];
+  rmTypes: string[];
+  rmTypeRows?: Array<{ label: string; code: string }>;
+  packaging: string[];
+  inkCoating: string[];
+  adhesive: string[];
+  printingWebClasses?: Array<{
+    label: string;
+    code: string;
+    inkSystem?: string | null;
+    solidPercent?: number | null;
+  }>;
+  productSubtypeRows?: Array<{ label: string; code: string; parent?: string }>;
+  processRows?: Array<{
+    label: string;
+    code: string;
+    description?: string;
+    costPerHour?: number;
+    speedBasis?: string;
+    speedValue?: number;
+    setupHours?: number;
+  }>;
+  costingDefaults?: { cleaningSolventKgPerJob?: number };
+  productTypeOptions: Array<{ label: string; value: string }>;
+  printingWebClassOptions: Array<{
+    label: string;
+    value: 'wide_web' | 'narrow_web';
+    inkSystem: string | null;
+    solidPercent: number | null;
+    description: string;
+  }>;
+  unitOptions: Array<{ label: string; value: string; basis?: 'kg' | 'pieces' | 'sqm' | 'lm' }>;
+  rmTypeOptions?: Array<{ label: string; code: string }>;
+  productSubtypeOptions?: Array<{ label: string; code: string; parent: string }>;
+  processOptions?: Array<{ label: string; code: string; description: string }>;
+};
+
 export type PlatformMasterMaterialInput = {
   key: string;
   name: string;
-  type: 'substrate' | 'ink' | 'adhesive' | 'solvent';
+  type: 'substrate' | 'ink' | 'adhesive' | 'solvent' | 'accessory';
   solidPercent: number;
   density: number;
   costPerKgUsd: number;
@@ -75,6 +127,12 @@ export type PlatformMasterMaterialInput = {
   externalId?: string | null;
   externalSource?: string | null;
   laminationRecipe?: Record<string, unknown> | null;
+  // Accessory pricing (type='accessory').
+  accessoryKind?: 'zipper' | 'spout' | 'valve' | 'handle' | 'window' | null;
+  costPerMeterUsd?: number | null;
+  costPerPieceUsd?: number | null;
+  weightGramPerMeter?: number | null;
+  weightGramPerPiece?: number | null;
 };
 
 export type PlatformMasterMaterialRow = PlatformMasterMaterialInput & {
@@ -87,6 +145,10 @@ export type PlatformMasterMaterialRow = PlatformMasterMaterialInput & {
 export class ApiClient {
   private token: string | null = null;
   private refreshTokenValue: string | null = null;
+  /** Single-flight guard so concurrent 401s trigger only one refresh. */
+  private refreshPromise: Promise<void> | null = null;
+  /** Optional hook the app can set to react to an unrecoverable auth failure. */
+  onAuthFailure: (() => void) | null = null;
 
   /** Call once on app startup to hydrate tokens from secure storage. */
   async init(): Promise<void> {
@@ -129,7 +191,8 @@ export class ApiClient {
   private async request<T>(
     method: string,
     path: string,
-    body?: unknown
+    body?: unknown,
+    isRetry = false
   ): Promise<T> {
     const headers: Record<string, string> = {};
     const writeMethods = new Set(['POST', 'PUT', 'PATCH']);
@@ -166,6 +229,28 @@ export class ApiClient {
     }
 
     if (!response.ok) {
+      // Access tokens are short-lived (30 min). On a 401, transparently refresh
+      // once and replay the original request so long-open sessions don't fail.
+      // Skip for auth endpoints themselves (a 401 there is a real credential
+      // failure) and for requests we've already retried.
+      const isAuthEndpoint = path.includes('/api/v1/auth/');
+      if (response.status === 401 && !isRetry && !isAuthEndpoint && this.getRefreshToken()) {
+        try {
+          await this.ensureRefreshed();
+        } catch {
+          await this.clearToken();
+          this.onAuthFailure?.();
+          const authErr = new Error('Session expired — please sign in again') as Error & {
+            status?: number;
+            code?: string;
+          };
+          authErr.status = 401;
+          authErr.code = 'AUTH_EXPIRED';
+          throw authErr;
+        }
+        return this.request<T>(method, path, body, true);
+      }
+
       const error = await response.json().catch(() => ({
         error: response.statusText,
       }));
@@ -209,7 +294,7 @@ export class ApiClient {
       token: string;
       refreshToken: string;
       user: { id: string; email: string; displayName: string; role: 'user' | 'tenant_admin' | 'platform_admin' };
-      tenant: { id: string; name: string; displayCurrency: string };
+      tenant: { id: string; name: string; type: 'individual' | 'company'; displayCurrency: string };
     }>('POST', '/api/v1/auth/register', {
       email, password, displayName, tenantName, tenantType: 'individual', displayCurrency,
     });
@@ -223,11 +308,27 @@ export class ApiClient {
       token: string;
       refreshToken: string;
       user: { id: string; email: string; displayName: string; role: 'user' | 'tenant_admin' | 'platform_admin' };
-      tenant: { id: string; name: string; displayCurrency: string };
+      tenant: { id: string; name: string; type: 'individual' | 'company'; displayCurrency: string };
     }>('POST', '/api/v1/auth/login', { email, password });
     await this.setToken(res.token);
     if (res.refreshToken) await this.setRefreshToken(res.refreshToken);
     return res;
+  }
+
+  /**
+   * Single-flight refresh: concurrent callers share one in-flight refresh so we
+   * never fire multiple /auth/refresh calls (which would rotate the refresh
+   * token underneath each other and fail).
+   */
+  private async ensureRefreshed(): Promise<void> {
+    if (!this.refreshPromise) {
+      this.refreshPromise = this.refreshToken()
+        .then(() => undefined)
+        .finally(() => {
+          this.refreshPromise = null;
+        });
+    }
+    return this.refreshPromise;
   }
 
   async refreshToken() {
@@ -256,7 +357,7 @@ export class ApiClient {
         role: 'user' | 'tenant_admin' | 'platform_admin';
         visibilityProfile: Record<string, boolean>;
       };
-      tenant: { id: string; name: string; displayCurrency: string };
+      tenant: { id: string; name: string; type: 'individual' | 'company'; displayCurrency: string };
     }>('GET', '/api/v1/auth/me');
   }
 
@@ -312,7 +413,29 @@ export class ApiClient {
   }
 
   getPlatformMasterDataReference() {
-    return this.getMasterDataReference();
+    // Admin edits the PLATFORM catalog directly (owner defaults), not the
+    // tenant-merged view.
+    return this.request<MasterDataReferencePayload & { masterDataVersion?: number }>(
+      'GET',
+      '/api/v1/platform/master-data/reference'
+    );
+  }
+
+  /** Tenant adds/edits its own reference rows for a category (Class A + units). */
+  saveTenantReferenceCategory(category: string, items: PlatformReferenceItemInput[]) {
+    return this.request<{ items: unknown[]; reference: MasterDataReferencePayload }>(
+      'PUT',
+      `/api/v1/master-data/reference/${category}`,
+      items
+    );
+  }
+
+  /** A tenant's own custom reference rows (excludes owner defaults), grouped by category. */
+  getTenantCustomReference() {
+    return this.request<{
+      categories: Record<string, Array<{ label: string; code: string | null; metadata: Record<string, unknown> | null }>>;
+      editable: string[];
+    }>('GET', '/api/v1/master-data/reference/custom');
   }
 
   savePlatformReferenceCategory(
@@ -418,32 +541,7 @@ export class ApiClient {
   }
 
   getMasterDataReference() {
-    return this.request<{
-      productTypes: string[];
-      productTypeRows?: Array<{ label: string; code: string }>;
-      units: string[];
-      rmTypes: string[];
-      rmTypeRows?: Array<{ label: string; code: string }>;
-      packaging: string[];
-      inkCoating: string[];
-      adhesive: string[];
-      printingWebClasses?: Array<{
-        label: string;
-        code: string;
-        inkSystem?: string | null;
-        solidPercent?: number | null;
-      }>;
-      productTypeOptions: Array<{ label: string; value: 'roll' | 'sleeve' | 'pouch' }>;
-      printingWebClassOptions: Array<{
-        label: string;
-        value: 'wide_web' | 'narrow_web';
-        inkSystem: string | null;
-        solidPercent: number | null;
-        description: string;
-      }>;
-      unitOptions: Array<{ label: string; value: string }>;
-      rmTypeOptions?: Array<{ label: string; code: string }>;
-    }>('GET', '/api/v1/master-data/reference');
+    return this.request<MasterDataReferencePayload>('GET', '/api/v1/master-data/reference');
   }
 
   pruneOrphanSubstrates() {
@@ -663,6 +761,46 @@ export class ApiClient {
     orderQuantityUnit?: string;
   }) {
     return this.request<any>('POST', `/api/v1/templates/${id}/instantiate`, data);
+  }
+
+  /**
+   * Resolve a template into a new (unsaved) estimate WITHOUT persisting it. The
+   * editor opens this as a draft; nothing is written to the DB until the user saves.
+   */
+  previewTemplate(id: string, data: {
+    customerId?: string;
+    jobName?: string;
+    orderQuantityKg?: number;
+    orderQuantityUnit?: string;
+  }) {
+    return this.request<{
+      preview: true;
+      estimate: {
+        jobName: string;
+        productType: 'roll' | 'sleeve' | 'pouch' | 'bag';
+        productSubtype: string | null;
+        printingWebClass: 'wide_web' | 'narrow_web';
+        dimensions: Record<string, unknown>;
+        markupPercent: string;
+        displayCurrency: string;
+        exchangeRateUsdToDisplay: string;
+        orderQuantityKg: string | null;
+        orderQuantityUnit: string;
+        sourceTemplateKey: string | null;
+        masterDataVersion: number | null;
+      };
+      layers: Array<{
+        materialId: string;
+        materialName: string;
+        materialType: string;
+        micron: number;
+        costPerKgUsd: number;
+        isSolventBased: boolean;
+        hoover: string | null;
+        position: number;
+      }>;
+      slabs: Array<{ quantityKg: number; pricePerKg: number }>;
+    }>('POST', `/api/v1/templates/${id}/instantiate`, { ...data, preview: true });
   }
 
   // ── Platform-standard catalog (platform_admin only) ────────────────────

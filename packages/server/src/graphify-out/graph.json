@@ -80,7 +80,7 @@
       "source_location": "L103",
       "_origin": "ast",
       "id": "db_index_getdatabase",
-      "community": 1,
+      "community": 2,
       "norm_label": "getdatabase()"
     },
     {
@@ -110,7 +110,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_master_materials_io",
-      "community": 7,
+      "community": 8,
       "norm_label": "master-materials-io.ts"
     },
     {
@@ -120,14 +120,14 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "db_master_materials_io_mastermaterial",
-      "community": 7,
+      "community": 8,
       "norm_label": "mastermaterial"
     },
     {
       "label": "ProductTypeRow",
       "file_type": "code",
       "source_file": "db/master-materials-io.ts",
-      "source_location": "L31",
+      "source_location": "L38",
       "_origin": "ast",
       "id": "db_master_materials_io_producttyperow",
       "community": 8,
@@ -137,57 +137,97 @@
       "label": "PrintingWebRow",
       "file_type": "code",
       "source_file": "db/master-materials-io.ts",
-      "source_location": "L36",
+      "source_location": "L43",
       "_origin": "ast",
       "id": "db_master_materials_io_printingwebrow",
       "community": 8,
       "norm_label": "printingwebrow"
     },
     {
+      "label": "UnitBasis",
+      "file_type": "code",
+      "source_file": "db/master-materials-io.ts",
+      "source_location": "L51",
+      "_origin": "ast",
+      "id": "db_master_materials_io_unitbasis",
+      "community": 8,
+      "norm_label": "unitbasis"
+    },
+    {
+      "label": "UnitRow",
+      "file_type": "code",
+      "source_file": "db/master-materials-io.ts",
+      "source_location": "L53",
+      "_origin": "ast",
+      "id": "db_master_materials_io_unitrow",
+      "community": 8,
+      "norm_label": "unitrow"
+    },
+    {
       "label": "MasterDataReference",
       "file_type": "code",
       "source_file": "db/master-materials-io.ts",
-      "source_location": "L43",
+      "source_location": "L62",
       "_origin": "ast",
       "id": "db_master_materials_io_masterdatareference",
-      "community": 8,
+      "community": 15,
       "norm_label": "masterdatareference"
+    },
+    {
+      "label": "DEFAULT_UNIT_ROWS",
+      "file_type": "code",
+      "source_file": "db/master-materials-io.ts",
+      "source_location": "L104",
+      "_origin": "ast",
+      "id": "db_master_materials_io_default_unit_rows",
+      "community": 8,
+      "norm_label": "default_unit_rows"
+    },
+    {
+      "label": "LEGACY_UNIT_METADATA",
+      "file_type": "code",
+      "source_file": "db/master-materials-io.ts",
+      "source_location": "L113",
+      "_origin": "ast",
+      "id": "db_master_materials_io_legacy_unit_metadata",
+      "community": 8,
+      "norm_label": "legacy_unit_metadata"
     },
     {
       "label": "TEMPLATE_REF_TO_MASTER_KEY",
       "file_type": "code",
       "source_file": "db/master-materials-io.ts",
-      "source_location": "L79",
+      "source_location": "L123",
       "_origin": "ast",
       "id": "db_master_materials_io_template_ref_to_master_key",
-      "community": 7,
+      "community": 8,
       "norm_label": "template_ref_to_master_key"
     },
     {
       "label": "costingKeyForMasterKey()",
       "file_type": "code",
       "source_file": "db/master-materials-io.ts",
-      "source_location": "L102",
+      "source_location": "L146",
       "_origin": "ast",
       "id": "db_master_materials_io_costingkeyformasterkey",
-      "community": 7,
+      "community": 0,
       "norm_label": "costingkeyformasterkey()"
     },
     {
       "label": "resolveMasterSeedPath()",
       "file_type": "code",
       "source_file": "db/master-materials-io.ts",
-      "source_location": "L109",
+      "source_location": "L153",
       "_origin": "ast",
       "id": "db_master_materials_io_resolvemasterseedpath",
-      "community": 7,
+      "community": 8,
       "norm_label": "resolvemasterseedpath()"
     },
     {
       "label": "resolveMasterDataReferencePath()",
       "file_type": "code",
       "source_file": "db/master-materials-io.ts",
-      "source_location": "L114",
+      "source_location": "L158",
       "_origin": "ast",
       "id": "db_master_materials_io_resolvemasterdatareferencepath",
       "community": 0,
@@ -197,7 +237,7 @@
       "label": "normalizeReferenceShape()",
       "file_type": "code",
       "source_file": "db/master-materials-io.ts",
-      "source_location": "L120",
+      "source_location": "L164",
       "_origin": "ast",
       "id": "db_master_materials_io_normalizereferenceshape",
       "community": 0,
@@ -207,10 +247,10 @@
       "label": "materialSyncKey()",
       "file_type": "code",
       "source_file": "db/master-materials-io.ts",
-      "source_location": "L143",
+      "source_location": "L188",
       "_origin": "ast",
       "id": "db_master_materials_io_materialsynckey",
-      "community": 7,
+      "community": 8,
       "norm_label": "materialsynckey()"
     },
     {
@@ -220,7 +260,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_platform_master_audit",
-      "community": 11,
+      "community": 0,
       "norm_label": "platform-master-audit.ts"
     },
     {
@@ -230,7 +270,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "db_platform_master_audit_auditactortype",
-      "community": 11,
+      "community": 0,
       "norm_label": "auditactortype"
     },
     {
@@ -240,7 +280,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "db_platform_master_audit_masterauditaction",
-      "community": 11,
+      "community": 0,
       "norm_label": "masterauditaction"
     },
     {
@@ -250,7 +290,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "db_platform_master_audit_auditactor",
-      "community": 11,
+      "community": 0,
       "norm_label": "auditactor"
     },
     {
@@ -260,7 +300,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "db_platform_master_audit_appendmasterauditinput",
-      "community": 11,
+      "community": 0,
       "norm_label": "appendmasterauditinput"
     },
     {
@@ -300,7 +340,7 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "db_platform_master_audit_appendmasterauditentry",
-      "community": 11,
+      "community": 0,
       "norm_label": "appendmasterauditentry()"
     },
     {
@@ -320,7 +360,7 @@
       "source_location": "L105",
       "_origin": "ast",
       "id": "db_platform_master_audit_masterdatachangerow",
-      "community": 11,
+      "community": 0,
       "norm_label": "masterdatachangerow"
     },
     {
@@ -330,7 +370,7 @@
       "source_location": "L117",
       "_origin": "ast",
       "id": "db_platform_master_audit_listmasterdatachangessince",
-      "community": 11,
+      "community": 0,
       "norm_label": "listmasterdatachangessince()"
     },
     {
@@ -377,7 +417,7 @@
       "label": "here",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L28",
+      "source_location": "L31",
       "_origin": "ast",
       "id": "db_platform_master_data_here",
       "community": 0,
@@ -387,7 +427,7 @@
       "label": "DEFAULT_PROCESS_ROWS",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L37",
+      "source_location": "L40",
       "_origin": "ast",
       "id": "db_platform_master_data_default_process_rows",
       "community": 0,
@@ -397,7 +437,7 @@
       "label": "ensurePlatformMasterState()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L48",
+      "source_location": "L51",
       "_origin": "ast",
       "id": "db_platform_master_data_ensureplatformmasterstate",
       "community": 0,
@@ -407,7 +447,7 @@
       "label": "getMasterDataVersion()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L64",
+      "source_location": "L67",
       "_origin": "ast",
       "id": "db_platform_master_data_getmasterdataversion",
       "community": 5,
@@ -417,7 +457,7 @@
       "label": "incrementMasterDataVersion()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L75",
+      "source_location": "L78",
       "_origin": "ast",
       "id": "db_platform_master_data_incrementmasterdataversion",
       "community": 0,
@@ -427,27 +467,27 @@
       "label": "ReferenceItemInUseError",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L89",
+      "source_location": "L92",
       "_origin": "ast",
       "id": "db_platform_master_data_referenceiteminuseerror",
-      "community": 11,
+      "community": 0,
       "norm_label": "referenceiteminuseerror"
     },
     {
       "label": ".constructor()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L90",
+      "source_location": "L93",
       "_origin": "ast",
       "id": "db_platform_master_data_referenceiteminuseerror_constructor",
-      "community": 11,
+      "community": 0,
       "norm_label": ".constructor()"
     },
     {
       "label": "countMaterialsUsingRmTypeCode()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L100",
+      "source_location": "L103",
       "_origin": "ast",
       "id": "db_platform_master_data_countmaterialsusingrmtypecode",
       "community": 0,
@@ -457,7 +497,7 @@
       "label": "assertUniqueReferenceCodes()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L109",
+      "source_location": "L112",
       "_origin": "ast",
       "id": "db_platform_master_data_assertuniquereferencecodes",
       "community": 0,
@@ -467,7 +507,7 @@
       "label": "placeholderCost()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L119",
+      "source_location": "L122",
       "_origin": "ast",
       "id": "db_platform_master_data_placeholdercost",
       "community": 0,
@@ -477,7 +517,7 @@
       "label": "resolveSeedJsonPath()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L127",
+      "source_location": "L130",
       "_origin": "ast",
       "id": "db_platform_master_data_resolveseedjsonpath",
       "community": 0,
@@ -487,7 +527,7 @@
       "label": "rowToMasterMaterial()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L131",
+      "source_location": "L134",
       "_origin": "ast",
       "id": "db_platform_master_data_rowtomastermaterial",
       "community": 0,
@@ -497,7 +537,7 @@
       "label": "masterMaterialInputToDbValues()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L150",
+      "source_location": "L158",
       "_origin": "ast",
       "id": "db_platform_master_data_mastermaterialinputtodbvalues",
       "community": 0,
@@ -507,7 +547,7 @@
       "label": "listPlatformMasterMaterials()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L179",
+      "source_location": "L192",
       "_origin": "ast",
       "id": "db_platform_master_data_listplatformmastermaterials",
       "community": 0,
@@ -517,17 +557,17 @@
       "label": "listPlatformMasterMaterialsWithIds()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L190",
+      "source_location": "L203",
       "_origin": "ast",
       "id": "db_platform_master_data_listplatformmastermaterialswithids",
-      "community": 11,
+      "community": 0,
       "norm_label": "listplatformmastermaterialswithids()"
     },
     {
       "label": "getPlatformMasterMaterialById()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L199",
+      "source_location": "L212",
       "_origin": "ast",
       "id": "db_platform_master_data_getplatformmastermaterialbyid",
       "community": 0,
@@ -537,7 +577,7 @@
       "label": "createPlatformMasterMaterial()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L209",
+      "source_location": "L222",
       "_origin": "ast",
       "id": "db_platform_master_data_createplatformmastermaterial",
       "community": 0,
@@ -547,7 +587,7 @@
       "label": "updatePlatformMasterMaterial()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L232",
+      "source_location": "L245",
       "_origin": "ast",
       "id": "db_platform_master_data_updateplatformmastermaterial",
       "community": 0,
@@ -557,7 +597,7 @@
       "label": "refreshSolventCommonRow()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L296",
+      "source_location": "L309",
       "_origin": "ast",
       "id": "db_platform_master_data_refreshsolventcommonrow",
       "community": 0,
@@ -567,7 +607,7 @@
       "label": "deletePlatformMasterMaterial()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L339",
+      "source_location": "L352",
       "_origin": "ast",
       "id": "db_platform_master_data_deleteplatformmastermaterial",
       "community": 0,
@@ -577,7 +617,7 @@
       "label": "replacePlatformMasterMaterials()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L366",
+      "source_location": "L379",
       "_origin": "ast",
       "id": "db_platform_master_data_replaceplatformmastermaterials",
       "community": 0,
@@ -587,7 +627,7 @@
       "label": "RefCategory",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L431",
+      "source_location": "L444",
       "_origin": "ast",
       "id": "db_platform_master_data_refcategory",
       "community": 0,
@@ -597,17 +637,17 @@
       "label": "listPlatformReferenceItems()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L433",
+      "source_location": "L446",
       "_origin": "ast",
       "id": "db_platform_master_data_listplatformreferenceitems",
-      "community": 1,
+      "community": 2,
       "norm_label": "listplatformreferenceitems()"
     },
     {
       "label": "deriveRmTypeCode()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L460",
+      "source_location": "L473",
       "_origin": "ast",
       "id": "db_platform_master_data_derivermtypecode",
       "community": 0,
@@ -617,17 +657,17 @@
       "label": "buildMasterDataReferenceFromDb()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L471",
+      "source_location": "L484",
       "_origin": "ast",
       "id": "db_platform_master_data_buildmasterdatareferencefromdb",
-      "community": 0,
+      "community": 15,
       "norm_label": "buildmasterdatareferencefromdb()"
     },
     {
       "label": "replacePlatformReferenceCategory()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L568",
+      "source_location": "L604",
       "_origin": "ast",
       "id": "db_platform_master_data_replaceplatformreferencecategory",
       "community": 0,
@@ -637,7 +677,7 @@
       "label": "TenantSyncResult",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L666",
+      "source_location": "L702",
       "_origin": "ast",
       "id": "db_platform_master_data_tenantsyncresult",
       "community": 0,
@@ -647,7 +687,7 @@
       "label": "syncPlatformMasterToAllTenants()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L676",
+      "source_location": "L712",
       "_origin": "ast",
       "id": "db_platform_master_data_syncplatformmastertoalltenants",
       "community": 0,
@@ -657,7 +697,7 @@
       "label": "loadSeedMaterialsFromJson()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L712",
+      "source_location": "L748",
       "_origin": "ast",
       "id": "db_platform_master_data_loadseedmaterialsfromjson",
       "community": 0,
@@ -667,7 +707,7 @@
       "label": "loadReferenceFromJson()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L718",
+      "source_location": "L754",
       "_origin": "ast",
       "id": "db_platform_master_data_loadreferencefromjson",
       "community": 0,
@@ -677,7 +717,7 @@
       "label": "ensurePlatformMasterSeeded()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L736",
+      "source_location": "L772",
       "_origin": "ast",
       "id": "db_platform_master_data_ensureplatformmasterseeded",
       "community": 0,
@@ -687,7 +727,7 @@
       "label": "ensureProcessesSeeded()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L826",
+      "source_location": "L878",
       "_origin": "ast",
       "id": "db_platform_master_data_ensureprocessesseeded",
       "community": 0,
@@ -697,7 +737,7 @@
       "label": "ensureSolventCatalogSeeded()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L857",
+      "source_location": "L909",
       "_origin": "ast",
       "id": "db_platform_master_data_ensuresolventcatalogseeded",
       "community": 0,
@@ -707,7 +747,7 @@
       "label": "LAMINATION_ADHESIVE_KEYS",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L922",
+      "source_location": "L974",
       "_origin": "ast",
       "id": "db_platform_master_data_lamination_adhesive_keys",
       "community": 0,
@@ -717,7 +757,7 @@
       "label": "RETIRED_ADHESIVE_KEYS",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L923",
+      "source_location": "L975",
       "_origin": "ast",
       "id": "db_platform_master_data_retired_adhesive_keys",
       "community": 0,
@@ -727,7 +767,7 @@
       "label": "ensureLaminationAdhesivesSeeded()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L928",
+      "source_location": "L980",
       "_origin": "ast",
       "id": "db_platform_master_data_ensurelaminationadhesivesseeded",
       "community": 0,
@@ -737,7 +777,7 @@
       "label": "updateCostingDefaults()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L990",
+      "source_location": "L1042",
       "_origin": "ast",
       "id": "db_platform_master_data_updatecostingdefaults",
       "community": 0,
@@ -937,7 +977,7 @@
       "label": "platformReferenceItems",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L73",
+      "source_location": "L79",
       "_origin": "ast",
       "id": "db_schema_platformreferenceitems",
       "community": 6,
@@ -947,7 +987,7 @@
       "label": "platformMasterState",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L96",
+      "source_location": "L102",
       "_origin": "ast",
       "id": "db_schema_platformmasterstate",
       "community": 6,
@@ -957,7 +997,7 @@
       "label": "platformMasterAuditLog",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L103",
+      "source_location": "L109",
       "_origin": "ast",
       "id": "db_schema_platformmasterauditlog",
       "community": 6,
@@ -967,7 +1007,7 @@
       "label": "platformServiceKeys",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L124",
+      "source_location": "L130",
       "_origin": "ast",
       "id": "db_schema_platformservicekeys",
       "community": 6,
@@ -977,7 +1017,7 @@
       "label": "tenants",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L142",
+      "source_location": "L148",
       "_origin": "ast",
       "id": "db_schema_tenants",
       "community": 6,
@@ -987,7 +1027,7 @@
       "label": "estimationCosts",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L162",
+      "source_location": "L168",
       "_origin": "ast",
       "id": "db_schema_estimationcosts",
       "community": 6,
@@ -997,17 +1037,27 @@
       "label": "users",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L173",
+      "source_location": "L179",
       "_origin": "ast",
       "id": "db_schema_users",
       "community": 6,
       "norm_label": "users"
     },
     {
+      "label": "tenantReferenceItems",
+      "file_type": "code",
+      "source_file": "db/schema.ts",
+      "source_location": "L201",
+      "_origin": "ast",
+      "id": "db_schema_tenantreferenceitems",
+      "community": 6,
+      "norm_label": "tenantreferenceitems"
+    },
+    {
       "label": "categories",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L189",
+      "source_location": "L226",
       "_origin": "ast",
       "id": "db_schema_categories",
       "community": 6,
@@ -1017,7 +1067,7 @@
       "label": "subcategories",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L201",
+      "source_location": "L238",
       "_origin": "ast",
       "id": "db_schema_subcategories",
       "community": 6,
@@ -1027,17 +1077,17 @@
       "label": "materials",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L215",
+      "source_location": "L252",
       "_origin": "ast",
       "id": "db_schema_materials",
-      "community": 16,
+      "community": 7,
       "norm_label": "materials"
     },
     {
       "label": "customers",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L256",
+      "source_location": "L299",
       "_origin": "ast",
       "id": "db_schema_customers",
       "community": 6,
@@ -1047,27 +1097,27 @@
       "label": "estimates",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L272",
+      "source_location": "L315",
       "_origin": "ast",
       "id": "db_schema_estimates",
-      "community": 15,
+      "community": 7,
       "norm_label": "estimates"
     },
     {
       "label": "layers",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L348",
+      "source_location": "L391",
       "_origin": "ast",
       "id": "db_schema_layers",
-      "community": 15,
+      "community": 7,
       "norm_label": "layers"
     },
     {
       "label": "processes",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L374",
+      "source_location": "L417",
       "_origin": "ast",
       "id": "db_schema_processes",
       "community": 6,
@@ -1077,7 +1127,7 @@
       "label": "slabs",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L395",
+      "source_location": "L438",
       "_origin": "ast",
       "id": "db_schema_slabs",
       "community": 6,
@@ -1087,7 +1137,7 @@
       "label": "slabTemplates",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L416",
+      "source_location": "L459",
       "_origin": "ast",
       "id": "db_schema_slabtemplates",
       "community": 6,
@@ -1097,7 +1147,7 @@
       "label": "proposals",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L428",
+      "source_location": "L471",
       "_origin": "ast",
       "id": "db_schema_proposals",
       "community": 6,
@@ -1107,7 +1157,7 @@
       "label": "activityLogs",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L442",
+      "source_location": "L485",
       "_origin": "ast",
       "id": "db_schema_activitylogs",
       "community": 6,
@@ -1117,7 +1167,7 @@
       "label": "priceHistory",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L458",
+      "source_location": "L501",
       "_origin": "ast",
       "id": "db_schema_pricehistory",
       "community": 6,
@@ -1127,7 +1177,7 @@
       "label": "structureTemplates",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L471",
+      "source_location": "L514",
       "_origin": "ast",
       "id": "db_schema_structuretemplates",
       "community": 6,
@@ -1137,7 +1187,7 @@
       "label": "structureTemplatesRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L512",
+      "source_location": "L555",
       "_origin": "ast",
       "id": "db_schema_structuretemplatesrelations",
       "community": 6,
@@ -1147,7 +1197,7 @@
       "label": "platformStandardTemplates",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L523",
+      "source_location": "L566",
       "_origin": "ast",
       "id": "db_schema_platformstandardtemplates",
       "community": 6,
@@ -1157,7 +1207,7 @@
       "label": "sessions",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L557",
+      "source_location": "L600",
       "_origin": "ast",
       "id": "db_schema_sessions",
       "community": 6,
@@ -1167,7 +1217,7 @@
       "label": "usersRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L575",
+      "source_location": "L618",
       "_origin": "ast",
       "id": "db_schema_usersrelations",
       "community": 6,
@@ -1177,7 +1227,7 @@
       "label": "customersRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L579",
+      "source_location": "L622",
       "_origin": "ast",
       "id": "db_schema_customersrelations",
       "community": 6,
@@ -1187,7 +1237,7 @@
       "label": "estimatesRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L583",
+      "source_location": "L626",
       "_origin": "ast",
       "id": "db_schema_estimatesrelations",
       "community": 6,
@@ -1197,7 +1247,7 @@
       "label": "layersRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L592",
+      "source_location": "L635",
       "_origin": "ast",
       "id": "db_schema_layersrelations",
       "community": 6,
@@ -1207,7 +1257,7 @@
       "label": "processesRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L597",
+      "source_location": "L640",
       "_origin": "ast",
       "id": "db_schema_processesrelations",
       "community": 6,
@@ -1217,7 +1267,7 @@
       "label": "slabsRelations",
       "file_type": "code",
       "source_file": "db/schema.ts",
-      "source_location": "L601",
+      "source_location": "L644",
       "_origin": "ast",
       "id": "db_schema_slabsrelations",
       "community": 6,
@@ -1230,7 +1280,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_seed_admin",
-      "community": 1,
+      "community": 2,
       "norm_label": "seed-admin.ts"
     },
     {
@@ -1240,7 +1290,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "db_seed_admin_seeddefaultadmin",
-      "community": 1,
+      "community": 2,
       "norm_label": "seeddefaultadmin()"
     },
     {
@@ -1250,7 +1300,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_seed_categories",
-      "community": 1,
+      "community": 2,
       "norm_label": "seed-categories.ts"
     },
     {
@@ -1260,7 +1310,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "db_seed_categories_standard_rm_codes",
-      "community": 1,
+      "community": 2,
       "norm_label": "standard_rm_codes"
     },
     {
@@ -1270,7 +1320,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "db_seed_categories_base_taxonomy",
-      "community": 1,
+      "community": 2,
       "norm_label": "base_taxonomy"
     },
     {
@@ -1280,7 +1330,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "db_seed_categories_taxonomycategory",
-      "community": 1,
+      "community": 2,
       "norm_label": "taxonomycategory"
     },
     {
@@ -1290,7 +1340,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "db_seed_categories_buildtaxonomy",
-      "community": 1,
+      "community": 2,
       "norm_label": "buildtaxonomy()"
     },
     {
@@ -1300,7 +1350,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "db_seed_categories_subcategoryformaterial",
-      "community": 1,
+      "community": 2,
       "norm_label": "subcategoryformaterial()"
     },
     {
@@ -1310,7 +1360,7 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "db_seed_categories_backfillmaterialsubcategories",
-      "community": 1,
+      "community": 2,
       "norm_label": "backfillmaterialsubcategories()"
     },
     {
@@ -1320,7 +1370,7 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "db_seed_categories_seedcategoriesfortenant",
-      "community": 1,
+      "community": 2,
       "norm_label": "seedcategoriesfortenant()"
     },
     {
@@ -1330,7 +1380,7 @@
       "source_location": "L160",
       "_origin": "ast",
       "id": "db_seed_categories_synccustomrmtypecategories",
-      "community": 1,
+      "community": 2,
       "norm_label": "synccustomrmtypecategories()"
     },
     {
@@ -1340,7 +1390,7 @@
       "source_location": "L191",
       "_origin": "ast",
       "id": "db_seed_categories_ensurecategoriesfortenant",
-      "community": 1,
+      "community": 2,
       "norm_label": "ensurecategoriesfortenant()"
     },
     {
@@ -1350,7 +1400,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_seed_materials_test",
-      "community": 7,
+      "community": 8,
       "norm_label": "seed-materials.test.ts"
     },
     {
@@ -1360,7 +1410,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "db_seed_materials_test_dbmaterial",
-      "community": 7,
+      "community": 8,
       "norm_label": "dbmaterial"
     },
     {
@@ -1370,17 +1420,17 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "db_seed_materials_test_row",
-      "community": 7,
+      "community": 8,
       "norm_label": "row()"
     },
     {
       "label": "ldpeMaster",
       "file_type": "code",
       "source_file": "db/seed-materials.test.ts",
-      "source_location": "L36",
+      "source_location": "L41",
       "_origin": "ast",
       "id": "db_seed_materials_test_ldpemaster",
-      "community": 7,
+      "community": 8,
       "norm_label": "ldpemaster"
     },
     {
@@ -1390,7 +1440,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_seed_materials",
-      "community": 7,
+      "community": 8,
       "norm_label": "seed-materials.ts"
     },
     {
@@ -1400,7 +1450,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "db_seed_materials_dbmaterial",
-      "community": 7,
+      "community": 8,
       "norm_label": "dbmaterial"
     },
     {
@@ -1410,74 +1460,74 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "db_seed_materials_mapmastertodbrow",
-      "community": 7,
+      "community": 0,
       "norm_label": "mapmastertodbrow()"
     },
     {
       "label": "LEGACY_ADHESIVE_NAMES",
       "file_type": "code",
       "source_file": "db/seed-materials.ts",
-      "source_location": "L38",
+      "source_location": "L44",
       "_origin": "ast",
       "id": "db_seed_materials_legacy_adhesive_names",
-      "community": 7,
+      "community": 8,
       "norm_label": "legacy_adhesive_names"
     },
     {
       "label": "LEGACY_INK_NAMES",
       "file_type": "code",
       "source_file": "db/seed-materials.ts",
-      "source_location": "L46",
+      "source_location": "L52",
       "_origin": "ast",
       "id": "db_seed_materials_legacy_ink_names",
-      "community": 7,
+      "community": 8,
       "norm_label": "legacy_ink_names"
     },
     {
       "label": "rmMatchKey()",
       "file_type": "code",
       "source_file": "db/seed-materials.ts",
-      "source_location": "L51",
+      "source_location": "L57",
       "_origin": "ast",
       "id": "db_seed_materials_rmmatchkey",
-      "community": 7,
+      "community": 8,
       "norm_label": "rmmatchkey()"
     },
     {
       "label": "sourceKey()",
       "file_type": "code",
       "source_file": "db/seed-materials.ts",
-      "source_location": "L59",
+      "source_location": "L65",
       "_origin": "ast",
       "id": "db_seed_materials_sourcekey",
-      "community": 7,
+      "community": 8,
       "norm_label": "sourcekey()"
     },
     {
       "label": "findOrphanSubstrateRows()",
       "file_type": "code",
       "source_file": "db/seed-materials.ts",
-      "source_location": "L69",
+      "source_location": "L75",
       "_origin": "ast",
       "id": "db_seed_materials_findorphansubstraterows",
-      "community": 7,
+      "community": 8,
       "norm_label": "findorphansubstraterows()"
     },
     {
       "label": "findExistingMatch()",
       "file_type": "code",
       "source_file": "db/seed-materials.ts",
-      "source_location": "L89",
+      "source_location": "L95",
       "_origin": "ast",
       "id": "db_seed_materials_findexistingmatch",
-      "community": 7,
+      "community": 0,
       "norm_label": "findexistingmatch()"
     },
     {
       "label": "loadPlatformMasterMaterials()",
       "file_type": "code",
       "source_file": "db/seed-materials.ts",
-      "source_location": "L154",
+      "source_location": "L160",
       "_origin": "ast",
       "id": "db_seed_materials_loadplatformmastermaterials",
       "community": 0,
@@ -1487,27 +1537,27 @@
       "label": "seedMaterialsForTenant()",
       "file_type": "code",
       "source_file": "db/seed-materials.ts",
-      "source_location": "L164",
+      "source_location": "L170",
       "_origin": "ast",
       "id": "db_seed_materials_seedmaterialsfortenant",
-      "community": 1,
+      "community": 2,
       "norm_label": "seedmaterialsfortenant()"
     },
     {
       "label": "ensureMaterialsForTenant()",
       "file_type": "code",
       "source_file": "db/seed-materials.ts",
-      "source_location": "L184",
+      "source_location": "L190",
       "_origin": "ast",
       "id": "db_seed_materials_ensurematerialsfortenant",
-      "community": 1,
+      "community": 2,
       "norm_label": "ensurematerialsfortenant()"
     },
     {
       "label": "syncMaterialsForTenant()",
       "file_type": "code",
       "source_file": "db/seed-materials.ts",
-      "source_location": "L204",
+      "source_location": "L210",
       "_origin": "ast",
       "id": "db_seed_materials_syncmaterialsfortenant",
       "community": 0,
@@ -1517,20 +1567,20 @@
       "label": "pruneOrphanSubstratesForTenant()",
       "file_type": "code",
       "source_file": "db/seed-materials.ts",
-      "source_location": "L292",
+      "source_location": "L305",
       "_origin": "ast",
       "id": "db_seed_materials_pruneorphansubstratesfortenant",
-      "community": 7,
+      "community": 8,
       "norm_label": "pruneorphansubstratesfortenant()"
     },
     {
       "label": "getMasterMaterialsList()",
       "file_type": "code",
       "source_file": "db/seed-materials.ts",
-      "source_location": "L314",
+      "source_location": "L327",
       "_origin": "ast",
       "id": "db_seed_materials_getmastermaterialslist",
-      "community": 4,
+      "community": 1,
       "norm_label": "getmastermaterialslist()"
     },
     {
@@ -1600,7 +1650,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_seed_slab_templates",
-      "community": 1,
+      "community": 2,
       "norm_label": "seed-slab-templates.ts"
     },
     {
@@ -1610,7 +1660,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "db_seed_slab_templates_default_slab_templates",
-      "community": 1,
+      "community": 2,
       "norm_label": "default_slab_templates"
     },
     {
@@ -1620,7 +1670,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "db_seed_slab_templates_seedslabtemplatesfortenant",
-      "community": 1,
+      "community": 2,
       "norm_label": "seedslabtemplatesfortenant()"
     },
     {
@@ -1630,7 +1680,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "db_seed_slab_templates_ensureslabtemplatesfortenant",
-      "community": 1,
+      "community": 2,
       "norm_label": "ensureslabtemplatesfortenant()"
     },
     {
@@ -1640,7 +1690,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "db_seed_slab_templates_quantitiesforslabtemplatekey",
-      "community": 2,
+      "community": 1,
       "norm_label": "quantitiesforslabtemplatekey()"
     },
     {
@@ -1650,7 +1700,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_seed_templates",
-      "community": 2,
+      "community": 1,
       "norm_label": "seed-templates.ts"
     },
     {
@@ -1660,7 +1710,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "db_seed_templates_templatelayerseed",
-      "community": 2,
+      "community": 1,
       "norm_label": "templatelayerseed"
     },
     {
@@ -1670,7 +1720,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "db_seed_templates_templateseedentry",
-      "community": 2,
+      "community": 1,
       "norm_label": "templateseedentry"
     },
     {
@@ -1680,7 +1730,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "db_seed_templates_platformstandardsource",
-      "community": 2,
+      "community": 1,
       "norm_label": "platformstandardsource"
     },
     {
@@ -1690,7 +1740,7 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "db_seed_templates_seedentrytosource",
-      "community": 2,
+      "community": 3,
       "norm_label": "seedentrytosource()"
     },
     {
@@ -1700,7 +1750,7 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "db_seed_templates_loadtenantmaterials",
-      "community": 2,
+      "community": 1,
       "norm_label": "loadtenantmaterials()"
     },
     {
@@ -1710,7 +1760,7 @@
       "source_location": "L111",
       "_origin": "ast",
       "id": "db_seed_templates_loadplatformstandardsources",
-      "community": 2,
+      "community": 1,
       "norm_label": "loadplatformstandardsources()"
     },
     {
@@ -1720,7 +1770,7 @@
       "source_location": "L163",
       "_origin": "ast",
       "id": "db_seed_templates_sourcetotenantinsertrow",
-      "community": 2,
+      "community": 1,
       "norm_label": "sourcetotenantinsertrow()"
     },
     {
@@ -1730,7 +1780,7 @@
       "source_location": "L195",
       "_origin": "ast",
       "id": "db_seed_templates_seedtemplatesfortenant",
-      "community": 2,
+      "community": 1,
       "norm_label": "seedtemplatesfortenant()"
     },
     {
@@ -1740,7 +1790,7 @@
       "source_location": "L240",
       "_origin": "ast",
       "id": "db_seed_templates_syncplatformstandardstotenant",
-      "community": 2,
+      "community": 1,
       "norm_label": "syncplatformstandardstotenant()"
     },
     {
@@ -1750,7 +1800,7 @@
       "source_location": "L354",
       "_origin": "ast",
       "id": "db_seed_templates_syncmissingstandardtemplates",
-      "community": 2,
+      "community": 1,
       "norm_label": "syncmissingstandardtemplates()"
     },
     {
@@ -1760,7 +1810,7 @@
       "source_location": "L359",
       "_origin": "ast",
       "id": "db_seed_templates_pruneduplicatestandardtemplates",
-      "community": 2,
+      "community": 1,
       "norm_label": "pruneduplicatestandardtemplates()"
     },
     {
@@ -1770,7 +1820,7 @@
       "source_location": "L398",
       "_origin": "ast",
       "id": "db_seed_templates_synctemplatekeysfortenant",
-      "community": 2,
+      "community": 1,
       "norm_label": "synctemplatekeysfortenant()"
     },
     {
@@ -1780,7 +1830,7 @@
       "source_location": "L445",
       "_origin": "ast",
       "id": "db_seed_templates_ensuretemplatesfortenant",
-      "community": 2,
+      "community": 1,
       "norm_label": "ensuretemplatesfortenant()"
     },
     {
@@ -1790,8 +1840,138 @@
       "source_location": "L461",
       "_origin": "ast",
       "id": "db_seed_templates_relinktemplatesfortenant",
-      "community": 2,
+      "community": 1,
       "norm_label": "relinktemplatesfortenant()"
+    },
+    {
+      "label": "tenant-reference-data.ts",
+      "file_type": "code",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "db_tenant_reference_data",
+      "community": 15,
+      "norm_label": "tenant-reference-data.ts"
+    },
+    {
+      "label": "RefCategory",
+      "file_type": "code",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L14",
+      "_origin": "ast",
+      "id": "db_tenant_reference_data_refcategory",
+      "community": 15,
+      "norm_label": "refcategory"
+    },
+    {
+      "label": "TenantRefRow",
+      "file_type": "code",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L15",
+      "_origin": "ast",
+      "id": "db_tenant_reference_data_tenantrefrow",
+      "community": 15,
+      "norm_label": "tenantrefrow"
+    },
+    {
+      "label": "TENANT_EXTENSIBLE_CATEGORIES",
+      "file_type": "code",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L18",
+      "_origin": "ast",
+      "id": "db_tenant_reference_data_tenant_extensible_categories",
+      "community": 15,
+      "norm_label": "tenant_extensible_categories"
+    },
+    {
+      "label": "isTenantExtensibleCategory()",
+      "file_type": "code",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L28",
+      "_origin": "ast",
+      "id": "db_tenant_reference_data_istenantextensiblecategory",
+      "community": 15,
+      "norm_label": "istenantextensiblecategory()"
+    },
+    {
+      "label": "listTenantOwnReference()",
+      "file_type": "code",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L33",
+      "_origin": "ast",
+      "id": "db_tenant_reference_data_listtenantownreference",
+      "community": 15,
+      "norm_label": "listtenantownreference()"
+    },
+    {
+      "label": "listTenantReferenceItems()",
+      "file_type": "code",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L48",
+      "_origin": "ast",
+      "id": "db_tenant_reference_data_listtenantreferenceitems",
+      "community": 15,
+      "norm_label": "listtenantreferenceitems()"
+    },
+    {
+      "label": "deriveCode()",
+      "file_type": "code",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L61",
+      "_origin": "ast",
+      "id": "db_tenant_reference_data_derivecode",
+      "community": 15,
+      "norm_label": "derivecode()"
+    },
+    {
+      "label": "unitRowFromItem()",
+      "file_type": "code",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L68",
+      "_origin": "ast",
+      "id": "db_tenant_reference_data_unitrowfromitem",
+      "community": 15,
+      "norm_label": "unitrowfromitem()"
+    },
+    {
+      "label": "buildMasterDataReferenceForTenant()",
+      "file_type": "code",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L87",
+      "_origin": "ast",
+      "id": "db_tenant_reference_data_buildmasterdatareferencefortenant",
+      "community": 15,
+      "norm_label": "buildmasterdatareferencefortenant()"
+    },
+    {
+      "label": "mergeByCode()",
+      "file_type": "code",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L165",
+      "_origin": "ast",
+      "id": "db_tenant_reference_data_mergebycode",
+      "community": 15,
+      "norm_label": "mergebycode()"
+    },
+    {
+      "label": "resolveOrderUnitDef()",
+      "file_type": "code",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L182",
+      "_origin": "ast",
+      "id": "db_tenant_reference_data_resolveorderunitdef",
+      "community": 15,
+      "norm_label": "resolveorderunitdef()"
+    },
+    {
+      "label": "replaceTenantReferenceCategory()",
+      "file_type": "code",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L206",
+      "_origin": "ast",
+      "id": "db_tenant_reference_data_replacetenantreferencecategory",
+      "community": 15,
+      "norm_label": "replacetenantreferencecategory()"
     },
     {
       "label": "index.ts",
@@ -2030,7 +2210,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_auth",
-      "community": 1,
+      "community": 2,
       "norm_label": "auth.ts"
     },
     {
@@ -2040,7 +2220,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "routes_auth_generaterefreshtoken",
-      "community": 1,
+      "community": 2,
       "norm_label": "generaterefreshtoken()"
     },
     {
@@ -2050,7 +2230,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "routes_auth_issuetokens",
-      "community": 1,
+      "community": 2,
       "norm_label": "issuetokens()"
     },
     {
@@ -2060,7 +2240,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "routes_auth_registerschema",
-      "community": 1,
+      "community": 2,
       "norm_label": "registerschema"
     },
     {
@@ -2070,7 +2250,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "routes_auth_loginschema",
-      "community": 1,
+      "community": 2,
       "norm_label": "loginschema"
     },
     {
@@ -2080,7 +2260,7 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "routes_auth_refreshschema",
-      "community": 1,
+      "community": 2,
       "norm_label": "refreshschema"
     },
     {
@@ -2090,7 +2270,7 @@
       "source_location": "L79",
       "_origin": "ast",
       "id": "routes_auth_registerroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "registerroute()"
     },
     {
@@ -2100,54 +2280,54 @@
       "source_location": "L162",
       "_origin": "ast",
       "id": "routes_auth_loginroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "loginroute()"
     },
     {
       "label": "refreshRoute()",
       "file_type": "code",
       "source_file": "routes/auth.ts",
-      "source_location": "L225",
+      "source_location": "L226",
       "_origin": "ast",
       "id": "routes_auth_refreshroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "refreshroute()"
     },
     {
       "label": "logoutRoute()",
       "file_type": "code",
       "source_file": "routes/auth.ts",
-      "source_location": "L301",
+      "source_location": "L302",
       "_origin": "ast",
       "id": "routes_auth_logoutroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "logoutroute()"
     },
     {
       "label": "meRoute()",
       "file_type": "code",
       "source_file": "routes/auth.ts",
-      "source_location": "L325",
+      "source_location": "L326",
       "_origin": "ast",
       "id": "routes_auth_meroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "meroute()"
     },
     {
       "label": "purgeExpiredSessions()",
       "file_type": "code",
       "source_file": "routes/auth.ts",
-      "source_location": "L371",
+      "source_location": "L373",
       "_origin": "ast",
       "id": "routes_auth_purgeexpiredsessions",
-      "community": 1,
+      "community": 2,
       "norm_label": "purgeexpiredsessions()"
     },
     {
       "label": "registerAuthRoutes()",
       "file_type": "code",
       "source_file": "routes/auth.ts",
-      "source_location": "L383",
+      "source_location": "L385",
       "_origin": "ast",
       "id": "routes_auth_registerauthroutes",
       "community": 9,
@@ -2160,7 +2340,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_categories",
-      "community": 1,
+      "community": 2,
       "norm_label": "categories.ts"
     },
     {
@@ -2170,7 +2350,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "routes_categories_getcategoriesroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "getcategoriesroute()"
     },
     {
@@ -2180,7 +2360,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "routes_categories_getsubcategoriesroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "getsubcategoriesroute()"
     },
     {
@@ -2200,7 +2380,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_customers",
-      "community": 1,
+      "community": 2,
       "norm_label": "customers.ts"
     },
     {
@@ -2210,7 +2390,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "routes_customers_createcustomerschema",
-      "community": 1,
+      "community": 2,
       "norm_label": "createcustomerschema"
     },
     {
@@ -2220,7 +2400,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "routes_customers_updatecustomerschema",
-      "community": 1,
+      "community": 2,
       "norm_label": "updatecustomerschema"
     },
     {
@@ -2230,7 +2410,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "routes_customers_escapelike",
-      "community": 1,
+      "community": 2,
       "norm_label": "escapelike()"
     },
     {
@@ -2240,7 +2420,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "routes_customers_getcustomersroute",
-      "community": 4,
+      "community": 2,
       "norm_label": "getcustomersroute()"
     },
     {
@@ -2250,7 +2430,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "routes_customers_autocompletecustomersroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "autocompletecustomersroute()"
     },
     {
@@ -2260,7 +2440,7 @@
       "source_location": "L101",
       "_origin": "ast",
       "id": "routes_customers_createcustomerroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "createcustomerroute()"
     },
     {
@@ -2270,7 +2450,7 @@
       "source_location": "L134",
       "_origin": "ast",
       "id": "routes_customers_getcustomerroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "getcustomerroute()"
     },
     {
@@ -2280,7 +2460,7 @@
       "source_location": "L160",
       "_origin": "ast",
       "id": "routes_customers_updatecustomerroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "updatecustomerroute()"
     },
     {
@@ -2290,7 +2470,7 @@
       "source_location": "L192",
       "_origin": "ast",
       "id": "routes_customers_deletecustomerroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "deletecustomerroute()"
     },
     {
@@ -2300,7 +2480,7 @@
       "source_location": "L246",
       "_origin": "ast",
       "id": "routes_customers_getcustomerestimatesroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "getcustomerestimatesroute()"
     },
     {
@@ -2350,7 +2530,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "routes_dashboard_estimatetotaldisplay",
-      "community": 5,
+      "community": 4,
       "norm_label": "estimatetotaldisplay()"
     },
     {
@@ -2380,7 +2560,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_estimates",
-      "community": 4,
+      "community": 5,
       "norm_label": "estimates.ts"
     },
     {
@@ -2390,7 +2570,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "routes_estimates_estimaterow",
-      "community": 4,
+      "community": 5,
       "norm_label": "estimaterow"
     },
     {
@@ -2400,7 +2580,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "routes_estimates_layerrow",
-      "community": 4,
+      "community": 5,
       "norm_label": "layerrow"
     },
     {
@@ -2410,7 +2590,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "routes_estimates_getuservisibilityprofile",
-      "community": 4,
+      "community": 2,
       "norm_label": "getuservisibilityprofile()"
     },
     {
@@ -2420,7 +2600,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "routes_estimates_laminationrecipecomponentschema",
-      "community": 4,
+      "community": 5,
       "norm_label": "laminationrecipecomponentschema"
     },
     {
@@ -2430,7 +2610,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "routes_estimates_laminationrecipeschema",
-      "community": 4,
+      "community": 5,
       "norm_label": "laminationrecipeschema"
     },
     {
@@ -2440,7 +2620,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "routes_estimates_estimatecreateschema",
-      "community": 4,
+      "community": 5,
       "norm_label": "estimatecreateschema"
     },
     {
@@ -2450,7 +2630,7 @@
       "source_location": "L88",
       "_origin": "ast",
       "id": "routes_estimates_estimateupdateschema",
-      "community": 4,
+      "community": 5,
       "norm_label": "estimateupdateschema"
     },
     {
@@ -2470,7 +2650,7 @@
       "source_location": "L131",
       "_origin": "ast",
       "id": "routes_estimates_getestimatesroute",
-      "community": 4,
+      "community": 2,
       "norm_label": "getestimatesroute()"
     },
     {
@@ -2487,17 +2667,17 @@
       "label": "calculateEstimateRoute()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L327",
+      "source_location": "L328",
       "_origin": "ast",
       "id": "routes_estimates_calculateestimateroute",
-      "community": 4,
+      "community": 2,
       "norm_label": "calculateestimateroute()"
     },
     {
       "label": "generateProposalPdfRoute()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L359",
+      "source_location": "L360",
       "_origin": "ast",
       "id": "routes_estimates_generateproposalpdfroute",
       "community": 4,
@@ -2507,17 +2687,17 @@
       "label": "getEstimateRoute()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L381",
+      "source_location": "L382",
       "_origin": "ast",
       "id": "routes_estimates_getestimateroute",
-      "community": 4,
+      "community": 2,
       "norm_label": "getestimateroute()"
     },
     {
       "label": "updateEstimateRoute()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L476",
+      "source_location": "L477",
       "_origin": "ast",
       "id": "routes_estimates_updateestimateroute",
       "community": 5,
@@ -2527,17 +2707,17 @@
       "label": "deleteEstimateRoute()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L741",
+      "source_location": "L742",
       "_origin": "ast",
       "id": "routes_estimates_deleteestimateroute",
-      "community": 4,
+      "community": 2,
       "norm_label": "deleteestimateroute()"
     },
     {
       "label": "requoteEstimateRoute()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L777",
+      "source_location": "L778",
       "_origin": "ast",
       "id": "routes_estimates_requoteestimateroute",
       "community": 5,
@@ -2547,7 +2727,7 @@
       "label": "duplicateEstimateRoute()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L973",
+      "source_location": "L974",
       "_origin": "ast",
       "id": "routes_estimates_duplicateestimateroute",
       "community": 5,
@@ -2557,7 +2737,7 @@
       "label": "registerEstimateRoutes()",
       "file_type": "code",
       "source_file": "routes/estimates.ts",
-      "source_location": "L1107",
+      "source_location": "L1108",
       "_origin": "ast",
       "id": "routes_estimates_registerestimateroutes",
       "community": 9,
@@ -2570,14 +2750,34 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_master_data",
-      "community": 9,
+      "community": 15,
       "norm_label": "master-data.ts"
+    },
+    {
+      "label": "ReferenceItemSchema",
+      "file_type": "code",
+      "source_file": "routes/master-data.ts",
+      "source_location": "L15",
+      "_origin": "ast",
+      "id": "routes_master_data_referenceitemschema",
+      "community": 15,
+      "norm_label": "referenceitemschema"
+    },
+    {
+      "label": "canManageTenantReference()",
+      "file_type": "code",
+      "source_file": "routes/master-data.ts",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "routes_master_data_canmanagetenantreference",
+      "community": 15,
+      "norm_label": "canmanagetenantreference()"
     },
     {
       "label": "registerMasterDataRoutes()",
       "file_type": "code",
       "source_file": "routes/master-data.ts",
-      "source_location": "L5",
+      "source_location": "L36",
       "_origin": "ast",
       "id": "routes_master_data_registermasterdataroutes",
       "community": 9,
@@ -2590,7 +2790,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_materials",
-      "community": 4,
+      "community": 8,
       "norm_label": "materials.ts"
     },
     {
@@ -2600,74 +2800,94 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "routes_materials_ismaterialadmin",
-      "community": 4,
+      "community": 8,
       "norm_label": "ismaterialadmin()"
+    },
+    {
+      "label": "canManageTenantMaterials()",
+      "file_type": "code",
+      "source_file": "routes/materials.ts",
+      "source_location": "L22",
+      "_origin": "ast",
+      "id": "routes_materials_canmanagetenantmaterials",
+      "community": 8,
+      "norm_label": "canmanagetenantmaterials()"
+    },
+    {
+      "label": "MASTER_DATA_FORBIDDEN",
+      "file_type": "code",
+      "source_file": "routes/materials.ts",
+      "source_location": "L35",
+      "_origin": "ast",
+      "id": "routes_materials_master_data_forbidden",
+      "community": 8,
+      "norm_label": "master_data_forbidden"
     },
     {
       "label": "normalizeMaterialPrices()",
       "file_type": "code",
       "source_file": "routes/materials.ts",
-      "source_location": "L15",
+      "source_location": "L43",
       "_origin": "ast",
       "id": "routes_materials_normalizematerialprices",
-      "community": 4,
+      "community": 8,
       "norm_label": "normalizematerialprices()"
     },
     {
       "label": "MaterialSchema",
       "file_type": "code",
       "source_file": "routes/materials.ts",
-      "source_location": "L28",
+      "source_location": "L56",
       "_origin": "ast",
       "id": "routes_materials_materialschema",
-      "community": 4,
+      "community": 8,
       "norm_label": "materialschema"
     },
     {
       "label": "getMaterialsRoute()",
       "file_type": "code",
       "source_file": "routes/materials.ts",
-      "source_location": "L42",
+      "source_location": "L76",
       "_origin": "ast",
       "id": "routes_materials_getmaterialsroute",
-      "community": 4,
+      "community": 2,
       "norm_label": "getmaterialsroute()"
     },
     {
       "label": "createMaterialRoute()",
       "file_type": "code",
       "source_file": "routes/materials.ts",
-      "source_location": "L91",
+      "source_location": "L125",
       "_origin": "ast",
       "id": "routes_materials_creatematerialroute",
-      "community": 4,
+      "community": 8,
       "norm_label": "creatematerialroute()"
     },
     {
       "label": "updateMaterialRoute()",
       "file_type": "code",
       "source_file": "routes/materials.ts",
-      "source_location": "L138",
+      "source_location": "L176",
       "_origin": "ast",
       "id": "routes_materials_updatematerialroute",
-      "community": 4,
+      "community": 8,
       "norm_label": "updatematerialroute()"
     },
     {
       "label": "deleteMaterialRoute()",
       "file_type": "code",
       "source_file": "routes/materials.ts",
-      "source_location": "L187",
+      "source_location": "L229",
       "_origin": "ast",
       "id": "routes_materials_deletematerialroute",
-      "community": 4,
+      "community": 8,
       "norm_label": "deletematerialroute()"
     },
     {
       "label": "registerMaterialRoutes()",
       "file_type": "code",
       "source_file": "routes/materials.ts",
-      "source_location": "L247",
+      "source_location": "L289",
       "_origin": "ast",
       "id": "routes_materials_registermaterialroutes",
       "community": 9,
@@ -2680,64 +2900,64 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_platform_master_data",
-      "community": 11,
+      "community": 0,
       "norm_label": "platform-master-data.ts"
     },
     {
-      "label": "requireMasterDataAdmin()",
+      "label": "requirePlatformAdmin()",
       "file_type": "code",
       "source_file": "routes/platform-master-data.ts",
-      "source_location": "L30",
+      "source_location": "L35",
       "_origin": "ast",
-      "id": "routes_platform_master_data_requiremasterdataadmin",
-      "community": 11,
-      "norm_label": "requiremasterdataadmin()"
+      "id": "routes_platform_master_data_requireplatformadmin",
+      "community": 1,
+      "norm_label": "requireplatformadmin()"
     },
     {
       "label": "auditActorFromRequest()",
       "file_type": "code",
       "source_file": "routes/platform-master-data.ts",
-      "source_location": "L39",
+      "source_location": "L44",
       "_origin": "ast",
       "id": "routes_platform_master_data_auditactorfromrequest",
-      "community": 11,
+      "community": 1,
       "norm_label": "auditactorfromrequest()"
     },
     {
       "label": "MaterialBodySchema",
       "file_type": "code",
       "source_file": "routes/platform-master-data.ts",
-      "source_location": "L44",
+      "source_location": "L49",
       "_origin": "ast",
       "id": "routes_platform_master_data_materialbodyschema",
-      "community": 11,
+      "community": 0,
       "norm_label": "materialbodyschema"
     },
     {
       "label": "ReferenceCategorySchema",
       "file_type": "code",
       "source_file": "routes/platform-master-data.ts",
-      "source_location": "L63",
+      "source_location": "L74",
       "_origin": "ast",
       "id": "routes_platform_master_data_referencecategoryschema",
-      "community": 11,
+      "community": 0,
       "norm_label": "referencecategoryschema"
     },
     {
       "label": "ReferenceItemSchema",
       "file_type": "code",
       "source_file": "routes/platform-master-data.ts",
-      "source_location": "L75",
+      "source_location": "L86",
       "_origin": "ast",
       "id": "routes_platform_master_data_referenceitemschema",
-      "community": 11,
+      "community": 0,
       "norm_label": "referenceitemschema"
     },
     {
       "label": "afterPlatformMutation()",
       "file_type": "code",
       "source_file": "routes/platform-master-data.ts",
-      "source_location": "L81",
+      "source_location": "L92",
       "_origin": "ast",
       "id": "routes_platform_master_data_afterplatformmutation",
       "community": 0,
@@ -2747,7 +2967,7 @@
       "label": "registerPlatformMasterDataRoutes()",
       "file_type": "code",
       "source_file": "routes/platform-master-data.ts",
-      "source_location": "L85",
+      "source_location": "L96",
       "_origin": "ast",
       "id": "routes_platform_master_data_registerplatformmasterdataroutes",
       "community": 9,
@@ -2760,24 +2980,24 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_platform",
-      "community": 4,
+      "community": 1,
       "norm_label": "platform.ts"
     },
     {
-      "label": "requireMasterDataAdmin()",
+      "label": "requirePlatformAdmin()",
       "file_type": "code",
       "source_file": "routes/platform.ts",
-      "source_location": "L5",
+      "source_location": "L6",
       "_origin": "ast",
-      "id": "routes_platform_requiremasterdataadmin",
-      "community": 4,
-      "norm_label": "requiremasterdataadmin()"
+      "id": "routes_platform_requireplatformadmin",
+      "community": 1,
+      "norm_label": "requireplatformadmin()"
     },
     {
       "label": "registerPlatformRoutes()",
       "file_type": "code",
       "source_file": "routes/platform.ts",
-      "source_location": "L14",
+      "source_location": "L15",
       "_origin": "ast",
       "id": "routes_platform_registerplatformroutes",
       "community": 9,
@@ -2790,7 +3010,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_settings",
-      "community": 1,
+      "community": 2,
       "norm_label": "settings.ts"
     },
     {
@@ -2800,7 +3020,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "routes_settings_gettenantsettingsroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "gettenantsettingsroute()"
     },
     {
@@ -2810,7 +3030,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "routes_settings_updatetenantsettingsroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "updatetenantsettingsroute()"
     },
     {
@@ -2820,7 +3040,7 @@
       "source_location": "L105",
       "_origin": "ast",
       "id": "routes_settings_refreshexchangerateroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "refreshexchangerateroute()"
     },
     {
@@ -2830,7 +3050,7 @@
       "source_location": "L147",
       "_origin": "ast",
       "id": "routes_settings_getsupportedcurrenciesroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "getsupportedcurrenciesroute()"
     },
     {
@@ -2840,7 +3060,7 @@
       "source_location": "L155",
       "_origin": "ast",
       "id": "routes_settings_getslabtemplatesroute",
-      "community": 1,
+      "community": 2,
       "norm_label": "getslabtemplatesroute()"
     },
     {
@@ -2860,124 +3080,124 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_templates",
-      "community": 2,
+      "community": 1,
       "norm_label": "templates.ts"
     },
     {
       "label": "EstimateRow",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L12",
+      "source_location": "L13",
       "_origin": "ast",
       "id": "routes_templates_estimaterow",
-      "community": 2,
+      "community": 1,
       "norm_label": "estimaterow"
     },
     {
       "label": "prepareTemplatesForTenant()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L27",
+      "source_location": "L28",
       "_origin": "ast",
       "id": "routes_templates_preparetemplatesfortenant",
-      "community": 2,
+      "community": 1,
       "norm_label": "preparetemplatesfortenant()"
     },
     {
       "label": "TemplateRow",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L47",
+      "source_location": "L48",
       "_origin": "ast",
       "id": "routes_templates_templaterow",
-      "community": 2,
+      "community": 1,
       "norm_label": "templaterow"
     },
     {
       "label": "canManageStandardTemplate()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L50",
+      "source_location": "L51",
       "_origin": "ast",
       "id": "routes_templates_canmanagestandardtemplate",
-      "community": 2,
+      "community": 1,
       "norm_label": "canmanagestandardtemplate()"
     },
     {
       "label": "canDeleteMyTemplate()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L55",
+      "source_location": "L56",
       "_origin": "ast",
       "id": "routes_templates_candeletemytemplate",
-      "community": 2,
+      "community": 1,
       "norm_label": "candeletemytemplate()"
     },
     {
       "label": "canEditMyTemplate()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L65",
+      "source_location": "L66",
       "_origin": "ast",
       "id": "routes_templates_caneditmytemplate",
-      "community": 2,
+      "community": 1,
       "norm_label": "caneditmytemplate()"
     },
     {
       "label": "canViewTemplate()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L72",
+      "source_location": "L73",
       "_origin": "ast",
       "id": "routes_templates_canviewtemplate",
-      "community": 2,
+      "community": 1,
       "norm_label": "canviewtemplate()"
     },
     {
       "label": "TemplateLayerSchema",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L82",
+      "source_location": "L83",
       "_origin": "ast",
       "id": "routes_templates_templatelayerschema",
-      "community": 2,
+      "community": 1,
       "norm_label": "templatelayerschema"
     },
     {
       "label": "UpdateTemplateSchema",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L91",
+      "source_location": "L92",
       "_origin": "ast",
       "id": "routes_templates_updatetemplateschema",
-      "community": 2,
+      "community": 1,
       "norm_label": "updatetemplateschema"
     },
     {
       "label": "getTemplatesRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L123",
+      "source_location": "L124",
       "_origin": "ast",
       "id": "routes_templates_gettemplatesroute",
-      "community": 2,
+      "community": 1,
       "norm_label": "gettemplatesroute()"
     },
     {
       "label": "getTemplateByIdRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L185",
+      "source_location": "L186",
       "_origin": "ast",
       "id": "routes_templates_gettemplatebyidroute",
-      "community": 2,
+      "community": 1,
       "norm_label": "gettemplatebyidroute()"
     },
     {
       "label": "instantiateByKeyRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L227",
+      "source_location": "L228",
       "_origin": "ast",
       "id": "routes_templates_instantiatebykeyroute",
       "community": 2,
@@ -2987,117 +3207,117 @@
       "label": "instantiateTemplateRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L298",
+      "source_location": "L299",
       "_origin": "ast",
       "id": "routes_templates_instantiatetemplateroute",
-      "community": 2,
+      "community": 5,
       "norm_label": "instantiatetemplateroute()"
     },
     {
       "label": "CreateTemplateFromEstimateSchema",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L529",
+      "source_location": "L572",
       "_origin": "ast",
       "id": "routes_templates_createtemplatefromestimateschema",
-      "community": 2,
+      "community": 1,
       "norm_label": "createtemplatefromestimateschema"
     },
     {
       "label": "CreateTemplateFromDefinitionSchema",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L537",
+      "source_location": "L580",
       "_origin": "ast",
       "id": "routes_templates_createtemplatefromdefinitionschema",
-      "community": 2,
+      "community": 1,
       "norm_label": "createtemplatefromdefinitionschema"
     },
     {
       "label": "CreateTemplateSchema",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L555",
+      "source_location": "L598",
       "_origin": "ast",
       "id": "routes_templates_createtemplateschema",
-      "community": 2,
+      "community": 1,
       "norm_label": "createtemplateschema"
     },
     {
       "label": "createTemplateRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L566",
+      "source_location": "L609",
       "_origin": "ast",
       "id": "routes_templates_createtemplateroute",
-      "community": 2,
+      "community": 3,
       "norm_label": "createtemplateroute()"
     },
     {
       "label": "createTemplateFromEstimateHandler()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L621",
+      "source_location": "L664",
       "_origin": "ast",
       "id": "routes_templates_createtemplatefromestimatehandler",
-      "community": 2,
+      "community": 3,
       "norm_label": "createtemplatefromestimatehandler()"
     },
     {
       "label": "createTemplateFromDefinition()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L741",
+      "source_location": "L784",
       "_origin": "ast",
       "id": "routes_templates_createtemplatefromdefinition",
-      "community": 2,
+      "community": 3,
       "norm_label": "createtemplatefromdefinition()"
     },
     {
       "label": "resolveMyTemplateOwnership()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L877",
+      "source_location": "L920",
       "_origin": "ast",
       "id": "routes_templates_resolvemytemplateownership",
-      "community": 2,
+      "community": 3,
       "norm_label": "resolvemytemplateownership()"
     },
     {
       "label": "resolveOwnership()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L890",
+      "source_location": "L933",
       "_origin": "ast",
       "id": "routes_templates_resolveownership",
-      "community": 2,
+      "community": 3,
       "norm_label": "resolveownership()"
     },
     {
       "label": "updateTemplateRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L906",
+      "source_location": "L949",
       "_origin": "ast",
       "id": "routes_templates_updatetemplateroute",
-      "community": 2,
+      "community": 1,
       "norm_label": "updatetemplateroute()"
     },
     {
       "label": "deleteTemplateRoute()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L995",
+      "source_location": "L1038",
       "_origin": "ast",
       "id": "routes_templates_deletetemplateroute",
-      "community": 2,
+      "community": 1,
       "norm_label": "deletetemplateroute()"
     },
     {
       "label": "registerTemplateRoutes()",
       "file_type": "code",
       "source_file": "routes/templates.ts",
-      "source_location": "L1044",
+      "source_location": "L1087",
       "_origin": "ast",
       "id": "routes_templates_registertemplateroutes",
       "community": 9,
@@ -3110,7 +3330,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_users",
-      "community": 4,
+      "community": 2,
       "norm_label": "users.ts"
     },
     {
@@ -3120,7 +3340,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "routes_users_visibilityprofileschema",
-      "community": 4,
+      "community": 2,
       "norm_label": "visibilityprofileschema"
     },
     {
@@ -3130,7 +3350,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "routes_users_patchuservisibilityschema",
-      "community": 4,
+      "community": 2,
       "norm_label": "patchuservisibilityschema"
     },
     {
@@ -3140,7 +3360,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "routes_users_normalizevisibilityprofile",
-      "community": 4,
+      "community": 2,
       "norm_label": "normalizevisibilityprofile()"
     },
     {
@@ -3150,7 +3370,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "routes_users_gettenantusersroute",
-      "community": 4,
+      "community": 2,
       "norm_label": "gettenantusersroute()"
     },
     {
@@ -3160,7 +3380,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "routes_users_updateuservisibilityroute",
-      "community": 4,
+      "community": 2,
       "norm_label": "updateuservisibilityroute()"
     },
     {
@@ -3200,7 +3420,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_verify_template_links",
-      "community": 7,
+      "community": 1,
       "norm_label": "verify-template-links.ts"
     },
     {
@@ -3210,7 +3430,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "scripts_verify_template_links_materials",
-      "community": 7,
+      "community": 1,
       "norm_label": "materials"
     },
     {
@@ -3220,7 +3440,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "scripts_verify_template_links_lookup",
-      "community": 7,
+      "community": 1,
       "norm_label": "lookup"
     },
     {
@@ -3230,7 +3450,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "scripts_verify_template_links_validids",
-      "community": 7,
+      "community": 1,
       "norm_label": "validids"
     },
     {
@@ -3247,7 +3467,7 @@
       "label": "Db",
       "file_type": "code",
       "source_file": "services/estimate-calculation.ts",
-      "source_location": "L9",
+      "source_location": "L10",
       "_origin": "ast",
       "id": "services_estimate_calculation_db",
       "community": 5,
@@ -3257,7 +3477,7 @@
       "label": "calculateAndPersistEstimate()",
       "file_type": "code",
       "source_file": "services/estimate-calculation.ts",
-      "source_location": "L11",
+      "source_location": "L12",
       "_origin": "ast",
       "id": "services_estimate_calculation_calculateandpersistestimate",
       "community": 5,
@@ -3430,7 +3650,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "services_proposal_pdf",
-      "community": 5,
+      "community": 4,
       "norm_label": "proposal-pdf.ts"
     },
     {
@@ -3440,7 +3660,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "services_proposal_pdf_db",
-      "community": 5,
+      "community": 4,
       "norm_label": "db"
     },
     {
@@ -3450,7 +3670,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "services_proposal_pdf_proposallayerrow",
-      "community": 5,
+      "community": 4,
       "norm_label": "proposallayerrow"
     },
     {
@@ -3460,7 +3680,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "services_proposal_pdf_proposalprocessrow",
-      "community": 5,
+      "community": 4,
       "norm_label": "proposalprocessrow"
     },
     {
@@ -3470,7 +3690,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "services_proposal_pdf_proposalslabrow",
-      "community": 5,
+      "community": 4,
       "norm_label": "proposalslabrow"
     },
     {
@@ -3480,7 +3700,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "services_proposal_pdf_getuservisibilityprofile",
-      "community": 5,
+      "community": 4,
       "norm_label": "getuservisibilityprofile()"
     },
     {
@@ -3490,7 +3710,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "services_proposal_pdf_proposalsdir",
-      "community": 5,
+      "community": 4,
       "norm_label": "proposalsdir()"
     },
     {
@@ -3500,7 +3720,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "services_proposal_pdf_hashcode",
-      "community": 5,
+      "community": 4,
       "norm_label": "hashcode()"
     },
     {
@@ -3510,7 +3730,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "services_proposal_pdf_laminatesvgfromlayers",
-      "community": 5,
+      "community": 4,
       "norm_label": "laminatesvgfromlayers()"
     },
     {
@@ -3520,7 +3740,7 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "services_proposal_pdf_buildproposalpdfbuffer",
-      "community": 5,
+      "community": 4,
       "norm_label": "buildproposalpdfbuffer()"
     },
     {
@@ -3530,7 +3750,7 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "services_proposal_pdf_saveproposalpdf",
-      "community": 5,
+      "community": 4,
       "norm_label": "saveproposalpdf()"
     },
     {
@@ -3540,7 +3760,7 @@
       "source_location": "L162",
       "_origin": "ast",
       "id": "services_proposal_pdf_readstoredproposalpdf",
-      "community": 5,
+      "community": 4,
       "norm_label": "readstoredproposalpdf()"
     },
     {
@@ -3770,7 +3990,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_auth",
-      "community": 4,
+      "community": 2,
       "norm_label": "auth.ts"
     },
     {
@@ -3780,7 +4000,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "utils_auth_hashpassword",
-      "community": 1,
+      "community": 2,
       "norm_label": "hashpassword()"
     },
     {
@@ -3790,7 +4010,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "utils_auth_verifypassword",
-      "community": 1,
+      "community": 2,
       "norm_label": "verifypassword()"
     },
     {
@@ -3800,7 +4020,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "utils_auth_tokenpayload",
-      "community": 3,
+      "community": 2,
       "norm_label": "tokenpayload"
     },
     {
@@ -3810,7 +4030,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "utils_auth_extracttenantfromrequest",
-      "community": 4,
+      "community": 2,
       "norm_label": "extracttenantfromrequest()"
     },
     {
@@ -3820,7 +4040,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "utils_auth_extractuserfromrequest",
-      "community": 4,
+      "community": 1,
       "norm_label": "extractuserfromrequest()"
     },
     {
@@ -3830,7 +4050,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "utils_auth_istenantadmin",
-      "community": 2,
+      "community": 1,
       "norm_label": "istenantadmin()"
     },
     {
@@ -3840,7 +4060,7 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "utils_auth_isplatformadmin",
-      "community": 3,
+      "community": 1,
       "norm_label": "isplatformadmin()"
     },
     {
@@ -3850,7 +4070,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_currency_test",
-      "community": 5,
+      "community": 4,
       "norm_label": "currency.test.ts"
     },
     {
@@ -3860,7 +4080,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_currency",
-      "community": 5,
+      "community": 4,
       "norm_label": "currency.ts"
     },
     {
@@ -3870,7 +4090,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "utils_currency_usdtodisplay",
-      "community": 5,
+      "community": 4,
       "norm_label": "usdtodisplay()"
     },
     {
@@ -3880,7 +4100,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "utils_currency_formatdisplayamount",
-      "community": 5,
+      "community": 4,
       "norm_label": "formatdisplayamount()"
     },
     {
@@ -3890,7 +4110,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "utils_currency_slabsusdtodisplay",
-      "community": 5,
+      "community": 4,
       "norm_label": "slabsusdtodisplay()"
     },
     {
@@ -3900,7 +4120,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_errors",
-      "community": 1,
+      "community": 2,
       "norm_label": "errors.ts"
     },
     {
@@ -3910,7 +4130,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "utils_errors_errorcode",
-      "community": 1,
+      "community": 2,
       "norm_label": "errorcode"
     },
     {
@@ -3920,7 +4140,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "utils_errors_errorenvelope",
-      "community": 1,
+      "community": 2,
       "norm_label": "errorenvelope"
     },
     {
@@ -3950,7 +4170,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "utils_errors_errorbody",
-      "community": 1,
+      "community": 2,
       "norm_label": "errorbody()"
     },
     {
@@ -3960,7 +4180,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "utils_errors_isfkviolation",
-      "community": 1,
+      "community": 2,
       "norm_label": "isfkviolation()"
     },
     {
@@ -3970,7 +4190,7 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "utils_errors_isuniqueviolation",
-      "community": 1,
+      "community": 2,
       "norm_label": "isuniqueviolation()"
     },
     {
@@ -4080,7 +4300,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_estimate_engine_input",
-      "community": 15,
+      "community": 7,
       "norm_label": "estimate-engine-input.ts"
     },
     {
@@ -4090,7 +4310,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "utils_estimate_engine_input_estimaterow",
-      "community": 15,
+      "community": 7,
       "norm_label": "estimaterow"
     },
     {
@@ -4100,7 +4320,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "utils_estimate_engine_input_layerrow",
-      "community": 15,
+      "community": 7,
       "norm_label": "layerrow"
     },
     {
@@ -4110,7 +4330,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "utils_estimate_engine_input_materialrow",
-      "community": 15,
+      "community": 7,
       "norm_label": "materialrow"
     },
     {
@@ -4120,7 +4340,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "utils_estimate_engine_input_processrow",
-      "community": 15,
+      "community": 7,
       "norm_label": "processrow"
     },
     {
@@ -4130,7 +4350,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "utils_estimate_engine_input_slabrow",
-      "community": 15,
+      "community": 7,
       "norm_label": "slabrow"
     },
     {
@@ -4147,10 +4367,10 @@
       "label": "calculateEstimateFromRows()",
       "file_type": "code",
       "source_file": "utils/estimate-engine-input.ts",
-      "source_location": "L122",
+      "source_location": "L125",
       "_origin": "ast",
       "id": "utils_estimate_engine_input_calculateestimatefromrows",
-      "community": 5,
+      "community": 4,
       "norm_label": "calculateestimatefromrows()"
     },
     {
@@ -4160,7 +4380,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_fx_rates",
-      "community": 1,
+      "community": 2,
       "norm_label": "fx-rates.ts"
     },
     {
@@ -4170,7 +4390,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "utils_fx_rates_fxresponse",
-      "community": 1,
+      "community": 2,
       "norm_label": "fxresponse"
     },
     {
@@ -4180,7 +4400,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "utils_fx_rates_cachedrate",
-      "community": 1,
+      "community": 2,
       "norm_label": "cachedrate"
     },
     {
@@ -4190,7 +4410,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "utils_fx_rates_ratecache",
-      "community": 1,
+      "community": 2,
       "norm_label": "ratecache"
     },
     {
@@ -4200,7 +4420,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "utils_fx_rates_fetchexchangerate",
-      "community": 1,
+      "community": 2,
       "norm_label": "fetchexchangerate()"
     },
     {
@@ -4210,7 +4430,7 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "utils_fx_rates_fetchmultiplerates",
-      "community": 1,
+      "community": 2,
       "norm_label": "fetchmultiplerates()"
     },
     {
@@ -4220,7 +4440,7 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "utils_fx_rates_clearratecache",
-      "community": 1,
+      "community": 2,
       "norm_label": "clearratecache()"
     },
     {
@@ -4230,7 +4450,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_item_class_test",
-      "community": 7,
+      "community": 8,
       "norm_label": "item-class.test.ts"
     },
     {
@@ -4240,7 +4460,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_item_class",
-      "community": 7,
+      "community": 8,
       "norm_label": "item-class.ts"
     },
     {
@@ -4250,17 +4470,17 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "utils_item_class_itemclassformastermaterial",
-      "community": 7,
+      "community": 8,
       "norm_label": "itemclassformastermaterial()"
     },
     {
       "label": "isPlatformPriceSource()",
       "file_type": "code",
       "source_file": "utils/item-class.ts",
-      "source_location": "L15",
+      "source_location": "L16",
       "_origin": "ast",
       "id": "utils_item_class_isplatformpricesource",
-      "community": 7,
+      "community": 8,
       "norm_label": "isplatformpricesource()"
     },
     {
@@ -4270,7 +4490,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_layer_lineage_test",
-      "community": 2,
+      "community": 3,
       "norm_label": "layer-lineage.test.ts"
     },
     {
@@ -4330,7 +4550,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_master_data_normalize_test",
-      "community": 8,
+      "community": 15,
       "norm_label": "master-data-normalize.test.ts"
     },
     {
@@ -4340,7 +4560,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_master_data_normalize",
-      "community": 8,
+      "community": 15,
       "norm_label": "master-data-normalize.ts"
     },
     {
@@ -4350,7 +4570,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "utils_master_data_normalize_producttypevalue",
-      "community": 8,
+      "community": 15,
       "norm_label": "producttypevalue"
     },
     {
@@ -4360,7 +4580,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "utils_master_data_normalize_printingwebvalue",
-      "community": 8,
+      "community": 15,
       "norm_label": "printingwebvalue"
     },
     {
@@ -4370,7 +4590,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "utils_master_data_normalize_product_type_map",
-      "community": 8,
+      "community": 15,
       "norm_label": "product_type_map"
     },
     {
@@ -4380,7 +4600,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "utils_master_data_normalize_unit_map",
-      "community": 8,
+      "community": 15,
       "norm_label": "unit_map"
     },
     {
@@ -4390,7 +4610,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "utils_master_data_normalize_printing_web_map",
-      "community": 8,
+      "community": 15,
       "norm_label": "printing_web_map"
     },
     {
@@ -4400,7 +4620,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "utils_master_data_normalize_normalizeproducttypelabel",
-      "community": 8,
+      "community": 15,
       "norm_label": "normalizeproducttypelabel()"
     },
     {
@@ -4410,7 +4630,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "utils_master_data_normalize_normalizeproducttypecode",
-      "community": 8,
+      "community": 15,
       "norm_label": "normalizeproducttypecode()"
     },
     {
@@ -4420,7 +4640,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "utils_master_data_normalize_normalizeprintingwebcode",
-      "community": 8,
+      "community": 15,
       "norm_label": "normalizeprintingwebcode()"
     },
     {
@@ -4430,7 +4650,7 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "utils_master_data_normalize_normalizeunitlabel",
-      "community": 8,
+      "community": 15,
       "norm_label": "normalizeunitlabel()"
     },
     {
@@ -4440,7 +4660,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "utils_master_data_normalize_producttypeoption",
-      "community": 8,
+      "community": 15,
       "norm_label": "producttypeoption"
     },
     {
@@ -4450,7 +4670,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "utils_master_data_normalize_printingweboption",
-      "community": 8,
+      "community": 15,
       "norm_label": "printingweboption"
     },
     {
@@ -4460,7 +4680,7 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "utils_master_data_normalize_rmtypeoption",
-      "community": 8,
+      "community": 15,
       "norm_label": "rmtypeoption"
     },
     {
@@ -4470,7 +4690,7 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "utils_master_data_normalize_productsubtypeoption",
-      "community": 8,
+      "community": 15,
       "norm_label": "productsubtypeoption"
     },
     {
@@ -4480,97 +4700,97 @@
       "source_location": "L80",
       "_origin": "ast",
       "id": "utils_master_data_normalize_masterdatareferenceresponse",
-      "community": 8,
+      "community": 15,
       "norm_label": "masterdatareferenceresponse"
     },
     {
       "label": "DEFAULT_PRODUCT_TYPE_ROWS",
       "file_type": "code",
       "source_file": "utils/master-data-normalize.ts",
-      "source_location": "L88",
+      "source_location": "L89",
       "_origin": "ast",
       "id": "utils_master_data_normalize_default_product_type_rows",
-      "community": 8,
+      "community": 15,
       "norm_label": "default_product_type_rows"
     },
     {
       "label": "DEFAULT_PRINTING_WEB_ROWS",
       "file_type": "code",
       "source_file": "utils/master-data-normalize.ts",
-      "source_location": "L94",
+      "source_location": "L95",
       "_origin": "ast",
       "id": "utils_master_data_normalize_default_printing_web_rows",
-      "community": 8,
+      "community": 15,
       "norm_label": "default_printing_web_rows"
     },
     {
       "label": "DEFAULT_PRODUCT_TYPES",
       "file_type": "code",
       "source_file": "utils/master-data-normalize.ts",
-      "source_location": "L99",
+      "source_location": "L100",
       "_origin": "ast",
       "id": "utils_master_data_normalize_default_product_types",
-      "community": 8,
+      "community": 15,
       "norm_label": "default_product_types"
     },
     {
       "label": "DEFAULT_PRINTING_WEB",
       "file_type": "code",
       "source_file": "utils/master-data-normalize.ts",
-      "source_location": "L106",
+      "source_location": "L107",
       "_origin": "ast",
       "id": "utils_master_data_normalize_default_printing_web",
-      "community": 8,
+      "community": 15,
       "norm_label": "default_printing_web"
     },
     {
       "label": "DEFAULT_RM_TYPES",
       "file_type": "code",
       "source_file": "utils/master-data-normalize.ts",
-      "source_location": "L123",
+      "source_location": "L124",
       "_origin": "ast",
       "id": "utils_master_data_normalize_default_rm_types",
-      "community": 8,
+      "community": 15,
       "norm_label": "default_rm_types"
     },
     {
       "label": "DEFAULT_UNITS",
       "file_type": "code",
       "source_file": "utils/master-data-normalize.ts",
-      "source_location": "L130",
+      "source_location": "L131",
       "_origin": "ast",
       "id": "utils_master_data_normalize_default_units",
-      "community": 8,
+      "community": 15,
       "norm_label": "default_units"
     },
     {
       "label": "productTypeOptionsFromRows()",
       "file_type": "code",
       "source_file": "utils/master-data-normalize.ts",
-      "source_location": "L138",
+      "source_location": "L139",
       "_origin": "ast",
       "id": "utils_master_data_normalize_producttypeoptionsfromrows",
-      "community": 8,
+      "community": 15,
       "norm_label": "producttypeoptionsfromrows()"
     },
     {
       "label": "printingWebOptionsFromRows()",
       "file_type": "code",
       "source_file": "utils/master-data-normalize.ts",
-      "source_location": "L153",
+      "source_location": "L154",
       "_origin": "ast",
       "id": "utils_master_data_normalize_printingweboptionsfromrows",
-      "community": 8,
+      "community": 15,
       "norm_label": "printingweboptionsfromrows()"
     },
     {
       "label": "enrichMasterDataReference()",
       "file_type": "code",
       "source_file": "utils/master-data-normalize.ts",
-      "source_location": "L178",
+      "source_location": "L179",
       "_origin": "ast",
       "id": "utils_master_data_normalize_enrichmasterdatareference",
-      "community": 8,
+      "community": 15,
       "norm_label": "enrichmasterdatareference()"
     },
     {
@@ -4580,7 +4800,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_material_map",
-      "community": 16,
+      "community": 5,
       "norm_label": "material-map.ts"
     },
     {
@@ -4590,7 +4810,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "utils_material_map_materialrow",
-      "community": 16,
+      "community": 5,
       "norm_label": "materialrow"
     },
     {
@@ -4600,14 +4820,14 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "utils_material_map_toenginematerial",
-      "community": 16,
+      "community": 5,
       "norm_label": "toenginematerial()"
     },
     {
       "label": "buildEngineMaterialMap()",
       "file_type": "code",
       "source_file": "utils/material-map.ts",
-      "source_location": "L26",
+      "source_location": "L31",
       "_origin": "ast",
       "id": "utils_material_map_buildenginematerialmap",
       "community": 5,
@@ -4620,7 +4840,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_pagination",
-      "community": 4,
+      "community": 2,
       "norm_label": "pagination.ts"
     },
     {
@@ -4630,7 +4850,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "utils_pagination_paginationquery",
-      "community": 4,
+      "community": 2,
       "norm_label": "paginationquery"
     },
     {
@@ -4640,7 +4860,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "utils_pagination_paginatedresult",
-      "community": 4,
+      "community": 2,
       "norm_label": "paginatedresult"
     },
     {
@@ -4650,7 +4870,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "utils_pagination_parsepagination",
-      "community": 4,
+      "community": 2,
       "norm_label": "parsepagination()"
     },
     {
@@ -4660,7 +4880,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "utils_pagination_paginate",
-      "community": 4,
+      "community": 2,
       "norm_label": "paginate()"
     },
     {
@@ -4670,7 +4890,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_pdf_proposal_kit",
-      "community": 5,
+      "community": 4,
       "norm_label": "pdf-proposal-kit.ts"
     },
     {
@@ -4680,7 +4900,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_pdf_proposal_kit_pdfproposalinput",
-      "community": 5,
+      "community": 4,
       "norm_label": "pdfproposalinput"
     },
     {
@@ -4690,7 +4910,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "utils_pdf_proposal_kit_renderbrandedpdfkitproposal",
-      "community": 5,
+      "community": 4,
       "norm_label": "renderbrandedpdfkitproposal()"
     },
     {
@@ -4740,7 +4960,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_resolve_solvent_cost",
-      "community": 15,
+      "community": 7,
       "norm_label": "resolve-solvent-cost.ts"
     },
     {
@@ -4750,7 +4970,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "utils_resolve_solvent_cost_solventmateriallike",
-      "community": 15,
+      "community": 7,
       "norm_label": "solventmateriallike"
     },
     {
@@ -4760,7 +4980,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "utils_resolve_solvent_cost_resolvesolventcostperkgusd",
-      "community": 15,
+      "community": 7,
       "norm_label": "resolvesolventcostperkgusd()"
     },
     {
@@ -4770,7 +4990,7 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "utils_resolve_solvent_cost_finddefaultsolventmaterialid",
-      "community": 15,
+      "community": 7,
       "norm_label": "finddefaultsolventmaterialid()"
     },
     {
@@ -4920,7 +5140,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_supported_currencies",
-      "community": 1,
+      "community": 2,
       "norm_label": "supported-currencies.ts"
     },
     {
@@ -4930,7 +5150,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "utils_supported_currencies_supported_currencies",
-      "community": 1,
+      "community": 2,
       "norm_label": "supported_currencies"
     },
     {
@@ -4940,7 +5160,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "utils_supported_currencies_filtersupportedcurrencies",
-      "community": 1,
+      "community": 2,
       "norm_label": "filtersupportedcurrencies()"
     },
     {
@@ -4950,7 +5170,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_template_key",
-      "community": 2,
+      "community": 3,
       "norm_label": "template-key.ts"
     },
     {
@@ -4960,7 +5180,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "utils_template_key_slugpart",
-      "community": 2,
+      "community": 3,
       "norm_label": "slugpart()"
     },
     {
@@ -4970,7 +5190,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "utils_template_key_nametierslug",
-      "community": 2,
+      "community": 3,
       "norm_label": "nametierslug()"
     },
     {
@@ -4980,7 +5200,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "utils_template_key_derivestandardtemplatekey",
-      "community": 2,
+      "community": 3,
       "norm_label": "derivestandardtemplatekey()"
     },
     {
@@ -4990,7 +5210,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "utils_template_key_derivetenanttemplatekey",
-      "community": 2,
+      "community": 3,
       "norm_label": "derivetenanttemplatekey()"
     },
     {
@@ -5000,7 +5220,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "utils_template_key_templatekeyrow",
-      "community": 2,
+      "community": 3,
       "norm_label": "templatekeyrow"
     },
     {
@@ -5010,7 +5230,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "utils_template_key_expectedtemplatekey",
-      "community": 2,
+      "community": 3,
       "norm_label": "expectedtemplatekey()"
     },
     {
@@ -5020,7 +5240,7 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "utils_template_key_resolvetemplatekeyassignments",
-      "community": 2,
+      "community": 3,
       "norm_label": "resolvetemplatekeyassignments()"
     },
     {
@@ -5030,7 +5250,7 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "utils_template_key_derivesourcetemplatekey",
-      "community": 2,
+      "community": 3,
       "norm_label": "derivesourcetemplatekey()"
     },
     {
@@ -5040,7 +5260,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_template_material_lookup_test",
-      "community": 2,
+      "community": 1,
       "norm_label": "template-material-lookup.test.ts"
     },
     {
@@ -5050,7 +5270,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "utils_template_material_lookup_test_fixturematerials",
-      "community": 2,
+      "community": 1,
       "norm_label": "fixturematerials"
     },
     {
@@ -5060,7 +5280,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_template_material_lookup",
-      "community": 2,
+      "community": 1,
       "norm_label": "template-material-lookup.ts"
     },
     {
@@ -5080,7 +5300,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "utils_template_material_lookup_templatelayerref",
-      "community": 2,
+      "community": 1,
       "norm_label": "templatelayerref"
     },
     {
@@ -5090,7 +5310,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "utils_template_material_lookup_buildvalidmaterialidset",
-      "community": 2,
+      "community": 1,
       "norm_label": "buildvalidmaterialidset()"
     },
     {
@@ -5100,7 +5320,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "utils_template_material_lookup_buildtemplatemateriallookup",
-      "community": 2,
+      "community": 1,
       "norm_label": "buildtemplatemateriallookup()"
     },
     {
@@ -5110,7 +5330,7 @@
       "source_location": "L166",
       "_origin": "ast",
       "id": "utils_template_material_lookup_familyof",
-      "community": 2,
+      "community": 1,
       "norm_label": "familyof()"
     },
     {
@@ -5120,7 +5340,7 @@
       "source_location": "L170",
       "_origin": "ast",
       "id": "utils_template_material_lookup_gradeof",
-      "community": 2,
+      "community": 1,
       "norm_label": "gradeof()"
     },
     {
@@ -5130,7 +5350,7 @@
       "source_location": "L174",
       "_origin": "ast",
       "id": "utils_template_material_lookup_resolvelayermaterialid",
-      "community": 2,
+      "community": 1,
       "norm_label": "resolvelayermaterialid()"
     },
     {
@@ -5140,7 +5360,7 @@
       "source_location": "L213",
       "_origin": "ast",
       "id": "utils_template_material_lookup_resolvetemplatelayers",
-      "community": 2,
+      "community": 1,
       "norm_label": "resolvetemplatelayers()"
     },
     {
@@ -5150,7 +5370,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_usd",
-      "community": 7,
+      "community": 8,
       "norm_label": "usd.ts"
     },
     {
@@ -5160,7 +5380,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "utils_usd_roundusd",
-      "community": 7,
+      "community": 8,
       "norm_label": "roundusd()"
     },
     {
@@ -5250,7 +5470,7 @@
       "source_location": "L128",
       "_origin": "ast",
       "id": "utils_visibility_geteffectiveprofile",
-      "community": 4,
+      "community": 2,
       "norm_label": "geteffectiveprofile()"
     },
     {
@@ -6084,6 +6304,17 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_index"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "index.ts",
       "source_location": "L2",
       "weight": 1.0,
@@ -6166,6 +6397,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "routes_estimates",
+      "target": "db_index"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/master-data.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_master_data",
       "target": "db_index"
     },
     {
@@ -6972,6 +7214,39 @@
       "target": "db_index_getdatabase"
     },
     {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L49",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data_listtenantreferenceitems",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L214",
+      "weight": 1.0,
+      "source": "db_tenant_reference_data_replacetenantreferencecategory",
+      "target": "db_index_getdatabase"
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "INFERRED",
@@ -7437,6 +7712,28 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "routes/master-data.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_master_data",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/master-data.ts",
+      "source_location": "L28",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_master_data_canmanagetenantreference",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "routes/materials.ts",
       "source_location": "L3",
       "weight": 1.0,
@@ -7777,6 +8074,26 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "db/master-materials-io.ts",
+      "source_location": "L104",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_master_materials_io",
+      "target": "db_master_materials_io_default_unit_rows"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/master-materials-io.ts",
+      "source_location": "L113",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_master_materials_io",
+      "target": "db_master_materials_io_legacy_unit_metadata"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/master-materials-io.ts",
       "source_location": "L48",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -7864,6 +8181,26 @@
       "target": "db_master_materials_io_template_ref_to_master_key"
     },
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/master-materials-io.ts",
+      "source_location": "L51",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_master_materials_io",
+      "target": "db_master_materials_io_unitbasis"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/master-materials-io.ts",
+      "source_location": "L53",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_master_materials_io",
+      "target": "db_master_materials_io_unitrow"
+    },
+    {
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -7927,6 +8264,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "db_seed_materials_test",
+      "target": "db_master_materials_io"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
       "target": "db_master_materials_io"
     },
     {
@@ -8110,10 +8458,54 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "db/platform-master-data.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_platform_master_data",
+      "target": "db_master_materials_io_unitbasis"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_master_materials_io_unitbasis"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_master_materials_io_unitrow"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "db/platform-master-data.ts",
       "source_location": "L6",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "db_platform_master_data",
+      "target": "db_master_materials_io_masterdatareference"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
       "target": "db_master_materials_io_masterdatareference"
     },
     {
@@ -8137,6 +8529,39 @@
       "confidence_score": 1.0,
       "source": "utils_master_data_normalize_masterdatareferenceresponse",
       "target": "db_master_materials_io_masterdatareference"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_platform_master_data",
+      "target": "db_master_materials_io_default_unit_rows"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_platform_master_data",
+      "target": "db_master_materials_io_legacy_unit_metadata"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_master_materials_io_legacy_unit_metadata"
     },
     {
       "relation": "imports",
@@ -9259,6 +9684,17 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L11",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_platform_master_data"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "index.ts",
       "source_location": "L4",
       "weight": 1.0,
@@ -10001,6 +10437,39 @@
       "confidence_score": 1.0,
       "source": "db_platform_master_data_buildmasterdatareferencefromdb",
       "target": "db_platform_master_data_loadreferencefromjson"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L11",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_platform_master_data_buildmasterdatareferencefromdb"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L88",
+      "weight": 1.0,
+      "source": "db_tenant_reference_data_buildmasterdatareferencefortenant",
+      "target": "db_platform_master_data_buildmasterdatareferencefromdb"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L196",
+      "weight": 1.0,
+      "source": "db_tenant_reference_data_resolveorderunitdef",
+      "target": "db_platform_master_data_buildmasterdatareferencefromdb"
     },
     {
       "relation": "imports",
@@ -10928,6 +11397,16 @@
       "confidence_score": 1.0,
       "source": "db_schema",
       "target": "db_schema_subcategories"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/schema.ts",
+      "source_location": "L201",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_schema",
+      "target": "db_schema_tenantreferenceitems"
     },
     {
       "relation": "contains",
@@ -12945,6 +13424,291 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L87",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_tenant_reference_data_buildmasterdatareferencefortenant"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L61",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_tenant_reference_data_derivecode"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L28",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_tenant_reference_data_istenantextensiblecategory"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L33",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_tenant_reference_data_listtenantownreference"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L48",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_tenant_reference_data_listtenantreferenceitems"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L165",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_tenant_reference_data_mergebycode"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L14",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_tenant_reference_data_refcategory"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L206",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_tenant_reference_data_replacetenantreferencecategory"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L182",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_tenant_reference_data_resolveorderunitdef"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L18",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_tenant_reference_data_tenant_extensible_categories"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L15",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_tenant_reference_data_tenantrefrow"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L68",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data",
+      "target": "db_tenant_reference_data_unitrowfromitem"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/master-data.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_master_data",
+      "target": "db_tenant_reference_data"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "services/estimate-calculation.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_estimate_calculation",
+      "target": "db_tenant_reference_data"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/master-data.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_master_data",
+      "target": "db_tenant_reference_data_tenant_extensible_categories"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L211",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data_replacetenantreferencecategory",
+      "target": "db_tenant_reference_data_istenantextensiblecategory"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/master-data.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_master_data",
+      "target": "db_tenant_reference_data_istenantextensiblecategory"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L36",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data_listtenantownreference",
+      "target": "db_tenant_reference_data_listtenantreferenceitems"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/master-data.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_master_data",
+      "target": "db_tenant_reference_data_listtenantownreference"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L89",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data_buildmasterdatareferencefortenant",
+      "target": "db_tenant_reference_data_listtenantreferenceitems"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L189",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data_resolveorderunitdef",
+      "target": "db_tenant_reference_data_listtenantreferenceitems"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L192",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data_resolveorderunitdef",
+      "target": "db_tenant_reference_data_unitrowfromitem"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/tenant-reference-data.ts",
+      "source_location": "L96",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "db_tenant_reference_data_buildmasterdatareferencefortenant",
+      "target": "db_tenant_reference_data_mergebycode"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/master-data.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_master_data",
+      "target": "db_tenant_reference_data_buildmasterdatareferencefortenant"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "services/estimate-calculation.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_estimate_calculation",
+      "target": "db_tenant_reference_data_resolveorderunitdef"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "services/estimate-calculation.ts",
+      "source_location": "L66",
+      "weight": 1.0,
+      "source": "services_estimate_calculation_calculateandpersistestimate",
+      "target": "db_tenant_reference_data_resolveorderunitdef"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/master-data.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_master_data",
+      "target": "db_tenant_reference_data_replacetenantreferencecategory"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "index.ts",
       "source_location": "L7",
       "weight": 1.0,
@@ -13088,9 +13852,9 @@
       "source_file": "routes/admin-platform-templates.ts",
       "source_location": "L135",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_admin_platform_templates",
-      "target": "routes_admin_platform_templates_refkeyformaterial",
-      "confidence_score": 1.0
+      "target": "routes_admin_platform_templates_refkeyformaterial"
     },
     {
       "relation": "contains",
@@ -13390,9 +14154,9 @@
       "source_file": "routes/admin-platform-templates.ts",
       "source_location": "L188",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_admin_platform_templates_normalizelayerstorefkeys",
-      "target": "routes_admin_platform_templates_refkeyformaterial",
-      "confidence_score": 1.0
+      "target": "routes_admin_platform_templates_refkeyformaterial"
     },
     {
       "relation": "calls",
@@ -14985,6 +15749,17 @@
       "target": "utils_visibility_stripestimaterow"
     },
     {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_templates",
+      "target": "routes_estimates"
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -15059,6 +15834,28 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "routes_estimates_requoteestimateroute",
+      "target": "routes_estimates_generaterefnumber"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/templates.ts",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_templates",
+      "target": "routes_estimates_generaterefnumber"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "routes/templates.ts",
+      "source_location": "L372",
+      "weight": 1.0,
+      "source": "routes_templates_instantiatetemplateroute",
       "target": "routes_estimates_generaterefnumber"
     },
     {
@@ -15483,11 +16280,64 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "routes/master-data.ts",
+      "source_location": "L26",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_master_data",
+      "target": "routes_master_data_canmanagetenantreference"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/master-data.ts",
+      "source_location": "L15",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_master_data",
+      "target": "routes_master_data_referenceitemschema"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/master-data.ts",
       "source_location": "L5",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "routes_master_data",
       "target": "routes_master_data_registermasterdataroutes"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/master-data.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_master_data",
+      "target": "utils_auth"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/master-data.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_master_data",
+      "target": "utils_auth_extracttenantfromrequest"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/master-data.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_master_data",
+      "target": "utils_auth_extractuserfromrequest"
     },
     {
       "relation": "imports_from",
@@ -15510,6 +16360,16 @@
       "confidence_score": 1.0,
       "source": "routes_master_data",
       "target": "utils_master_data_normalize_enrichmasterdatareference"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/materials.ts",
+      "source_location": "L22",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_materials",
+      "target": "routes_materials_canmanagetenantmaterials"
     },
     {
       "relation": "contains",
@@ -15550,6 +16410,16 @@
       "confidence_score": 1.0,
       "source": "routes_materials",
       "target": "routes_materials_ismaterialadmin"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/materials.ts",
+      "source_location": "L35",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_materials",
+      "target": "routes_materials_master_data_forbidden"
     },
     {
       "relation": "contains",
@@ -15717,6 +16587,17 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "routes/materials.ts",
+      "source_location": "L27",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_materials_canmanagetenantmaterials",
+      "target": "routes_materials_ismaterialadmin"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/materials.ts",
       "source_location": "L88",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -15744,6 +16625,39 @@
       "confidence_score": 1.0,
       "source": "routes_materials_updatematerialroute",
       "target": "routes_materials_ismaterialadmin"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/materials.ts",
+      "source_location": "L135",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_materials_creatematerialroute",
+      "target": "routes_materials_canmanagetenantmaterials"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/materials.ts",
+      "source_location": "L241",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_materials_deletematerialroute",
+      "target": "routes_materials_canmanagetenantmaterials"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/materials.ts",
+      "source_location": "L187",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_materials_updatematerialroute",
+      "target": "routes_materials_canmanagetenantmaterials"
     },
     {
       "relation": "calls",
@@ -15974,11 +16888,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "routes/platform-master-data.ts",
-      "source_location": "L29",
+      "source_location": "L42",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "routes_platform_master_data",
-      "target": "routes_platform_master_data_requiremasterdataadmin"
+      "target": "routes_platform_master_data_requireplatformadmin"
     },
     {
       "relation": "imports_from",
@@ -16001,6 +16915,17 @@
       "confidence_score": 1.0,
       "source": "routes_platform_master_data",
       "target": "utils_auth_extractuserfromrequest"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/platform-master-data.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_platform_master_data",
+      "target": "utils_auth_isplatformadmin"
     },
     {
       "relation": "imports_from",
@@ -16073,11 +16998,22 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "routes/platform-master-data.ts",
-      "source_location": "L30",
+      "source_location": "L43",
       "weight": 1.0,
       "confidence_score": 1.0,
-      "source": "routes_platform_master_data_requiremasterdataadmin",
+      "source": "routes_platform_master_data_requireplatformadmin",
       "target": "utils_auth_extractuserfromrequest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/platform-master-data.ts",
+      "source_location": "L44",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_platform_master_data_requireplatformadmin",
+      "target": "utils_auth_isplatformadmin"
     },
     {
       "relation": "calls",
@@ -16104,11 +17040,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "routes/platform.ts",
-      "source_location": "L5",
+      "source_location": "L6",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "routes_platform",
-      "target": "routes_platform_requiremasterdataadmin"
+      "target": "routes_platform_requireplatformadmin"
     },
     {
       "relation": "imports_from",
@@ -16133,15 +17069,37 @@
       "target": "utils_auth_extractuserfromrequest"
     },
     {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/platform.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_platform",
+      "target": "utils_auth_isplatformadmin"
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "routes/platform.ts",
-      "source_location": "L6",
+      "source_location": "L7",
       "weight": 1.0,
       "confidence_score": 1.0,
-      "source": "routes_platform_requiremasterdataadmin",
+      "source": "routes_platform_requireplatformadmin",
       "target": "utils_auth_extractuserfromrequest"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "routes/platform.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "routes_platform_requireplatformadmin",
+      "target": "utils_auth_isplatformadmin"
     },
     {
       "relation": "contains",

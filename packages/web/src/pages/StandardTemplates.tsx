@@ -19,9 +19,6 @@ import {
   type ClassFilter,
   type TemplateStructureTier,
 } from '../lib/templateCatalog';
-import {
-  setWorkingEstimateForTemplate,
-} from '../lib/estimateSession';
 
 interface TemplateLayer {
   layer_order: number;
@@ -346,30 +343,26 @@ const StandardTemplates = () => {
   const _editingClassification = editing ? getTemplateClassification(catalogInput(editing)) : null;
   void _editingClassification;
 
-  /** Templates = structure only. Always instantiate a new estimate; customer/dims/qty filled in editor. */
+  /** Templates = structure only. Resolve the template into an UNSAVED draft (no DB row);
+   *  the editor opens it as a new estimate and only persists when the user saves. */
   const createEstimateFromStructure = async (template: StructureTemplate) => {
     setInstantiating(template.id);
     setInstantiateError(null);
     try {
-      const templateKey = template.templateKey?.trim() || null;
-      const created = await apiClient.instantiateTemplate(template.id, {
+      const preview = await apiClient.previewTemplate(template.id, {
         customerId: customerFromUrl || undefined,
         jobName: template.name,
       });
-      if (!created?.id) {
-        throw new Error('Could not create estimate — server returned no id');
-      }
-      if (templateKey) {
-        setWorkingEstimateForTemplate(templateKey, created.id);
-      }
       const estimatePath = customerFromUrl
-        ? `/estimate/${created.id}?customer=${encodeURIComponent(customerFromUrl)}`
-        : `/estimate/${created.id}`;
+        ? `/estimate/new?customer=${encodeURIComponent(customerFromUrl)}`
+        : '/estimate/new';
       navigate(estimatePath, {
         state: {
           returnTo: '/estimates',
           configureFromTemplate: true,
           fromStructureTemplate: true,
+          // Editor hydrates a new (unsaved) estimate from this; nothing is saved yet.
+          instantiated: preview,
         },
       });
     } catch (err) {

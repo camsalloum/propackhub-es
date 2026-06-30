@@ -26,6 +26,20 @@ export function layerTypeColor(type?: string): string {
   return '#6B7280';
 }
 
+/**
+ * Theme-independent neutral fill for the numbered sequence badges.
+ *
+ * Layer-type fills (blue/purple/green) collide with whatever theme shares that
+ * hue (e.g. Forest Green's brand sits on top of the adhesive green). Since the
+ * theme palette spans the whole wheel, no fixed *colored* fill can avoid every
+ * theme. So in `number` mode the chip BODY is a fixed slate that matches none of
+ * the 9 themes' brand/accent tokens, and the layer type is carried by the chip's
+ * colored OUTLINE instead — keeping the type cue without ever coinciding with the
+ * active theme's brand/button color.
+ */
+const SEQUENCE_CHIP_FILL = '#475569'; // slate-600
+const SEQUENCE_CHIP_STROKE_WIDTH = 2;
+
 function layerThickness(l: Layer): number {
   const micron = Number(l.micron || 0);
   if (micron > 0) return micron;
@@ -132,8 +146,10 @@ export default function LaminateVisualizer({
                 width={w}
                 height={barHeight}
                 rx={3}
-                fill={layerTypeColor(layer.type)}
-                opacity={layer.type === 'ink' ? 0.92 : 1}
+                fill={resolvedLabelMode === 'number' ? SEQUENCE_CHIP_FILL : layerTypeColor(layer.type)}
+                stroke={resolvedLabelMode === 'number' ? layerTypeColor(layer.type) : undefined}
+                strokeWidth={resolvedLabelMode === 'number' ? SEQUENCE_CHIP_STROKE_WIDTH : undefined}
+                opacity={layer.type === 'ink' && resolvedLabelMode !== 'number' ? 0.92 : 1}
               />
               {resolvedLabelMode === 'composition' && w >= 22 && (
                 <text
@@ -224,8 +240,10 @@ export default function LaminateVisualizer({
                 width={barWidth}
                 height={h}
                 rx={3}
-                fill={layerTypeColor(layer.type)}
-                opacity={layer.type === 'ink' ? 0.92 : 1}
+                fill={resolvedLabelMode === 'number' ? SEQUENCE_CHIP_FILL : layerTypeColor(layer.type)}
+                stroke={resolvedLabelMode === 'number' ? layerTypeColor(layer.type) : undefined}
+                strokeWidth={resolvedLabelMode === 'number' ? SEQUENCE_CHIP_STROKE_WIDTH : undefined}
+                opacity={layer.type === 'ink' && resolvedLabelMode !== 'number' ? 0.92 : 1}
               />
               {resolvedLabelMode === 'composition' && h >= 16 && (
                 <>

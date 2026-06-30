@@ -79,10 +79,11 @@ export interface ProductSubtypeOption {
 
 export interface MasterDataReferenceResponse extends MasterDataReference {
   productTypeOptions: ProductTypeOption[];
-  unitOptions: Array<{ label: string; value: string }>;
+  unitOptions: Array<{ label: string; value: string; basis?: 'kg' | 'pieces' | 'sqm' | 'lm' }>;
   printingWebClassOptions: PrintingWebOption[];
   rmTypeOptions: RmTypeOption[];
   productSubtypeOptions: ProductSubtypeOption[];
+  processOptions: Array<{ label: string; code: string; description: string }>;
 }
 
 export const DEFAULT_PRODUCT_TYPE_ROWS: ProductTypeRow[] = [
@@ -128,11 +129,11 @@ const DEFAULT_RM_TYPES: RmTypeOption[] = [
 ];
 
 const DEFAULT_UNITS: MasterDataReferenceResponse['unitOptions'] = [
-  { label: 'Kgs', value: 'kgs' },
-  { label: 'Kpcs', value: 'kpcs' },
-  { label: 'SQM', value: 'sqm' },
-  { label: 'LM', value: 'lm' },
-  { label: 'Roll 500 LM', value: 'roll_500_lm' },
+  { label: 'Kgs', value: 'kgs', basis: 'kg' },
+  { label: 'Kpcs', value: 'kpcs', basis: 'pieces' },
+  { label: 'SQM', value: 'sqm', basis: 'sqm' },
+  { label: 'LM', value: 'lm', basis: 'lm' },
+  { label: 'Roll 500 LM', value: 'roll_500_lm', basis: 'lm' },
 ];
 
 function productTypeOptionsFromRows(rows: ProductTypeRow[]): ProductTypeOption[] {
@@ -187,12 +188,15 @@ export function enrichMasterDataReference(ref: MasterDataReference): MasterDataR
     ref.printingWebClasses?.length > 0 ? ref.printingWebClasses : DEFAULT_PRINTING_WEB_ROWS;
   const printingWebClassOptions = printingWebOptionsFromRows(pwRows);
 
-  const unitOptions = ref.units
-    .map((label) => {
-      const value = normalizeUnitLabel(label);
-      return value ? { label, value } : null;
-    })
-    .filter((x): x is { label: string; value: string } => x != null);
+  const unitOptions =
+    ref.unitRows && ref.unitRows.length > 0
+      ? ref.unitRows.map((u) => ({ label: u.label, value: u.code, basis: u.basis }))
+      : ref.units
+          .map((label) => {
+            const value = normalizeUnitLabel(label);
+            return value ? { label, value } : null;
+          })
+          .filter((x): x is { label: string; value: string } => x != null);
 
   const rmTypeOptions: RmTypeOption[] =
     ref.rmTypeRows && ref.rmTypeRows.length > 0

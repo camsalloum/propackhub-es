@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and, isNull } from 'drizzle-orm';
 import { getEffectiveProfile, stripEstimateRow } from '../utils/visibility';
 import { usdToDisplay } from '../utils/currency';
 
@@ -52,7 +52,7 @@ export async function getDashboardSummaryRoute(
     const allEstimates = await db
       .select()
       .from(schema.estimates)
-      .where(eq(schema.estimates.tenantId, tenantId))
+      .where(and(eq(schema.estimates.tenantId, tenantId), isNull(schema.estimates.deletedAt)))
       .orderBy(desc(schema.estimates.createdAt));
 
     const customers = await db

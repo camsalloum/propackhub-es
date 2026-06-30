@@ -219,3 +219,44 @@ export function dimensionsPatchFromPouchFields(
   }
   return patch;
 }
+
+// ── Accessories ─────────────────────────────────────────────────────────────
+// Zipper / spout / valve / window / handle add real weight and cost (engine:
+// pouch-accessories.ts). They are options toggled on per pouch — mirroring the
+// bag gusset checkboxes — rather than separate `_zip` subtypes.
+
+export type PouchAccessoryKind = 'zipper' | 'spout' | 'valve' | 'window' | 'handle';
+
+export interface PouchAccessoryMeta {
+  kind: PouchAccessoryKind;
+  label: string;
+  /** Rate basis surfaced in the UI. */
+  basis: 'per_meter' | 'per_piece' | 'per_m2';
+  hint: string;
+}
+
+export const POUCH_ACCESSORY_META: Record<PouchAccessoryKind, PouchAccessoryMeta> = {
+  zipper: { kind: 'zipper', label: 'Zipper', basis: 'per_meter', hint: 'Resealable zip profile — priced per metre (≈ pouch width).' },
+  spout: { kind: 'spout', label: 'Spout + cap', basis: 'per_piece', hint: 'Fitment for liquids/refill — priced per unit.' },
+  valve: { kind: 'valve', label: 'Degassing valve', basis: 'per_piece', hint: 'One-way coffee valve — priced per unit.' },
+  window: { kind: 'window', label: 'Window patch', basis: 'per_m2', hint: 'Transparent patch — adds film area (W×H).' },
+  handle: { kind: 'handle', label: 'Handle', basis: 'per_piece', hint: 'Carry handle — priced per unit.' },
+};
+
+/**
+ * Which accessories are offered for each pouch configurator type.
+ * Center-seal (VFFS pillow) intentionally offers none by default.
+ */
+const ACCESSORY_APPLICABILITY: Record<PouchConfiguratorType, PouchAccessoryKind[]> = {
+  'three-side-seal': ['zipper', 'window'],
+  'center-seal': [],
+  'four-side-seal': ['zipper', 'window'],
+  'stand-up': ['zipper', 'spout', 'valve', 'window', 'handle'],
+  'side-gusset': ['zipper', 'valve', 'window'],
+  'flat-bottom': ['zipper', 'spout', 'valve', 'window', 'handle'],
+};
+
+export function accessoriesForPouchType(type: PouchConfiguratorType | null | undefined): PouchAccessoryKind[] {
+  if (!type) return [];
+  return ACCESSORY_APPLICABILITY[type] ?? [];
+}

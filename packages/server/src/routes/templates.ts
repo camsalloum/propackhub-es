@@ -98,6 +98,8 @@ const UpdateTemplateSchema = z.object({
   productSubtype: z.string().max(64).nullable().optional(),
   materialClass: z.string().nullable().optional(),
   structureType: z.string().nullable().optional(),
+  /** Product-group margin over raw material, USD/kg (admin-defined). */
+  marginOverRmPerKgUsd: z.coerce.number().nonnegative().nullable().optional(),
   /** Declared structure tier (Smart Template Builder — Task 3.3) */
   structureTier: z.enum(['Mono', 'Duplex', 'Triplex', 'Quadriplex']).optional(),
   /** Declared print mode stored in defaultDimensions (Task 3.3) */
@@ -466,6 +468,8 @@ export async function instantiateTemplateRoute(
           orderQuantityUnit: orderQuantityUnit ?? 'kgs',
           sourceTemplateKey,
           masterDataVersion,
+          // Product-group margin (USD/kg) — estimates default their margin/kg from it.
+          marginValuePerKgUsd: template.marginOverRmPerKgUsd ?? null,
         },
         layers: previewLayers,
         slabs: slabQtys.map((q) => ({ quantityKg: q, pricePerKg: 0 })),
@@ -563,8 +567,13 @@ export async function instantiateTemplateRoute(
       productType: estimate.productType,
     });
   } catch (error: any) {
-    console.error('Instantiate template error:', error);
-    return reply.status(500).send({ error: 'Failed to instantiate template' });
+    console.error('Instantiate template error:', error?.stack || error);
+    // Surface the underlying cause so a 500 here is diagnosable from the client
+    // (network response) instead of being an opaque "Failed to instantiate".
+    return reply.status(500).send({
+      error: 'Failed to instantiate template',
+      detail: error?.message ?? String(error),
+    });
   }
 }
 
@@ -989,6 +998,10 @@ export async function updateTemplateRoute(
     if (body.productSubtype !== undefined) updates.productSubtype = body.productSubtype;
     if (body.materialClass !== undefined) updates.materialClass = body.materialClass;
     if (body.structureType !== undefined) updates.structureType = body.structureType;
+    if (body.marginOverRmPerKgUsd !== undefined) {
+      updates.marginOverRmPerKgUsd =
+        body.marginOverRmPerKgUsd != null ? String(body.marginOverRmPerKgUsd) : null;
+    }
     // Task 3.3: structureTier → structureType reconciliation
     if (body.structureTier !== undefined) {
       updates.structureType = tierToStructureType(body.structureTier);

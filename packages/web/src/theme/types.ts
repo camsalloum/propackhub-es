@@ -18,6 +18,8 @@
  *   `forest`   — natural emerald & green tones (light, PEBI)
  *   `frost`    — modern indigo glassmorphism (light, PEBI)
  *   `classic`  — professional neutral gray & minimal (light, PEBI)
+ *   `industrial` — technical steel-grey + blue on industrial white (light,
+ *                  from the ProPackHub "Technical Component Library" design)
  *
  * PEBI's orange `sunset` and gold `gold` themes are intentionally NOT imported
  * — the user explicitly dislikes orange/gold accents.
@@ -31,7 +33,8 @@ export type ThemeId =
   | 'midnight'
   | 'forest'
   | 'frost'
-  | 'classic';
+  | 'classic'
+  | 'industrial';
 
 /** Display metadata for a theme, consumed by the theme switchers. */
 export interface ThemeMeta {

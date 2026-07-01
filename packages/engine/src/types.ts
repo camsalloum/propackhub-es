@@ -5,6 +5,7 @@ import type { LaminationRecipe } from './lamination-recipe';
 import type { InkPrintingProcess } from './ink-printing';
 import type { PouchAccessorySelection } from './pouch-accessories';
 import type { UnitDef } from './unit-conversion';
+import type { WasteBand } from './waste-bands';
 
 export type LayerType = 'substrate' | 'ink' | 'adhesive' | 'solvent';
 
@@ -129,10 +130,29 @@ export interface Estimate {
 
   // Pricing
   markupPercent: number;
-  platesPerKg: number; // In display currency
-  deliveryPerKg: number; // In display currency
+  platesPerKg: number; // Legacy flat per-kg (display currency) — superseded by tooling below
+  deliveryPerKg: number; // Legacy flat per-kg (display currency) — superseded by delivery below
   processes: Process[];
   slabs: Slab[];
+
+  // ── Pricing model (new) ──────────────────────────────────────────────────
+  // When `pricingMethod` is set, the engine uses the quantity-band waste +
+  // lump-sum tooling/delivery (amortized over the order qty) + margin model and
+  // ignores platesPerKg/deliveryPerKg and process operation cost. When unset,
+  // the legacy additive model runs (full backward compatibility).
+  pricingMethod?: 'markup' | 'margin_per_kg';
+  /** Margin in USD/kg, used when pricingMethod === 'margin_per_kg' (defaults from the template). */
+  marginValuePerKgUsd?: number;
+  /** Tooling (plates/cylinders) lump-sum charge in USD for the whole job. */
+  toolingChargeUsd?: number;
+  /** Whether the tooling charge is billed to the customer (added to the price). */
+  toolingBilledToCustomer?: boolean;
+  /** Delivery/Incoterm term label (EXW, FOB, CIF, …). */
+  deliveryTerm?: string;
+  /** Delivery/freight lump-sum charge in USD for the whole job (0 for EXW). */
+  deliveryChargeUsd?: number;
+  /** Quantity-based waste bands; falls back to engine defaults when omitted. */
+  wasteBands?: WasteBand[];
 
   // Solvent mix config (for SB ink/adhesive — dry GSM model)
   solventMaterialId?: string; // Library solvent row (default: Solvent Common)
@@ -207,6 +227,24 @@ export interface Estimate {
   orderQuantityKpcs?: number;
   orderQuantitySqm?: number;
   orderQuantityMeters?: number;
+  /** Order quantity converted to true kilograms (regardless of the entered unit). */
+  orderQuantityKgConverted?: number;
+  /** Finished reel running metres for the order — the costing LM (matches the 'lm' unit). */
+  orderQuantityMetersReel?: number;
+
+  // ── New pricing model — output breakdown (per kg, USD) ───────────────────
+  /** Waste % applied to the material cost for the order quantity's band. */
+  wastePercentApplied?: number;
+  /** Material cost per kg after applying the band waste %. */
+  wasteAdjustedMaterialPerKg?: number;
+  /** Logistics (delivery) cost per kg — lump sum amortized over the order qty. */
+  logisticsCostPerKg?: number;
+  /** Development (tooling) cost per kg — lump sum amortized over the order qty. */
+  developmentCostPerKg?: number;
+  /** Margin added per kg (markup amount, or the fixed margin/kg). */
+  marginPerKg?: number;
+  /** Pricing method actually used by the engine. */
+  pricingMethodResolved?: 'markup' | 'margin_per_kg';
 }
 
 export interface CalculationResult {
@@ -219,6 +257,10 @@ export interface CalculationResult {
     processPercent: number;
     /** Accessory hardware share of total cost (pouch zipper/spout/valve/etc.). */
     accessoryPercent?: number;
+    /** Logistics (delivery) share of the sale price — new pricing model. */
+    logisticsPercent?: number;
+    /** Development (tooling) share of the sale price — new pricing model. */
+    developmentPercent?: number;
   };
   warnings: string[];
 }

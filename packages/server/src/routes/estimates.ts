@@ -73,6 +73,19 @@ const EstimateCreateSchema = z.object({
   })).default([]),
   orderQuantityKg: z.coerce.number().positive().optional(),
   orderQuantityUnit: z.string().max(32).optional(),
+  sourceTemplateKey: z.string().max(128).optional(),
+  // Pricing model v2
+  pricingMethod: z.enum(['markup', 'margin_per_kg']).optional(),
+  marginValuePerKgUsd: z.coerce.number().nonnegative().optional(),
+  toolingChargeUsd: z.coerce.number().nonnegative().optional(),
+  toolingBilledToCustomer: z.boolean().optional(),
+  deliveryTerm: z.string().max(32).optional(),
+  deliveryChargeUsd: z.coerce.number().nonnegative().optional(),
+  wasteBands: z.array(z.object({
+    minKg: z.coerce.number().nonnegative(),
+    maxKg: z.coerce.number().nonnegative().nullable(),
+    wastePercent: z.coerce.number().min(0).max(100),
+  })).optional(),
   solventMaterialId: z.string().uuid().optional(),
   solventCostPerKgUsd: z.coerce.number().nonnegative().optional(),
   solventRatio: z.coerce.number().positive().optional(),
@@ -258,6 +271,14 @@ export async function createEstimateRoute(
         masterDataVersion,
         orderQuantityKg: data.orderQuantityKg != null ? String(data.orderQuantityKg) : undefined,
         orderQuantityUnit: data.orderQuantityUnit ?? 'kgs',
+        sourceTemplateKey: data.sourceTemplateKey ?? undefined,
+        pricingMethod: data.pricingMethod ?? undefined,
+        marginValuePerKgUsd: data.marginValuePerKgUsd != null ? String(data.marginValuePerKgUsd) : undefined,
+        toolingChargeUsd: data.toolingChargeUsd != null ? String(data.toolingChargeUsd) : undefined,
+        toolingBilledToCustomer: data.toolingBilledToCustomer ?? false,
+        deliveryTerm: data.deliveryTerm ?? undefined,
+        deliveryChargeUsd: data.deliveryChargeUsd != null ? String(data.deliveryChargeUsd) : undefined,
+        wasteBands: data.wasteBands ?? undefined,
         solventMaterialId: data.solventMaterialId,
         solventCostPerKgUsd: data.solventCostPerKgUsd != null ? String(data.solventCostPerKgUsd) : undefined,
         solventRatio: data.solventRatio != null ? String(data.solventRatio) : undefined,
@@ -586,6 +607,25 @@ async function updateEstimateRoute(
     if (data.inkPrintingProcess !== undefined) {
       updates.inkPrintingProcess = data.inkPrintingProcess;
     }
+    if (data.pricingMethod !== undefined) updates.pricingMethod = data.pricingMethod;
+    if (data.marginValuePerKgUsd !== undefined) {
+      updates.marginValuePerKgUsd = String(data.marginValuePerKgUsd);
+    }
+    if (data.toolingChargeUsd !== undefined) {
+      updates.toolingChargeUsd = String(data.toolingChargeUsd);
+    }
+    if (data.toolingBilledToCustomer !== undefined) {
+      updates.toolingBilledToCustomer = data.toolingBilledToCustomer;
+    }
+    if (data.deliveryTerm !== undefined) {
+      updates.deliveryTerm = data.deliveryTerm || null;
+    }
+    if (data.deliveryChargeUsd !== undefined) {
+      updates.deliveryChargeUsd = String(data.deliveryChargeUsd);
+    }
+    if (data.wasteBands !== undefined) {
+      updates.wasteBands = data.wasteBands;
+    }
     // Any layer save clears configure-from-template mode in the DB.
     if (data.layers !== undefined && data.dimensions === undefined) {
       updates.dimensions = stripConfigureFromTemplateFlag(
@@ -733,8 +773,11 @@ async function updateEstimateRoute(
     if (error instanceof z.ZodError) {
       return reply.status(400).send({ error: 'Validation failed', details: error.errors });
     }
-    console.error('Update estimate error:', error);
-    return reply.status(500).send({ error: 'Failed to update estimate' });
+    console.error('Update estimate error:', error?.stack || error);
+    return reply.status(500).send({
+      error: 'Failed to update estimate',
+      detail: error?.message ?? String(error),
+    });
   }
 }
 

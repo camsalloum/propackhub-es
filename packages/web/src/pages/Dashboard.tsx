@@ -271,7 +271,7 @@ const Dashboard = () => {
             Track quotes, conversions, and proposal velocity at a glance. All numbers update live.
           </p>
         </div>
-        <Link to="/templates" className="btn-primary">
+        <Link to="/estimate/choose" className="btn-primary">
           <PlusCircle className="w-5 h-5" />
           <span>New estimate</span>
         </Link>

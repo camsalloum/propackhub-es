@@ -130,8 +130,8 @@ describe('THEME_TOKENS — Property 4: WCAG AA contrast', () => {
 });
 
 describe('THEMES registry — R2.1 shape', () => {
-  it('provides 9 themes — 2 base (light, dark) + 7 distinct colorful', () => {
-    expect(THEMES).toHaveLength(9);
+  it('provides 10 themes — 2 base (light, dark) + 8 distinct colorful', () => {
+    expect(THEMES).toHaveLength(10);
     expect(THEMES.map((t) => t.id)).toEqual([
       'light',
       'dark',
@@ -142,6 +142,7 @@ describe('THEMES registry — R2.1 shape', () => {
       'forest',
       'frost',
       'classic',
+      'industrial',
     ]);
     // At least one Light and one Dark kind (R2.1).
     expect(THEMES.some((t) => t.kind === 'light')).toBe(true);

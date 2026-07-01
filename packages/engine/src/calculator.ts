@@ -12,6 +12,7 @@ import { calculateBagFlatSheetAreaM2 } from './bag-flat-sheet';
 import { calculatePouchFlatSheetAreaM2 } from './pouch-flat-sheet';
 import { calculatePouchAccessories } from './pouch-accessories';
 import { convertOrderQuantityToKg } from './unit-conversion';
+import { wastePercentForQuantity, type WasteBand } from './waste-bands';
 
 /**
  * Main calculation engine - mirrors Laravel costing formulas
@@ -89,50 +90,12 @@ export function calculateEstimate(
   // Step 8: Calculate operation costs from processes (using converted kg)
   const processResults = calculateProcessCosts(estimate.processes, trueOrderQuantityKg, productMetrics);
 
-  // Step 9: Calculate sale price per kg (Laravel additive formula)
-  const salePricePerKg = calculateSalePrice(
-    layerRmCostPerKg + solventCostPerKg,
-    estimate.markupPercent,
-    estimate.platesPerKg,
-    estimate.deliveryPerKg,
-    processResults.operationCostPerKg,
-    accessoryCostPerKg
-  );
-
-  // Step 10: Calculate per‑slab prices and totals
-  // Each slab may have a different order quantity, affecting process costs and thus sale price.
-  const slabsWithTotals = estimate.slabs.map(slab => {
-    // Re‑calculate process costs for this slab's quantity
-    const slabProcessResults = calculateProcessCosts(
-      estimate.processes,
-      slab.quantityKg,
-      productMetrics
-    );
-
-    const slabSalePricePerKg = calculateSalePrice(
-      layerRmCostPerKg + solventCostPerKg,
-      estimate.markupPercent,
-      estimate.platesPerKg,
-      estimate.deliveryPerKg,
-      slabProcessResults.operationCostPerKg,
-      accessoryCostPerKg
-    );
-
-    return {
-      ...slab,
-      pricePerKg: slabSalePricePerKg,
-      total: slab.quantityKg * slabSalePricePerKg
-    };
-  });
-
-  // Step 11: Calculate cost breakdown percentages
+  // ── Step 9: Pricing ──────────────────────────────────────────────────────
   const materialCost = layerRmCostPerKg + solventCostPerKg;
   const rmCostPerM2 = totalCostM2 + solventDetail.totalCostPerM2;
-  const markupAmount = materialCost * (estimate.markupPercent / 100);
-  const totalCost = materialCost + markupAmount + estimate.platesPerKg +
-    estimate.deliveryPerKg + processResults.operationCostPerKg + accessoryCostPerKg;
 
-  // Calculate waste cost impact: sum of (cost_m2 × waste/100) across all layers, converted to per-kg
+  // Legacy waste-cost impact (sum of per-material wastePercent), used only by the
+  // legacy breakdown. The new model derives waste from the order-quantity band.
   let totalWasteCostPerM2 = 0;
   layersWithCalc.forEach(layer => {
     const material = materials.get(layer.materialId);
@@ -143,21 +106,107 @@ export function calculateEstimate(
       const gsm = layer.micron * material.density;
       baseCostPerM2 = (gsm / 1000) * material.costPerKgUsd;
     } else {
-      // New model: layer.micron = dry gsm; costPerKgUsd = dry-equiv cost
-      // cost/m² = (dry_gsm / 1000) × costPerKgUsd_dry_equiv
       baseCostPerM2 = (layer.micron / 1000) * material.costPerKgUsd;
     }
     totalWasteCostPerM2 += baseCostPerM2 * (material.wastePercent / 100);
   });
-  const wasteCostPerKg = totalGsm > 0 ? (totalWasteCostPerM2 / totalGsm) * 1000 : 0;
+  const legacyWasteCostPerKg = totalGsm > 0 ? (totalWasteCostPerM2 / totalGsm) * 1000 : 0;
 
-  const costBreakdown = {
-    materialPercent: totalCost > 0 ? (materialCost / totalCost) * 100 : 0,
-    wastePercent: totalCost > 0 ? (wasteCostPerKg / totalCost) * 100 : 0,
-    markupPercent: totalCost > 0 ? (markupAmount / totalCost) * 100 : 0,
-    processPercent: totalCost > 0 ? (processResults.operationCostPerKg / totalCost) * 100 : 0,
-    accessoryPercent: totalCost > 0 ? (accessoryCostPerKg / totalCost) * 100 : 0
-  };
+  // When pricingMethod is set the new model runs (quantity-band waste +
+  // lump-sum tooling/delivery amortized over the order qty + margin). Otherwise
+  // the legacy additive model runs unchanged.
+  const useNewModel =
+    estimate.pricingMethod === 'markup' || estimate.pricingMethod === 'margin_per_kg';
+
+  let salePricePerKg: number;
+  let slabsWithTotals: CalculationResult['slabs'];
+  let markupAmount: number;
+  let totalCost: number;
+  let costBreakdown: CalculationResult['costBreakdown'];
+  let newModel: ReturnType<typeof priceWithNewModel> | null = null;
+
+  if (useNewModel) {
+    const charges = {
+      materialPerKg: materialCost,
+      accessoryPerKg: accessoryCostPerKg,
+      amortizeQtyKg: trueOrderQuantityKg,
+      wasteBands: estimate.wasteBands,
+      toolingChargeUsd: estimate.toolingChargeUsd ?? 0,
+      toolingBilled: estimate.toolingBilledToCustomer ?? false,
+      deliveryChargeUsd: estimate.deliveryChargeUsd ?? 0,
+      pricingMethod: estimate.pricingMethod!,
+      markupPercent: estimate.markupPercent,
+      marginValuePerKgUsd: estimate.marginValuePerKgUsd ?? 0,
+    };
+
+    newModel = priceWithNewModel({ ...charges, wasteQtyKg: trueOrderQuantityKg });
+    salePricePerKg = newModel.salePricePerKg;
+    markupAmount = newModel.marginPerKg;
+    totalCost = newModel.salePricePerKg;
+
+    // Slab ladder: waste varies per band (slab quantity); logistics, development
+    // and margin parameters stay flat (amortized over the entered order qty).
+    slabsWithTotals = estimate.slabs.map(slab => {
+      const p = priceWithNewModel({ ...charges, wasteQtyKg: slab.quantityKg });
+      return { ...slab, pricePerKg: p.salePricePerKg, total: slab.quantityKg * p.salePricePerKg };
+    });
+
+    const denom = totalCost > 0 ? totalCost : 0;
+    const wasteAmount = newModel.wasteAdjustedMaterialPerKg - materialCost;
+    costBreakdown = {
+      materialPercent: denom > 0 ? (materialCost / denom) * 100 : 0,
+      wastePercent: denom > 0 ? (wasteAmount / denom) * 100 : 0,
+      markupPercent: denom > 0 ? (newModel.marginPerKg / denom) * 100 : 0,
+      processPercent: 0,
+      accessoryPercent: denom > 0 ? (accessoryCostPerKg / denom) * 100 : 0,
+      logisticsPercent: denom > 0 ? (newModel.logisticsCostPerKg / denom) * 100 : 0,
+      developmentPercent: denom > 0 ? (newModel.developmentCostPerKg / denom) * 100 : 0,
+    };
+  } else {
+    // ── Legacy additive model (unchanged) ──
+    salePricePerKg = calculateSalePrice(
+      materialCost,
+      estimate.markupPercent,
+      estimate.platesPerKg,
+      estimate.deliveryPerKg,
+      processResults.operationCostPerKg,
+      accessoryCostPerKg
+    );
+
+    slabsWithTotals = estimate.slabs.map(slab => {
+      const slabProcessResults = calculateProcessCosts(
+        estimate.processes,
+        slab.quantityKg,
+        productMetrics
+      );
+      const slabSalePricePerKg = calculateSalePrice(
+        materialCost,
+        estimate.markupPercent,
+        estimate.platesPerKg,
+        estimate.deliveryPerKg,
+        slabProcessResults.operationCostPerKg,
+        accessoryCostPerKg
+      );
+      return {
+        ...slab,
+        pricePerKg: slabSalePricePerKg,
+        total: slab.quantityKg * slabSalePricePerKg,
+      };
+    });
+
+    markupAmount = materialCost * (estimate.markupPercent / 100);
+    totalCost = materialCost + markupAmount + estimate.platesPerKg +
+      estimate.deliveryPerKg + processResults.operationCostPerKg + accessoryCostPerKg;
+
+    costBreakdown = {
+      materialPercent: totalCost > 0 ? (materialCost / totalCost) * 100 : 0,
+      wastePercent: totalCost > 0 ? (legacyWasteCostPerKg / totalCost) * 100 : 0,
+      markupPercent: totalCost > 0 ? (markupAmount / totalCost) * 100 : 0,
+      processPercent: totalCost > 0 ? (processResults.operationCostPerKg / totalCost) * 100 : 0,
+      accessoryPercent: totalCost > 0 ? (accessoryCostPerKg / totalCost) * 100 : 0,
+    };
+  }
+
 
   // Update estimate with calculated fields
   const updatedEstimate: Estimate = {
@@ -195,9 +244,20 @@ export function calculateEstimate(
     linearMPerKgWeb: productMetrics.linearMPerKgWeb,
     linearMPerKgReel: productMetrics.linearMPerKgReel,
     // Order quantities (derived from the converted true kg)
+    orderQuantityKgConverted: trueOrderQuantityKg,
     orderQuantityKpcs: trueOrderQuantityKg * (productMetrics.piecesPerKg || 0) / 1000,
     orderQuantitySqm: trueOrderQuantityKg * (sqmPerKg || 0),
-    orderQuantityMeters: trueOrderQuantityKg * (productMetrics.linearMPerKgWeb || 0)
+    // Web (press) running metres — MES quantity, kept for downstream use.
+    orderQuantityMeters: trueOrderQuantityKg * (productMetrics.linearMPerKgWeb || 0),
+    // Finished reel running metres — the costing LM (matches the 'lm' order-quantity unit).
+    orderQuantityMetersReel: trueOrderQuantityKg * (productMetrics.linearMPerKgReel || 0),
+    // New pricing model breakdown (per kg). Undefined when the legacy model runs.
+    wastePercentApplied: newModel?.wastePct,
+    wasteAdjustedMaterialPerKg: newModel?.wasteAdjustedMaterialPerKg,
+    logisticsCostPerKg: newModel?.logisticsCostPerKg,
+    developmentCostPerKg: newModel?.developmentCostPerKg,
+    marginPerKg: newModel?.marginPerKg,
+    pricingMethodResolved: useNewModel ? estimate.pricingMethod : undefined,
   };
 
   return {
@@ -472,4 +532,60 @@ function calculateSalePrice(
 ): number {
   const markupAmount = materialCostPerKg * (markupPercent / 100);
   return materialCostPerKg + markupAmount + platesPerKg + deliveryPerKg + operationPerKg + accessoryPerKg;
+}
+
+/**
+ * New pricing model price build-up (per kg, USD base):
+ *   wasteAdjMaterial = material × (1 + bandWaste%/100)
+ *   costBase         = wasteAdjMaterial + accessory + logistics + development
+ *   margin           = markup% × costBase   OR   fixed margin/kg
+ *   sale             = costBase + margin
+ *
+ * Logistics & development are lump sums amortized over `amortizeQtyKg` (the
+ * entered order quantity). `wasteQtyKg` selects the waste band (the order qty
+ * for the headline price; each slab's qty for the ladder).
+ */
+function priceWithNewModel(params: {
+  materialPerKg: number;
+  accessoryPerKg: number;
+  wasteQtyKg: number;
+  amortizeQtyKg: number;
+  wasteBands?: WasteBand[];
+  toolingChargeUsd: number;
+  toolingBilled: boolean;
+  deliveryChargeUsd: number;
+  pricingMethod: 'markup' | 'margin_per_kg';
+  markupPercent: number;
+  marginValuePerKgUsd: number;
+}): {
+  wastePct: number;
+  wasteAdjustedMaterialPerKg: number;
+  logisticsCostPerKg: number;
+  developmentCostPerKg: number;
+  costBasePerKg: number;
+  marginPerKg: number;
+  salePricePerKg: number;
+} {
+  const wastePct = wastePercentForQuantity(params.wasteQtyKg, params.wasteBands);
+  const wasteAdjustedMaterialPerKg = params.materialPerKg * (1 + wastePct / 100);
+  const amort = params.amortizeQtyKg > 0 ? params.amortizeQtyKg : 0;
+  const logisticsCostPerKg = amort > 0 ? params.deliveryChargeUsd / amort : 0;
+  const developmentCostPerKg =
+    params.toolingBilled && amort > 0 ? params.toolingChargeUsd / amort : 0;
+  const costBasePerKg =
+    wasteAdjustedMaterialPerKg + params.accessoryPerKg + logisticsCostPerKg + developmentCostPerKg;
+  const marginPerKg =
+    params.pricingMethod === 'margin_per_kg'
+      ? params.marginValuePerKgUsd
+      : costBasePerKg * (params.markupPercent / 100);
+  const salePricePerKg = costBasePerKg + marginPerKg;
+  return {
+    wastePct,
+    wasteAdjustedMaterialPerKg,
+    logisticsCostPerKg,
+    developmentCostPerKg,
+    costBasePerKg,
+    marginPerKg,
+    salePricePerKg,
+  };
 }

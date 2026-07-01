@@ -15,6 +15,7 @@ export * from './bag-flat-sheet';
 export * from './pouch-flat-sheet';
 export * from './pouch-accessories';
 export * from './unit-conversion';
+export * from './waste-bands';
 
 // Re-export for convenience
 export { calculateEstimate } from './calculator';

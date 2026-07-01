@@ -290,3 +290,27 @@ DO $$ BEGIN
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
+
+-- ---------------------------------------------------------------------------
+-- Pricing model v2 (2026-06-30) — quantity-band waste + lump-sum tooling/
+-- delivery (amortized over order qty) + margin (markup % OR fixed USD/kg).
+-- All monetary values are USD base. Legacy estimates (pricing_method NULL) keep
+-- the old additive model.
+-- ---------------------------------------------------------------------------
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS pricing_method VARCHAR(20);
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS margin_value_per_kg_usd DECIMAL(12, 4);
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS tooling_charge_usd DECIMAL(12, 2);
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS tooling_billed_to_customer BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS delivery_term VARCHAR(32);
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS delivery_charge_usd DECIMAL(12, 2);
+
+-- Product group (= template) margin over raw material, in USD/kg. Admin sets it
+-- on the template; estimates default their margin/kg from it.
+ALTER TABLE structure_templates ADD COLUMN IF NOT EXISTS margin_over_rm_per_kg_usd DECIMAL(12, 4);
+
+-- Per-user pricing method, decided by the owner/group manager. Defaults to markup.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS pricing_method VARCHAR(20) NOT NULL DEFAULT 'markup';
+
+-- Editable per-estimate waste bands (quantity ranges + waste %). Defaults are
+-- seeded in the engine; this stores admin/manager edits.
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS waste_bands JSONB;

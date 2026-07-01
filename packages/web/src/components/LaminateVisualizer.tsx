@@ -33,7 +33,8 @@ export function layerTypeColor(type?: string): string {
  * hue (e.g. Forest Green's brand sits on top of the adhesive green). Since the
  * theme palette spans the whole wheel, no fixed *colored* fill can avoid every
  * theme. So in `number` mode the chip BODY is a fixed slate that matches none of
- * the 9 themes' brand/accent tokens, and the layer type is carried by the chip's
+ * the 10 themes' brand/accent tokens (Industrial's slate brand is slate-800,
+ * distinct from this slate-600 body), and the layer type is carried by the chip's
  * colored OUTLINE instead — keeping the type cue without ever coinciding with the
  * active theme's brand/button color.
  */

@@ -6,6 +6,7 @@ import {
   type Estimate,
   type Material,
   type LaminationRecipe,
+  type WasteBand,
 } from '@es/engine';
 
 export interface ClientCalcMaterial {
@@ -48,6 +49,16 @@ export interface ClientCalcInput {
   inkPrintingProcess?: 'flexo' | 'rotogravure' | null;
   inkSolventRatio?: number;
   orderQuantityKg?: number;
+  // Pricing model v2 — when pricingMethod is set, the engine uses waste bands +
+  // lump-sum tooling/delivery + margin instead of the legacy additive model.
+  pricingMethod?: 'markup' | 'margin_per_kg';
+  marginValuePerKgUsd?: number;
+  toolingChargeUsd?: number;
+  toolingBilledToCustomer?: boolean;
+  deliveryTerm?: string;
+  deliveryChargeUsd?: number;
+  /** Quantity-based waste bands; falls back to engine defaults when omitted. */
+  wasteBands?: WasteBand[];
   /** Order-quantity unit code + its resolved {basis, multiplier} (for live preview parity with the server). */
   orderQuantityUnit?: string;
   orderQuantityUnitDef?: { basis: 'kg' | 'pieces' | 'sqm' | 'lm'; multiplier: number };
@@ -132,6 +143,13 @@ export function runClientCalculation(input: ClientCalcInput) {
     cleaningSolventKgPerJob: input.cleaningSolventKgPerJob ?? DEFAULT_CLEANING_SOLVENT_KG_PER_JOB,
     inkPrintingProcess: input.inkPrintingProcess ?? undefined,
     inkSolventRatio: input.inkSolventRatio,
+    pricingMethod: input.pricingMethod,
+    marginValuePerKgUsd: input.marginValuePerKgUsd,
+    toolingChargeUsd: input.toolingChargeUsd,
+    toolingBilledToCustomer: input.toolingBilledToCustomer,
+    deliveryTerm: input.deliveryTerm,
+    deliveryChargeUsd: input.deliveryChargeUsd,
+    wasteBands: input.wasteBands,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

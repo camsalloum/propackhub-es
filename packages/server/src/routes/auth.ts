@@ -201,7 +201,7 @@ export async function loginRoute(
     return reply.send({
       token: accessToken,
       refreshToken,
-      user: { id: user.id, email: user.email, displayName: user.displayName, role: user.role },
+      user: { id: user.id, email: user.email, displayName: user.displayName, role: user.role, pricingMethod: user.pricingMethod },
       tenant: {
         id: tenant.id,
         name: tenant.name,
@@ -355,6 +355,7 @@ export async function meRoute(
         email: userData.email,
         displayName: userData.displayName,
         role: userData.role,
+        pricingMethod: userData.pricingMethod,
         visibilityProfile: getEffectiveProfile(userData.role, userData.visibilityProfile),
       },
       tenant: {

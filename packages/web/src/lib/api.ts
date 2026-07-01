@@ -277,6 +277,11 @@ export class ApiClient {
       if ((error as { unresolvedLayers?: unknown })?.unresolvedLayers) {
         err.details = (error as { unresolvedLayers: unknown }).unresolvedLayers;
       }
+      // Surface a server-provided `detail` (root-cause message) so 500s aren't opaque.
+      if ((error as { detail?: unknown })?.detail) {
+        err.details = (error as { detail: unknown }).detail;
+        err.message = `${message}: ${(error as { detail: unknown }).detail}`;
+      }
       throw err;
     }
 

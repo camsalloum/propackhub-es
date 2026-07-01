@@ -208,7 +208,7 @@ const EstimatesList = () => {
             Estimates
           </SectionTitle>
         </div>
-        <Link to="/templates" className="btn-primary text-center w-full sm:w-auto">
+        <Link to="/estimate/choose" className="btn-primary text-center w-full sm:w-auto">
           New estimate
         </Link>
       </div>
@@ -272,9 +272,9 @@ const EstimatesList = () => {
         <EmptyState
           icon={FileText}
           title="No estimates yet"
-          body="Pick a template to scaffold your first cost estimate. Saved quotes land here so the whole team can find them."
+          body="Start your first cost estimate from a template or from scratch. Saved quotes land here so the whole team can find them."
           action={
-            <Link to="/templates" className="btn-primary inline-flex">
+            <Link to="/estimate/choose" className="btn-primary inline-flex">
               Create your first quote
             </Link>
           }

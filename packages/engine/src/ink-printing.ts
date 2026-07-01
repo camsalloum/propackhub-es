@@ -3,9 +3,10 @@ import type { LayerMaterialRef } from './layer-stack';
 
 export type InkPrintingProcess = 'flexo' | 'rotogravure';
 
-/** Dry ink GSM ÷ ratio = on-press makeup solvent GSM (Excel model). Ratio from flexo/roto — not wide/narrow web. */
-export const INK_SOLVENT_RATIO_FLEXO = 1.5;
-export const INK_SOLVENT_RATIO_ROTOGRAVURE = 1.0;
+/** Parts of on-press makeup solvent per part of dry ink: makeup GSM = dry ink GSM × ratio.
+ *  Flexo needs 1 part solvent per part ink; rotogravure needs 2 (consumes more). */
+export const INK_SOLVENT_RATIO_FLEXO = 1.0;
+export const INK_SOLVENT_RATIO_ROTOGRAVURE = 2.0;
 
 const PE_FAMILY_CODES = new Set(['PE', 'LDPE', 'HDPE', 'MDPE', 'LLDPE', 'UHMWPE']);
 
@@ -85,7 +86,8 @@ export function calculateInkMakeupSolventCost(
   if (dryInkGsm <= 0 || inkSolventRatio <= 0) {
     return { costPerM2: 0, costPerKg: 0, dryInkGsm: 0, makeupGsm: 0 };
   }
-  const makeupGsm = dryInkGsm / inkSolventRatio;
+  // Multiplier model: makeup solvent = dry ink × parts-per-part (flexo 1, roto 2).
+  const makeupGsm = dryInkGsm * inkSolventRatio;
   const costPerM2 = (makeupGsm / 1000) * solventPrice;
   const costPerKg = totalGsm > 0 ? (costPerM2 / totalGsm) * 1000 : 0;
   return { costPerM2, costPerKg, dryInkGsm, makeupGsm };

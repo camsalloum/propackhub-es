@@ -686,6 +686,71 @@
   }
 
   /* ============================================================
+     INDUSTRIAL — technical steel-grey + blue on industrial white
+     (light). From the ProPackHub "Technical Component Library"
+     design: slate surfaces, steel-grey secondary text, blue accent.
+     The design's #3B82F6 blue fails AA as text on white, so the
+     accent uses the accessible blue-600 / blue-700 (R5) while
+     keeping the blue identity.
+     ============================================================ */
+  [data-theme="industrial"] {
+    --neutral-1:  248 250 252;
+    --neutral-2:  241 245 249;
+    --neutral-3:  226 232 240;
+    --neutral-4:  203 213 225;
+    --neutral-5:  148 163 184;
+    --neutral-6:  100 116 139;
+    --neutral-7:   71  85 105;
+    --neutral-8:   51  65  85;
+    --neutral-9:   30  41  59;
+    --neutral-10:  15  23  42;
+    --neutral-11:   8  14  30;
+    --neutral-12:   2   6  23;
+
+    --accent-1:  239 246 255;
+    --accent-2:  219 234 254;
+    --accent-3:  191 219 254;
+    --accent-4:  147 197 253;
+    --accent-5:   96 165 250;
+    --accent-6:   59 130 246;
+    --accent-7:   37  99 235;
+    --accent-8:   29  78 216;
+    --accent-9:   30  64 175;
+    --accent-10:  30  58 138;
+    --accent-11:  23  37  84;
+    --accent-12:  16  26  60;
+
+    --color-surface-base:   248 250 252;
+    --color-surface-raised: 255 255 255;
+    --color-surface-sunken: 238 242 246;
+    --color-surface-overlay:255 255 255;
+    --color-text-primary:    15  23  42;
+    --color-text-secondary:  71  85 105;
+    --color-text-inverse:   255 255 255;
+    --color-text-on-accent: 255 255 255;
+    --color-brand:           30  41  59;
+    --color-accent:          37  99 235;
+    --color-accent-text:     29  78 216;
+    --color-accent-soft:    219 234 254;
+    --color-focus-ring:      37  99 235;
+    --color-border:         203 213 225;
+    --color-border-strong:  148 163 184;
+    --color-success:         21 128  61;
+    --color-warning:        180  83   9;
+    --color-danger:         185  28  28;
+    --color-info:            29  78 216;
+    --color-success-soft:   220 252 231;
+    --color-warning-soft:   254 243 199;
+    --color-danger-soft:    254 226 226;
+    --color-info-soft:      219 234 254;
+    --color-badge-draft-bg: 254 243 199; --color-badge-draft-fg: 146  64  14;
+    --color-badge-quote-bg: 241 245 249; --color-badge-quote-fg:  15  23  42;
+    --color-badge-sent-bg:  219 234 254; --color-badge-sent-fg:   29  78 216;
+    --color-badge-won-bg:   220 252 231; --color-badge-won-fg:    21 128  61;
+    --color-badge-lost-bg:  254 226 226; --color-badge-lost-fg:  185  28  28;
+  }
+
+  /* ============================================================
      DENSITY presets
      ============================================================ */
   :root[data-density="comfortable"] { --density-scale: 1; }
@@ -1313,5 +1378,106 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .brand-mark { animation: none; }
+  }
+}
+
+/* ============================================================
+   INDUSTRIAL theme — NEUMORPHIC component treatments
+   ============================================================
+   The Industrial theme is a true "Soft UI" — adapted from PEBI's
+   proven neumorphism recipe (apps/pph styles/effects/neumorphism.css)
+   and re-tokenized for ES. The defining trait: canvas and cards
+   share one soft slate tone and elements EXTRUDE via a two-light-
+   source dual shadow (light top-left, dark bottom-right) instead of
+   white-on-grey contrast. Inputs are carved IN (sunken inset). All
+   scoped to `[data-theme="industrial"]` so no other theme is touched;
+   specificity (`[data-theme] .card` > `.card`) wins within the layer.
+   ============================================================ */
+@layer components {
+  /* Plain soft canvas — neumorphism reads best without a grid pattern. */
+  [data-theme="industrial"] body {
+    background-image: none;
+    background-color: rgb(var(--color-surface-base));
+  }
+
+  /* Raised neumorphic card: soft 145deg gradient + dual extrude shadow,
+     no border (depth comes entirely from light). */
+  [data-theme="industrial"] .card {
+    border: none;
+    border-radius: var(--radius-xl);
+    background-image: linear-gradient(
+      145deg,
+      color-mix(in srgb, rgb(var(--color-surface-raised)) 100%, white 7%),
+      color-mix(in srgb, rgb(var(--color-surface-raised)) 100%, black 5%)
+    );
+    box-shadow:
+      6px 6px 16px rgb(15 23 42 / 0.13),
+      -6px -6px 16px rgb(255 255 255 / 0.90);
+  }
+  [data-theme="industrial"] .card[data-interactive="true"]:where(:hover, :focus-visible) {
+    transform: translateY(-2px);
+    border: none;
+    box-shadow:
+      8px 8px 22px rgb(15 23 42 / 0.18),
+      -8px -8px 22px rgb(255 255 255 / 0.95),
+      0 0 0 1px rgb(var(--color-accent) / 0.28);
+  }
+  [data-theme="industrial"] .card[data-interactive="true"]:active {
+    transform: translateY(0);
+    box-shadow:
+      inset 4px 4px 10px rgb(15 23 42 / 0.12),
+      inset -4px -4px 10px rgb(255 255 255 / 0.85);
+  }
+
+  /* Sunken neumorphic inputs — carved into the surface. */
+  [data-theme="industrial"] :is(.input, .input-compact, .input-field) {
+    border: none;
+    border-radius: var(--radius-lg);
+    background-color: rgb(var(--color-surface-sunken));
+    background-image: none;
+    box-shadow:
+      inset 4px 4px 8px rgb(15 23 42 / 0.11),
+      inset -4px -4px 8px rgb(255 255 255 / 0.92);
+  }
+  [data-theme="industrial"] :is(.input, .input-compact, .input-field):hover {
+    border: none;
+  }
+  [data-theme="industrial"] :is(.input, .input-compact, .input-field):focus {
+    border: none;
+    background-color: rgb(var(--color-surface-raised));
+    box-shadow:
+      inset 4px 4px 8px rgb(15 23 42 / 0.11),
+      inset -4px -4px 8px rgb(255 255 255 / 0.92),
+      0 0 0 3px rgb(var(--color-focus-ring) / 0.30);
+  }
+
+  /* Secondary buttons become tactile neumorphic keys that press IN on click. */
+  [data-theme="industrial"] .btn-secondary {
+    border: none;
+    box-shadow:
+      4px 4px 8px rgb(15 23 42 / 0.12),
+      -4px -4px 8px rgb(255 255 255 / 0.88);
+  }
+  [data-theme="industrial"] .btn-secondary:hover {
+    box-shadow:
+      6px 6px 12px rgb(15 23 42 / 0.16),
+      -6px -6px 12px rgb(255 255 255 / 0.95);
+  }
+  [data-theme="industrial"] .btn-secondary:active {
+    box-shadow:
+      inset 4px 4px 8px rgb(15 23 42 / 0.14),
+      inset -4px -4px 8px rgb(255 255 255 / 0.85);
+  }
+
+  /* Primary button keeps the accent gradient but gains a soft accent halo. */
+  [data-theme="industrial"] .btn-primary {
+    box-shadow:
+      5px 5px 12px rgb(15 23 42 / 0.18),
+      -4px -4px 10px rgb(255 255 255 / 0.55);
+  }
+
+  /* Fully-rounded status indicators, per the technical design. */
+  [data-theme="industrial"] :is(.badge-success, .badge-info, .badge-warning, .badge-danger, .badge-live) {
+    border-radius: var(--radius-full);
   }
 }

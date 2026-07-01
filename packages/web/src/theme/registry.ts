@@ -23,6 +23,9 @@ export const THEMES: ThemeMeta[] = [
   { id: 'forest',   name: 'Forest Green',    kind: 'light', swatch: '#059669' },
   { id: 'frost',    name: 'Frost',           kind: 'light', swatch: '#6366F1' },
   { id: 'classic',  name: 'Classic',         kind: 'light', swatch: '#374151' },
+  // Technical steel-grey + blue on industrial white — from the ProPackHub
+  // "Technical Component Library" (Stitch) design.
+  { id: 'industrial', name: 'Industrial',    kind: 'light', swatch: '#2563EB' },
 ];
 
 export const DEFAULT_LIGHT: ThemeId = 'light';
@@ -254,6 +257,33 @@ const CLASSIC_OVERRIDES: Partial<Record<TokenKey, string>> = {
   danger: '#DC2626',
 };
 
+// Industrial — technical steel-grey + blue on industrial white (light). From
+// the ProPackHub "Technical Component Library" design: slate surfaces, steel
+// secondary text, and a blue primary accent. The design's #3B82F6 (blue-500)
+// fails AA as text on white (~4:1), so accent/accent-text use the accessible
+// blue-600 / blue-700 substitutes (R5.5) while preserving the blue identity.
+const INDUSTRIAL_OVERRIDES: Partial<Record<TokenKey, string>> = {
+  // Neumorphic surfaces: canvas and cards share one soft slate tone; elements
+  // extrude via dual shadows (see the [data-theme="industrial"] component
+  // treatments in index.css) rather than white-on-grey contrast.
+  'surface-base': '#F8FAFC',   // near-white canvas (matches PEBI)
+  'surface-raised': '#FFFFFF', // white cards
+  'surface-overlay': '#FFFFFF',
+  'text-primary': '#0F172A',   // slate-900
+  'text-secondary': '#475569', // slate-600 steel grey
+  brand: '#1E293B',            // slate-800 industrial dark
+  accent: '#2563EB',           // blue-600 (AA on white text)
+  'accent-text': '#1D4ED8',    // blue-700 (AA text on the soft surface)
+  'focus-ring': '#2563EB',
+  border: '#CBD5E1',           // slate-300 — used where borders remain
+  'border-strong': '#94A3B8',  // slate-400
+  success: '#15803D',
+  warning: '#B45309',
+  danger: '#B91C1C',
+  'badge-sent-bg': '#DBEAFE',
+  'badge-sent-fg': '#1D4ED8',
+};
+
 const withOverrides = (
   overrides: Partial<Record<TokenKey, string>>,
 ): Record<TokenKey, string> => ({ ...LIGHT_TOKENS, ...overrides });
@@ -268,4 +298,5 @@ export const THEME_TOKENS: Record<ThemeId, Record<TokenKey, string>> = {
   forest:   withOverrides(FOREST_OVERRIDES),
   frost:    withOverrides(FROST_OVERRIDES),
   classic:  withOverrides(CLASSIC_OVERRIDES),
+  industrial: withOverrides(INDUSTRIAL_OVERRIDES),
 };

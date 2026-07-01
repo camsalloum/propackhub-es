@@ -13,15 +13,12 @@ export interface LayerCardLayer {
 interface LayerCardProps {
   layer: LayerCardLayer;
   index: number;
-  total: number;
   showCost?: boolean;
   onEdit?: () => void;
   onFormula?: () => void;
   showFormula?: boolean;
   formulaOverridden?: boolean;
   onRemove?: () => void;
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
   onDragStart?: (index: number) => void;
   onDragEnter?: (index: number) => void;
   onDragEnd?: () => void;
@@ -33,15 +30,12 @@ const SWIPE_THRESHOLD = 72;
 const LayerCard = ({
   layer,
   index,
-  total,
   showCost = false,
   onEdit,
   onFormula,
   showFormula = false,
   formulaOverridden = false,
   onRemove,
-  onMoveUp,
-  onMoveDown,
   onDragStart,
   onDragEnter,
   onDragEnd,
@@ -148,27 +142,6 @@ const LayerCard = ({
               {layer.micron} µ · {(layer.gsm ?? 0).toFixed(1)} GSM
               {showCost && layer.costPerKg != null ? ` · $${layer.costPerKg.toFixed(2)}/kg` : ''}
             </div>
-          </div>
-
-          <div className="flex flex-col gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={onMoveUp}
-              disabled={index === 0}
-              className="w-11 h-8 text-xs rounded bg-surface-base disabled:opacity-30"
-              aria-label="Move layer up"
-            >
-              ↑
-            </button>
-            <button
-              type="button"
-              onClick={onMoveDown}
-              disabled={index >= total - 1}
-              className="w-11 h-8 text-xs rounded bg-surface-base disabled:opacity-30"
-              aria-label="Move layer down"
-            >
-              ↓
-            </button>
           </div>
 
           {showFormula && onFormula && (

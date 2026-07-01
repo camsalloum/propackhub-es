@@ -83,7 +83,7 @@ const Layout = () => {
   const bottomNav = [
     { name: 'Home', href: '/dashboard', icon: Home },
     { name: 'Quotes', href: '/estimates', icon: FileText },
-    { name: 'New', href: '/templates', icon: PlusCircle, accent: true },
+    { name: 'New', href: '/estimate/choose', icon: PlusCircle, accent: true },
     { name: 'Customers', href: '/customers', icon: Users },
     { name: 'More', href: '#menu', icon: Menu },
   ];

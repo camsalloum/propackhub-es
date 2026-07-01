@@ -89,7 +89,7 @@ export default function CustomersList() {
             <p className="text-sm text-text-secondary">{customers.length} customers</p>
           </div>
         </div>
-        <Link to="/templates" className="btn-primary inline-flex items-center space-x-2">
+        <Link to="/estimate/choose" className="btn-primary inline-flex items-center space-x-2">
           <Plus className="w-4 h-4" />
           <span>New Estimate</span>
         </Link>
@@ -115,7 +115,7 @@ export default function CustomersList() {
             title="No customers yet"
             body="Customers are auto-saved the first time you assign one to an estimate. Once added, they show up here with quote history."
             action={
-              <Link to="/templates" className="btn-primary inline-flex items-center gap-2">
+              <Link to="/estimate/choose" className="btn-primary inline-flex items-center gap-2">
                 <Plus className="w-4 h-4" />
                 <span>Start a new estimate</span>
               </Link>

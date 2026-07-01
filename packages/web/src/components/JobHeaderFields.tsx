@@ -55,6 +55,8 @@ export function JobHeaderFields({
   orderQuantityUnit,
   onOrderQuantityUnitChange,
   unitOptions,
+  orderQuantityHint,
+  dimensionHints,
   bagDimensionsPanel,
 }: {
   customerId: string;
@@ -80,6 +82,10 @@ export function JobHeaderFields({
   orderQuantityUnit?: string;
   onOrderQuantityUnitChange?: (unit: string) => void;
   unitOptions?: UnitOption[];
+  /** Tooltip for the order-quantity input — e.g. the entered qty converted to every unit. */
+  orderQuantityHint?: string;
+  /** Per-dimension tooltips (key → text), e.g. reel width → resulting LM/kg & pcs/kg. */
+  dimensionHints?: Record<string, string>;
   /** When set (bag configurator), replaces dimension field columns in the spec row. */
   bagDimensionsPanel?: ReactNode;
 }) {
@@ -197,7 +203,7 @@ export function JobHeaderFields({
 
             {showOrderQty && (
               <>
-                <SpecField label="Order quantity">
+                <SpecField label="Order quantity" title={orderQuantityHint ?? 'Order quantity'}>
                   <input
                     type="number"
                     min={0}
@@ -205,6 +211,7 @@ export function JobHeaderFields({
                     value={Number.isFinite(orderQuantity) ? orderQuantity : ''}
                     onChange={(e) => onOrderQuantityChange(Number(e.target.value) || 0)}
                     onFocus={selectOnFocus}
+                    title={orderQuantityHint}
                     className="input input-compact w-full text-center tabular-nums"
                   />
                 </SpecField>
@@ -243,7 +250,7 @@ export function JobHeaderFields({
                   <SpecField
                     key={f.key}
                     label={`${f.label}${f.unit ? ` (${f.unit})` : ''}${f.required ? ' *' : ''}`}
-                    title={f.label}
+                    title={dimensionHints?.[f.key] ?? f.label}
                   >
                     <input
                       type="number"
@@ -256,6 +263,7 @@ export function JobHeaderFields({
                       value={dimensions[f.key] ?? 0}
                       onChange={(e) => onDimensionChange(f.key, Number(e.target.value))}
                       onFocus={selectOnFocus}
+                      title={dimensionHints?.[f.key]}
                     />
                   </SpecField>
                 )

@@ -169,7 +169,7 @@ export default function CustomerDetail() {
             </div>
 
             <button
-              onClick={() => navigate(`/templates?customer=${id}`)}
+              onClick={() => navigate(`/estimate/choose?customer=${id}`)}
               className="btn-primary w-full mt-6"
             >
               + New estimate

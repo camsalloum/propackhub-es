@@ -56,6 +56,8 @@ interface TemplateForEdit {
   productSubtype?: string | null;
   materialClass?: string | null;
   structureType?: string | null;
+  /** Product-group margin over raw material, USD/kg (admin-defined). */
+  marginOverRmPerKgUsd?: string | number | null;
   defaultLayers?: Array<{
     layer_order?: number;
     layer_type: 'substrate' | 'ink' | 'adhesive';
@@ -294,6 +296,9 @@ export function TemplateBuilder({
   const [materialClass, setMaterialClass] = useState<'PE' | 'Non PE'>(initMaterialClass);
   const [structureTier, setStructureTier] = useState<StructureTier>(initTier);
   const [printMode, setPrintMode] = useState<PrintMode>(initPrintMode);
+  const [marginOverRmPerKgUsd, setMarginOverRmPerKgUsd] = useState<number>(
+    template?.marginOverRmPerKgUsd != null ? Number(template.marginOverRmPerKgUsd) : 0
+  );
   const [saving, setSaving] = useState(false);
   const [processesOpen, setProcessesOpen] = useState(false);
   // Whether the platform_admin wants to publish this as a platform standard.
@@ -668,6 +673,7 @@ export function TemplateBuilder({
             materialClass,
             structureTier,
             printMode,
+            marginOverRmPerKgUsd,
             defaultLayers: layerPayload,
             defaultProcesses: processes,
           });
@@ -721,6 +727,25 @@ export function TemplateBuilder({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. PE Plain Mono"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-brand mb-1">
+                Margin over raw material (USD/kg)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="input w-full max-w-xs text-sm"
+                value={marginOverRmPerKgUsd}
+                onChange={(e) => setMarginOverRmPerKgUsd(Number(e.target.value) || 0)}
+                placeholder="e.g. 0.50"
+              />
+              <p className="text-xs text-mist mt-1">
+                Default margin for this product group. Estimates created from this template
+                inherit it (used when the user's pricing method is margin per kg).
+              </p>
             </div>
 
             {/* Platform admin: save as platform standard */}

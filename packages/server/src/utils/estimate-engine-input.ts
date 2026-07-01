@@ -76,6 +76,14 @@ export function buildEngineEstimateFromRows(opts: {
     markupPercent: parseFloat(estimate.markupPercent),
     platesPerKg: parseFloat(estimate.platesPerKg),
     deliveryPerKg: parseFloat(estimate.deliveryPerKg),
+    // Pricing model v2 — present only when the estimate uses the new model.
+    pricingMethod: (estimate.pricingMethod as 'markup' | 'margin_per_kg' | null) ?? undefined,
+    marginValuePerKgUsd: estimate.marginValuePerKgUsd != null ? parseFloat(estimate.marginValuePerKgUsd) : undefined,
+    toolingChargeUsd: estimate.toolingChargeUsd != null ? parseFloat(estimate.toolingChargeUsd) : undefined,
+    toolingBilledToCustomer: estimate.toolingBilledToCustomer ?? undefined,
+    deliveryTerm: estimate.deliveryTerm ?? undefined,
+    deliveryChargeUsd: estimate.deliveryChargeUsd != null ? parseFloat(estimate.deliveryChargeUsd) : undefined,
+    wasteBands: (estimate.wasteBands as import('@es/engine').WasteBand[] | null) ?? undefined,
     processes: processes.map((p) => ({
       id: p.id,
       name: p.name,

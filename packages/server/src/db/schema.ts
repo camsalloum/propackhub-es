@@ -184,6 +184,8 @@ export const users = pgTable('users', {
   displayName: varchar('display_name', { length: 255 }).notNull(),
   role: userRoleEnum('role').notNull().default('user'),
   visibilityProfile: jsonb('visibility_profile'), // VisibilityProfile type from engine
+  /** Pricing method assigned by the owner/group manager: 'markup' | 'margin_per_kg'. */
+  pricingMethod: varchar('pricing_method', { length: 20 }).notNull().default('markup'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
@@ -333,6 +335,17 @@ export const estimates = pgTable('estimates', {
   markupPercent: decimal('markup_percent', { precision: 5, scale: 2 }).notNull(),
   platesPerKg: decimal('plates_per_kg', { precision: 12, scale: 4 }).notNull().default('0'),
   deliveryPerKg: decimal('delivery_per_kg', { precision: 12, scale: 4 }).notNull().default('0'),
+
+  // Pricing model v2 — when pricingMethod is set, the engine uses the
+  // quantity-band waste + lump-sum tooling/delivery + margin model.
+  pricingMethod: varchar('pricing_method', { length: 20 }),
+  marginValuePerKgUsd: decimal('margin_value_per_kg_usd', { precision: 12, scale: 4 }),
+  toolingChargeUsd: decimal('tooling_charge_usd', { precision: 12, scale: 2 }),
+  toolingBilledToCustomer: boolean('tooling_billed_to_customer').notNull().default(false),
+  deliveryTerm: varchar('delivery_term', { length: 32 }),
+  deliveryChargeUsd: decimal('delivery_charge_usd', { precision: 12, scale: 2 }),
+  /** Editable quantity-based waste bands (jsonb array of {minKg,maxKg,wastePercent}). */
+  wasteBands: jsonb('waste_bands'),
 
   // Currency snapshot
   displayCurrency: varchar('display_currency', { length: 3 }).notNull(),
@@ -526,6 +539,8 @@ export const structureTemplates = pgTable('structure_templates', {
   materialClass: varchar('material_class', { length: 50 }), // PE, Non PE
   structureType: varchar('structure_type', { length: 50 }), // Mono, Multilayer
   substrateOrigin: varchar('substrate_origin', { length: 50 }), // PE or null
+  /** Product-group margin over raw material, USD/kg. Admin sets it; estimates default from it. */
+  marginOverRmPerKgUsd: decimal('margin_over_rm_per_kg_usd', { precision: 12, scale: 4 }),
   displayOrder: integer('display_order').notNull().default(0),
   // Flag to indicate standard (built‑in) templates vs. tenant‑created (B2)
   isStandard: boolean('is_standard').notNull().default(true),

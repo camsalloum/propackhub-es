@@ -162,7 +162,17 @@ export function stripEstimateRow(row: any, profile: VisibilityProfile): any {
 
   if (profile.markupPercent) {
     visible.markupPercent = row.markupPercent;
+    // Pricing model v2 inputs (cost-sensitive — gated with markup).
+    visible.pricingMethod = row.pricingMethod;
+    visible.marginValuePerKgUsd = row.marginValuePerKgUsd;
+    visible.toolingChargeUsd = row.toolingChargeUsd;
+    visible.toolingBilledToCustomer = row.toolingBilledToCustomer;
+    visible.deliveryChargeUsd = row.deliveryChargeUsd;
   }
+  // Delivery term is quote metadata (not a cost) — always returned.
+  visible.deliveryTerm = row.deliveryTerm;
+  // Editable waste bands (quantity → waste %). Not cost-sensitive on their own.
+  visible.wasteBands = row.wasteBands;
 
   if (profile.materialCostPerKg) {
     visible.materialCostPerKg = row.materialCostPerKg ?? row.materialCostPerKgUsd;

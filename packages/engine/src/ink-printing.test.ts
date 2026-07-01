@@ -62,9 +62,9 @@ describe('ink printing defaults', () => {
     ).toBe('rotogravure');
   });
 
-  it('flexo uses higher ratio (less makeup solvent) than rotogravure', () => {
+  it('rotogravure uses a higher solvent multiplier (more makeup) than flexo', () => {
     expect(inkSolventRatioForProcess('flexo')).toBe(INK_SOLVENT_RATIO_FLEXO);
     expect(inkSolventRatioForProcess('rotogravure')).toBe(INK_SOLVENT_RATIO_ROTOGRAVURE);
-    expect(INK_SOLVENT_RATIO_FLEXO).toBeGreaterThan(INK_SOLVENT_RATIO_ROTOGRAVURE);
+    expect(INK_SOLVENT_RATIO_ROTOGRAVURE).toBeGreaterThan(INK_SOLVENT_RATIO_FLEXO);
   });
 });

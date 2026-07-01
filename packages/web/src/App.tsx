@@ -6,7 +6,7 @@ import { ThemeStatusToast } from './theme/ThemeStatusToast';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import EstimateEditor from './pages/EstimateEditor';
-import TemplatePicker from './pages/TemplatePicker';
+import EstimateStart from './pages/EstimateStart';
 import EstimatesList from './pages/EstimatesList';
 import CustomerDetail from './pages/CustomerDetail';
 import CustomersList from './pages/CustomersList';
@@ -79,7 +79,7 @@ function App() {
         >
           <Route path="" element={<Dashboard />} />
           <Route path="dashboard" element={<Dashboard />} />
-          <Route path="estimate/choose" element={<TemplatePicker />} />
+          <Route path="estimate/choose" element={<EstimateStart />} />
           <Route path="templates" element={<StandardTemplates />} />
           <Route path="my-templates" element={<Navigate to="/templates?tab=mine" replace />} />
           <Route

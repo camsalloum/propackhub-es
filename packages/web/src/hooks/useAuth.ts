@@ -6,6 +6,8 @@ export interface AuthUser {
   email: string;
   displayName: string;
   role: 'user' | 'tenant_admin' | 'platform_admin';
+  /** Pricing method assigned by the owner/group manager. */
+  pricingMethod?: 'markup' | 'margin_per_kg';
 }
 
 export interface AuthTenant {

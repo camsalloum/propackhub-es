@@ -53,18 +53,9 @@
 
 ### Adhesive
 
-- **Adhesive SB** for lamination (duplex default + Alu insert) — **GP / MP / HP** master rows with `laminationRecipe`
-- **Solvent costing:** (1) **ink makeup** — flexo/roto on SB ink (PE→flexo ÷1.5, else roto ÷1.0); (2) **lamination EA** from recipe per SB adhesive; (3) **cleaning** kg/job when SB ink present
-
-### Solvent catalog (RM type `solvent`)
-
-| Name | Density | Solid % | Notes |
-|------|---------|---------|-------|
-| Ethyl Acetate, Ethanol, IPA, MEK, Toluene | per seed | 0 | Individual solvents |
-| Normal Propanol, Normal Propyl Acetate, Methoxy Propanol, Ethoxy Propanol | per seed | 0 | Added 2026-06-25 |
-| **Solvent Common** | avg density | 0 | Default on estimate; **auto-avg** $/kg + density on master save |
-
-Estimate UI: compact Print/EA/Clean bar under layer table; **Solvents** expandable row (+ detail) with Cost/kg and Cost/m²; **Total RM** footer; solvent dropdown, editable $/kg, cleaning kg/job, **Formula** per SB adhesive (Option B). Master Data → Solvent tab: default cleaning kg/job.
+- **Adhesive SB** for lamination (duplex default + Alu insert)
+- **Solvent Base** optional row for solvent math
+- **Solvent-Mix:** global cost/kg + GSM ratio — when stack has SB ink and/or SB adhesive
 
 ### Microns
 
@@ -170,29 +161,6 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 ---
 
 ## Session log
-
-### 2026-06-29 — Draft/Saved estimates, Back auto-save, Notes, hover-only helper copy
-
-- **Status vocabulary:** ES UI now shows **Draft** (`status='draft'`) vs **Saved**
-  (`sent|won|lost`). DB enum unchanged (`draft|sent|won|lost`) for MES reuse.
-  Won/Lost hidden behind `VITE_ENABLE_MES_OUTCOME` (default off) — editor Outcome
-  panel + dashboard "Won" tile gated; code preserved for MES.
-- **Back button bug fixed:** old `handleCancel` showed "your draft stays in the list"
-  but never saved (new estimates were lost). Now `handleBack` silently auto-saves as
-  draft (preserves status for already-saved rows), no confirm dialog. If nothing is
-  savable (new estimate, no layer/material) it drops a one-shot `es:flashNotice` into
-  sessionStorage and EstimatesList shows it as a dismissible banner.
-- **Save controls:** explicit **Save draft** (status=draft, minimal guards) and **Save**
-  (status=sent, full `validateConfiguredEstimate`). `persistEstimate(mode)` with
-  `'draft'|'final'|'silent'`. Calculate uses `'silent'` (no status change).
-- **Notes:** free-text textarea (≤2000 chars) in Job details card → `estimates.notes`
-  (server already accepted it). Always sent so clearing round-trips.
-- **UI copy rule (app-wide):** instructional/clarification text is no longer inline —
-  moved to hover tooltips via new `components/SectionTitle.tsx` (heading + info icon,
-  `title`/`aria-label`). Converted EstimateEditor, EstimatesList, Dashboard,
-  ThemeSwitcher, MasterData. Exemptions: data/counts, field labels, status, placeholders,
-  Login hero. **Rule recorded in `.kiro/steering/estimation-studio.md` → "UI copy".**
-- Spec: requirements.md Req 17 extended (criteria 7-12). web + server builds green.
 
 ### 2026-06-11 — PRD + platform scope
 
@@ -445,7 +413,7 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 **Solution:** Auto-seed 14 platform master materials on tenant registration.
 
 **Master materials added:**
-- **Substrates (47 grades from Master Data.xlsx):** BOPP, PET, PE, CPP, PA, ALU, PAPER, SLEEVE, SPECIALTY families — see `master-materials-seed.json`
+- **Substrates (10):** LDPE Natural, LDPE Shrink, PET Transparent, PET Metalized, BOPP Transparent, BOPP White, BOPP Metalized, Aluminium Foil, Nylon, Paper Kraft
 - **Inks (2):** Ink SB (30% solid, $12/kg), Ink UV (100% solid, $15/kg)
 - **Adhesives (2):** Adhesive SB ($6.50/kg), Adhesive WB ($5.80/kg)
 
@@ -706,715 +674,184 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 6. Mark complete items in `ES_BUGS_AND_PRD_GAPS.md`
 7. All changes still **uncommitted** — user to commit when ready
 
-### 2026-06-20 — Substrates Master import + tenant sync
+### 2026-07-02 — Draft estimate load 500 fix (process fallback)
 
-**Context:** User flagged substrate RM library not fully applied from `Substrates Master.xlsx` (46 grades). Prior session had expanded seed JSON manually but import script was broken and existing tenants were not updated.
+**Context:** User reported two saved draft estimates returning `500` on `GET /api/v1/estimates/:id` and showing zero manufacturing/operating cost before failure.
+
+**Root cause:** `getEstimateRoute` tried to insert fallback process rows during read when legacy drafts had zero `processes`. In environments where new process columns were not fully migrated (`process_key`, `process_quantity`, `cost_per_kg_usd`), this write-on-read path could throw and crash the request.
+
+**Fix applied:** `getEstimateRoute` now resolves fallback processes **in-memory only** (template default processes + master-data process defaults) and returns them in the response without DB inserts.
+
+**Result:** Legacy drafts can load without server write side-effects, and Mfg/Operating process data is available to the editor response.
+
+**Note:** Server `typecheck` still has pre-existing unrelated errors in `templates.ts`, `proposal-pdf.ts`, and some test files.
+
+### 2026-07-02 — Draft estimate 500 follow-up (legacy `processes` columns)
+
+**Context:** User still hit 500 after initial hotfix.
+
+**Likely root cause:** Some environments still run with older `processes` table schema, so Drizzle `select().from(processes)` can throw `column does not exist` before fallback logic executes.
+
+**Fix applied:** Added compatibility path in `getEstimateRoute`:
+- Try normal Drizzle select first.
+- If Postgres `undefined_column` (42703), run a legacy-safe raw SQL select with only old columns.
+- Map rows to modern API shape with defaults (`processKey=null`, `processQuantity=1`, `costPerKgUsd='0'`).
+
+**Result:** Legacy drafts should load even before full DB migration.
+
+### 2026-07-02 — Legacy draft operating-cost fallback in calculate path
+
+**Context:** User confirmed 500 was gone, but old drafts still showed `Manufacturing & Operating = USD 0.00/kg` while new estimates calculated correctly.
+
+**Root cause:** `calculateAndPersistEstimate` still relied on DB `processes` rows only. Legacy drafts created before process persistence had no rows (or old-row shape), so operation cost remained zero.
+
+**Fix applied:** In `estimate-calculation.ts`:
+- Added legacy-safe `processes` read fallback for missing columns (`42703`).
+- If no process rows exist, derive fallback process rows from template default processes + master process reference (same business defaults used in instantiate/get fallbacks).
+- Feed these derived rows into engine calculation so old drafts compute operating cost.
+
+**Result:** Old drafts should now calculate non-zero manufacturing/operating cost without deleting/recreating the estimate.
+
+### 2026-07-02 — Legacy draft save compatibility (`processes` inserts)
+
+**Context:** User then hit `PATCH /estimates/:id` 500 with Postgres error: `column "cost_per_kg_usd" of relation "processes" does not exist`.
+
+**Root cause:** Save paths were still inserting modern process fields into older DB schema.
+
+**Fix applied:** Added `insertProcessCompat()` in `routes/estimates.ts` and switched process inserts in create/update/requote/duplicate routes to use it.
+- Primary path: Drizzle insert with full modern fields.
+- Fallback path (on missing-column error): raw legacy SQL insert with old column set only.
+
+**Result:** Legacy drafts can be saved/updated without crashing on old `processes` table shape.
+
+### 2026-07-02 — Transaction-abort follow-up
+
+**Context:** User still saw `current transaction is aborted` on PATCH after compatibility helper.
+
+**Root cause:** In transactional update flow, first failed modern insert still aborted the SQL transaction before fallback could run.
+
+**Fix applied:** Added upfront schema detection (`detectProcessInsertMode`) using `information_schema.columns` and selected insert mode before entering writes.
+- `modern` mode: Drizzle insert with new fields.
+- `legacy` mode: raw SQL insert with old columns only.
+- Applied to create/update/requote/duplicate process insert paths.
+
+**Result:** No probe-failure SQL inside transaction; legacy save flow should complete without TX-aborted errors.
+
+### 2026-07-02 — Scope regression fix (`processInsertMode`)
+
+**Context:** User reported repeated 500 with explicit message: `processInsertMode is not defined`.
+
+**Root cause:** `processInsertMode` was referenced in `updateEstimateRoute` but not declared in that function scope.
+
+**Fix applied:** Added `const processInsertMode = await detectProcessInsertMode(db);` in update route and removed stray unused declaration in calculate route.
+
+### 2026-07-02 — User-reported repeat repro handled
+
+User reproduced the same ReferenceError again. Re-opened `updateEstimateRoute` and verified the active runtime path; re-applied explicit `processInsertMode` declaration immediately after DB init in that function to guarantee scope availability before transaction block.
+
+### 2026-07-02 — Main issue fix: legacy draft Mfg/Op showing USD 0.00/kg
+
+**Context:** Server startup/save errors were fixed, but user’s main complaint remained: old drafts showed `Manufacturing & Operating = USD 0.00/kg`.
+
+**Root cause:** In legacy schema environments, `processes.costPerKgUsd` can be absent/zero. UI breakdown logic relied mostly on `costPerKgUsd` or master-data code/label matching; when both failed, process cost stayed zero.
+
+**Fix applied (web):**
+- In `EstimateEditor.tsx`, process normalization now derives fallback per-kg cost from `costPerHour / speedValue` when `speedBasis === 'kg_per_hour'` and persisted `costPerKgUsd` is missing/zero.
+- Same fallback added in runtime Mfg/Op breakdown reducer to avoid rendering zero for legacy rows.
+
+**Result:** Existing legacy drafts now show non-zero Mfg/Operating cost after load/save without requiring immediate DB migration.
+
+### 2026-07-02 — Template process authority + scratch process gate
+
+**Rule:** Manufacturing processes come from the **template** (`default_processes` with `process_quantity`) for template-based quotes — not re-derived at quote time.
+
+**Bug:** Legacy DB rows with `process_key` null caused GET/calculate to skip template reconcile (only ran when zero rows). Lamination ×2 / extrusion were lost on reload.
+
+**Fix:** `resolveEstimateProcesses()` in `utils/estimate-processes.ts` — shared by GET + calculate; reconciles in-memory when rows empty or legacy. Editor: `EstimateProcessesPanel` + validation gate before Quantity Slabs. Scratch builds must pick processes in Structure first.
+
+**End-of-session status (2026-07-02):** Owner still sees **1.20** not **1.90** on Triplex. Scratch still seeds layers; process gate weak. **Read:** `docs/PROCESS_COSTING_AND_ESTIMATE_FLOW_HANDOFF.md` before next fix attempt.
+
+**Why 1.20 persists (summary):**
+- Reconcile skips when DB has `process_key` but wrong `process_quantity` (all ×1).
+- `findFirst` template may hit older row without extrusion / lamination ×2.
+- Seed JSON still has old 3-process triplex defaults.
+- UI `processesState` may not reflect server reconcile; client calc does not require processes.
+
+### 2026-07-02 — Part B Phase 0 complete (shared derivation engine)
+
+**Scope:** Implemented only Part B Phase 0 in `packages/engine` (no web/server wiring).
 
 **Delivered:**
-- `master-materials-io.ts` — reads Excel sheet `Substrate Costing Master` columns (`Substrate Family`, `Substrate Grade`, `Density (g/cm3)`, `Hoover`, `User Price`, `Market Price`); preserves 4 ink/adhesive rows
-- Fixed `update-materials-from-excel.ts` (path resolution, default `xlsx` import, column mapping)
-- `syncMaterialsForTenant` in `seed-materials.ts` — upsert by `substrateGrade`/`name` (substrates) or `type`+`name` (ink/adhesive); legacy rows left in place
-- `npm run db:sync-materials` — backfills all tenants
-- Regenerated `master-materials-seed.json`: **50 materials** (46 substrates + 4 ink/adhesive); fixed bad `hoover` values (e.g. `=B2` → `BOPP Transparent`)
+- Added pure `deriveProcessesFromStructure(input, catalog)` in `packages/engine/src/derive-processes.ts` with B.2 rules:
+  - extrusion default enabled qty 1 (override supports 1 or 2)
+  - printing when stack has ≥1 ink layer
+  - lamination qty = adhesive-layer count
+  - slitting for roll/sleeve
+  - pouch/bag/seaming by product type
+  - per-process `costPerKgUsd` from provided catalog
+- Added `computeStructureSignature(layers, productType)` in `packages/engine/src/structure-signature.ts` (stable deterministic hash).
+- Exported both modules from `packages/engine/src/index.ts`.
+- Added `packages/engine/src/derive-processes.test.ts` golden + edge tests:
+  - Triplex printed = 1.90
+  - Mono PE printed = 1.30
+  - Commercial printed pouch = 2.10
+  - edges: 0 adhesives, 3 adhesives, no ink, extrusion qty override.
 
-**Commands:**
-```bash
-npm run update-materials      # Excel → master-materials-seed.json
-npm run db:sync-materials     # seed JSON → all tenant DBs
-```
+**Validation:**
+- `npm run build --workspace=packages/engine` ✅
+- `npm run test --workspace=packages/engine` ✅ (16 files, 176 tests)
 
-**Verified:** import + sync on 34 tenants (+34 inserted, 1666 updated).
+### 2026-07-02 — Part B Phase 1 started/completed (schema + migration patch)
 
-**Fix (same day):** User Price vs Market Price — `costPerKgUsd` ← Excel **User Price**; `marketPriceUsd` ← Excel **Market Price** or defaults to User Price (both editable in Library). Tenant admins always get full material prices from API (fixes `$NaN` from visibility stripping).
-
-**Library refresh buttons:**
-- **Refresh from Excel** — `POST /api/v1/materials/refresh-from-excel` (tenant_admin+): reads `Substrates Master.xlsx` → seed JSON → upsert tenant library (platform_admin syncs all tenants)
-- **Refresh market prices** — `POST /api/v1/materials/refresh-prices`: free Yahoo Finance polymer futures (USD/lb→kg), family conversion factors, grade premium vs family avg user price; **never changes User Price**; ALU skipped (no free feed)
-
-**Library inline price save (same day):** Replaced blur-only save with per-row **Save prices** / **Cancel** when User or Market $/kg is edited; Enter saves, Escape cancels; drafts cleared on fetch/successful save.
-
-**Substrate sync audit implementation (2026-06-20):**
-- Dynamic substrate families in Library (from DB + defaults); free-text family in Add Material (datalist)
-- Excel refresh reports inserted/updated/orphans; optional prune on refresh; **Prune orphans** button; `npm run db:prune-orphan-substrates`
-- `SUBSTRATES_EXCEL_PATH` env for production Excel location
-- Category filter in Library; hierarchical material picker in EstimateEditor (`materialTaxonomy.ts`)
-- `POST /api/v1/templates` + **Save as Template** in estimate editor
-- Engine throws `MissingMaterialsError` instead of $0 placeholder; API returns 400
-- Mark-sent persists proposal PDF to `uploads/proposals/`; `GET /estimates/:id/proposals` + `GET /proposals/:id/pdf`
-
-### 2026-06-20 — Master Data.xlsx (single platform workbook)
-
-**Context:** User renamed workbook to **Master Data.xlsx** and consolidated Excel Name Manager so all lists live in one file (no external `Costing_form ES.xlsx` refs). ES must use only this workbook for platform master data.
-
-**Architecture:**
-
-| Layer | Role |
-|-------|------|
-| `Master Data.xlsx` (project root) | Platform master — sheets: Substrate, Ink & Coating, Adhesive, Packaging, Unit, PT, RM Type |
-| `master-materials-seed.json` | Built from Excel Substrate sheet + 4 ink/adhesive costing rows (`npm run update-materials`) |
-| `master-data-reference.json` | Named-list sheets (PT, Unit, RM Type, Packaging, Ink & Coating, Adhesive) — reference for future UI/API |
-| Tenant `materials` table | Seeded on **first registration** from seed JSON; user additions via Library stay in PostgreSQL only |
-
-**Env:** `MASTER_DATA_EXCEL_PATH` (preferred); legacy `SUBSTRATES_EXCEL_PATH` still accepted.
-
-**Commands:**
-```bash
-npm run update-materials      # Master Data.xlsx → seed + reference JSON
-npm run db:sync-materials     # seed → all tenants (upsert)
-npm run db:prune-orphan-substrates
-```
-
-**Current import (2026-06-20):** 51 materials — **47 substrates** + 4 ink/adhesive. Reference lists synced to `master-data-reference.json` (Adhesive sheet empty in workbook — fix named range in Excel when populated).
-
-**Code:** `master-materials-io.ts` (`resolveMasterDataExcelPath`, `readMasterDataReference`, `writeMasterDataReference`); refresh service writes both JSON files; Library UI strings + prune script updated.
-
-**User Excel note:** Populate `Adhesive` sheet and point Name Manager `Adhesive` range to local sheet (was external ref in prior audit).
-
-### 2026-06-20 — Full Master Data refresh (all sheets → UI)
-
-**Context:** User expected **Refresh from Excel** to sync every workbook sheet, not substrates only.
+**Scope:** Implemented Part B Phase 1 only: estimate flags/signature columns + idempotent SQL patch.
 
 **Delivered:**
-- `buildMasterMaterialsFromExcel` now imports **Ink & Coating** (catalog ink rows), **Adhesive** list, **Packaging** (family `Packaging`), plus Substrate sheet + 4 costing ink/adhesive rows
-- `master-data-reference.json` + `GET /api/v1/master-data/reference` — PT, Unit, RM Type lists for estimate UI
-- **EstimateEditor:** product type buttons + order quantity units from Excel reference
-- **Library:** Packaging filter tab; refresh summary shows counts per sheet category
-- Prune orphans extended to ink/adhesive/packaging catalog rows (generic costing rows preserved)
-
-**Counts after import:** 66 materials — 47 substrates + 3 packaging + 13 ink + 3 adhesive; reference: 3 PT, 5 units, 4 RM types.
-
-### 2026-06-20 — Structured Excel tables (Family, Grade, Solid %)
-
-**Context:** User reformatted Ink & Coating, Adhesive, Packaging sheets to match Substrate layout (Family, Grade, Density, Solid %, Hoover, User Price). Deep sync review requested.
-
-**Excel layout (Master Data.xlsx):**
-
-| Sheet | Headers |
-|-------|---------|
-| Substrate | Substrate Family, Substrate Grade, Density (g/cm3), Solid %, Hoover, User Price, Market Price |
-| Ink & Coating | Family, Grade, Density, Solid %, Hoover, User Price |
-| Adhesive | Family, Grade, Density, Solid %, Hoover, User Price |
-| Packaging | Family, Grade, Density, Solid %, Hoover, User Price |
-| Unit | Units (table) |
-| PT | Product Type |
-| RM Type | RM Type |
-
-**Fixes applied:**
-- Rewrote `master-materials-io.ts` — unified structured parser; reads sheets directly (not broken Name Manager refs)
-- Sync keys: `family + grade + hoover` for substrate, ink, adhesive, packaging (no name-only conflicts)
-- Costing keys from Excel: `ink-sb` = first Solvent Based row (Common Colors); `ink-uv` = first UV-LED row; `adhesive-sb/wb/mono-component` from Family
-- No duplicate hardcoded Ink SB / Adhesive SB rows when Excel sheets populated
-- `repair-master-data-excel.py` — restores Excel Tables (auto-expand) + Name Manager structured refs
-- ~~`fix-master-data-excel.ts`~~ — **do not use** (Node xlsx destroyed tables → `#REF!`)
-
-**Excel Tables + Name Manager:**
-
-| Table name (ListObject) | Sheet | Name Manager (friendly) |
-|-------------------------|-------|-------------------------|
-| tblSubstrates | Substrate | SubstrateFamily, BOPP_Transparent |
-| tblInkCoating | Ink & Coating | InkCoating |
-| tblAdhesive | Adhesive | Adhesive |
-| tblPackaging | Packaging | Packaging |
-| tblUnits | Unit | Unit |
-| tblPtypes | PT | Ptypes |
-| tblRMTypes | RM Type | Type |
-
-**Excel repair dialog fix:** Table `displayName` must not equal a defined name (e.g. table `Adhesive` + name `Adhesive` corrupted table3.xml). Tables use `tbl*` prefix; names stay user-friendly.
-
-**Commands:** `npm run repair-master-data-excel` → `npm run update-materials` → Library **Refresh from Excel**
-
-**Never** rewrite Master Data.xlsx with Node `xlsx` — use openpyxl repair script only.
-
-### 2026-06-20 — Session close: Master Data sync hardening
-
-**Bugs fixed this session:**
-1. **Refresh only substrates in UI** — prune compared stale in-memory keys after update → deleted all ink/adhesive/packaging; fixed in `seed-materials.ts` (track `syncedIds`).
-2. **Legacy adhesive rows reappearing** — hardcoded Adhesive SB/WB injected on refresh; Excel Adhesive sheet is now sole source; costing keys map to Solvent Base/Less/Mono Component.
-3. **Excel #REF! / repair dialog** — Node `xlsx` stripped ListObjects; `repair-master-data-excel.py` (openpyxl) recreates tables; `tbl*` table names avoid Name Manager collision (`Adhesive` name ≠ `Adhesive` table).
-4. **Add Material missing Packaging** — modal now has Packaging type (stored as `substrate` + family `Packaging`).
-
-**Current state (66 materials from Excel):** 47 substrates + 13 ink + 3 adhesive + 3 packaging; `GET /api/v1/master-data/reference` for PT/units.
-
-**Ops checklist for new session:**
-```bash
-npm run repair-master-data-excel   # only if Excel tables/names break
-npm run update-materials
-# Restart API, then Library → Refresh from Excel
-```
-
-**Do not:** edit `Master Data.xlsx` with Node `xlsx` or `fix-master-data-excel.ts`.
-
-**Uncommitted** — user to commit when ready.
-
-### 2026-06-20 — Standard Templates admin + material relink
-
-**Problem:** Template `defaultLayers` had null `materialId` after Excel library refresh; instantiate created estimates with 0 layers. TemplatePicker required two clicks (select + Continue).
-
-**Fixes:**
-1. **`template-material-lookup.ts`** — shared `ref_material_key` → tenant material id map (substrates, Ink SB/UV fallbacks, Adhesive SB = Solvent Base).
-2. **`relinkTemplatesForTenant`** — runs on GET/instantiate; updates stored `materialId` on all templates.
-3. **Instantiate** — resolves `materialId` at runtime if still missing.
-4. **API** — `PATCH /api/v1/templates/:id`, `DELETE /api/v1/templates/:id` (standard soft-deactivate admin-only; My Templates hard delete).
-5. **UI** — `/templates` Standard Templates page in left nav (browse, admin edit/delete, My Templates tab); TemplatePicker single-click → editor; Save as Template → My Templates.
-
-**User flow:** New estimate → pick standard → edit → Save as Template → appears under My Templates.
-
-### 2026-06-20 — Master Data + Templates hardening (unified audit plan)
-
-**P0 DB bootstrap:** Removed root `drizzle-orm`/`pg`/`xlsx` conflict; committed `packages/server/scripts/schema-patches.sql` + `setup-db.sql`; `.gitignore` allows patch SQL; deleted `check-cols.cjs`; CI `db:push` no longer masked with `|| true`.
-
-**P1 Excel integrity:** `costPerKgUsd` = User Price, fallback Market Price; `preserveSeedPricesWhenExcelBlank` for ink/adhesive canonical keys when Excel blank; platform `PUT /master-materials` read-only; `platform_admin` refresh syncs all tenants.
-
-**P2 Tenant customization:** `materials.priceSource` (`excel`|`manual`), `isTenantOnly`, `costingKey`; manual prices skipped on Excel sync; material CRUD admin-only; tenant-only rows exempt from prune.
-
-**P3 Template linking:** `TEMPLATE_REF_TO_MASTER_KEY` map (`bopp`→`bopp-transparent`, `ldpe-shrink`→`pe-shrink`); lookup uses `costingKey` first; stale UUID falls back to `ref_material_key`; relink after Excel refresh; instantiate **409** on unresolved layers; My Templates save `ref_material_key` from `costingKey`.
-
-**Verification:** `npm run verify-template-links`; server tests 12/12; engine 20/20.
-
-### 2026-06-20 — Excel-driven reference lists (PT, Printing Web, Units)
-
-**Excel sheets:** PT now has `Product Type` + `Code` columns; new **Printing Web** sheet (`Printing Web | Code | Ink System | Solid %`). `npm run repair-master-data-excel` creates them if missing.
-
-**Pipeline:** `readMasterDataReference` → `master-data-reference.json` on `update-materials` / Library Refresh → `GET /api/v1/master-data/reference` → UI.
-
-**UI:** EstimateEditor, StandardTemplates, TemplatePicker use `useMasterDataReference()` — no hardcoded product type / printing web options (fallback only if API fails).
-
-**Note:** Engine still supports `roll` | `sleeve` | `pouch` and `wide_web` | `narrow_web` only — Excel `Code` must use those slugs until DB/engine are generalized.
-
-### 2026-06-20 — Template classification drives substrate picker
-
-**Engine:** `template-classification.ts` — PE Mono → PE substrates only; Non PE Mono → no PE; Multilayer → all families; sleeve → SLEEVE/PET.
-
-**UI:** Standard Templates + EstimateEditor (when `dimensions.templateClassification` from template instantiate) filter substrate materials by classification. Changing class/structure prunes invalid layer materials.
-
-**UX:** Edit modal — 3 fields one row; Back + X + Escape; double-click card opens edit.
-
-**UX:** Estimate editor no longer shows Printing Web Class. Users add **Ink & Coating** as a layer type; material dropdown filters to `type === 'ink'` (same pattern for substrate/adhesive).
-
-**Costing:** Ink system from layer `isSolventBased` + flexo/roto for SB makeup (`ink-printing.ts`). `stackNeedsSolventMix` gates solvent block. `derivePrintingWebClass` → DB metadata only (UV ink → `narrow_web`).
-
-**Persistence:** `printing_web_class` column kept for compat; auto-derived on create/update from layer materials. Template instantiate + Standard Templates admin derive same way; printing web dropdown removed from template editor.
-
-### 2026-06-20 — In-app Master Data (Excel retired as source of truth)
-
-**Goal:** Platform admin manages all master materials + reference lists in the app; changes auto-sync to all tenants — no Excel file or refresh buttons.
-
-**Schema:** `platform_master_materials`, `platform_reference_items` (+ `platform_reference_category` enum) in `schema-patches.sql`.
-
-**Service:** `platform-master-data.ts` — CRUD, `buildMasterDataReferenceFromDb`, `syncPlatformMasterToAllTenants`, `ensurePlatformMasterSeeded` (one-time import from bundled JSON on empty tables; placeholder costs for blank ink/adhesive: $12/$8).
-
-**API:** `GET/POST/PATCH/DELETE/PUT /api/v1/platform/master-data/materials`, `PUT /api/v1/platform/master-data/reference/:category`, `GET /api/v1/master-data/reference` reads DB. `POST /api/v1/materials/sync-from-platform` replaces Excel refresh (legacy endpoint delegates to platform DB).
-
-**UI:** `/platform/master-data` — tabbed admin (substrates, ink, adhesive, packaging, PT, units, printing web, RM types). `MasterDataProvider` + `useMasterDataReference` invalidate on save → Library + EstimateEditor reload materials/dropdowns live.
-
-**Removed from Library:** Refresh from Excel, Prune orphans (platform save auto-syncs). Excel scripts kept for optional one-time import only.
-
-**Nav:** Master Data (platform_admin); `/platform/master-library` redirects.
-
-### 2026-06-20 — Master Data cleanup + TemplatePicker classification grid
-
-**Removed tabs from Master Data page:** `Printing Web`, `Ink Families`, `Adhesive Families` are all derived/absorbed — removed from `REF_TABS` and `RefTab` type (DB enum + server fn unchanged, backward-safe).
-
-**`templateCatalog.ts` — new exports:** `getTemplateClassification()` (returns `{ materialClass, isPrinted, structure }`), `TemplateStructureTier`, `ClassFilter`, `matchesClassFilter()`.
-
-**`TemplatePicker.tsx` — full rebuild:** 4-tier classification grid (All → PE/Non PE → Printed/Plain → Mono/Duplex/Triplex/Quadriplex), cumulative AND filter, client-side, no API round-trip. Template cards shown inline with LaminateVisualizer; clicking a card calls `instantiateTemplate`. Disabled cells (grey) when count=0 for that combination. Blank canvas buttons remain at bottom.
-
-### 2026-06-21 — RM Types closed-loop wiring (Library ↔ Master Data)
-
-**Problem:** Adding "Plate" to Master Data → RM Types did nothing — the Library page had hardcoded filter tabs and the Add Material modal had hardcoded type options. The `rm_type` reference was orphaned.
-
-**Fix — backend:** `buildMasterDataReferenceFromDb()` now returns `rmTypeRows: [{label, code}]` alongside `rmTypes: string[]`. Added `deriveRmTypeCode()` helper that maps standard labels to their DB type codes (`substrate`/`ink`/`adhesive`/`packaging`) and custom labels to kebab slugs. `enrichMasterDataReference()` now produces `rmTypeOptions: [{label, code}]` in the API response.
-
-**Fix — frontend:** `MasterDataReferenceState` now includes `rmTypeOptions`. The `MasterDataProvider`, `useMasterDataReference` hook, and `api.ts` types all carry the new field with `DEFAULT_RM_TYPE_OPTIONS` as fallback.
-
-**Library page fully dynamic:** Filter tabs are now rendered from `rmTypeOptions` — "Plate" added in Master Data instantly appears as a filter tab. Filter logic: `ink`→`type='ink'`; `adhesive`→`type='adhesive'`; `packaging`→`type='substrate'&&family='Packaging'`; `substrate`→all substrates not claimed by custom types; custom code→`type='substrate'&&family=label`. Add Material modal type dropdown also driven by `rmTypeOptions`; selecting a custom type stores as `type='substrate', substrateFamily=label`.
-
-**Master Data RM Types tab:** Added Code column (monospace, auto-lowercased). Help text explains the code semantics. Delete button shows a contextual warning: stronger warning for standard types (substrate/ink/adhesive/packaging), informational warning for custom types — materials are NOT auto-deleted, only hidden from filters.
-
-### 2026-06-21 — MES-ready master data plan (doc only)
-
-**Deliverable:** [docs/MES_READY.md](./MES_READY.md) — phased plan (A–F) for platform↔tenant lineage, versioning, taxonomy, audit, external IDs. **Revised 2026-06-21** after live review: V1 prerequisites (§3) before MES phases; template_key compound rule; My Templates policy; service API key auth for change feed.
-
-### 2026-06-21 — V1 prerequisites §3.1–§3.4 (implemented)
-
-**P0 slab pricing:** Root cause was `calculateProcessCosts` ignoring `setupHours` — only run hours counted, so speed-based $/kg was constant across quantities. Fix: `totalCost = setupCost + runCost`. Per-slab loop in calculator already correct; server persist path unchanged. New engine test: 500 kg > 2,000 kg > 10,000 kg $/kg when setupHours > 0.
-
-**P0 engine build:** Root `postinstall` + `start:servers` pre-step + `RUN-ES.bat` step [3/5] build `@es/engine` before API start.
-
-**P1 JWT:** `@fastify/jwt` `sign.expiresIn: '7d'`.
-
-**P1 PDF:** `slabsUsdToDisplay()` helper; proposal PDF + on-demand generate use `result.slabs` per-tier prices, not header `salePricePerKg` repeated.
-
-### 2026-06-21 — V1 P2/P3 cleanup + MES Phase A
-
-**P2 TS:** `tsc --noEmit` clean on server (typed callbacks in platform-master-data, seed-*, proposal-pdf, routes).
-
-**P2 dead table:** Dropped `estimation_cost_snapshots` (schema + SQL patch); canonical audit table remains `estimation_costs`.
-
-**P3 Excel:** `git rm --cached` on tracked xlsx/lock/backups; `.gitignore` already excludes going forward.
-
-**P3 scripts:** `SETUP.md` script legend; `db:backfill-platform-keys` added; routine vs legacy marked.
-
-**MES Phase A:** `materials.platform_master_key` + `platform_synced_at`; key-first sync in `seed-materials.ts`; SQL unique index per tenant; backfill script; 3 unit tests on `findExistingMatch`.
-
-### 2026-06-21 — MES Phase B (versioning + estimate lineage)
-
-**Schema:** `platform_master_state` singleton; `estimates.master_data_version`, `source_template_key`; `layers.platform_master_key_snapshot`, `costing_key_snapshot`.
-
-**Versioning:** `getMasterDataVersion()` / `incrementMasterDataVersion()` on platform material + reference mutations; exposed on `GET /platform/master-data/reference`.
-
-**Write paths:** Estimate create/update/requote/copy + template instantiate stamp version; layer inserts use `buildLayerInsertValues()`; calculate refreshes snapshots + version.
-
-### 2026-06-21 — MES Phase C + D
-
-**Phase C:** `materials.item_class`; `price_source` enum value `platform` (excel legacy alias); taxonomy from platform RM types via `seed-categories.ts`; UNIQUE(category,code) on reference items; RM type delete guard (`ReferenceItemInUseError` 409).
-
-**Phase D:** `structure_templates.template_key`; compound keys on seed; `syncTemplateKeysForTenant`; `GET /templates?template_key=`; `POST /templates/instantiate` by key; tenant template auto-key.
-
-### 2026-06-21 — Fix GET /templates 500 (template_key collision)
-
-**Root cause:** Legacy duplicate standard rows (e.g. two `Laminates · Triplex`) both assigned `laminates-non-pe-triplex`; `syncTemplateKeysForTenant` updated rows one-by-one and hit `structure_templates_tenant_key_uq`. `ensureTemplatesForTenant` also ran key sync before duplicate prune.
-
-**Fix:** `resolveTemplateKeyAssignments()` — active row keeps canonical key, inactive duplicate gets `null`; two-phase null-then-assign updates. Removed key sync from `ensureTemplatesForTenant`. Route uses `prepareTemplatesForTenant()` (seed missing → prune → sync keys → relink).
-
-### 2026-06-21 — MES Phase E + F (audit, change feed, API docs)
-
-**Phase E schema:** `platform_master_audit_log`, `platform_service_keys`; `external_id` / `external_source` on platform materials, tenant materials, structure templates.
-
-**Audit:** Platform material + reference mutations append versioned entries via `appendMasterAuditEntries()`; actor stamped from admin JWT.
-
-**Change feed:** `GET /api/v1/platform/master-data/changes?since_version=` — auth via platform admin JWT or `X-ES-Service-Key` (`master_data:read`). Optional `include_snapshot=true`.
-
-**Service keys:** Admin CRUD at `/api/v1/platform/service-keys`; plain key returned once on create; SHA-256 hash stored.
-
-**Phase F:** [docs/API_MASTER_DATA.md](./API_MASTER_DATA.md) — integration contract for MES agents.
-
-**UI:** Library shows `platform_master_key` badge; Standard Templates shows `template_key` on cards.
-
-### 2026-06-21 — MES plan completion (remaining §14 UI + V1 nice-to-haves)
-
-**UI §14:** Master Data — read-only `key` + editable `external_id` / `external_source`; Estimate Editor admin lineage (master version, template key, layer key snapshots); My Templates section with tenant-key help text.
-
-**V1:** `POST /api/v1/auth/refresh`; PDF on-demand route consolidated to `buildProposalPdfBuffer` (removed duplicate HTML/puppeteer path).
-
-**Phase E polish:** Service-key rate limit 120/min on change feed; estimate API returns lineage fields; MES_READY checklist marked complete.
-
-### 2026-06-21 — RUN-ES.bat startup reliability
-
-**Problem:** Fixed 4s browser timer opened before API ready; duplicate `@es/engine` build (~18s); stale `node.exe` on :5001 caused `EADDRINUSE`.
-
-**Fix:** `kill-es-ports.bat` double-pass with exact port match (`findstr /C:":PORT "`); second kill before server start; `wait-and-open-browser.bat` polls `/health` then opens browser (avoids `start /b` quoting bug); `start:servers:dev` skips engine rebuild (bat step [3/5] only); `npm run start:servers` still builds engine for CLI use.
-
-### 2026-06-21 — Standard Templates UI: axis classification + readable cards
-
-**Classification:** Replaced single-bucket chips (PE·Plain, Labels, …) with the same 3-axis filter as TemplatePicker — **PE / Non PE**, **Plain / Printed**, **Mono / Duplex / Triplex / Quadriplex**. Selecting **Plain** shows all plain templates across material classes; filters combine with AND logic.
-
-**Cards:** Grid `1→2→3` columns (was `minmax(148px)` micro-cards); larger visualizer + `text-sm` titles; removed `truncate` / `line-clamp`; edit/delete moved beside content so names and `template_key` wrap fully.
-
-### 2026-06-21 — Template cards + classification flow (round 2)
-
-**Cards:** Full-width color stack bar (no tiny SVG labels) + readable layer list (`LDPE Natural · 45µ`) with type-colored dots; `text-base` titles.
-
-### 2026-06-21 — Template cards: numbered proportional stack bar
-
-**Cards:** Horizontal bar per template — segments **1, 2, 3…** numbered left-to-right; equal segment width (structure slots only, no stored µ). Color = layer type.
-
-### 2026-06-21 — Template = structure only; dimensions at estimate time
-
-**Edit template:** Layers = type + material only (no µ, no width). Save stores `default_micron: 0`, no job dimensions.
-
-**Instantiate:** Estimate created with layer materials, micron 0, dimension fields 0, `configureFromTemplate: true`. Editor shows configure banner; Structure tab for µ, Dimensions tab for width — no auto-calculate until user fills values.
-
-**Classification from layers (live in edit):** Ink layer → **Printed**. +1 substrate → **Duplex** (+2 → Triplex, +3 → Quadriplex). Adhesive alone stays Plain.
-
-### 2026-06-21 — Unified flows: templates picker + estimates filters
-
-**New estimate** (`/estimate/choose` → `/templates?new=1`): same catalog UI as Standard Templates + customer/job header + blank canvas. Single card grid, numbered stack bars.
-
-**Estimates list:** structure filters (PE/Plain/Duplex…), customer + status + search, **Re-quote** action (new prices).
-
-**DB:** `dimensions.estimateClassification` snapshot on template instantiate and on estimate layer save (server). Enables estimate list filtering.
-
-**Save as template:** Copies structure + classification only, not estimate dimensions or layer µ.
-
-**Structure model clarified:** DB stores **Mono / Multilayer** (auto from substrate count). Filter chips **Mono / Duplex / Triplex / Quadriplex** are **derived from substrate count in the layer stack** — not a separate edit field. Edit modal shows numbered stack preview + auto tier; no Mono/Multilayer dropdown.
-
-### 2026-06-21 — Integration complete: shared components + configure sync
-
-**Shared UI (mobile-ready):** `JobHeaderFields`, `TemplateStructureCard`, `ClassFilterPanel` — 44–48px touch targets; same card grid on `/templates` and `/templates?new=1`.
-
-**Configure flow:** `dimensionsForSave` strips `configureFromTemplate` on save; server `stripConfigureFromTemplateFlag` on PATCH; validate µ + dimensions before Save & Calculate; banner dismisses after first save; no client preview calc while configuring.
-
-**Schema:** `estimates.order_quantity_unit` column + patch (unit persists with order qty).
-
-**Layout:** Mobile bottom nav hidden on estimate editor and new-quote picker (`/templates?new=1`).
-
-### 2026-06-21 — Excel-style job header (2×2)
-
-**New estimate picker + editor:** Customer name | Job name · Product type | Order qty + unit — matches legacy Excel header. Dropdown options from `GET /master-data/reference` (`productTypeOptions`, `unitOptions`) via `useMasterDataReference`, not hardcoded.
-
-**Job header UI:** Full-width layout; compact fields (`input-compact`). Customer picker loads tenant customers from DB on focus.
-
-**Navigation:** Cancel on `/templates?new=1` (→ estimates list) and estimate editor (Back + Cancel). Blank canvas entry removed — all quotes start from a standard/my template.
-
-### 2026-06-21 — Job header UX polish (session close)
-
-**Layout:** Full-width pages (removed `max-w-7xl`); equal 2×2 grid for job header; `input-compact` sizing; product type / qty columns no longer use broken `max-w` caps.
-
-**Customer field:** `CustomerAutocomplete` — `w-full`, loads tenant customers from DB on focus (no 2-char minimum to see list); type to filter.
-
-**Data model reminder:** One estimate = one structure + dimensions + qty slabs. Same customer, different structure → separate estimates (customer reused from DB).
-
-**Not built (P2):** Side-by-side compare; estimate file attachments.
-
-### 2026-06-24 — Estimate save PATCH validation fix
-
-**Root cause:** After SC-3 added Zod validation on PATCH, `processes` loaded from GET (Postgres decimals as strings like `"50.0000"`) were sent back unchanged → `400 Validation failed` → nothing persisted (µ, GSM, cost overrides all appeared "not saved").
-
-**Fix:** `normalizeProcessesForSave` on load + in `buildSavePayload`; server `z.coerce.number()` on numeric estimate fields; per-layer `gsm` included in PATCH payload and `buildLayerInsertValues`; silent `fetchEstimate` after successful save to refresh from DB.
-
-**Follow-up (same day):** Browser was reusing cached GET responses after PATCH (`cache: 'no-store'` on client + `Cache-Control: no-store` on estimate GET/PATCH). Template `configureFromTemplate` in React Router state kept re-entering configure mode after save — cleared on first successful save. Green “Changes saved” banner added.
-
-### 2026-06-24 — Template resume after save (Cancel ≠ lost work)
-
-**User confusion:** Dialog “OK = open draft / Cancel = start new quote”. User Cancel’d old draft (e.g. QT-00146), edited new quote, saved, returned to Templates — dialog offered **older** draft again (list capped at 50 by `createdAt`) or they Cancel’d again → another blank quote → felt like save failed (HAR proved PATCH worked on F5).
-
-**Fix:** `sessionStorage` key `es:workingEstimate:{sourceTemplateKey}` set on save + instantiate. Templates page checks session first (“Continue your last saved quote?”). API `GET /estimates?sourceTemplateKey=&status=draft&limit=1` orders by `updatedAt` desc when filtering by template. Declining session resume skips second draft prompt and starts fresh.
-
-**User verified (end of session):** Save + resume flow OK. Dev console: `service-worker.js` “Failed to convert value to 'Response'” = PWA worker on localhost:5000 (not save-related); `searchAnalyzer.js` = browser extension.
-
-### 2026-06-25 — Permanent save model (template ≠ estimate)
-
-**Root cause (2-day struggle):** Templates are **blueprints**; estimates are **saved documents**. Every “Use template” click called `POST instantiate` → **new** estimate with seed µ defaults — even after Save succeeded on a different estimate. Dialogs + `sessionStorage` did not survive browser restarts. User saw “old values” because they were opening a **new** quote, not the saved one.
-
-**Permanent rules (updated 2026-06-25):**
-1. **Templates** (`/templates`) — **Standard | My Templates** tabs. Structures only: layers, materials, default µ. **No** customer, dimensions, or order qty on this page.
-2. **Card click** on any template → `POST instantiate` → **new** estimate → editor. User fills customer, job name, dimensions, order qty there, then **Save**.
-3. **Estimates** (`/estimates` + customer quote history) — saved customer-specific quotes (QT-…). Reopen drafts here, not from Templates.
-4. **Save as Template** (in editor) → copies structure to My Templates tab. Does not move the quote.
-5. **Pencil** on template card → edit structure blueprint only (TemplateBuilder).
-
-### 2026-06-25 — Solvent catalog + dry-GSM solvent mix
-
-- **Raw Materials → Solvent tab:** 9 named solvents + **Solvent Common** (average $/kg and density). Market-style seed prices; solid% = 0.
-- **Not a laminate layer** — `type: solvent` in DB; excluded from layer add dropdown.
-- **Estimate editor:** solvent dropdown (default Solvent Common), ink-to-solvent ratio (default **1.0** = 1:1), $/kg read-only from library; `solvent_material_id` on estimate.
-- **Engine:** `sum_dry_gsm` of SB ink/adhesive layers ÷ ratio × solvent $/kg / 1000. Defaults: ratio 1.0, cost from Solvent Common ($1.54/kg).
-- **PRD §7.3** updated for dry GSM ink/adhesive model (replaces liquid µ × solid%).
-- **Migration:** `drizzle/0004_solvent_materials.sql`; startup `ensureSolventCatalogSeeded()` for existing DBs.
-
-### 2026-06-25 — Lamination recipe costing (Option B)
-
-- **Adhesive master:** GP / MP / HP rows with `laminationRecipe` JSON (binder concentrate on layer; EA priced separately). Template ref `adhesive-sb` maps to GP default.
-- **Engine:** EA from recipe parts; cleaning 20 kg EA/job when SB ink present (allocated per order kg). Ink-to-solvent ratio superseded for adhesive.
-- **Estimate:** `laminationRecipeOverrides` per layer id; editable solvent $/kg; cleaning kg/job.
-- **Migration:** `drizzle/0005_lamination_recipes.sql`.
-
-### 2026-06-25 — Ink phase 2 + solvent UI polish (session end handoff)
-
-**Ink makeup (SB only, separate from lamination EA and cleaning):**
-- `ink-printing.ts`: PE substrate in stack → **flexo** (ratio **1.5**); else **rotogravure** (ratio **1.0**). Formula: `makeup_solvent_gsm = sum(sb_ink_dry_gsm) / ratio`.
-- Estimate field: `ink_printing_process` (`flexo` | `rotogravure`), migration **0006**.
-- UI: compact bar under layer table (Print Flexo/Roto, EA select, $/kg, Clean kg). Dev-only hint via `import.meta.env.DEV`.
-
-**Structure table — Solvents row:**
-- Last data row before footer; **+** expands detail (ink makeup, lamination EA, cleaning).
-- Columns match layers: **Cost/kg** and **Cost/m²** from engine (not UI GSM conversion).
-- Footer **Total RM** row: sum layers + solvents per kg and per m².
-
-**Engine output (calculator):**
-- `layerRmCostPerKg` / `layerRmCostPerM2` — layers only.
-- `solventMixCostPerKg` / `solventMixCostPerM2` — all solvent lines.
-- `rmCostPerM2` — full RM per m²; `materialCostPerKg` — full RM per kg (pricing input).
-
-**Fixes same session:**
-- `getEffectiveProfile` merges stored profile with role defaults (`solventMixCost` was missing on old admin profiles → UI hidden).
-- Layer load: `isSolventBased` from API field `isSolventBased` (was wrong key).
-- Service worker: prod-only registration.
-- `template-scaffolding` re-export for TemplateBuilder.
-- `canConfigureSolvent` TDZ: must be `can('solventMixCost') || can('markupPercent')`.
-
-**Tomorrow:** verify save/reload of solvent fields; align PRD/ES_MEMORY ink-makeup text; optional UX tweaks.
-
-### 2026-06-26 — Engine: layer-based SB/UV costing
-
-- **Concept:** Wide/Narrow web UI retired; costing uses `material.isSolventBased` on ink/adhesive rows. SB ink → flexo/roto makeup + cleaning; UV ink → dry GSM RM only. SB adhesive → lamination EA even when ink is UV.
-- **Engine:** `solvent-costing` uses `stackNeedsSolventMix` / `stackHasSbInk`; `printingWebClass` optional metadata; validator no longer requires it. Tests: `solvent-costing.test.ts`, calculator UV case. PRD §6.2.1 rewritten.
-
-- **Icon overflow:** Template-locked ink controls in dedicated **4%** column — vertical `+▲▼✕` stack, outside $/m². Unlocked actions column 10% horizontal.
-- **GSM:** Grade dropdown in table already gated (`substrate` only). Fixed mobile bottom-sheet material + micron handlers; legacy `getTemplateLayers` scaffold.
-- **Layer access:** Removed `canEditLayerFamilyGrade` template gate — substrate/adhesive family & grade dropdowns work on template quotes; only add/remove/reorder stays ink-only.
-
-### 2026-06-26 — Bag visual configurator (Job details)
-
-- **UX:** When Product type = Bag + subtype, `BagConfigurator` replaces spec-row dimension fields. Layout: mm **input row** → **2D SVG** (Bolt-style, 9 subtypes) → status (face area, flat sheet). Integrated via `JobHeaderFields.bagDimensionsPanel`.
-- **Data:** `bagConfiguratorCatalog.ts` maps `bag_*` subtypes → schematic types + `dimensions` keys. `seedBagDimensionPatch` seeds empty/invalid placeholders only (not on every read).
-- **Excluded:** Film thickness µm and GSM on bag panel — from Structure web totals only.
-- **Fixes:** Template lock no longer disables bag inputs; removed `effectiveBagFieldValue` snap-back; local draft on inputs.
-- **References:** `mes_packaging_configurator_v2.html` (legacy); user Bolt 2D HTML; R3F 3D bottom-gusset mockup (reviewed, not integrated).
-- **Next session:** Polish 2D all subtypes; add optional 3D toggle (bottom-gusset first, lazy Three.js, shared inputs).
-
-### 2026-06-27 — Bag 2D polish + 3D toggle (3D later removed)
-
-- **2D:** All 9 schematic drawers show dimension labels with mm values (`W=400mm`, `G=120mm`, etc.) — matches legacy `mes_packaging_configurator_v2.html`.
-- **3D (removed same day):** User did not want 3D preview — reverted `BagScene3D`/`BagGeometry3D`, toggle, and three/R3F dependencies. **2D-only** going forward.
-- **Pending:** Manual test save/reload per bag subtype.
-
-
-
----
-
-## 2026-06-28 — UI revamp: PREMIUM v2 (visual identity reset)
-
-**Context.** The original `es-ui-revamp` spec (R1.4) required Light theme to be byte-identical to the legacy navy+gold palette. After implementing the full Phase 1.5 premium addendum (12-step OKLCH ramps, fluid type, density toggle, NumberTicker spring, sparklines, view transitions, refreshed dark theme), the user reported the result still read as "same orange ugly buttons" because R1.4 preserved Light verbatim. We **overrode R1.4** and replaced the Light identity entirely.
-
-### Identity decisions
-
-- **Brand color** changed from navy `#0F1F3D` to **near-black `#0C0A09`** (Linear-esque rich ink).
-- **Accent color** changed from gold `#C8962A` to **violet `#9333EA`** (violet-600); accent-text → `#6B21A8` (violet-800, AA on white).
-- **Surface base** changed from `#F4F5F7` to warm off-white `#FAFAF9`; raised stays pure `#FFFFFF`.
-- **Borders** changed from cool `#E2E4E8` to warm stone `#E7E5E4`.
-- **Themes**: `light` / `dark` / `indigo` / `emerald` — same IDs preserved (persisted-preference safe), but every theme's values redesigned. Dark uses elevation-tinted neutrals (Linear pattern). Indigo is cool slate + indigo accent. Emerald is forest-tinted ivory + emerald.
-
-### Motion stack — motion library actually used now
-
-`motion@12.42.0` (≈22 KB gz) is wired into **three** places, not one:
-
-1. **`NumberTicker`** — spring-physics count-up on dashboard KPI values.
-2. **`useEntrance`** — every card/page mount entrance uses motion spring (stiffness 180, damping 22). Replaces the prior fixed-duration WAAPI cubic-bezier.
-3. **`BottomSheet`** — `useSwipeToDismiss` hook drives pointer-driven drag with spring snap-back or dismiss-slide (motion's `animate` for the spring path).
-
-Plus `useHoverSpring` primitive available, not yet wired (reserved for explicit physical-feeling card hovers when CSS easing isn't enough).
-
-Everything else animates via **CSS keyframes / WAAPI / View Transitions API** — no library needed: button shine sweep, card hover lift, logo float, mesh drift, page-ambient drift, skeleton shimmer, pulse dots, active nav indicator, dot-grid background, page transitions.
-
-### Premium visual upgrades (beyond tokens)
-
-- **Buttons** — `.btn-primary` is a violet gradient with a 700ms light-sweep `::before` pseudo-element on hover, plus glow shadow + scale-press.
-- **Cards** — multi-layer shadow stack with subtle accent ring on hover, 1rem radius, lift translateY(-4px) + violet ring on interactive variants.
-- **Sidebar** — `nav-item` class with sliding violet indicator on the left for active; logo is a glowing violet-gradient tile with `brand-mark` 6s float animation; theme switcher is now a labeled pill (not a hidden icon).
-- **Mobile chrome** — header + bottom nav use `backdrop-filter: blur(20px) saturate(180%)` glass; active bottom-nav item gets a glowing accent bar at the top.
-- **Background** — every page has a soft dot-grid pattern + a `page-ambient` drifting radial-blur blob (30s loop, reduced-motion guarded).
-- **Auth screens** — `auth-shell` with two `auth-mesh` layers, 40-60px blur, saturation-boosted radial gradients; logo gets `brand-mark` float; card uses `--elevation-4`.
-- **Dashboard** — `display-title` for "Dashboard" with eyebrow; KPI cards 144px min-height, gradient overlay on hover, 56px sparklines, **delta indicator pills** (↑↓—) showing % change vs prior 2 weeks; NumberTicker bumped to 1600ms so the count-up is visible.
-- **Tables** — `.data-table` uses violet-tinted hover row (`accent-soft / 0.4`).
-- **Type scale** — bigger, fluid: `--text-3xl` up to 2.5rem max, `--text-4xl` up to 3.5rem; tracking-tighter on display.
-- **Motion budget** — entrance 520ms (was 280), page 480ms (was 320), stagger step 80ms (was 60) — now actually visible.
-
-### Bundle
-
-CSS 66 KB / 12.4 KB gz (+0.7 KB) · JS 882 KB / 258.8 KB gz (motion +22 KB gz, recharts +95 KB gz, app +rest).
-
-### Spec status
-
-`R1.4 OVERRIDDEN`. Light theme is no longer byte-identical to the legacy palette. All other requirements (R12 functional preservation, R5 contrast, R6/R7 reduced-motion, R11 responsive) still hold. The phase-1.5 addendum (`phase-1.5-premium.md`) is implemented end-to-end. `tasks.md` reflects waves 1–16 complete.
-
-### Pre-existing TS errors fixed (incidental)
-
-App.tsx unused Library import, BagConfigurator EstimateDimensions cast, BagFlatBlank Band[] narrowing, CustomerAutocomplete `created` typing, MasterData index signature + LaminationRecipe cast, EstimateEditor unused locals. Type-only fixes — no behavior change.
-
-### Build
-
-`npm run build` green end-to-end. ~30s.
-
----
-
-## 2026-06-28 — UI revamp re-audit: distinct themes + spec reconciliation + property tests
-
-**Context.** Re-audited `es-ui-revamp` spec vs delivered code. Found three real deviations and a complaint that the four themes weren't visually distinct enough (`indigo` and `emerald` both light-with-an-accent — too similar to Light). User explicitly asked to keep 4 themes but make them clearly different: light, dark, and two **colorful** ones. PEBI (`apps/pph`) was named as the reference for "good" colorful palettes.
-
-### Themes — replaced indigo/emerald with PEBI-derived Sunset + Ocean
-
-Removed `indigo` + `emerald` entirely. Added two genuinely distinct colorful themes adapted from the PEBI `ThemeContext.jsx` palettes:
-
-| ID | Kind | Identity | PEBI source |
-|----|------|----------|------------|
-| `light`  | light | clean editorial — near-black `#0C0A09` + violet `#9333EA` on warm white | preserved |
-| `dark`   | dark  | Linear-esque deep ink + violet | preserved |
-| `sunset` | light | **warm colorful** — burnt orange `#7C2D12` brand + orange-500 `#F97316` accent on cream `#FFFBEB` | "Sunset Warm" |
-| `ocean`  | dark  | **cool colorful** — light teal `#5EEAD4` brand + teal-400 `#2DD4BF` accent on deep teal `#042F2E` + dark-tuned elevation | "Ocean Depths" |
-
-Files touched: `theme/types.ts`, `theme/registry.ts` (new SUNSET/OCEAN_OVERRIDES, dropped INDIGO/EMERALD), `index.css` (full `[data-theme="sunset"|"ocean"]` scopes — 12-step neutral+accent ramps, semantic tokens, badge surfaces, dark elevation stack for Ocean), `index.html` pre-paint `VALID_THEMES`. Both switchers (`ThemeSwitcher` + `QuickThemeSwitcher`) are registry-driven, so they pick up the new themes automatically.
-
-**Migration safety:** legacy persisted ids (`indigo` / `emerald`) now fail the `resolveTheme` registry check → resolved as invalid → OS default applied + stored value overwritten (R4.5). Users with old preferences migrate cleanly with no manual reset.
-
-### Spec deviations fixed (`requirements.md`, `design.md`, `phase-1.5-premium.md`, `tasks.md`)
-
-1. **R1.4 byte-identical Light** — Premium v2 already silently overrode this. Rewrote R1.4 to acknowledge the intentional reset (no byte-for-byte legacy preservation required); R5 contrast still takes precedence. Updated design.md Light/Dark token tables to the real values; replaced the indigo/emerald tables with sunset/ocean tables (with measured AA contrast ratios).
-2. **R1.7 root font-size** — spec said 90%, code shipped 95%. Updated R1.7 to "95% × `--density-scale`" (the actual Comfortable-density baseline).
-3. **Phase 1.5 Block E** — addendum promised 5 themes (Ember/Slate/Mono) that were never built. Rewrote Block E + its acceptance criteria + the OKLCH anchor table + the `ThemeId` / `THEMES` example code to describe the actual 4-theme decision (sunset/ocean). Updated `dark` elevation selector from `[data-theme="dark"], [data-theme="mono"]` to `[data-theme="dark"], [data-theme="ocean"]`.
-
-### Property tests (contractual tier) — 25 tests, all passing
-
-Filled in the property tests the original plan had marked `*`-optional, focused on the pure units the spec defines:
-
-| Property | File | Tests | Validates |
-|----------|------|-------|-----------|
-| 1 — Theme resolution total & valid | `theme/resolveTheme.test.ts` | 7 | R2.5, R3.6, R3.7, R4.2, R4.3, R4.4, R4.5, R4.7 + legacy migration |
-| 2 — Preference persistence round-trip | `preferences/PreferenceStore.test.ts` | 3 | R3.5, R4.1, R4.7 |
-| 3 — Token completeness | `theme/themeTokens.test.ts` | 3 | R1.1, R1.6, R2.2, R23.3 |
-| 4 — WCAG AA contrast | `theme/themeTokens.test.ts` | 4 | R5.1–R5.6, R9.4 — across **all 4 themes** (verifies Sunset + Ocean pass AA) |
-| 5 — Reduced-motion zeroing | `motion/resolveMotionDurations.test.ts` | 3 | R6.6, R7.1, R7.3, R7.4, R7.6, R8.3, R9.5, R10.3, R25.5 + per-page reduced-motion clauses |
-| 6 — Overlay focus containment | `components/Overlay.test.tsx` | 5 | R25.8, R25.9, R25.10, R25.11 — focus stays inside, wraps first↔last, Escape closes, return-focus restores trigger |
-
-Each `fc.assert` runs ≥ 100 iterations and is tagged `// Feature: es-ui-revamp, Property N: ...`. Overlay test shims `HTMLElement.offsetParent` (jsdom always returns null) so the focus-trap visibility filter behaves as it would in a real browser.
-
-Updated `tasks.md`: 3.3/3.5/4.2/5.2/6.3/8.2/8.3 marked `[x]` with file references; 3.6 marked `[~]` (superseded — registry-shape assertion replaces "Light tokens equal legacy palette hexes" because that requirement no longer applies).
-
-### Verification
-
-- `npm run test` → **25 / 25 passed**.
-- `npm run build` → green (tsc + vite). CSS 67.97 kB / 12.55 kB gz, JS 902 kB / 262.7 kB gz.
-
-### Open follow-ups (optional, not blocking)
-
-- Phase 1.5 Property 8 (`useDensity` resolution) and Property 9 (`NumberTicker` termination) — not yet written.
-- Shared-element view transitions (`view-transition-name` on list rows + detail headers).
-- `*`-optional regression suites in tasks.md: 20.2 responsive/CLS, 20.3 skeleton-failure path.
-- Wire `useHoverSpring` to dashboard `StatCard` for spring-physics hover.
-
----
-
-## 2026-06-28 — Theme expansion 4 → 9 (Lagoon + 5 PEBI imports)
-
-**Context.** User feedback after the previous re-audit: the orange `sunset`
-theme had "that gold color I don't like" — asked to replace it with a "mix of
-both colors dark blue and greenish of the layers" (referring to the dark-blue
-+ green layer pills visible in the estimation editor cards). Also asked to
-"bring all themes of PEBE to this app" with explicit permission to exceed 4
-themes.
-
-### Final registry — 9 themes
-
-| ID | Kind | Identity | Source |
-|----|------|----------|--------|
-| `light`    | light | clean editorial — near-black `#0C0A09` + violet `#9333EA` on warm white | preserved |
-| `dark`     | dark  | Linear-esque deep ink `#09090B` + violet `#B275F0` | preserved |
-| `lagoon`   | dark  | **dark blue + emerald-green mix** — navy `#0F2540` base + green-500 `#22C55E` accent + light emerald `#86EFAC` brand | **in-house, NEW** — replaces orange Sunset |
-| `ocean`    | dark  | teal/cyan on deep teal `#042F2E`, dark-tuned elevation | PEBI "Ocean Depths" |
-| `aurora`   | light | vibrant violet + pink on lavender white `#FAF5FF` | PEBI "Aurora Gradient" |
-| `midnight` | dark  | deep indigo `#1E1B4B` + violet `#A78BFA` accents | PEBI "Midnight Purple" |
-| `forest`   | light | natural emerald + green on mint white `#F0FDF4` | PEBI "Forest Green" |
-| `frost`    | light | indigo glassmorphism on indigo-tinted `#F5F7FF` | PEBI "Frosted Glass" |
-| `classic`  | light | professional neutral gray on `#F9FAFB` | PEBI "Classic Corporate" |
-
-**Explicitly NOT imported from PEBI**: `sunset` (orange/coral — user dislikes
-gold/orange) and `gold` (luxury black + gold — same reason).
-
-### Lagoon palette rationale
-
-User said "mix of both colors dark blue and greenish of the layers". Inspired
-by the layer pill colors in the estimation editor cards (blue + green chips).
-Designed as a dark-kind theme:
-- `surface-base` = `#0F2540` (deep ocean navy — the "dark blue")
-- `surface-raised` = `#143C5C` (slightly lighter navy for cards)
-- `accent` = `#22C55E` (green-500 — the "greenish")
-- `accent-text` / `brand` / `text-secondary` = `#86EFAC` (light emerald — pops on navy)
-- `border-strong` = `#2563EB` (blue) — keeps the navy identity visible at component edges
-- Dark-tuned elevation stack (multi-layer shadows + inset white highlight)
-
-Contrast verified: text-primary #ECFDF5 on #143C5C ≈ 10.7:1, accent-text #86EFAC ≈ 8:1, focus-ring #22C55E ≈ 4.93:1 (well above the 3:1 threshold).
-
-### Code touched
-
-| File | Change |
-|------|--------|
-| `theme/types.ts` | `ThemeId` union expanded to 9 ids |
-| `theme/registry.ts` | `THEMES` array (9 entries), `OCEAN_OVERRIDES` retained, `LAGOON_OVERRIDES` added, 5 new `*_OVERRIDES` for PEBI imports |
-| `index.css` | Removed `[data-theme="sunset"]` block; added 7 new theme scopes (`lagoon`, `ocean`, `aurora`, `midnight`, `forest`, `frost`, `classic`) — each with 12-step neutral + accent ramps, semantic surface/text/brand/border/state tokens, badge surfaces. Lagoon/Ocean/Midnight get dark-tuned elevation stack. CSS grew from 67.97 kB → 74.65 kB (+6.68 kB raw, +1.12 kB gz). |
-| `index.html` | Pre-paint script `VALID_THEMES` list updated to 9 ids |
-| `theme/resolveTheme.test.ts` | Legacy-id migration test extended to include `sunset` |
-| `theme/themeTokens.test.ts` | Registry-shape assertion updated for 9 themes with documented order; dark-kind subset now `['dark', 'lagoon', 'ocean', 'midnight']` |
-
-### Migration safety
-
-Legacy persisted theme ids from prior sessions — `indigo`, `emerald`, `sunset`
-— all fail the registry membership check in `resolveTheme`. They are treated
-as invalid persisted values → OS default applied + stored value overwritten
-(R4.5). Users with old preferences migrate cleanly on first reload, no manual
-reset needed.
-
-### Switcher UI
-
-Both switchers (`ThemeSwitcher` in Settings and `QuickThemeSwitcher` in the
-sidebar/header) are registry-driven — they read from `THEMES` and render every
-entry automatically. No UI changes were needed; the 9 themes appear with their
-swatches the moment the registry is updated.
-
-### Spec docs reconciled
-
-| Doc | Updated |
-|-----|---------|
-| `design.md` | Architecture diagram `[data-theme=...]` list, `ThemeId` example, registry block, pre-paint script, **all 9 per-theme token tables with measured WCAG AA contrast ratios** |
-| `phase-1.5-premium.md` | Block E intro + acceptance criteria (now 9 themes, legacy-id list extended to include `sunset`), OKLCH anchor table, `ThemeId` / `THEMES` example, "Property 3/4 generators enumerate the nine themes" |
-| `tasks.md` | 3.2 scope list (all 9 theme attributes); 22.2/22.3 reworked + new 22.3a for the 5 PEBI imports |
-
-### Verification
-
-- `npm run test` → **25 / 25 passed**. The property-based WCAG AA contrast test
-  enumerates the registry and verifies every theme (including the 5 new PEBI
-  imports + Lagoon) clears 4.5:1 for body/accent text and 3:1 for focus rings
-  against `surface-raised`.
-- `npm run build` → green (`tsc` + `vite build`). CSS 74.65 kB / 13.67 kB gz,
-  JS 905.37 kB / 263.33 kB gz.
-
-### Open follow-ups (unchanged)
-
-- Phase 1.5 Property 8 (`useDensity` resolution) and Property 9 (`NumberTicker` termination) — not yet written.
-- Shared-element view transitions (`view-transition-name` on list rows + detail headers).
-- `*`-optional regression suites in tasks.md: 20.2 responsive/CLS, 20.3 skeleton-failure path.
-
----
-
-## 2026-06-28 — Contrast bug fix (white-on-light foreground)
-
-**Context.** User reported "some theme font is white and in the same time background is white or has a light color, contrast is bad". The expanded theme work earlier in the day shipped 9 themes that all passed the contrast property tests in place at the time — but the tests only checked text-on-`surface-raised` pairings, not text-on-`accent` or text-on-`brand` pairings. The user saw real broken text in three classes of place I'd missed.
-
-### Three root causes
-
-1. **Dark theme `text-on-accent` token not overridden.** The DARK_OVERRIDES in `theme/registry.ts` and the `[data-theme="dark"]` block in `index.css` set every text token *except* `text-on-accent`, so it inherited LIGHT_TOKENS' `#FFFFFF`. Dark's accent is `#B275F0` (lavender, light) and brand is `#F4F4F5` (near-white) — both light. White-on-light = invisible. Affected: every consumer of `text-on-accent` in Dark theme (logo "ES" tiles, `.btn-primary` labels, badge accent variants, `ClassFilterPanel` selected pills, `LayerCard` delete button + type icons, EstimateEditor flexo/roto picker selected state). Fix: `DARK_OVERRIDES.text-on-accent = '#0F0F12'` (registry.ts) and `--color-text-on-accent: 15 15 18;` ([data-theme="dark"] in index.css).
-
-2. **Hardcoded `text-white` on logo "ES" tiles.** Four places: `components/Layout.tsx` (mobile drawer header, desktop sidebar header, mobile sticky header) and `App.tsx` (auth-loading screen). The logo's gradient background uses `linear-gradient(rgb(var(--color-accent)) → rgb(var(--accent-9)))`. In Dark/Lagoon/Ocean/Midnight themes, the accent ramp trends *light* (step 9 = light pastel), so the gradient is light on most of its surface area — white letters disappear. Fix: replace all 4 `text-white` → `text-text-on-accent` so the foreground follows theme.
-
-3. **Hardcoded `bg-white` in 4 components.** `BagConfigurator`, `PouchConfigurator`, `CustomerAutocomplete` dropdown, `StructureGradeSelect` menu. Background stayed forced-white in dark themes, but child text inherited the body's `--color-text-primary` which is *white* in dark themes → white-on-white. Fix: replace `bg-white` → `bg-surface-raised`; nearby `border-slate` → `border-border`; `bg-slate/10` → `bg-surface-sunken`; `text-navy/70` → `text-text-secondary`.
-
-### Property test strengthened to prevent regression
-
-Added two new assertions to `theme/themeTokens.test.ts`:
-
-```ts
-it('text-on-accent on accent ≥ 3.0:1 (UI / large text) for every theme', ...);
-it('text-on-accent on brand ≥ 3.0:1 (UI / large text) for every theme', ...);
-```
-
-Threshold is 3.0:1 per **WCAG 2.1 §1.4.3 large-text** (≥18pt or ≥14pt bold) and **§1.4.11 UI components** — `text-on-accent` is only painted as bold/large UI text in this codebase: logo letters (large + bold), `font-display font-semibold` button labels, `font-medium` badges, selected nav pills, layer-type indicator icons. Any future caller painting small body text in `text-on-accent` must override locally.
-
-The new test caught the Dark regression on first run at 1.92:1 (white #FFF on accent #B275F0). After the fix it reads 6.55:1 (#0F0F12 on #B275F0). The other failing case it exposed was strict-4.5:1 white text on Aurora's `#8B5CF6` (4.15:1) and Forest's `#059669` (3.71:1) and Frost's `#6366F1` (4.32:1) — all comfortably pass the 3:1 threshold and are conventional Tailwind design (violet-500/emerald-600/indigo-500 expect white bold UI labels).
-
-### Verification
-
-- `npm run test` → **27 / 27 passed** (was 25; added 2 contrast assertions).
-- `npm run build` → green. CSS 74.74 kB / 13.66 kB gz (essentially unchanged), JS 907.55 kB / 263.74 kB gz.
-
-### Files touched
-
-| File | Change |
-|------|--------|
-| `theme/registry.ts` | `DARK_OVERRIDES.text-on-accent: '#0F0F12'` (with explanatory comment) |
-| `index.css` | `[data-theme="dark"]` adds `--color-text-on-accent: 15 15 18` |
-| `theme/themeTokens.test.ts` | +2 contrast assertions (text-on-accent on accent ≥ 3:1, on brand ≥ 3:1) |
-| `components/Layout.tsx` | 3× `text-white` → `text-text-on-accent` on logo "ES" |
-| `App.tsx` | 1× `text-white` → `text-text-on-accent` on auth-loading logo |
-| `components/BagConfigurator.tsx` | `bg-white border border-slate` → `bg-surface-raised border border-border`; `bg-slate/10` → `bg-surface-sunken`; `text-navy/70` → `text-text-secondary` |
-| `components/PouchConfigurator.tsx` | same |
-| `components/CustomerAutocomplete.tsx` | dropdown `bg-white` → `bg-surface-raised` |
-| `components/StructureGradeSelect.tsx` | menu `bg-white` → `bg-surface-raised` |
-
-### Lesson learned
-
-Surface×foreground contrast must be tested for **every** painted pairing, not just (text-primary on surface-raised). The audit pattern for new themeable component classes is:
-1. Identify every (color-token, background-token) pair in the class definition.
-2. Add a property-test assertion for each pair at the appropriate WCAG threshold.
-3. Run against the full registry.
-
-This caught a class of bug that visual review missed and that the prior contrast suite couldn't reach.
+- Added columns in `packages/server/src/db/schema.ts` (`estimates` table):
+  - `structure_forked BOOLEAN NOT NULL DEFAULT FALSE`
+  - `processes_customized BOOLEAN NOT NULL DEFAULT FALSE`
+  - `structure_signature VARCHAR(128) NULL`
+- Added matching idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` lines in `packages/server/scripts/schema-patches.sql`.
+
+**Validation:**
+- `npm run db:patch --workspace=packages/server` ✅ (`Schema patches applied`)
+- `npm run build --workspace=packages/server` ✅
+- `npm run typecheck --workspace=packages/server` ❌ pre-existing unrelated errors remain in
+  `platform-master-data.ts`, `routes/templates.ts`, `services/proposal-pdf.ts`, `test/smart-template-builder.integration.test.ts`, and `utils/solvent-common.test.ts`.
+
+**Note:** No Phase 2 logic wiring started in this session.
+
+### 2026-07-02 — Login reliability fix (DB pool timeout / transient disconnect)
+
+**Symptom (user repro):** API started, but login intermittently failed with:
+- `Connection terminated due to connection timeout`
+- `Connection terminated unexpectedly`
+
+This forced repeated restarts before login could succeed.
+
+**Root cause:** DB pool was configured with a low `connectionTimeoutMillis=2000` and no transient reconnect handling in login path. Startup browser-open script also polled `/health` (liveness only), not DB readiness.
+
+**Fix applied:**
+- `packages/server/src/db/index.ts`
+  - Added env-configurable pool tuning:
+    - `DB_POOL_MAX` (default 20)
+    - `DB_IDLE_TIMEOUT_MS` (default 30000)
+    - `DB_CONNECTION_TIMEOUT_MS` (default 10000)
+    - `DB_KEEP_ALIVE` (default true)
+    - `DB_KEEP_ALIVE_INITIAL_DELAY_MS` (default 10000)
+  - Added pool error logging.
+  - Added `isTransientDatabaseError(error)` helper.
+  - Added `resetDatabaseConnection()` to rebuild pool on transient failures.
+- `packages/server/src/routes/auth.ts`
+  - Login now retries once on transient DB errors:
+    - logs warning,
+    - resets DB connection pool,
+    - retries user/tenant lookup.
+- `scripts/wait-api-health.bat`
+  - Polls `http://localhost:5001/health/ready` (DB readiness), not `/health`.
+  - Increased default wait from 90s to 240s.
+- `packages/server/.env.example`
+  - Documented new DB pool env vars.
+
+**Validation:**
+- `npm run build --workspace=packages/server` ✅
+- changed TS files report no diagnostics via direct file checks.

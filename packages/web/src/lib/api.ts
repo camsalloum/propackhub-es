@@ -92,8 +92,11 @@ export type MasterDataReferencePayload = {
     speedBasis?: string;
     speedValue?: number;
     setupHours?: number;
+    costPerKgUsd?: number;
   }>;
   costingDefaults?: { cleaningSolventKgPerJob?: number };
+  /** Platform-wide waste bands (single source of truth for all estimates). */
+  wasteBands?: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
   productTypeOptions: Array<{ label: string; value: string }>;
   printingWebClassOptions: Array<{
     label: string;
@@ -390,6 +393,21 @@ export class ApiClient {
     );
   }
 
+  getPlatformWasteBands() {
+    return this.request<{ wasteBands: Array<{ minKg: number; maxKg: number | null; wastePercent: number }> }>(
+      'GET',
+      '/api/v1/platform/master-data/waste-bands'
+    );
+  }
+
+  updatePlatformWasteBands(wasteBands: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>) {
+    return this.request<{ wasteBands: Array<{ minKg: number; maxKg: number | null; wastePercent: number }> }>(
+      'PUT',
+      '/api/v1/platform/master-data/waste-bands',
+      { wasteBands }
+    );
+  }
+
   getPlatformMasterDataMaterials() {
     return this.request<PlatformMasterMaterialRow[]>('GET', '/api/v1/platform/master-data/materials');
   }
@@ -650,7 +668,7 @@ export class ApiClient {
       materialId?: string | null;
       default_micron: number;
     }>;
-    defaultProcesses?: Array<{ process_key: string; enabled: boolean }>;
+    defaultProcesses?: Array<{ process_key: string; enabled: boolean; process_quantity?: number }>;
     /** Admin shortcut: when true, server delegates to the platform-templates path. */
     saveAsPlatformStandard?: boolean;
     cloneFromTemplateId?: string;
@@ -805,6 +823,16 @@ export class ApiClient {
         position: number;
       }>;
       slabs: Array<{ quantityKg: number; pricePerKg: number }>;
+      processes?: Array<{
+        name: string;
+        processKey: string | null;
+        processQuantity: number;
+        enabled: boolean;
+        costPerHour: number;
+        speedBasis: string;
+        speedValue: number;
+        setupHours: number;
+      }>;
     }>('POST', `/api/v1/templates/${id}/instantiate`, { ...data, preview: true });
   }
 
@@ -832,7 +860,7 @@ export class ApiClient {
       ref_material_key?: string;
       default_micron: number;
     }>;
-    defaultProcesses?: Array<{ process_key: string; enabled: boolean }>;
+    defaultProcesses?: Array<{ process_key: string; enabled: boolean; process_quantity?: number }>;
     defaultDimensions?: Record<string, unknown>;
     displayOrder?: number;
     cloneFromTemplateId?: string;

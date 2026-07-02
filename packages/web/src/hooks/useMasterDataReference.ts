@@ -50,9 +50,15 @@ export function useMasterDataReference() {
             (((ref as { processOptions?: import('../lib/masterDataReference').ProcessOption[] }).processOptions) ?? []).length > 0
               ? (ref as { processOptions?: import('../lib/masterDataReference').ProcessOption[] }).processOptions!
               : DEFAULT_MASTER_REFERENCE.processOptions,
+          processRows:
+            (ref as { processRows?: Array<{ label: string; code: string; description?: string; costPerKgUsd?: number }> }).processRows ?? [],
           costingDefaults:
             (ref as { costingDefaults?: MasterDataReferenceState['costingDefaults'] }).costingDefaults ??
             DEFAULT_MASTER_REFERENCE.costingDefaults,
+          wasteBands:
+            ((ref as { wasteBands?: MasterDataReferenceState['wasteBands'] }).wasteBands ?? []).length > 0
+              ? (ref as { wasteBands?: MasterDataReferenceState['wasteBands'] }).wasteBands!
+              : DEFAULT_MASTER_REFERENCE.wasteBands,
         });
       } catch {
         if (!cancelled) setLocalReference(DEFAULT_MASTER_REFERENCE);

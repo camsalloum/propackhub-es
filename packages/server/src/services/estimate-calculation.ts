@@ -6,6 +6,7 @@ import { snapshotsFromMaterial, toMaterialLineageSource } from '../utils/layer-l
 import { getMasterDataVersion } from '../db/platform-master-data';
 import { resolveOrderUnitDef } from '../db/tenant-reference-data';
 import { buildEngineEstimateFromRows } from '../utils/estimate-engine-input';
+import { resolveEstimateProcesses } from '../utils/estimate-processes';
 
 type Db = ReturnType<typeof import('../db').getDatabase>;
 
@@ -44,10 +45,7 @@ export async function calculateAndPersistEstimate(
     }
   }
 
-  const processes = await db
-    .select()
-    .from(schema.processes)
-    .where(eq(schema.processes.estimateId, estimateId));
+  const processes = await resolveEstimateProcesses(db, estimate);
 
   const slabs = await db
     .select()

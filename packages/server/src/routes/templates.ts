@@ -5,7 +5,13 @@ import { extractTenantFromRequest, extractUserFromRequest, isTenantAdmin } from 
 import { eq, and, asc, desc } from 'drizzle-orm';
 import { ensureTemplatesForTenant, relinkTemplatesForTenant, syncMissingStandardTemplates, pruneDuplicateStandardTemplates, syncTemplateKeysForTenant } from '../db/seed-templates';
 import { quantitiesForSlabTemplateKey } from '../db/seed-slab-templates';
-import { derivePrintingWebClass, stackNeedsSolventMix, resolveTemplateStoreClassification, tierToStructureType } from '@es/engine';
+import {
+  computeStructureSignature,
+  derivePrintingWebClass,
+  stackNeedsSolventMix,
+  resolveTemplateStoreClassification,
+  tierToStructureType,
+} from '@es/engine';
 import { buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
 import { generateRefNumber } from './estimates';
 import { getMasterDataVersion } from '../db/platform-master-data';
@@ -108,7 +114,11 @@ const UpdateTemplateSchema = z.object({
   defaultDimensions: z.record(z.any()).optional(),
   defaultLayers: z.array(TemplateLayerSchema).optional(),
   defaultProcesses: z
-    .array(z.object({ process_key: z.string(), enabled: z.boolean() }))
+    .array(z.object({
+      process_key: z.string(),
+      enabled: z.boolean(),
+      process_quantity: z.coerce.number().int().positive().default(1).optional(),
+    }))
     .optional(),
   defaultPrintingWebClass: z.enum(['wide_web', 'narrow_web']).optional(),
   solventMixEnabled: z.boolean().optional(),
@@ -430,6 +440,27 @@ export async function instantiateTemplateRoute(
       materials.map((m: MaterialRow) => [m.id, m])
     );
 
+    const defaultProcesses = (template.defaultProcesses as any[]) || [];
+    const templateStructureSignature = computeStructureSignature(
+      defaultLayers.map((layer, index) => ({
+        type: layer.layer_type ?? 'substrate',
+        position: layer.layer_order ?? index + 1,
+      })),
+      template.productType
+    );
+    const masterRef = await import('../db/platform-master-data').then((m) => m.buildMasterDataReferenceFromDb());
+    const processRefMap = new Map((masterRef.processRows ?? []).map((p) => [p.code, p]));
+    const fallbackDefaults = {
+      label: '',
+      code: '',
+      description: '',
+      costPerHour: 50,
+      costPerKgUsd: 0,
+      speedBasis: 'kg_per_hour',
+      speedValue: 100,
+      setupHours: 1,
+    };
+
     // Preview mode: return the resolved estimate + layers WITHOUT persisting. The
     // editor opens these as a new (unsaved) draft; nothing hits the DB until Save.
     if (preview) {
@@ -453,6 +484,23 @@ export async function instantiateTemplateRoute(
         };
       });
       const slabQtys = quantitiesForSlabTemplateKey(tenant.defaultSlabTemplate || 'standard');
+
+      // Include processes in preview so the editor can hydrate them (Mfg & Operating calc).
+      const previewProcesses = defaultProcesses.map((p) => {
+        const ref = processRefMap.get(p.process_key);
+        return {
+          name: ref?.label ?? p.process_key,
+          processKey: p.process_key,
+          processQuantity: p.process_quantity ?? 1,
+          enabled: p.enabled !== false,
+          costPerHour: (ref?.costPerHour ?? fallbackDefaults.costPerHour) as number,
+          speedBasis: (ref?.speedBasis ?? fallbackDefaults.speedBasis) as string,
+          speedValue: (ref?.speedValue ?? fallbackDefaults.speedValue) as number,
+          setupHours: (ref?.setupHours ?? fallbackDefaults.setupHours) as number,
+          costPerKgUsd: ref?.costPerKgUsd ?? 0,
+        };
+      });
+
       return reply.send({
         preview: true,
         estimate: {
@@ -468,10 +516,14 @@ export async function instantiateTemplateRoute(
           orderQuantityUnit: orderQuantityUnit ?? 'kgs',
           sourceTemplateKey,
           masterDataVersion,
+          structureForked: false,
+          processesCustomized: false,
+          structureSignature: templateStructureSignature,
           // Product-group margin (USD/kg) — estimates default their margin/kg from it.
           marginValuePerKgUsd: template.marginOverRmPerKgUsd ?? null,
         },
         layers: previewLayers,
+        processes: previewProcesses,
         slabs: slabQtys.map((q) => ({ quantityKg: q, pricePerKg: 0 })),
       });
     }
@@ -495,6 +547,9 @@ export async function instantiateTemplateRoute(
         status: 'draft',
         masterDataVersion,
         sourceTemplateKey,
+        structureForked: false,
+        processesCustomized: false,
+        structureSignature: templateStructureSignature,
         orderQuantityKg: orderQuantityKg != null ? String(orderQuantityKg) : undefined,
         orderQuantityUnit: orderQuantityUnit ?? 'kgs',
       })
@@ -529,23 +584,18 @@ export async function instantiateTemplateRoute(
       layerPosition++;
     }
 
-    const defaultProcesses = (template.defaultProcesses as any[]) || [];
-    // Load process cost/speed defaults from Master Data reference (not hardcoded)
-    const masterRef = await import('../db/platform-master-data').then((m) => m.buildMasterDataReferenceFromDb());
-    const processRefMap = new Map(
-      (masterRef.processRows ?? []).map((p) => [p.code, p])
-    );
-    const fallbackDefaults = { costPerHour: 50, speedBasis: 'kg_per_hour', speedValue: 100, setupHours: 1 };
-
     for (const proc of defaultProcesses) {
-      const ref = processRefMap.get(proc.process_key) ?? fallbackDefaults;
+      const ref = processRefMap.get(proc.process_key);
       await db.insert(schema.processes).values({
         estimateId: estimate.id,
-        name: ref.label ?? (proc.process_key.charAt(0).toUpperCase() + proc.process_key.slice(1).replace(/_/g, ' ')),
-        costPerHour: String(ref.costPerHour ?? fallbackDefaults.costPerHour),
-        speedBasis: ref.speedBasis ?? fallbackDefaults.speedBasis,
-        speedValue: String(ref.speedValue ?? fallbackDefaults.speedValue),
-        setupHours: String(ref.setupHours ?? fallbackDefaults.setupHours),
+        name: ref?.label ?? (proc.process_key.charAt(0).toUpperCase() + proc.process_key.slice(1).replace(/_/g, ' ')),
+        processKey: proc.process_key,
+        processQuantity: proc.process_quantity ?? 1,
+        costPerHour: String(ref?.costPerHour ?? fallbackDefaults.costPerHour),
+        costPerKgUsd: String(ref?.costPerKgUsd ?? fallbackDefaults.costPerKgUsd),
+        speedBasis: ref?.speedBasis ?? fallbackDefaults.speedBasis,
+        speedValue: String(ref?.speedValue ?? fallbackDefaults.speedValue),
+        setupHours: String(ref?.setupHours ?? fallbackDefaults.setupHours),
         enabled: proc.enabled !== false,
       });
     }
@@ -596,7 +646,11 @@ const CreateTemplateFromDefinitionSchema = z.object({
   printMode: z.enum(['Plain', 'Printed']),
   defaultLayers: z.array(TemplateLayerSchema),
   defaultProcesses: z
-    .array(z.object({ process_key: z.string(), enabled: z.boolean() }))
+    .array(z.object({
+      process_key: z.string(),
+      enabled: z.boolean(),
+      process_quantity: z.coerce.number().int().positive().default(1).optional(),
+    }))
     .optional(),
   /** Admin shortcut: when true, delegates to POST /admin/platform-templates. */
   saveAsPlatformStandard: z.boolean().optional(),
@@ -716,8 +770,9 @@ async function createTemplateFromEstimateHandler(
   }));
 
   const defaultProcesses = processes.map((p: (typeof processes)[number]) => ({
-    process_key: p.name.toLowerCase().replace(/\s+/g, '_'),
+    process_key: p.processKey || p.name.toLowerCase().replace(/\s+/g, '_'),
     enabled: p.enabled,
+    process_quantity: p.processQuantity ?? 1,
   }));
 
   const tenantMaterials = await db
@@ -726,7 +781,9 @@ async function createTemplateFromEstimateHandler(
     .where(eq(schema.materials.tenantId, tenantId));
   const materialMap = buildEngineMaterialMap(tenantMaterials);
   const needsSolvent = stackNeedsSolventMix(
-    layers.map((l: (typeof layers)[number]) => ({ materialId: l.materialId })),
+    layers
+      .filter((l) => l.materialId != null)
+      .map((l) => ({ materialId: l.materialId as string })),
     materialMap
   );
 
@@ -866,12 +923,16 @@ async function createTemplateFromDefinition(
 
   const materialMap = buildEngineMaterialMap(tenantMaterials);
   const needsSolvent = stackNeedsSolventMix(
-    defaultLayers.map((l) => ({ materialId: l.materialId })),
+    defaultLayers.flatMap((layer) =>
+      layer.materialId != null ? [{ materialId: layer.materialId }] : []
+    ),
     materialMap
   );
 
   const printingWebClass = derivePrintingWebClass(
-    defaultLayers.map((l) => ({ materialId: l.materialId })),
+    defaultLayers.flatMap((layer) =>
+      layer.materialId != null ? [{ materialId: layer.materialId }] : []
+    ),
     materialMap
   );
 
@@ -930,25 +991,6 @@ function resolveMyTemplateOwnership(user: import('../utils/auth').TokenPayload):
   isStandard: false;
   createdByUserId: string;
 } {
-  return { isStandard: false, createdByUserId: user.userId };
-}
-
-/**
- * Determine ownership tier from the JWT role (admin catalog / tenant add-on flows).
- * platform_admin → isStandard=true (adds to global catalog)
- * tenant_admin   → isStandard=false, createdByUserId=null (tenant add-on)
- * user           → isStandard=false, createdByUserId=<userId> (user add-on)
- */
-function resolveOwnership(user: import('../utils/auth').TokenPayload): {
-  isStandard: boolean;
-  createdByUserId: string | null;
-} {
-  if (user.role === 'platform_admin') {
-    return { isStandard: true, createdByUserId: null };
-  }
-  if (user.role === 'tenant_admin') {
-    return { isStandard: false, createdByUserId: null };
-  }
   return { isStandard: false, createdByUserId: user.userId };
 }
 

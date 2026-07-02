@@ -20,8 +20,10 @@ import {
   reconcileTierToSubstrateCount,
   tierToStructureType,
   TIER_SUBSTRATE_COUNT,
+  deriveProcessesFromStructure,
   type StructureTier,
   type PrintMode,
+  type ProcessCatalog,
 } from '@es/engine';
 import type { ProductTypeCode } from '@es/engine';
 import { getTemplateClassification, structureTierLabel } from '../lib/templateCatalog';
@@ -64,7 +66,7 @@ interface TemplateForEdit {
     materialId?: string | null;
     default_micron?: number;
   }> | null;
-  defaultProcesses?: Array<{ process_key: string; enabled: boolean }> | null;
+  defaultProcesses?: Array<{ process_key: string; enabled: boolean; process_quantity?: number }> | null;
   defaultDimensions?: Record<string, unknown> | null;
   isStandard?: boolean;
 }
@@ -105,9 +107,25 @@ const STRUCTURE_TIERS: Array<{ label: string; value: StructureTier }> = [
   { label: 'Quadriplex (4 substrates)', value: 'Quadriplex' },
 ];
 
+/** Build the shared-engine process catalog (label + costPerKgUsd) from Master Data options. */
+function buildProcessCatalogFromOptions(processOptions: ProcessOption[]): ProcessCatalog {
+  const catalog: ProcessCatalog = {};
+  for (const opt of processOptions) {
+    (catalog as Record<string, { label: string; costPerKgUsd: number }>)[opt.code] = {
+      label: opt.label,
+      costPerKgUsd: opt.costPerKgUsd ?? 0,
+    };
+  }
+  return catalog;
+}
+
 /**
- * Derive the sensible default process set from declared attributes.
- * `processOptions` is the live list from Master Data.
+ * Derive the sensible default process set from declared attributes, via the
+ * SAME shared derivation used by estimates (`@es/engine` deriveProcessesFromStructure`).
+ * Lamination quantity = adhesive-layer count (e.g. Triplex → ×2); extrusion is
+ * enabled by default (assumed in-house, qty 1 — user can set 1/2 or disable).
+ * `processOptions` is the live list from Master Data — used to filter out any
+ * process code not configured for this tenant and to price each process.
  * `productFamily` is the UI family code: roll | sleeve | pouch | bag | custom.
  */
 function deriveDefaultProcesses(
@@ -116,27 +134,29 @@ function deriveDefaultProcesses(
   productFamily: string,
   materialClass: 'PE' | 'Non PE',
   processOptions: ProcessOption[]
-): Array<{ process_key: string; enabled: boolean }> {
-  const has = (code: string) => processOptions.some((p) => p.code === code);
+): Array<{ process_key: string; enabled: boolean; process_quantity: number }> {
+  const availableCodes = new Set(processOptions.map((p) => p.code));
+  const structureLayers = scaffoldLayerDescriptors(structureTier, printMode).map((d) => ({
+    type: d.layer_type,
+  }));
+  const productType = (engineTypeForFamily(productFamily) ?? 'roll') as
+    | 'roll'
+    | 'sleeve'
+    | 'pouch'
+    | 'bag';
 
-  const codes: string[] = [];
+  const derived = deriveProcessesFromStructure(
+    { layers: structureLayers, productType, materialClass },
+    buildProcessCatalogFromOptions(processOptions)
+  );
 
-  if (structureTier === 'Mono' && materialClass === 'PE' && has('extrusion'))
-    codes.push('extrusion');
-  if (printMode === 'Printed' && has('printing'))
-    codes.push('printing');
-  if (structureTier !== 'Mono' && has('lamination'))
-    codes.push('lamination');
-  if (has('slitting'))
-    codes.push('slitting');
-  if (productFamily === 'pouch' && has('pouch_making'))
-    codes.push('pouch_making');
-  if (productFamily === 'bag' && has('bag_making'))
-    codes.push('bag_making');
-  if (productFamily === 'sleeve' && has('seaming'))
-    codes.push('seaming');
-
-  return codes.map((code) => ({ process_key: code, enabled: true }));
+  return derived
+    .filter((p) => availableCodes.has(p.process_key))
+    .map((p) => ({
+      process_key: p.process_key,
+      enabled: p.enabled,
+      process_quantity: p.process_quantity,
+    }));
 }
 
 function genId() {
@@ -355,10 +375,14 @@ export function TemplateBuilder({
   });
 
   // ── Processes ────────────────────────────────────────────────────────────
-  const [processes, setProcesses] = useState<Array<{ process_key: string; enabled: boolean }>>(
+  const [processes, setProcesses] = useState<Array<{ process_key: string; enabled: boolean; process_quantity: number }>>(
     () => {
       if (template?.defaultProcesses?.length) {
-        return template.defaultProcesses.map((p) => ({ ...p }));
+        return template.defaultProcesses.map((p) => ({
+          process_key: p.process_key,
+          enabled: p.enabled,
+          process_quantity: Math.max(1, Number((p as any).process_quantity) || 1),
+        }));
       }
       return deriveDefaultProcesses(initTier, initPrintMode, initFamily, initMaterialClass, processOptions);
     }
@@ -567,7 +591,7 @@ export function TemplateBuilder({
         copy[idx] = { ...copy[idx], enabled: !copy[idx].enabled };
         return copy;
       }
-      return [...prev, { process_key: key, enabled: true }];
+      return [...prev, { process_key: key, enabled: true, process_quantity: 1 }];
     });
   };
   const _isProcessEnabled = (key: string) =>
@@ -1095,24 +1119,51 @@ export function TemplateBuilder({
                   </p>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-3">
-                  {processOptions.map((opt) => (
-                    <label
-                      key={opt.code}
-                      className="inline-flex items-start gap-2 text-sm cursor-pointer"
-                      title={opt.description}
-                    >
-                      <input
-                        type="checkbox"
-                        className="mt-0.5"
-                        checked={processes.find((p) => p.process_key === opt.code)?.enabled ?? false}
-                        onChange={() => toggleProcess(opt.code)}
-                      />
-                      <span>
-                        <span className="font-medium text-brand">{opt.label}</span>
-                        <span className="block text-xs text-text-secondary">{opt.description}</span>
-                      </span>
-                    </label>
-                  ))}
+                  {processOptions.map((opt) => {
+                    const proc = processes.find((p) => p.process_key === opt.code);
+                    const isEnabled = proc?.enabled ?? false;
+                    return (
+                      <div key={opt.code} className="flex flex-col gap-1">
+                        <label
+                          className="inline-flex items-start gap-2 text-sm cursor-pointer"
+                          title={opt.description}
+                        >
+                          <input
+                            type="checkbox"
+                            className="mt-0.5"
+                            checked={isEnabled}
+                            onChange={() => toggleProcess(opt.code)}
+                          />
+                          <span>
+                            <span className="font-medium text-brand">{opt.label}</span>
+                            <span className="block text-xs text-text-secondary">{opt.description}</span>
+                          </span>
+                        </label>
+                        {isEnabled && (
+                          <div className="pl-6 flex items-center gap-1.5">
+                            <label className="text-xs text-text-secondary whitespace-nowrap">×</label>
+                            <input
+                              type="number"
+                              min={1}
+                              step={1}
+                              className="input !min-h-[26px] !py-0 !px-1.5 text-xs w-16 font-mono"
+                              value={proc?.process_quantity ?? 1}
+                              onChange={(e) => {
+                                const val = Math.max(1, Math.round(Number(e.target.value) || 1));
+                                setProcesses((prev) =>
+                                  prev.map((p) =>
+                                    p.process_key === opt.code ? { ...p, process_quantity: val } : p
+                                  )
+                                );
+                              }}
+                              title="Number of times this process is applied (e.g. 2 for double-lamination)"
+                            />
+                            <span className="text-xs text-text-secondary">times</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

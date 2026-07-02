@@ -1,15 +1,173 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-06-29 (Multi-tenant security hardening + data-driven units + tenant reference layer + UI fixes)
-**Session focus:** External audit review, platform/tenant role separation, engine unit refactor, layered tenant reference model, UX fixes.
+**Last updated:** 2026-07-02 (end of session — Part B audit + fixes)
+**Session focus:** Audited Part B (Smart Structure-Driven Process Costing) implementation across
+Phases 0–5. Phases 0–2 and part of Phase 3 were already implemented in prior un-logged sessions
+(no SESSION_LOG entries existed for them). Found and fixed 3 real bugs; Phase 4 (TemplateBuilder)
+and Phase 5 (backfill script) were NOT done — Phase 4 fixed this session, Phase 5 still open.
 
 ---
 
 ## Where we stopped (read this first next session)
 
+### **START HERE:** `docs/PROCESS_COSTING_AND_ESTIMATE_FLOW_HANDOFF.md` → Part B
+
+Part B is the approved implementation plan (3-state model: template-locked / user-owned /
+forked, with snap-back). See Part B §B.7 for phase status below.
+
+### Part B phase status (verified against code 2026-07-02, not just session log)
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| 0 — shared derivation engine | ✅ Done | `derive-processes.ts`, `structure-signature.ts`, 7/7 golden tests pass |
+| 1 — schema columns | ✅ Done | `structure_forked`, `processes_customized`, `structure_signature` on `estimates` |
+| 2 — server authority (3-way resolve) | ✅ Done, 1 bug fixed | `resolveEstimateProcesses()` implements template-locked / derived / frozen. **Fixed 2026-07-02:** it trusted the persisted `structureForked` column on read, so pre-existing/never-resaved drafts (incl. the original QT-2026-00007) could still serve stale admin-template processes even if their layers had diverged. Now recomputes live fork status via structure-signature comparison on every read (GET/calculate), no DB write needed. |
+| 3 — web fork-on-edit + confirm UX | ⚠️ Partial | Fork/customize/snap-back badges + "Lock in changes" button + `EstimateProcessesPanel` all wired and functional. **Deviates from approved plan:** no confirmation *modal* (inline panel instead — may be acceptable, flagged for owner). **Gap:** `processesState` is not live-recomputed client-side as layers change before Save — Mfg & Op only reflects the new derivation after Save + refetch, not instantly. **Bug fixed 2026-07-02:** server had a hard 409 block preventing ANY layer edit once `processesCustomized=true`, forcing users into "Snap back" (which discards their confirmed processes) as the only way forward — contradicted the approved "stale banner, not block" rule. Block removed; frozen processes already persist correctly regardless of layer edits. |
+| 4 — template builder + seed alignment | ✅ Fixed 2026-07-02 | `TemplateBuilder.tsx`'s local `deriveDefaultProcesses()` still had the **exact original bug** — lamination hardcoded to qty 1 (never scaled with adhesive count) and extrusion only for Mono+PE. This meant any NEW template created via the builder would reproduce the 1.20-vs-1.90 bug. Replaced with a call into the shared `deriveProcessesFromStructure` engine function (lamination = adhesive count, extrusion default-enabled). |
+| 5 — backfill script + full verification | ❌ Not done | `backfill-processes.ts` was never created. Mitigated by the Phase 2 read-path fix above (live recompute means no backfill migration is strictly required), but the planned one-shot audit/verification pass (checklist in Part B §B.5) has not been run. |
+
+### Audit fixes applied this session (2026-07-02)
+
+1. `estimate-processes.ts` — `resolveEstimateProcesses()` now computes fork status live from
+   structure signatures instead of trusting the persisted column (fixes stale legacy drafts).
+2. `estimates.ts` / `state-validation.ts` — removed the Rule 2 hard-block (409) on layer edits
+   after `processesCustomized=true`; frozen processes already survive layer edits correctly via
+   Phase 2, so blocking the save was both unnecessary and contradicted the approved plan.
+3. `TemplateBuilder.tsx` — `deriveDefaultProcesses()` now delegates to the shared engine
+   `deriveProcessesFromStructure` (lamination × adhesive count, extrusion default-enabled)
+   instead of its own stale, pre-Part-B logic.
+
+Verified: `packages/engine` build + tests (7/7) pass; `packages/server` and `packages/web`
+`tsc --noEmit` clean.
+
+### Open follow-ups (not yet done — for next session)
+
+- Phase 5: write `backfill-processes.ts` (mostly for audit-trail/signature backfill now, not
+  correctness) + run the Part B §B.5 verification checklist end-to-end against a live DB.
+- Phase 3 gap: consider live client-side re-derivation of `processesState` as layers change
+  (currently only refreshed after Save + refetch) — matches Decision #23 "instant price on edit".
+- Confirm with owner whether the inline panel + "Lock in changes" button satisfies the
+  originally-requested "confirmation modal that appears", or whether an actual modal is required.
+
+
+
+### Session 2026-07-02 — Part B Phase 1 (completed)
+
+| Item | Status |
+|------|--------|
+| `estimates.structure_forked` schema column | ✅ Added |
+| `estimates.processes_customized` schema column | ✅ Added |
+| `estimates.structure_signature` schema column | ✅ Added |
+| Idempotent SQL patch entries | ✅ Added |
+| `npm run db:patch --workspace=packages/server` | ✅ Pass |
+| `npm run build --workspace=packages/server` | ✅ Pass |
+| `npm run typecheck --workspace=packages/server` | ❌ Pre-existing unrelated errors |
+
+### Session 2026-07-02 — Login reliability hotfix (completed)
+
+| Item | Status |
+|------|--------|
+| DB pool timeout raised (2s → 10s default via env) | ✅ |
+| DB keepalive + pool env tuning | ✅ |
+| Login transient DB reconnect + retry once | ✅ |
+| Startup waiter switched to `/health/ready` | ✅ |
+| Startup wait window increased (90s → 240s) | ✅ |
+| Server build after fix | ✅ Pass |
+
+### Session 2026-07-02 — End status (owner sign-off pending)
+
+| Item | Status |
+|------|--------|
+| Triplex Mfg & Op **1.90/kg** | **FAIL** — user sees **1.20** |
+| Template processes from `default_processes` | Partial — reconcile incomplete |
+| Scratch blank layers + process gate | **FAIL** — still seeds 2 layers; calc not blocked |
+| React hooks crash | Fixed (useCallback before early return) |
+| `kill-es-ports.bat` `$pid` error | Fixed (`$listenerPid`) |
+
+### Session 2026-07-02 — Template process authority + scratch process gate (partial)
+
+**Symptom:** Laminates · Triplex template defines extrusion ×1, lamination ×2, etc., but saved drafts lost quantities on reload (Mfg & Operating wrong).
+
+**Fix:** `resolveEstimateProcesses()` reconciles template `default_processes` on GET/calculate when DB rows are empty or legacy (`process_key` null). Editor adds Processes panel; slabs/markup blocked until ≥1 process + dimensions valid. Scratch estimates start on Structure with process selection required.
+
+**Impact:** Intended QT-2026-00007 → 1.90/kg; **user still reports 1.20** — see handoff doc §5.
+
 ### Session 2026-06-29 — Full summary
 
 External agent gave a thorough code review. We verified every claim against the actual code and implemented fixes + new features across engine, server, and web.
+
+### Session 2026-07-02 — Draft estimate 500 on load (hotfix)
+
+**Symptom:** Existing drafts failed on open with `GET /api/v1/estimates/:id` → `500`.
+
+**Cause:** `routes/estimates.ts#getEstimateRoute` attempted DB inserts for fallback processes when `processes.length === 0`. On DBs missing newer process columns, this write path crashed during read.
+
+**Fix:** Removed write-on-read behavior. Fallback process rows are now built in-memory and returned in response, using template defaults and master-data process reference values.
+
+**Impact:** Drafts can load again without mutating DB in GET; manufacturing/operating process data remains populated in response for legacy estimates.
+
+### Session 2026-07-02 — Legacy DB compatibility follow-up
+
+**Symptom:** 500 persisted for some drafts after write-on-read removal.
+
+**Cause:** Older DB schema can still fail on `SELECT * FROM processes` due to missing new columns.
+
+**Fix:** Added runtime compatibility fallback in estimate GET route: on `undefined_column` (42703), query only legacy process columns via raw SQL and adapt to modern response shape with defaults.
+
+**Impact:** Draft loads are now backward compatible with pre-migration `processes` tables.
+
+### Session 2026-07-02 — Legacy draft operating-cost correction
+
+**Symptom:** Draft opened successfully but `Manufacturing & Operating` stayed `USD 0.00/kg`.
+
+**Cause:** Calculation service used DB process rows only; legacy drafts had zero/missing process rows.
+
+**Fix:** `calculateAndPersistEstimate` now applies the same legacy process fallback strategy as read path:
+- handle old `processes` schema safely,
+- derive fallback process rows from template + master reference when no rows exist,
+- pass fallback into engine for operation-cost compute.
+
+**Impact:** Existing legacy drafts should now produce operating/manufacturing cost on calculate, matching new-estimate behavior.
+
+### Session 2026-07-02 — Legacy draft save 500 correction
+
+**Symptom:** Saving the same draft failed on `PATCH /api/v1/estimates/:id` with `column "cost_per_kg_usd" of relation "processes" does not exist`.
+
+**Cause:** Process re-insert logic in estimate save routes still targeted modern columns only.
+
+**Fix:** Added compatibility insert helper in `routes/estimates.ts`:
+- try modern insert first,
+- on missing-column error, insert with legacy process column list.
+
+**Impact:** Draft save/update is now backward-compatible with old DB schemas while preserving modern behavior where migrations are applied.
+
+### Session 2026-07-02 — TX-aborted correction for legacy save
+
+**Symptom:** Save still failed with `current transaction is aborted`.
+
+**Cause:** Fallback logic triggered only after a failing insert inside the same SQL transaction (too late).
+
+**Fix:** Detect `processes` schema mode before writes and execute only compatible insert statements during transaction.
+
+**Impact:** Prevents transaction poisoning on legacy DBs; draft PATCH should now proceed.
+
+### Session 2026-07-02 — Runtime scope fix
+
+**Symptom:** PATCH failed with `processInsertMode is not defined`.
+
+**Fix:** Declared `processInsertMode` in `updateEstimateRoute` and removed misplaced declaration from calculate route.
+
+**Follow-up:** After user repeated the same runtime error, revalidated and re-applied declaration directly in the update route entry path to ensure deployed watcher picks the intended scope fix.
+
+### Session 2026-07-02 — Legacy draft Mfg/Op zero (primary user issue)
+
+**Symptom:** Old drafts saved/loaded but still displayed `Manufacturing & Operating USD 0.00/kg`.
+
+**Fix:** Added UI-level legacy fallback in `EstimateEditor`:
+- normalize process rows with derived per-kg cost (`costPerHour/speedValue`) for `kg_per_hour` rows when `costPerKgUsd` is missing,
+- apply same fallback in Mfg/Op breakdown render path.
+
+**Impact:** Legacy drafts now display non-zero Mfg/Operating cost even when historical process rows lack persisted `cost_per_kg_usd`.
 
 ---
 

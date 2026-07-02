@@ -29,6 +29,20 @@
 
 ---
 
+## Active — Process costing & estimate flow (2026-07-02)
+
+**Handoff (read first):** [PROCESS_COSTING_AND_ESTIMATE_FLOW_HANDOFF.md](./PROCESS_COSTING_AND_ESTIMATE_FLOW_HANDOFF.md)
+
+| ID | Symptom | Root cause (summary) | Priority |
+|----|---------|----------------------|----------|
+| PC-1 | Triplex Mfg & Op **1.20** not **1.90** | Reconcile skips when `process_key` set but `process_quantity` wrong; old template rows / seed | **P0** |
+| PC-2 | Scratch not blank layers | `getTemplateLayers()` seeds substrate+ink on `/estimate/new` | **P0** |
+| PC-3 | No hard process gate before estimation | Validation only on tab nav; `clientCalcResult` ignores processes | **P0** |
+| PC-4 | `deriveDefaultProcesses` lamination always ×1 | Should use `TIER_ADHESIVE_COUNT` for tier | P1 |
+| PC-5 | Triplex seed missing extrusion + lam ×2 | `structure-templates-seed.json` outdated | P1 |
+
+---
+
 ## Part A — Engine & costing bugs (confirmed)
 
 These were validated in code review 2026-06-18. They affect **sale price accuracy**, not just UI.

@@ -16,6 +16,8 @@ export * from './pouch-flat-sheet';
 export * from './pouch-accessories';
 export * from './unit-conversion';
 export * from './waste-bands';
+export * from './derive-processes';
+export * from './structure-signature';
 
 // Re-export for convenience
 export { calculateEstimate } from './calculator';

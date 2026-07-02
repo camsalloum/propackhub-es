@@ -13,6 +13,7 @@ import {
   type UnitBasis,
 } from './master-materials-io';
 import { roundUsd } from '../utils/usd';
+import { DEFAULT_WASTE_BANDS, type WasteBand } from '@es/engine';
 import { syncMaterialsForTenant } from './seed-materials';
 import { relinkTemplatesForTenant } from './seed-templates';
 import { syncCustomRmTypeCategories } from './seed-categories';
@@ -558,6 +559,7 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
         speedBasis?: string;
         speedValue?: number;
         setupHours?: number;
+        costPerKgUsd?: number;
       };
       return {
         label: i.label,
@@ -567,6 +569,7 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
         speedBasis: meta.speedBasis ?? 'kg_per_hour',
         speedValue: meta.speedValue ?? 100,
         setupHours: meta.setupHours ?? 1,
+        costPerKgUsd: meta.costPerKgUsd ?? 0,
       };
     });
 
@@ -598,6 +601,7 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
     costingDefaults: {
       cleaningSolventKgPerJob: cleaningFromMeta,
     },
+    wasteBands: await getPlatformWasteBands(),
   };
 }
 
@@ -1087,4 +1091,96 @@ export async function updateCostingDefaults(
   );
 
   return { cleaningSolventKgPerJob };
+}
+
+/** Read platform-wide waste bands (singleton column). Falls back to DEFAULT_WASTE_BANDS when unset. */
+export async function getPlatformWasteBands(): Promise<WasteBand[]> {
+  await ensurePlatformMasterState();
+  const db = getDatabase();
+  const [row] = await db
+    .select({ wasteBands: schema.platformMasterState.wasteBands })
+    .from(schema.platformMasterState)
+    .where(eq(schema.platformMasterState.id, PLATFORM_STATE_ID))
+    .limit(1);
+  const bands = row?.wasteBands;
+  if (!Array.isArray(bands) || bands.length === 0) {
+    return DEFAULT_WASTE_BANDS.map((b) => ({ ...b }));
+  }
+  return bands
+    .filter(
+      (b): b is WasteBand =>
+        !!b &&
+        typeof (b as WasteBand).minKg === 'number' &&
+        typeof (b as WasteBand).wastePercent === 'number'
+    )
+    .map((b) => ({
+      minKg: Number(b.minKg) || 0,
+      maxKg: b.maxKg == null ? null : Number(b.maxKg),
+      wastePercent: Number(b.wastePercent) || 0,
+    }))
+    .sort((a, b) => {
+      if (a.maxKg === null) return 1;
+      if (b.maxKg === null) return -1;
+      return a.maxKg - b.maxKg;
+    });
+}
+
+/** Persist platform-wide waste bands (Master Data → Waste Bands tab). Bumps master_data_version + audit log. */
+export async function replacePlatformWasteBands(
+  bands: WasteBand[],
+  actor?: AuditActor
+): Promise<{ wasteBands: WasteBand[] }> {
+  // Validate + normalize: non-negative numbers, open-ended band at most one, sorted ascending.
+  const normalized: WasteBand[] = bands
+    .filter((b) => b && Number.isFinite(b.minKg) && Number.isFinite(b.wastePercent))
+    .map((b) => ({
+      minKg: Math.max(0, Number(b.minKg) || 0),
+      maxKg: b.maxKg == null ? null : Math.max(0, Number(b.maxKg) || 0),
+      wastePercent: Math.min(100, Math.max(0, Number(b.wastePercent) || 0)),
+    }))
+    .sort((a, b) => {
+      if (a.maxKg === null) return 1;
+      if (b.maxKg === null) return -1;
+      return a.maxKg - b.maxKg;
+    });
+
+  const openEnded = normalized.filter((b) => b.maxKg === null);
+  if (openEnded.length > 1) {
+    throw new Error('Only one open-ended (max = ∞) waste band is allowed');;
+  }
+  if (normalized.length === 0) {
+    throw new Error('At least one waste band is required');
+  }
+
+  await ensurePlatformMasterState();
+  const db = getDatabase();
+
+  const [beforeRow] = await db
+    .select({ wasteBands: schema.platformMasterState.wasteBands })
+    .from(schema.platformMasterState)
+    .where(eq(schema.platformMasterState.id, PLATFORM_STATE_ID))
+    .limit(1);
+  const before = beforeRow?.wasteBands ?? null;
+
+  await db
+    .update(schema.platformMasterState)
+    .set({ wasteBands: normalized, updatedAt: new Date() })
+    .where(eq(schema.platformMasterState.id, PLATFORM_STATE_ID));
+
+  const version = await incrementMasterDataVersion();
+  await appendMasterAuditEntries(
+    version,
+    [
+      {
+        entityType: 'platform_master_state',
+        entityKey: 'platform_master_state:waste_bands',
+        action: 'update',
+        beforeJson: before as Record<string, unknown> | null,
+        afterJson: normalized as unknown as Record<string, unknown>,
+      },
+    ],
+    actor
+  );
+
+  return { wasteBands: normalized };
 }

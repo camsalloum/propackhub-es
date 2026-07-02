@@ -124,11 +124,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS materials_tenant_platform_key_uq
 CREATE TABLE IF NOT EXISTS platform_master_state (
   id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
   master_data_version INTEGER NOT NULL DEFAULT 1,
+  waste_bands JSONB,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 INSERT INTO platform_master_state (id, master_data_version)
 VALUES (1, 1)
 ON CONFLICT (id) DO NOTHING;
+-- Waste bands column added post-seed; idempotent for existing installs.
+ALTER TABLE platform_master_state ADD COLUMN IF NOT EXISTS waste_bands JSONB;
 
 ALTER TABLE estimates ADD COLUMN IF NOT EXISTS master_data_version INTEGER;
 ALTER TABLE estimates ADD COLUMN IF NOT EXISTS source_template_key VARCHAR(128);
@@ -303,6 +306,9 @@ ALTER TABLE estimates ADD COLUMN IF NOT EXISTS tooling_charge_usd DECIMAL(12, 2)
 ALTER TABLE estimates ADD COLUMN IF NOT EXISTS tooling_billed_to_customer BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE estimates ADD COLUMN IF NOT EXISTS delivery_term VARCHAR(32);
 ALTER TABLE estimates ADD COLUMN IF NOT EXISTS delivery_charge_usd DECIMAL(12, 2);
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS structure_forked BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS processes_customized BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS structure_signature VARCHAR(128);
 
 -- Product group (= template) margin over raw material, in USD/kg. Admin sets it
 -- on the template; estimates default their margin/kg from it.

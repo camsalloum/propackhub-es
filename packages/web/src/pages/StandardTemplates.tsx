@@ -40,7 +40,7 @@ interface StructureTemplate {
   displayOrder?: number;
   defaultDimensions?: Record<string, unknown>;
   defaultLayers?: TemplateLayer[];
-  defaultProcesses?: { process_key: string; enabled: boolean }[];
+  defaultProcesses?: { process_key: string; enabled: boolean; process_quantity?: number }[];
   defaultPrintingWebClass?: 'wide_web' | 'narrow_web';
   isStandard?: boolean;
   createdByUserId?: string | null;

@@ -199,6 +199,11 @@ export function stripEstimateRow(row: any, profile: VisibilityProfile): any {
     visible.inkPrintingProcess = row.inkPrintingProcess;
   }
 
+  // Phase 2/3: Structure fork & process customization state (UI flags, not cost-sensitive)
+  visible.structureForked = Boolean(row.structureForked);
+  visible.processesCustomized = Boolean(row.processesCustomized);
+  visible.structureSignature = row.structureSignature ?? null;
+
   visible.orderQuantityKg = row.orderQuantityKg;
   visible.orderQuantityUnit = row.orderQuantityUnit;
 

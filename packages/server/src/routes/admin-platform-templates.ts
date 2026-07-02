@@ -50,7 +50,13 @@ const CreatePlatformTemplateSchema = z.object({
   printMode: z.enum(['Plain', 'Printed']),
   defaultLayers: z.array(PlatformLayerSchema),
   defaultProcesses: z
-    .array(z.object({ process_key: z.string(), enabled: z.boolean() }))
+    .array(
+      z.object({
+        process_key: z.string(),
+        enabled: z.boolean(),
+        process_quantity: z.number().int().positive().optional(),
+      })
+    )
     .optional(),
   defaultDimensions: z.record(z.any()).optional(),
   displayOrder: z.number().int().optional(),
@@ -67,7 +73,13 @@ const UpdatePlatformTemplateSchema = z.object({
   printMode: z.enum(['Plain', 'Printed']).optional(),
   defaultLayers: z.array(PlatformLayerSchema).optional(),
   defaultProcesses: z
-    .array(z.object({ process_key: z.string(), enabled: z.boolean() }))
+    .array(
+      z.object({
+        process_key: z.string(),
+        enabled: z.boolean(),
+        process_quantity: z.number().int().positive().optional(),
+      })
+    )
     .optional(),
   defaultDimensions: z.record(z.any()).optional(),
   displayOrder: z.number().int().optional(),

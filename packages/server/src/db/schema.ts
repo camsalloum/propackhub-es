@@ -102,6 +102,12 @@ export const platformReferenceItems = pgTable(
 export const platformMasterState = pgTable('platform_master_state', {
   id: smallint('id').primaryKey().default(1),
   masterDataVersion: integer('master_data_version').notNull().default(1),
+  /**
+   * Platform-wide waste bands (jsonb array of {minKg,maxKg,wastePercent}).
+   * Single source of truth consumed by every estimate via order-quantity lookup;
+   * admin curates them in Master Data → Waste Bands. Bumped with master_data_version.
+   */
+  wasteBands: jsonb('waste_bands'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
@@ -387,6 +393,12 @@ export const estimates = pgTable('estimates', {
   masterDataVersion: integer('master_data_version'),
   /** Structure template key when created from template (MES Phase B / D) */
   sourceTemplateKey: varchar('source_template_key', { length: 128 }),
+  /** True when the estimate layer stack diverges from the source template stack. */
+  structureForked: boolean('structure_forked').notNull().default(false),
+  /** True after the user manually edits derived process toggles/quantities. */
+  processesCustomized: boolean('processes_customized').notNull().default(false),
+  /** Deterministic structure hash (layers + productType) for fork/snap-back checks. */
+  structureSignature: varchar('structure_signature', { length: 128 }),
 
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
@@ -431,10 +443,15 @@ export const processes = pgTable('processes', {
   id: uuid('id').primaryKey().defaultRandom(),
   estimateId: uuid('estimate_id').notNull().references(() => estimates.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
+  /** Stable master-data code (e.g. 'lamination') — used for reliable cost lookups. */
+  processKey: varchar('process_key', { length: 255 }),
+  /** How many times this process is applied (e.g. 2 for double-lamination). */
+  processQuantity: integer('process_quantity').notNull().default(1),
   costPerHour: decimal('cost_per_hour', { precision: 12, scale: 4 }).notNull(),
   speedBasis: varchar('speed_basis', { length: 20 }).notNull(), // kg_per_hour, m_per_min, pcs_per_min
   speedValue: decimal('speed_value', { precision: 12, scale: 2 }).notNull(),
   setupHours: decimal('setup_hours', { precision: 10, scale: 2 }).notNull().default('0'),
+  costPerKgUsd: decimal('cost_per_kg_usd', { precision: 12, scale: 4 }).notNull().default('0'),
   enabled: boolean('enabled').notNull().default(true),
 
   // Cached calculations

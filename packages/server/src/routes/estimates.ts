@@ -15,9 +15,112 @@ import {
   stripConfigureFromTemplateFlag,
 } from '../utils/estimate-classification';
 import { parsePagination, paginate } from '../utils/pagination';
+import {
+  computeEstimateStructureSignature,
+  computeTemplateStructureSignature,
+  findEstimateTemplate,
+  loadEstimateStructureLayers,
+  resolveEstimateProcesses,
+} from '../utils/estimate-processes';
+import {
+  validateProcessesCustomizeTransition,
+  detectStateTransition,
+  buildStateSnapshot,
+  type EstimateState,
+} from '../utils/state-validation';
+import {
+  logEstimateStateTransition,
+} from '../utils/estimate-audit';
 
 type EstimateRow = typeof schema.estimates.$inferSelect;
 type LayerRow = typeof schema.layers.$inferSelect;
+type ProcessInsertMode = 'modern' | 'legacy';
+
+function signatureLayerType(
+  materialType: string | null | undefined
+): 'substrate' | 'ink' | 'adhesive' {
+  if (materialType === 'ink') return 'ink';
+  if (materialType === 'adhesive') return 'adhesive';
+  return 'substrate';
+}
+
+async function insertProcessCompat(
+  dbLike: any,
+  mode: ProcessInsertMode,
+  values: {
+    estimateId: string;
+    name: string;
+    processKey?: string | null;
+    processQuantity?: number;
+    costPerHour: string;
+    costPerKgUsd?: string;
+    speedBasis: string;
+    speedValue: string;
+    setupHours: string;
+    enabled: boolean;
+    runHours?: string | null;
+    totalCost?: string | null;
+  }
+): Promise<void> {
+  if (mode === 'modern') {
+    await dbLike.insert(schema.processes).values({
+      estimateId: values.estimateId,
+      name: values.name,
+      processKey: values.processKey ?? null,
+      processQuantity: values.processQuantity ?? 1,
+      costPerHour: values.costPerHour,
+      costPerKgUsd: values.costPerKgUsd ?? '0',
+      speedBasis: values.speedBasis,
+      speedValue: values.speedValue,
+      setupHours: values.setupHours,
+      enabled: values.enabled,
+      runHours: values.runHours ?? null,
+      totalCost: values.totalCost ?? null,
+    });
+    return;
+  }
+
+  // Legacy schema fallback: older `processes` table without process_key/process_quantity/cost_per_kg_usd.
+  await dbLike.execute(sql`
+    INSERT INTO processes (
+      estimate_id,
+      name,
+      cost_per_hour,
+      speed_basis,
+      speed_value,
+      setup_hours,
+      enabled,
+      run_hours,
+      total_cost
+    ) VALUES (
+      ${values.estimateId},
+      ${values.name},
+      ${values.costPerHour},
+      ${values.speedBasis},
+      ${values.speedValue},
+      ${values.setupHours},
+      ${values.enabled},
+      ${values.runHours ?? null},
+      ${values.totalCost ?? null}
+    )
+  `);
+}
+
+async function detectProcessInsertMode(dbLike: any): Promise<ProcessInsertMode> {
+  const result = await dbLike.execute(sql`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'processes'
+  `);
+  const rows = Array.isArray((result as any)?.rows) ? (result as any).rows : (result as any[]);
+  const columns = new Set<string>(rows.map((r: any) => String(r.column_name)));
+  const hasModernColumns =
+    columns.has('process_key') &&
+    columns.has('process_quantity') &&
+    columns.has('cost_per_kg_usd');
+  return hasModernColumns ? 'modern' : 'legacy';
+}
 
 async function getUserVisibilityProfile(db: any, userId: string): Promise<VisibilityProfile> {
   const [userRecord] = await db
@@ -62,10 +165,13 @@ const EstimateCreateSchema = z.object({
   processes: z.array(z.object({
     name: z.string(),
     costPerHour: z.coerce.number(),
+    costPerKgUsd: z.coerce.number().nonnegative().default(0),
     speedBasis: z.enum(['kg_per_hour', 'm_per_min', 'pcs_per_min']),
     speedValue: z.coerce.number(),
     setupHours: z.coerce.number().default(0),
     enabled: z.boolean().default(true),
+    processKey: z.string().nullable().optional(),
+    processQuantity: z.coerce.number().int().positive().default(1),
   })).default([]),
   slabs: z.array(z.object({
     quantityKg: z.coerce.number().positive(),
@@ -81,11 +187,7 @@ const EstimateCreateSchema = z.object({
   toolingBilledToCustomer: z.boolean().optional(),
   deliveryTerm: z.string().max(32).optional(),
   deliveryChargeUsd: z.coerce.number().nonnegative().optional(),
-  wasteBands: z.array(z.object({
-    minKg: z.coerce.number().nonnegative(),
-    maxKg: z.coerce.number().nonnegative().nullable(),
-    wastePercent: z.coerce.number().min(0).max(100),
-  })).optional(),
+  // wasteBands removed from per-estimate payload — now platform-wide (Master Data → Waste Bands).
   solventMaterialId: z.string().uuid().optional(),
   solventCostPerKgUsd: z.coerce.number().nonnegative().optional(),
   solventRatio: z.coerce.number().positive().optional(),
@@ -95,6 +197,8 @@ const EstimateCreateSchema = z.object({
   status: z.enum(['draft', 'sent', 'won', 'lost']).optional(),
   notes: z.string().optional(),
   note: z.string().optional(), // used in activity log
+  structureForked: z.boolean().optional(),
+  processesCustomized: z.boolean().optional(),
 });
 
 /** PATCH accepts any subset of the create fields. */
@@ -249,6 +353,24 @@ export async function createEstimateRoute(
       tenantMaterials.map((m: MaterialRow) => [m.id, m])
     );
 
+    const structureSignature = computeEstimateStructureSignature(
+      data.layers.map((layer) => ({
+        type: signatureLayerType(materialById.get(layer.materialId)?.type),
+        position: layer.position,
+      })),
+      data.productType
+    );
+    const structureForked =
+      typeof data.structureForked === 'boolean'
+        ? data.structureForked
+        : !data.sourceTemplateKey;
+    const processesCustomized =
+      typeof data.processesCustomized === 'boolean'
+        ? data.processesCustomized
+        : false;
+
+    const processInsertMode = await detectProcessInsertMode(db);
+
     // Create estimate
     const [estimate] = (await db
       .insert(schema.estimates)
@@ -269,6 +391,9 @@ export async function createEstimateRoute(
         status: data.status ?? 'draft',
         notes: data.notes ?? undefined,
         masterDataVersion,
+        structureForked,
+        processesCustomized,
+        structureSignature,
         orderQuantityKg: data.orderQuantityKg != null ? String(data.orderQuantityKg) : undefined,
         orderQuantityUnit: data.orderQuantityUnit ?? 'kgs',
         sourceTemplateKey: data.sourceTemplateKey ?? undefined,
@@ -278,7 +403,6 @@ export async function createEstimateRoute(
         toolingBilledToCustomer: data.toolingBilledToCustomer ?? false,
         deliveryTerm: data.deliveryTerm ?? undefined,
         deliveryChargeUsd: data.deliveryChargeUsd != null ? String(data.deliveryChargeUsd) : undefined,
-        wasteBands: data.wasteBands ?? undefined,
         solventMaterialId: data.solventMaterialId,
         solventCostPerKgUsd: data.solventCostPerKgUsd != null ? String(data.solventCostPerKgUsd) : undefined,
         solventRatio: data.solventRatio != null ? String(data.solventRatio) : undefined,
@@ -307,17 +431,18 @@ export async function createEstimateRoute(
 
     // Create processes
     for (const process of data.processes) {
-      await db
-        .insert(schema.processes)
-        .values({
-          estimateId: estimate.id,
-          name: process.name,
-          costPerHour: process.costPerHour.toString(),
-          speedBasis: process.speedBasis,
-          speedValue: process.speedValue.toString(),
-          setupHours: process.setupHours.toString(),
-          enabled: process.enabled,
-        });
+      await insertProcessCompat(db, processInsertMode, {
+        estimateId: estimate.id,
+        name: process.name,
+        processKey: process.processKey ?? null,
+        processQuantity: process.processQuantity ?? 1,
+        costPerHour: process.costPerHour.toString(),
+        costPerKgUsd: String(process.costPerKgUsd ?? 0),
+        speedBasis: process.speedBasis,
+        speedValue: process.speedValue.toString(),
+        setupHours: process.setupHours.toString(),
+        enabled: process.enabled,
+      });
     }
 
     // Create slabs
@@ -436,11 +561,9 @@ async function getEstimateRoute(
       .where(eq(schema.layers.estimateId, id))
       .orderBy(schema.layers.position);
 
-    // Get processes
-    const processes = await db
-      .select()
-      .from(schema.processes)
-      .where(eq(schema.processes.estimateId, id));
+    // Template `default_processes` is authoritative for template-based quotes.
+    // Reconcile legacy/partial DB rows in-memory (no write-on-read).
+    const processes = await resolveEstimateProcesses(db, estimate);
 
     // Get slabs
     const slabs = await db
@@ -483,7 +606,9 @@ async function getEstimateRoute(
     return reply.send({
       ...stripEstimateRow(estimate, profile),
       layers: enrichedLayers,
-      processes: profile.operationCost ? processes : [],
+      // Always return processes — needed for Mfg & Operating cost calculation
+      // even when the process details section is hidden from the user.
+      processes,
       slabs: profile.slabTable ? slabs : [],
       activityLogs: logs || [],
       lastCalculatedAt: estimate.lastCalculatedAt,
@@ -509,6 +634,7 @@ async function updateEstimateRoute(
     const user = extractUserFromRequest(request);
     const { id } = request.params;
     const db = getDatabase();
+    const processInsertMode = await detectProcessInsertMode(db);
 
     // SC-3: validate the PATCH body. Without this, mistyped keys are silently
     // ignored and out-of-range values (negative µ, NaN) reach the DB. `.partial()`
@@ -530,6 +656,32 @@ async function updateEstimateRoute(
     if (!existing) {
       return reply.status(404).send({ error: 'Estimate not found' });
     }
+
+    // PHASE 5 VALIDATION: State transition rules
+    // Rule 1: Cannot customize processes unless structure is already forked
+    if (data.processesCustomized === true) {
+      const validation = validateProcessesCustomizeTransition(
+        {
+          id: existing.id,
+          structureForked: existing.structureForked,
+          processesCustomized: existing.processesCustomized,
+          sourceTemplateKey: existing.sourceTemplateKey,
+          structureSignature: existing.structureSignature,
+        },
+        true
+      );
+      if (!validation.valid) {
+        return reply.status(409).send({ error: validation.error });
+      }
+    }
+
+    // Rule 2 (removed 2026-07-02 audit): layer edits after processesCustomized=true used to be
+    // hard-blocked (409), forcing "Snap back" (which discards the user's confirmed processes) as
+    // the only way forward. That contradicts the approved design: a customized/frozen process
+    // set must NOT be silently recomputed when layers change, but the user must still be able to
+    // keep editing their own structure. `resolveEstimateProcesses()` already returns the frozen
+    // DB process rows whenever `processesCustomized` is true, regardless of layer edits, so no
+    // block is needed here — the frontend surfaces a "Customized" badge instead.
 
     const [tenant] = await db
       .select({ quotationValidDays: schema.tenants.quotationValidDays })
@@ -623,9 +775,7 @@ async function updateEstimateRoute(
     if (data.deliveryChargeUsd !== undefined) {
       updates.deliveryChargeUsd = String(data.deliveryChargeUsd);
     }
-    if (data.wasteBands !== undefined) {
-      updates.wasteBands = data.wasteBands;
-    }
+    // wasteBands no longer patched per-estimate — platform-wide via Master Data.
     // Any layer save clears configure-from-template mode in the DB.
     if (data.layers !== undefined && data.dimensions === undefined) {
       updates.dimensions = stripConfigureFromTemplateFlag(
@@ -715,10 +865,13 @@ async function updateEstimateRoute(
       if (data.processes !== undefined) {
         await tx.delete(schema.processes).where(eq(schema.processes.estimateId, id));
         for (const process of data.processes) {
-          await tx.insert(schema.processes).values({
+          await insertProcessCompat(tx, processInsertMode, {
             estimateId: id,
             name: process.name,
+            processKey: process.processKey ?? null,
+            processQuantity: process.processQuantity ?? 1,
             costPerHour: process.costPerHour.toString(),
+            costPerKgUsd: String(process.costPerKgUsd ?? 0),
             speedBasis: process.speedBasis,
             speedValue: process.speedValue.toString(),
             setupHours: process.setupHours.toString(),
@@ -741,6 +894,16 @@ async function updateEstimateRoute(
         }
       }
     });
+
+    // PHASE 5 AUDIT LOGGING: Track fork/customize/snap-back transitions
+    // Capture state before and after for audit trail
+    const stateBefore: EstimateState = {
+      id: existing.id,
+      structureForked: existing.structureForked,
+      processesCustomized: existing.processesCustomized,
+      sourceTemplateKey: existing.sourceTemplateKey,
+      structureSignature: existing.structureSignature,
+    };
 
     // If status changed, insert an activity log for audit trail
     if (updates.status) {
@@ -767,8 +930,70 @@ async function updateEstimateRoute(
       .from(schema.estimates)
       .where(and(eq(schema.estimates.id, id), eq(schema.estimates.tenantId, tenantId)))) as EstimateRow[];
 
+    let responseRow: EstimateRow | undefined = finalRow ?? updated;
+
+    if (responseRow) {
+      const template = await findEstimateTemplate(db, responseRow);
+      const structureLayers = await loadEstimateStructureLayers(db, id);
+      const structureSignature = computeEstimateStructureSignature(
+        structureLayers,
+        responseRow.productType
+      );
+      const templateSignature = template ? computeTemplateStructureSignature(template) : null;
+
+      const processesCustomized =
+        typeof data.processesCustomized === 'boolean'
+          ? data.processesCustomized
+          : Boolean(responseRow.processesCustomized);
+
+      const structureForked = templateSignature
+        ? !(structureSignature === templateSignature && !processesCustomized)
+        : true;
+
+      await db
+        .update(schema.estimates)
+        .set({
+          structureSignature,
+          structureForked,
+          processesCustomized,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(schema.estimates.id, id), eq(schema.estimates.tenantId, tenantId)));
+
+      const [withState] = (await db
+        .select()
+        .from(schema.estimates)
+        .where(and(eq(schema.estimates.id, id), eq(schema.estimates.tenantId, tenantId)))) as EstimateRow[];
+
+      responseRow = withState ?? responseRow;
+
+      // PHASE 5 AUDIT LOGGING: Detect and log state transitions
+      if (responseRow) {
+        const stateAfter: EstimateState = {
+          id: responseRow.id,
+          structureForked: responseRow.structureForked,
+          processesCustomized: responseRow.processesCustomized,
+          sourceTemplateKey: responseRow.sourceTemplateKey,
+          structureSignature: responseRow.structureSignature,
+        };
+
+        const transition = detectStateTransition(stateBefore, stateAfter);
+        if (transition !== 'none') {
+          await logEstimateStateTransition(db, {
+            tenantId,
+            userId: user.userId,
+            estimateId: id,
+            action: transition,
+            stateBefore: buildStateSnapshot(stateBefore),
+            stateAfter: buildStateSnapshot(stateAfter),
+            signature: responseRow.structureSignature,
+          });
+        }
+      }
+    }
+
     reply.header('Cache-Control', 'no-store');
-    return reply.send(finalRow ?? updated);
+    return reply.send(responseRow ?? updated);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return reply.status(400).send({ error: 'Validation failed', details: error.errors });
@@ -830,6 +1055,7 @@ async function requoteEstimateRoute(
     const tenantId = extractTenantFromRequest(request);
     const { id } = request.params;
     const db = getDatabase();
+    const processInsertMode = await detectProcessInsertMode(db);
 
     // Get source estimate (BUG-5: honor soft-delete)
     const [source] = await db
@@ -924,14 +1150,17 @@ async function requoteEstimateRoute(
       .where(eq(schema.processes.estimateId, id));
 
     for (const process of sourceProcesses) {
-      await db.insert(schema.processes).values({
+      await insertProcessCompat(db, processInsertMode, {
         estimateId: newEstimate.id,
         name: process.name,
         costPerHour: process.costPerHour,
+        costPerKgUsd: process.costPerKgUsd,
         speedBasis: process.speedBasis,
         speedValue: process.speedValue,
         setupHours: process.setupHours,
         enabled: process.enabled,
+        runHours: process.runHours,
+        totalCost: process.totalCost,
       });
     }
 
@@ -1024,6 +1253,7 @@ async function duplicateEstimateRoute(
     const tenantId = extractTenantFromRequest(request);
     const { id } = request.params;
     const db = getDatabase();
+    const processInsertMode = await detectProcessInsertMode(db);
 
     const [source] = await db
       .select()
@@ -1118,10 +1348,11 @@ async function duplicateEstimateRoute(
     }
 
     for (const process of sourceProcesses) {
-      await db.insert(schema.processes).values({
+      await insertProcessCompat(db, processInsertMode, {
         estimateId: newEstimate.id,
         name: process.name,
         costPerHour: process.costPerHour,
+        costPerKgUsd: process.costPerKgUsd,
         speedBasis: process.speedBasis,
         speedValue: process.speedValue,
         setupHours: process.setupHours,

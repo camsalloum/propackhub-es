@@ -120,6 +120,7 @@ export async function buildMasterDataReferenceForTenant(tenantId: string): Promi
       speedBasis?: string;
       speedValue?: number;
       setupHours?: number;
+      costPerKgUsd?: number;
     };
     return {
       label: r.label,
@@ -129,9 +130,10 @@ export async function buildMasterDataReferenceForTenant(tenantId: string): Promi
       speedBasis: meta.speedBasis ?? 'kg_per_hour',
       speedValue: meta.speedValue ?? 100,
       setupHours: meta.setupHours ?? 1,
+      costPerKgUsd: meta.costPerKgUsd,
     };
   });
-  const processRows = mergeByCode(base.processRows ?? [], tenantProcesses, (r) => r.code, (r) => r.label);
+  const processRows = mergeProcessRowsByCode(base.processRows ?? [], tenantProcesses);
 
   // ── simple label lists ────────────────────────────────────────────────────
   const mergeLabels = (baseList: string[], cat: RefCategory) => {
@@ -171,6 +173,31 @@ function mergeByCode<T>(
   const byCode = new Map<string, T>();
   for (const r of baseRows) byCode.set(codeOf(r).toLowerCase(), r);
   for (const r of tenantRows) byCode.set(codeOf(r).toLowerCase(), r); // tenant wins
+  return [...byCode.values()];
+}
+
+function mergeProcessRowsByCode(
+  baseRows: Array<{ label: string; code: string; description?: string; costPerHour?: number; speedBasis?: string; speedValue?: number; setupHours?: number; costPerKgUsd?: number }>,
+  tenantRows: Array<{ label: string; code: string; description?: string; costPerHour?: number; speedBasis?: string; speedValue?: number; setupHours?: number; costPerKgUsd?: number }>
+) {
+  const byCode = new Map<string, typeof baseRows[number]>();
+  for (const row of baseRows) byCode.set(row.code.toLowerCase(), row);
+  for (const tenantRow of tenantRows) {
+    const code = tenantRow.code.toLowerCase();
+    const baseRow = byCode.get(code);
+    if (baseRow) {
+      byCode.set(code, {
+        ...baseRow,
+        ...tenantRow,
+        costPerKgUsd: tenantRow.costPerKgUsd ?? baseRow.costPerKgUsd,
+      });
+    } else {
+      byCode.set(code, {
+        ...tenantRow,
+        costPerKgUsd: tenantRow.costPerKgUsd ?? 0,
+      });
+    }
+  }
   return [...byCode.values()];
 }
 

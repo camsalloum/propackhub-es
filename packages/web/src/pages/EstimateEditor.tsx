@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Save, Download, ArrowLeft, Layers, Calculator, DollarSign, Loader2, X, Check, Plus, Minus, GripVertical } from 'lucide-react';
+import { Save, Download, ArrowLeft, Layers, Calculator, DollarSign, Loader2, X, Check, Plus, Minus, GripVertical, AlertCircle, RefreshCw } from 'lucide-react';
 import LayerCard from '../components/LayerCard';
 import BottomSheet from '../components/BottomSheet';
 import FilmStackVisualizer from '../components/FilmStackVisualizer';
+import { EstimateProcessesPanel } from '../components/EstimateProcessesPanel';
 import StructureGradeSelect from '../components/StructureGradeSelect';
 import { JobHeaderFields } from '../components/JobHeaderFields';
 import { SectionTitle } from '../components/SectionTitle';
@@ -26,10 +27,13 @@ import { usdToDisplay, usdToDisplayPrecise } from '../lib/currency';
 import { runClientCalculation, effectiveMarginPercent } from '../lib/estimateCalc';
 import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
 import {
+  buildProcessCostCatalogFromReference,
   dimensionsForSave,
   estimateNeedsConfiguration,
+  lookupProcessCostRow,
   normalizeProcessesForSave,
   productTypeForSave,
+  resolveProcessPerKgUsd,
   validateConfiguredEstimate,
 } from '../lib/estimateConfigure';
 import { setWorkingEstimateForTemplate } from '../lib/estimateSession';
@@ -134,8 +138,44 @@ const EstimateEditor = () => {
   const [orderQuantityUnit, setOrderQuantityUnit] = useState(() => defaultUnitValue());
   const [processesState, setProcessesState] = useState<any[]>([]);
   const { reference: masterReference, version: masterDataVersion } = useMasterDataReference();
+  const processCostCatalog = useMemo(
+    () => buildProcessCostCatalogFromReference(masterReference),
+    [masterReference.processRows, masterReference.processOptions]
+  );
   const defaultCleaningKg =
     masterReference.costingDefaults?.cleaningSolventKgPerJob ?? DEFAULT_CLEANING_SOLVENT_KG_PER_JOB;
+
+  const normalizeLoadedProcesses = useCallback(
+    (rows: any[]) => {
+      return normalizeProcessesForSave(
+        (rows ?? []).map((process: any) => {
+          const match = lookupProcessCostRow(process, processCostCatalog);
+          return {
+            ...process,
+            processKey: process.processKey ?? match?.code ?? null,
+            costPerKgUsd: resolveProcessPerKgUsd(process, processCostCatalog),
+          };
+        })
+      );
+    },
+    [processCostCatalog]
+  );
+
+  useEffect(() => {
+    if (!processesState?.length || processCostCatalog.length === 0) return;
+
+    const recalculated = normalizeLoadedProcesses(processesState);
+    const isDifferent = recalculated.some((p, index) => {
+      const prev = processesState[index];
+      return (
+        p.costPerKgUsd !== prev?.costPerKgUsd ||
+        (p.processKey ?? null) !== (prev?.processKey ?? null)
+      );
+    });
+    if (isDifferent) {
+      setProcessesState(recalculated);
+    }
+  }, [processCostCatalog, normalizeLoadedProcesses, processesState]);
 
   // UI state
   const [activeSection, setActiveSection] = useState<'structure' | 'dimensions' | 'slabs' | 'markup'>('structure');
@@ -158,10 +198,10 @@ const EstimateEditor = () => {
   const [toolingChargeUsd, setToolingChargeUsd] = useState(0);
   const [deliveryTerm, setDeliveryTerm] = useState('EXW');
   const [deliveryChargeUsd, setDeliveryChargeUsd] = useState(0);
-  // Editable quantity-based waste bands (defaults preloaded; admin/manager can change).
-  const [wasteBands, setWasteBands] = useState<WasteBand[]>(() =>
-    DEFAULT_WASTE_BANDS.map((b) => ({ ...b }))
-  );
+  // Waste bands are now platform-wide (Master Data → Waste Bands). The estimate
+  // consumes them read-only via the master reference; the % is looked up from the
+  // order quantity and added to material cost.
+  const wasteBands: WasteBand[] = masterReference.wasteBands ?? DEFAULT_WASTE_BANDS;
   const [solventMaterialId, setSolventMaterialId] = useState<string | null>(null);
   const [solventCostOverrideUsd, setSolventCostOverrideUsd] = useState<number | null>(null);
   const [cleaningSolventKgPerJob, setCleaningSolventKgPerJob] = useState(defaultCleaningKg);
@@ -571,6 +611,8 @@ const EstimateEditor = () => {
             { quantityKg: 5000, pricePerKgUsd: 0, pricePerKg: 0, total: 0 },
           ]);
           setEstimate({ id: undefined, status: 'draft', displayCurrency: 'USD', salePricePerKg: 0, materialCostPerKg: 0, totalGsm: 0, totalMicron: 0 });
+          setNeedsConfiguration(true);
+          setActiveSection('structure');
           const statePriceChanges = (location.state as any)?.priceChanges;
           if (statePriceChanges) setPriceChanges(statePriceChanges);
           setLoading(false);
@@ -636,38 +678,10 @@ const EstimateEditor = () => {
    * (server resolved the layers but persisted nothing). The estimate is written to
    * the DB only when the user clicks Save.
    */
-  function hydrateFromInstantiated(
-    instantiated: {
-      estimate: {
-        jobName: string;
-        productType: string;
-        productSubtype: string | null;
-        printingWebClass: string;
-        dimensions: Record<string, unknown>;
-        markupPercent: string;
-        displayCurrency: string;
-        exchangeRateUsdToDisplay: string;
-        orderQuantityKg: string | null;
-        orderQuantityUnit: string;
-        sourceTemplateKey: string | null;
-      };
-      layers: Array<{
-        materialId: string;
-        materialName: string;
-        materialType: string;
-        micron: number;
-        costPerKgUsd: number;
-        isSolventBased: boolean;
-        hoover: string | null;
-        position: number;
-      }>;
-      slabs?: Array<{ quantityKg: number; pricePerKg: number }>;
-    },
-    mats: MaterialItem[]
-  ) {
+  function hydrateFromInstantiated(instantiated: any, mats: MaterialItem[]) {
     const pe = instantiated.estimate;
     const matById = new Map(mats.map((m) => [m.id, m]));
-    const hydratedLayers: LayerItem[] = (instantiated.layers || []).map((l, i) => {
+    const hydratedLayers: LayerItem[] = ((instantiated.layers || []) as any[]).map((l, i) => {
       const mat = matById.get(l.materialId);
       const density = mat?.density ? parseFloat(mat.density) : 0.9;
       const isSub = (l.materialType || 'substrate') === 'substrate';
@@ -702,6 +716,10 @@ const EstimateEditor = () => {
       ...(pe.dimensions as Partial<DimensionState>),
     });
     setLayers(hydratedLayers);
+    // Hydrate processes from template preview (Mfg & Operating cost calculation).
+    if (instantiated.processes && instantiated.processes.length > 0) {
+      setProcessesState(normalizeLoadedProcesses(instantiated.processes));
+    }
     setMarkupPercent(parseFloat(pe.markupPercent) || 15);
     // Pricing method from the user; margin/kg default from the template (product group).
     setPricingMethod(user?.pricingMethod ?? 'markup');
@@ -712,10 +730,10 @@ const EstimateEditor = () => {
     if (pe.orderQuantityKg) setOrderQuantity(parseFloat(pe.orderQuantityKg));
     if (pe.orderQuantityUnit) setOrderQuantityUnit(normalizeUnitValue(pe.orderQuantityUnit, unitOptions));
     setSlabsState(
-      (instantiated.slabs && instantiated.slabs.length > 0
+      ((instantiated.slabs && instantiated.slabs.length > 0
         ? instantiated.slabs
         : [{ quantityKg: 1000, pricePerKg: 0 }, { quantityKg: 2000, pricePerKg: 0 }, { quantityKg: 5000, pricePerKg: 0 }]
-      ).map((s) => ({ quantityKg: s.quantityKg, pricePerKgUsd: 0, pricePerKg: 0, total: 0 }))
+      ) as any[]).map((s) => ({ quantityKg: s.quantityKg, pricePerKgUsd: 0, pricePerKg: 0, total: 0 }))
     );
     setEstimate({
       id: undefined,
@@ -801,17 +819,8 @@ const EstimateEditor = () => {
       setToolingChargeUsd(parseFloat(data.toolingChargeUsd) || 0);
       setDeliveryTerm(typeof data.deliveryTerm === 'string' && data.deliveryTerm ? data.deliveryTerm : 'EXW');
       setDeliveryChargeUsd(parseFloat(data.deliveryChargeUsd) || 0);
-      if (Array.isArray(data.wasteBands) && data.wasteBands.length > 0) {
-        setWasteBands(
-          (data.wasteBands as Array<{ minKg: number; maxKg: number | null; wastePercent: number }>).map((b) => ({
-            minKg: Number(b.minKg) || 0,
-            maxKg: b.maxKg == null ? null : Number(b.maxKg),
-            wastePercent: Number(b.wastePercent) || 0,
-          }))
-        );
-      } else {
-        setWasteBands(DEFAULT_WASTE_BANDS.map((b) => ({ ...b })));
-      }
+      // Waste bands are platform-wide now — no per-estimate seed. The platform
+      // reference (masterReference.wasteBands) is the single source of truth.
       if (data.solventMaterialId) {
         setSolventMaterialId(data.solventMaterialId);
       } else {
@@ -876,7 +885,7 @@ const EstimateEditor = () => {
       if (data.orderQuantityUnit) {
         setOrderQuantityUnit(normalizeUnitValue(data.orderQuantityUnit, unitOptions));
       }
-      if (data.processes) setProcessesState(normalizeProcessesForSave(data.processes));
+      if (data.processes) setProcessesState(normalizeLoadedProcesses(data.processes));
       const fromTemplate = estimateNeedsConfiguration(
         data.dimensions as Record<string, unknown> | null | undefined
       );
@@ -990,7 +999,6 @@ const EstimateEditor = () => {
       toolingBilledToCustomer: toolingChargeUsd > 0,
       deliveryTerm: deliveryTerm || undefined,
       deliveryChargeUsd,
-      wasteBands,
       solventMaterialId: needsSolventMix ? solventMaterialId ?? undefined : undefined,
       solventCostPerKgUsd: needsSolventMix ? resolvedSolventCostPerKgUsd : undefined,
       laminationRecipeOverrides:
@@ -1026,7 +1034,7 @@ const EstimateEditor = () => {
       }));
     }
     return payload;
-  }, [jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, productType, productTypeOptions, productSubtype, needsSolventMix, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, toolingChargeUsd, deliveryTerm, deliveryChargeUsd, wasteBands, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
+  }, [jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, productType, productTypeOptions, productSubtype, needsSolventMix, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, toolingChargeUsd, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   /** Link estimate to a customer row — create customer record if user typed a new name. */
   const ensureCustomerForSave = async (): Promise<string | undefined> => {
@@ -1108,7 +1116,7 @@ const EstimateEditor = () => {
     solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob,
     hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, layers.length, accessories,
     orderQuantity, orderQuantityUnit, masterReference,
-    pricingMethod, marginValuePerKgUsd, toolingChargeUsd, deliveryTerm, deliveryChargeUsd, wasteBands,
+    pricingMethod, marginValuePerKgUsd, toolingChargeUsd, deliveryTerm, deliveryChargeUsd,
   ]);
 
   const solventCostLines = useMemo(() => {
@@ -1257,6 +1265,39 @@ const EstimateEditor = () => {
     activeSection,
   ]);
 
+  const ensureStructureReady = useCallback((): boolean => {
+    const err = validateConfiguredEstimate({
+      layers,
+      productType,
+      dimensions: dimensions as Record<string, unknown>,
+      processes: processesState,
+    });
+    if (err) {
+      alert(err);
+      setActiveSection('structure');
+      return false;
+    }
+    return true;
+  }, [layers, productType, dimensions, processesState]);
+
+  const goToSection = useCallback(
+    (section: 'structure' | 'dimensions' | 'slabs' | 'markup') => {
+      if (section !== 'structure' && !ensureStructureReady()) return;
+      
+      // Validate: slabs and markup require at least one process enabled
+      if ((section === 'slabs' || section === 'markup')) {
+        const enabledCount = processesState.filter((p) => p.enabled !== false).length;
+        if (enabledCount === 0) {
+          alert('Select at least one process before proceeding to pricing.');
+          return;
+        }
+      }
+      
+      setActiveSection(section);
+    },
+    [ensureStructureReady, processesState]
+  );
+
   // Replay a draft that was saved while offline back to the server once we're
   // online again. This is the restore path for the offline save above — the
   // work is recovered by re-submitting it, not silently dropped.
@@ -1309,6 +1350,7 @@ const EstimateEditor = () => {
         layers,
         productType,
         dimensions: dimensions as Record<string, unknown>,
+        processes: processesState,
       });
       if (validationError) {
         alert(validationError);
@@ -1443,6 +1485,69 @@ const EstimateEditor = () => {
     }
   };
 
+  const handleSnapBack = async () => {
+    if (!estimate?.id || !estimate?.sourceTemplateKey) {
+      alert('Only template quotes can be reverted to template.');
+      return;
+    }
+    const confirmed = window.confirm(
+      'Revert to template structure? This will reset layers & processes to the template defaults. Current edits will be lost.'
+    );
+    if (!confirmed) return;
+    
+    try {
+      setSaving(true);
+      // Load the template by its ID (sourceTemplateKey)
+      const template = await apiClient.getTemplate(estimate.sourceTemplateKey);
+      if (!template) {
+        alert('Template not found.');
+        return;
+      }
+      // Re-instantiate estimate from template (server-side fork check)
+      const instantiated = await apiClient.instantiateTemplate(template.id, {
+        customerId,
+        jobName,
+      });
+      if (!instantiated?.estimate) {
+        alert('Failed to instantiate template.');
+        return;
+      }
+
+      // Merge into current estimate while preserving customer/job name
+      const payload = {
+        ...instantiated.estimate,
+        jobName,
+        customerId,
+        layers: instantiated.layers,
+        processes: instantiated.processes || [],
+        processesCustomized: false,
+      };
+      await apiClient.updateEstimate(estimate.id, payload);
+      setSaveNotice('Reverted to template structure.');
+      await fetchEstimate(estimate.id, { silent: true });
+    } catch (err) {
+      alert('Failed to revert: ' + (err instanceof Error ? err.message : 'Unknown'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCustomizeProcesses = async () => {
+    if (!estimate?.id) return;
+    try {
+      setSaving(true);
+      await apiClient.updateEstimate(estimate.id, {
+        processesCustomized: true,
+      });
+      setSaveNotice('Processes locked in — future layer changes won\'t affect them.');
+      await fetchEstimate(estimate.id, { silent: true });
+    } catch (err) {
+      alert('Failed to lock processes: ' + (err instanceof Error ? err.message : 'Unknown'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const downloadStoredProposal = async (proposalId: string) => {
     try {
       const blob = await apiClient.getStoredProposalPdf(proposalId);
@@ -1489,6 +1594,7 @@ const EstimateEditor = () => {
   // structureLocked: estimate from a standard template — substrate/adhesive stack is fixed.
   // Ink & coating (e.g. varnish) may still be added, removed, reordered, and graded per job.
   const structureLocked = Boolean(estimate?.sourceTemplateKey?.trim());
+
   /** Template quotes: add/remove/reorder — ink only */
   const canEditLayerStructure = (layer: { materialType: string }) =>
     !structureLocked || layer.materialType === 'ink';
@@ -1802,10 +1908,24 @@ const EstimateEditor = () => {
             <span className="hidden sm:inline">Back</span>
           </button>
           <div className="min-w-0">
-            <p className="eyebrow font-mono leading-none truncate">
-              {estimate?.refNumber
-                ? `${estimate.refNumber} · ${estimateStatusLabel(estimate?.status)}${needsConfiguration ? ' · Needs configuration' : ''}`
-                : `Draft estimate${needsConfiguration ? ' · Needs configuration' : ''}`}
+            <p className="eyebrow font-mono leading-none truncate flex items-center gap-2 flex-wrap">
+              <span>
+                {estimate?.refNumber
+                  ? `${estimate.refNumber} · ${estimateStatusLabel(estimate?.status)}${needsConfiguration ? ' · Needs configuration' : ''}`
+                  : `Draft estimate${needsConfiguration ? ' · Needs configuration' : ''}`}
+              </span>
+              {estimate?.structureForked && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-warning/10 text-warning rounded whitespace-nowrap" title="Layers differ from template">
+                  <AlertCircle className="w-3 h-3" />
+                  Forked
+                </span>
+              )}
+              {estimate?.processesCustomized && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-info/10 text-info rounded whitespace-nowrap" title="Processes manually edited">
+                  <Check className="w-3 h-3" />
+                  Customized
+                </span>
+              )}
             </p>
             <h1 className="font-display font-semibold text-brand leading-tight truncate text-lg sm:text-xl">
               {jobName}
@@ -1815,6 +1935,18 @@ const EstimateEditor = () => {
 
         {/* Right: actions */}
         <div className="flex flex-wrap gap-2 shrink-0">
+          {estimate?.structureForked && estimate?.sourceTemplateKey && (
+            <button
+              type="button"
+              onClick={handleSnapBack}
+              disabled={saving}
+              className="btn-secondary inline-flex items-center space-x-1 text-xs"
+              title="Revert layers & processes to template defaults"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              <span className="hidden sm:inline">Snap back</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={handleCancel}
@@ -1979,13 +2111,13 @@ const EstimateEditor = () => {
         <div>
           {/* Navigation tabs */}
           <div className="flex space-x-2 mb-6 overflow-x-auto">
-            <button onClick={() => setActiveSection('structure')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors duration-micro ease-micro ${activeSection === 'structure' ? 'bg-accent-soft text-accent-text font-medium' : 'hover:bg-surface-base text-text-primary'}`}>
+            <button onClick={() => goToSection('structure')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors duration-micro ease-micro ${activeSection === 'structure' ? 'bg-accent-soft text-accent-text font-medium' : 'hover:bg-surface-base text-text-primary'}`}>
               <Layers className="w-4 h-4" /><span>Structure</span>
             </button>
-            <button onClick={() => setActiveSection('slabs')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors duration-micro ease-micro ${activeSection === 'slabs' ? 'bg-accent-soft text-accent-text font-medium' : 'hover:bg-surface-base text-text-primary'}`}>
+            <button onClick={() => goToSection('slabs')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors duration-micro ease-micro ${activeSection === 'slabs' ? 'bg-accent-soft text-accent-text font-medium' : 'hover:bg-surface-base text-text-primary'}`}>
               <Calculator className="w-4 h-4" /><span>Quantity Slabs</span>
             </button>
-            {can('markupPercent') && <button onClick={() => setActiveSection('markup')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors duration-micro ease-micro ${activeSection === 'markup' ? 'bg-accent-soft text-accent-text font-medium' : 'hover:bg-surface-base text-text-primary'}`}>
+            {can('markupPercent') && <button onClick={() => goToSection('markup')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors duration-micro ease-micro ${activeSection === 'markup' ? 'bg-accent-soft text-accent-text font-medium' : 'hover:bg-surface-base text-text-primary'}`}>
               <DollarSign className="w-4 h-4" /><span>Costs &amp; Terms</span>
             </button>}
           </div>
@@ -2613,6 +2745,21 @@ const EstimateEditor = () => {
               </div>
               )}
 
+              <EstimateProcessesPanel
+                processes={processesState}
+                processOptions={masterReference.processOptions}
+                layerCount={layers.length}
+                hint={
+                  structureLocked
+                    ? 'Pre-filled from your template — steps and quantities match what you configured when the template was saved.'
+                    : 'Define which manufacturing steps apply to this job before quantity slabs and pricing.'
+                }
+                onChange={(rows) => setProcessesState(normalizeLoadedProcesses(rows))}
+                isCustomized={estimate?.processesCustomized ?? true}
+                structureForked={estimate?.structureForked ?? false}
+                onCustomize={handleCustomizeProcesses}
+              />
+
               {clientCalcResult && (
                 <div className="card space-y-5">
                   <SectionTitle
@@ -2740,26 +2887,7 @@ const EstimateEditor = () => {
                                   {active && <span className="ml-2 text-[10px] text-accent-text font-medium">this order</span>}
                                 </td>
                                 <td className="py-2.5 px-3 text-right">
-                                  {can('markupPercent') ? (
-                                    <input
-                                      type="number"
-                                      value={band.wastePercent}
-                                      step="0.1"
-                                      min="0"
-                                      onChange={(e) => {
-                                        const v = Number(e.target.value);
-                                        setWasteBands((prev) =>
-                                          prev.map((b, bi) =>
-                                            bi === i ? { ...b, wastePercent: Number.isFinite(v) ? v : 0 } : b
-                                          )
-                                        );
-                                      }}
-                                      onFocus={selectOnFocus}
-                                      className="input input-compact w-16 text-right font-mono text-xs"
-                                    />
-                                  ) : (
-                                    <span className="font-mono">{band.wastePercent}%</span>
-                                  )}
+                                  <span className="font-mono">{band.wastePercent}%</span>
                                 </td>
                                 <td className="py-2.5 px-3 text-right font-mono font-semibold text-navy tabular-nums">
                                   {usdToDisplayPrecise(priceUsd, fxRate).toFixed(4)}
@@ -2772,9 +2900,10 @@ const EstimateEditor = () => {
                     </table>
                   </div>
                   <p className="text-xs text-mist">
-                    Waste % comes from the order-quantity band and is added to the material cost.
-                    Logistics &amp; tooling are amortized over the entered order quantity (flat across bands);
-                    only waste changes per band.
+                    Waste % is platform-wide (Master Data → Waste Bands) and looked up from the
+                    order quantity; it is added to the material cost. Logistics &amp; tooling are
+                    amortized over the entered order quantity (flat across bands); only waste
+                    changes per band.
                   </p>
                 </>
               ) : (
@@ -2911,8 +3040,15 @@ const EstimateEditor = () => {
                   // New-model per-kg components (USD).
                   const devUsd = ce?.developmentCostPerKg ?? 0;
                   const logiUsd = ce?.logisticsCostPerKg ?? 0;
-                  const marginUsd = ce?.marginPerKg ?? 0;
                   const wasteUsd = (ce?.wasteAdjustedMaterialPerKg ?? 0) - (ce?.materialCostPerKg ?? 0);
+                  // Sum of selected enabled processes' cost $/kg (platform Master Data → Processes).
+                  const mfgOpPerKgUsd = (processesState ?? [])
+                    .filter((p: any) => p.enabled !== false)
+                    .reduce((sum: number, p: any) => {
+                      const qty = Math.max(1, Number(p.processQuantity) || 1);
+                      const processCost = resolveProcessPerKgUsd(p, processCostCatalog);
+                      return sum + processCost * qty;
+                    }, 0);
 
                   const matCostUsd = clientCalcResult?.estimate.materialCostPerKg ?? Number(estimate?.materialCostPerKg) ?? 0;
                   const rmPerM2Usd = rmTotals?.rmPerM2 ?? clientCalcResult?.estimate.rmCostPerM2 ?? 0;
@@ -2940,18 +3076,22 @@ const EstimateEditor = () => {
                           </span>
                         </div>
                       )}
-                      {can('markupAmount') && marginUsd > 0 && (
+                      {can('markupAmount') && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-text-secondary">Margin ({pricingMethod === 'margin_per_kg' ? 'per kg' : `${markupPercent}%`})</span>
-                          <span className="font-mono font-semibold tabular">{estimate?.displayCurrency || 'USD'} {usdToDisplay(marginUsd, fxRate).toFixed(2)}</span>
+                          <span className="text-text-secondary">Margin</span>
+                          <span className="font-mono font-semibold tabular text-mist">—</span>
                         </div>
                       )}
                       {wasteUsd > 0 && (
                         <div className="flex justify-between text-sm">
-                          <span className="text-text-secondary">Waste ({ce?.wastePercentApplied ?? 0}%)</span>
+                          <span className="text-text-secondary">Waste</span>
                           <span className="font-mono font-semibold tabular">{estimate?.displayCurrency || 'USD'} {usdToDisplay(wasteUsd, fxRate).toFixed(2)}</span>
                         </div>
                       )}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-text-secondary">Manufacturing &amp; Operating</span>
+                        <span className="font-mono font-semibold tabular">{estimate?.displayCurrency || 'USD'} {usdToDisplay(mfgOpPerKgUsd, fxRate).toFixed(2)}/kg</span>
+                      </div>
                       {devUsd > 0 && (
                         <div className="flex justify-between text-sm">
                           <span className="text-text-secondary">Tooling / development</span>

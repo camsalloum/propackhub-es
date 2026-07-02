@@ -226,6 +226,7 @@ export function enrichMasterDataReference(ref: MasterDataReference): MasterDataR
       label: p.label,
       code: p.code,
       description: p.description ?? '',
+      costPerKgUsd: p.costPerKgUsd ?? 0,
     }));
 
   return {

@@ -16,7 +16,7 @@ import { SectionTitle } from '../components/SectionTitle';
 import { deriveBinderConcentrateStats, type LaminationRecipe } from '@es/engine';
 
 type MaterialTab = string; // now dynamic — any rm_type code can be a material tab
-type RefTab = 'product_type' | 'product_subtype' | 'unit' | 'rm_type' | 'process';
+type RefTab = 'product_type' | 'product_subtype' | 'unit' | 'rm_type' | 'process' | 'waste_bands';
 type Tab = MaterialTab | RefTab;
 
 // Static ref tabs — these never change
@@ -25,10 +25,11 @@ const REF_TABS: { id: RefTab; label: string }[] = [
   { id: 'product_type', label: 'Product Types' },
   { id: 'unit', label: 'Units' },
   { id: 'process', label: 'Processes' },
+  { id: 'waste_bands', label: 'Waste Bands' },
 ];
 
 // Static reference tab IDs — used to distinguish material tabs from ref tabs
-const REF_TAB_IDS = new Set<string>(['product_type', 'product_subtype', 'unit', 'rm_type', 'process']);
+const REF_TAB_IDS = new Set<string>(['product_type', 'product_subtype', 'unit', 'rm_type', 'process', 'waste_bands']);
 
 const PACKAGING_FAMILY = 'Packaging';
 
@@ -176,7 +177,9 @@ const MasterData = () => {
   /** Subtypes (all parents) — edited nested under Product Types. */
   const [subtypeRows, setSubtypeRows] = useState<Array<{ label: string; code: string; parent: string }>>([]);
   /** Process definitions — edited under the Processes tab. */
-  const [processRows, setProcessRows] = useState<Array<{ label: string; code: string; description: string; costPerHour: number; speedBasis: string; speedValue: number; setupHours: number }>>([]);
+  const [processRows, setProcessRows] = useState<Array<{ label: string; code: string; description: string; costPerHour: number; speedBasis: string; speedValue: number; setupHours: number; costPerKgUsd: number }>>([]);
+  /** Platform-wide waste bands (single source of truth for all estimates). */
+  const [wasteBands, setWasteBands] = useState<Array<{ minKg: number; maxKg: number | null; wastePercent: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -254,6 +257,7 @@ const MasterData = () => {
           : { label: (r as { label: string }).label, code: (r as { code: string }).code ?? '' }
       ),
       process: [],  // process tab managed separately via processRows state
+      waste_bands: [],
     };
 
     // Build dynamic material tabs from RM types.
@@ -287,7 +291,7 @@ const MasterData = () => {
       );
     }
     // Always load process rows (used by Processes tab)
-    const pRows = ((ref as { processRows?: Array<{ label: string; code: string; description?: string; costPerHour?: number; speedBasis?: string; speedValue?: number; setupHours?: number }> })
+    const pRows = ((ref as { processRows?: Array<{ label: string; code: string; description?: string; costPerHour?: number; speedBasis?: string; speedValue?: number; setupHours?: number; costPerKgUsd?: number }> })
       .processRows ?? []);
     if (pRows.length > 0) {
       setProcessRows(pRows.map((p) => ({
@@ -298,8 +302,21 @@ const MasterData = () => {
         speedBasis: p.speedBasis ?? 'kg_per_hour',
         speedValue: p.speedValue ?? 100,
         setupHours: p.setupHours ?? 1,
+        costPerKgUsd: p.costPerKgUsd ?? 0,
       })));
     }
+    // Always load platform waste bands (used by Waste Bands tab)
+    const wRows = ((ref as { wasteBands?: Array<{ minKg: number; maxKg: number | null; wastePercent: number }> })
+      .wasteBands ?? []);
+    setWasteBands(
+      wRows.length > 0
+        ? wRows.map((b) => ({
+            minKg: Number(b.minKg) || 0,
+            maxKg: b.maxKg == null ? null : Number(b.maxKg),
+            wastePercent: Number(b.wastePercent) || 0,
+          }))
+        : []
+    );
   }, [tab]);
 
   const canEdit = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
@@ -437,10 +454,38 @@ const MasterData = () => {
                 speedBasis: p.speedBasis,
                 speedValue: p.speedValue,
                 setupHours: p.setupHours,
+                costPerKgUsd: p.costPerKgUsd,
               },
             }))
         );
         syncToast(result.sync);
+        invalidate();
+        return;
+      }
+      if (tab === 'waste_bands') {
+        const normalized = wasteBands
+          .filter((b) => Number.isFinite(b.minKg) && Number.isFinite(b.wastePercent))
+          .map((b) => ({
+            minKg: Math.max(0, Number(b.minKg) || 0),
+            maxKg: b.maxKg == null ? null : Math.max(0, Number(b.maxKg) || 0),
+            wastePercent: Math.min(100, Math.max(0, Number(b.wastePercent) || 0)),
+          }))
+          .sort((a, b) => {
+            if (a.maxKg === null) return 1;
+            if (b.maxKg === null) return -1;
+            return a.maxKg - b.maxKg;
+          });
+        if (normalized.length === 0) {
+          setError('At least one waste band is required');
+          return;
+        }
+        if (normalized.filter((b) => b.maxKg === null).length > 1) {
+          setError('Only one open-ended (max = ∞) waste band is allowed');
+          return;
+        }
+        const result = await apiClient.updatePlatformWasteBands(normalized);
+        setWasteBands(result.wasteBands);
+        setStatus(`Saved ${result.wasteBands.length} waste band(s) — synced to all tenants`);
         invalidate();
         return;
       }
@@ -1135,7 +1180,7 @@ const MasterData = () => {
             <button
               type="button"
               className="btn-secondary text-sm flex items-center gap-1 py-1.5"
-              onClick={() => setProcessRows((prev) => [...prev, { label: 'New process', code: '', description: '', costPerHour: 50, speedBasis: 'kg_per_hour', speedValue: 100, setupHours: 1 }])}
+              onClick={() => setProcessRows((prev) => [...prev, { label: 'New process', code: '', description: '', costPerHour: 50, speedBasis: 'kg_per_hour', speedValue: 100, setupHours: 1, costPerKgUsd: 0 }])}
             >
               <Plus className="w-4 h-4" /> Add process
             </button>
@@ -1199,10 +1244,110 @@ const MasterData = () => {
                       <label className="block text-xs text-mist mb-0.5">Speed value</label>
                       <input type="number" className="input !min-h-[30px] !py-0.5 !px-2 text-xs w-full" value={proc.speedValue} onChange={(e) => setProcessRows((prev) => prev.map((p, j) => j === i ? { ...p, speedValue: Number(e.target.value) } : p))} />
                     </div>
+                    <div>
+                      <label className="block text-xs text-mist mb-0.5">Cost $/kg</label>
+                      <input type="number" step="0.01" className="input !min-h-[30px] !py-0.5 !px-2 text-xs w-full" value={proc.costPerKgUsd} onChange={(e) => setProcessRows((prev) => prev.map((p, j) => j === i ? { ...p, costPerKgUsd: Number(e.target.value) } : p))} />
+                    </div>
                   </div>
                 </div>
               );
             })}
+          </div>
+        </div>
+      ) : tab === 'waste_bands' ? (
+        <div className="card p-3 space-y-3">
+          <div className="flex justify-between items-center">
+            <SectionTitle
+              as="span"
+              className="text-sm text-mist"
+              hint="Platform-wide waste % bands. Each estimate looks up its waste % from the order quantity here — single source of truth synced to all tenants. Bands are matched by min/max kg; the open-ended band (∞) applies above the last cap."
+            >
+              {wasteBands.length} band(s)
+            </SectionTitle>
+            <button
+              type="button"
+              className="btn-secondary text-sm flex items-center gap-1 py-1.5"
+              onClick={() => setWasteBands((prev) => [...prev, { minKg: 0, maxKg: null, wastePercent: 5 }])}
+            >
+              <Plus className="w-4 h-4" /> Add band
+            </button>
+          </div>
+          <p className="text-xs text-mist">
+            Each band sets the waste % applied to estimates whose order quantity falls between
+            <strong> Min kg</strong> and <strong>Max kg</strong>. Leave Max kg blank (∞) on the last
+            band to cover any quantity above the highest cap. Waste % is added to the material cost
+            in every estimate.
+          </p>
+          <div className="table-wrap">
+            <table className="data-table min-w-[520px]">
+              <thead>
+                <tr>
+                  <th>Min kg</th>
+                  <th>Max kg</th>
+                  <th>Waste %</th>
+                  <th aria-label="actions"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {wasteBands.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="text-center text-mist py-4">No bands — using engine defaults</td>
+                  </tr>
+                ) : (
+                  wasteBands.map((band, i) => (
+                    <tr key={i}>
+                      <td>
+                        <input
+                          type="number"
+                          className="input !min-h-[30px] !py-0.5 !px-2 text-xs w-28"
+                          value={band.minKg}
+                          min={0}
+                          onChange={(e) => setWasteBands((prev) => prev.map((b, j) => j === i ? { ...b, minKg: Number(e.target.value) } : b))}
+                          disabled={!canEdit}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          className="input !min-h-[30px] !py-0.5 !px-2 text-xs w-28"
+                          value={band.maxKg ?? ''}
+                          min={0}
+                          placeholder="∞ (open)"
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setWasteBands((prev) => prev.map((b, j) => j === i ? { ...b, maxKg: v === '' ? null : Number(v) } : b));
+                          }}
+                          disabled={!canEdit}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          step="0.1"
+                          className="input !min-h-[30px] !py-0.5 !px-2 text-xs w-24"
+                          value={band.wastePercent}
+                          min={0}
+                          max={100}
+                          onChange={(e) => setWasteBands((prev) => prev.map((b, j) => j === i ? { ...b, wastePercent: Number(e.target.value) } : b))}
+                          disabled={!canEdit}
+                        />
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="p-1.5 text-danger hover:bg-danger/10 rounded transition-colors duration-micro ease-micro"
+                          onClick={() => setWasteBands((prev) => prev.filter((_, j) => j !== i))}
+                          disabled={!canEdit}
+                          aria-label="Delete band"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       ) : (

@@ -5,11 +5,12 @@
 ## Session start
 
 1. Read `docs/ES_MEMORY.md` — living memory and costing rules
-2. Read `docs/LOCKED_DECISIONS.md` — strategic locks
-3. Read `docs/ES_PRD_v3_FINAL_BUILD_SPEC.md` — build spec (when implementing)
-4. Read `docs/LIVE_STATE.md` — current phase
-5. Engine reference: `archive/legacy-laravel/COSTING_NOTES.md`
-6. Platform context: `../../platform/docs/PLATFORM_MASTER_PLAN.md`
+2. Read `docs/LIVE_STATE.md` — current phase
+3. **If touching Mfg & Operating, processes, or estimate start flow:** read `docs/PROCESS_COSTING_AND_ESTIMATE_FLOW_HANDOFF.md`
+4. Read `docs/LOCKED_DECISIONS.md` — strategic locks
+5. Read `docs/ES_PRD_v3_FINAL_BUILD_SPEC.md` — build spec (when implementing)
+6. Engine reference: `archive/legacy-laravel/COSTING_NOTES.md`
+7. Platform context: `../../platform/docs/PLATFORM_MASTER_PLAN.md`
 
 ## Product
 

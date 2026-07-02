@@ -87,10 +87,13 @@ export interface MasterDataReference {
     speedBasis?: string;
     speedValue?: number;
     setupHours?: number;
+    costPerKgUsd?: number;
   }>;
   costingDefaults?: {
     cleaningSolventKgPerJob?: number;
   };
+  /** Platform-wide waste bands (single source of truth for all estimates). */
+  wasteBands?: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
 }
 
 export const PACKAGING_FAMILY = 'Packaging';

@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { extractUserFromRequest, isPlatformAdmin } from '../utils/auth';
+import { extractUserFromRequest, isPlatformAdmin, isTenantAdmin } from '../utils/auth';
 import {
   listPlatformMasterMaterialsWithIds,
   createPlatformMasterMaterial,
@@ -13,6 +13,8 @@ import {
   syncPlatformMasterToAllTenants,
   getMasterDataVersion,
   listPlatformMasterMaterials,
+  getPlatformWasteBands,
+  replacePlatformWasteBands,
   ReferenceItemInUseError,
   type AuditActor,
 } from '../db/platform-master-data';
@@ -36,6 +38,17 @@ function requirePlatformAdmin(request: FastifyRequest, reply: FastifyReply): boo
   const user = extractUserFromRequest(request);
   if (!isPlatformAdmin(user.role)) {
     reply.status(403).send({ error: 'Platform admin only' });
+    return false;
+  }
+  return true;
+}
+
+// Waste bands are platform-wide but editable by tenant admins (managers) too —
+// they own the costing parameters for their estimates. Returns true if allowed.
+function requireTenantAdmin(request: FastifyRequest, reply: FastifyReply): boolean {
+  const user = extractUserFromRequest(request);
+  if (!isTenantAdmin(user.role)) {
+    reply.status(403).send({ error: 'Admin or manager only' });
     return false;
   }
   return true;
@@ -271,6 +284,48 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
       } catch (error) {
         console.error('Update costing defaults error:', error);
         return reply.status(500).send({ error: 'Failed to update costing defaults' });
+      }
+    }
+  );
+
+  // Platform-wide waste bands (single source of truth consumed by all estimates
+  // via order-quantity lookup). Read-only for non-admins; PUT replaces the set.
+  fastify.get('/api/v1/platform/master-data/waste-bands', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+      const wasteBands = await getPlatformWasteBands();
+      return reply.send({ wasteBands });
+    } catch (error) {
+      console.error('Get platform waste bands error:', error);
+      return reply.status(500).send({ error: 'Failed to load waste bands' });
+    }
+  });
+
+  fastify.put<{ Body: { wasteBands: Array<{ minKg: number; maxKg: number | null; wastePercent: number }> } }>(
+    '/api/v1/platform/master-data/waste-bands',
+    async (request, reply) => {
+      try {
+        await request.jwtVerify();
+        if (!requireTenantAdmin(request, reply)) return;
+        const WasteBandSchema = z.object({
+          minKg: z.coerce.number().nonnegative(),
+          maxKg: z.union([z.coerce.number().nonnegative(), z.null()]),
+          wastePercent: z.coerce.number().min(0).max(100),
+        });
+        const wasteBands = z
+          .array(WasteBandSchema)
+          .min(1)
+          .parse(request.body.wasteBands);
+        const result = await replacePlatformWasteBands(wasteBands, auditActorFromRequest(request));
+        // Keep tenants in sync so their cached master reference refreshes.
+        await syncPlatformMasterToAllTenants({ pruneOrphans: false });
+        return reply.send(result);
+      } catch (error) {
+        if (error instanceof Error && (error.message.includes('open-ended') || error.message.includes('At least one'))) {
+          return reply.status(400).send({ error: error.message });
+        }
+        console.error('Update platform waste bands error:', error);
+        return reply.status(500).send({ error: 'Failed to update waste bands' });
       }
     }
   );

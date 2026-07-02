@@ -1,7 +1,105 @@
 /** Validation + dimension cleanup for template → estimate configure flow. */
 
-import { normalizeProductType } from './masterDataReference';
+import {
+  DEFAULT_PROCESS_OPTIONS,
+  normalizeProductType,
+  type MasterDataReferenceState,
+  type ProcessOption,
+} from './masterDataReference';
 import { engineTypeForFamily, type ProductFamily } from './productCatalog';
+
+export type ProcessCostRow = {
+  label: string;
+  code: string;
+  description?: string;
+  costPerKgUsd?: number;
+  costPerHour?: number;
+  speedBasis?: string;
+  speedValue?: number;
+  setupHours?: number;
+};
+
+const normProcessToken = (value: unknown) => String(value ?? '').trim().toLowerCase();
+
+/** Merge processRows + processOptions into one lookup catalog (rows win). */
+export function buildProcessCostCatalog(input: {
+  processRows?: ProcessCostRow[];
+  processOptions?: ProcessOption[];
+}): ProcessCostRow[] {
+  const byCode = new Map<string, ProcessCostRow>();
+  for (const row of input.processRows ?? []) {
+    const code = normProcessToken(row.code);
+    if (!code) continue;
+    byCode.set(code, row);
+  }
+  const optionSource =
+    (input.processOptions ?? []).length > 0 ? input.processOptions! : DEFAULT_PROCESS_OPTIONS;
+  for (const option of optionSource) {
+    const code = normProcessToken(option.code);
+    if (!code || byCode.has(code)) continue;
+    byCode.set(code, {
+      label: option.label,
+      code: option.code,
+      description: option.description,
+      costPerKgUsd: option.costPerKgUsd ?? 0,
+    });
+  }
+  return [...byCode.values()];
+}
+
+export function buildProcessCostCatalogFromReference(
+  reference: Pick<MasterDataReferenceState, 'processRows' | 'processOptions'>
+): ProcessCostRow[] {
+  return buildProcessCostCatalog({
+    processRows: reference.processRows,
+    processOptions: reference.processOptions,
+  });
+}
+
+export function lookupProcessCostRow(
+  process: Record<string, unknown>,
+  catalog: ProcessCostRow[]
+): ProcessCostRow | null {
+  const candidates = new Set<string>();
+  const processKey = normProcessToken(process.processKey);
+  const name = normProcessToken(process.name);
+  if (processKey) candidates.add(processKey);
+  if (name) {
+    candidates.add(name);
+    candidates.add(name.replace(/\s+/g, '_'));
+  }
+  return (
+    catalog.find((row) => {
+      const code = normProcessToken(row.code);
+      const label = normProcessToken(row.label);
+      for (const candidate of candidates) {
+        if (candidate === code || candidate === label) return true;
+      }
+      return false;
+    }) ?? null
+  );
+}
+
+/** Master per-kg cost wins over stale legacy persisted values. */
+export function resolveProcessPerKgUsd(
+  process: Record<string, unknown>,
+  catalog: ProcessCostRow[]
+): number {
+  const match = lookupProcessCostRow(process, catalog);
+  const masterCost = Number(match?.costPerKgUsd ?? 0);
+  if (masterCost > 0) return masterCost;
+
+  const persisted = Number(process.costPerKgUsd ?? 0);
+  if (persisted > 0) return persisted;
+
+  const basis = normProcessToken(process.speedBasis);
+  const costPerHour = Number(process.costPerHour ?? 0);
+  const speedValue = Number(process.speedValue ?? 0);
+  if (basis === 'kg_per_hour' && costPerHour > 0 && speedValue > 0) {
+    return costPerHour / speedValue;
+  }
+  return 0;
+}
 
 const PROCESS_SPEED_BASES = ['kg_per_hour', 'm_per_min', 'pcs_per_min'] as const;
 export type ProcessSpeedBasis = (typeof PROCESS_SPEED_BASES)[number];
@@ -15,11 +113,16 @@ export function normalizeProcessForSave(process: Record<string, unknown>) {
 
   return {
     name: String(process.name ?? ''),
+    /** Stable master-data code — e.g. 'lamination'. Used for reliable cost lookups. */
+    processKey: process.processKey ? String(process.processKey) : null,
+    /** How many times this process applies (e.g. 2 for double-lamination). */
+    processQuantity: Math.max(1, Number(process.processQuantity) || 1),
     costPerHour: Number(process.costPerHour) || 0,
     speedBasis,
     speedValue: Number(process.speedValue) || 0,
     setupHours: Number(process.setupHours) || 0,
     enabled: process.enabled !== false,
+    costPerKgUsd: Number(process.costPerKgUsd) || 0,
   };
 }
 
@@ -58,11 +161,21 @@ export function estimateNeedsConfiguration(dimensions?: Record<string, unknown> 
   return Boolean(dimensions?.configureFromTemplate);
 }
 
+export function hasConfiguredProcesses(
+  processes?: Array<{ enabled?: boolean }> | null
+): boolean {
+  return (processes ?? []).some((p) => p.enabled !== false);
+}
+
 export function validateConfiguredEstimate(input: {
   layers: Array<{ micron: number }>;
   productType: string;
   dimensions: Record<string, unknown>;
+  processes?: Array<{ enabled?: boolean }> | null;
 }): string | null {
+  if (!hasConfiguredProcesses(input.processes)) {
+    return 'Select at least one manufacturing process in Structure.';
+  }
   if (input.layers.length === 0) return 'Add at least one layer.';
   if (input.layers.some((l) => !l.micron || l.micron <= 0)) {
     return 'Set thickness (µ) for every layer in Structure.';

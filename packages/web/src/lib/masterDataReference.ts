@@ -52,9 +52,17 @@ export interface MasterDataReferenceState {
   productSubtypeOptions: ProductSubtypeOption[];
   /** Process definitions — driven by Master Data > Processes. */
   processOptions: ProcessOption[];
+  processRows?: Array<{
+    label: string;
+    code: string;
+    description?: string;
+    costPerKgUsd?: number;
+  }>;
   costingDefaults?: {
     cleaningSolventKgPerJob?: number;
   };
+  /** Platform-wide waste bands (single source of truth for all estimates). */
+  wasteBands?: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
 }
 
 export interface ProcessOption {
@@ -64,17 +72,19 @@ export interface ProcessOption {
   code: string;
   /** Short description shown as tooltip/hint */
   description: string;
+  /** Platform default per-kg operating cost (USD). */
+  costPerKgUsd?: number;
 }
 
 /** Default process options — used when Master Data has not yet been seeded. */
 export const DEFAULT_PROCESS_OPTIONS: ProcessOption[] = [
-  { label: 'Extrusion',    code: 'extrusion',    description: 'Blown/cast film production — PE mono structures' },
-  { label: 'Printing',     code: 'printing',     description: 'Flexo / gravure print run' },
-  { label: 'Lamination',   code: 'lamination',   description: 'Solvent or solventless bonding — multilayer stacks' },
-  { label: 'Slitting',     code: 'slitting',     description: 'Reel slitting to finished width' },
-  { label: 'Pouch Making', code: 'pouch_making', description: 'Pouch forming, filling & sealing' },
-  { label: 'Bag Making',   code: 'bag_making',   description: 'Bag forming & sealing (shopping, industrial, courier)' },
-  { label: 'Seaming',      code: 'seaming',      description: 'Side-seal seaming — sleeves' },
+  { label: 'Extrusion',    code: 'extrusion',    description: 'Blown/cast film production — PE mono structures', costPerKgUsd: 0.4 },
+  { label: 'Printing',     code: 'printing',     description: 'Flexo / gravure print run', costPerKgUsd: 0.8 },
+  { label: 'Lamination',   code: 'lamination',   description: 'Solvent or solventless bonding — multilayer stacks', costPerKgUsd: 0.3 },
+  { label: 'Slitting',     code: 'slitting',     description: 'Reel slitting to finished width', costPerKgUsd: 0.1 },
+  { label: 'Pouch Making', code: 'pouch_making', description: 'Pouch forming, filling & sealing', costPerKgUsd: 0.8 },
+  { label: 'Bag Making',   code: 'bag_making',   description: 'Bag forming & sealing (shopping, industrial, courier)', costPerKgUsd: 0.5 },
+  { label: 'Seaming',      code: 'seaming',      description: 'Side-seal seaming — sleeves', costPerKgUsd: 0.5 },
 ];
 
 export const DEFAULT_RM_TYPE_OPTIONS: RmTypeOption[] = [
@@ -106,6 +116,8 @@ export const DEFAULT_PRODUCT_SUBTYPE_OPTIONS: ProductSubtypeOption[] = [
   { label: 'Diaper Bag', code: 'bag_diaper', parent: 'bag', group: 'Other' },
   { label: 'Wicket Bag', code: 'bag_wicket', parent: 'bag', group: 'Other' },
 ];
+
+import { DEFAULT_WASTE_BANDS } from '@es/engine';
 
 export const DEFAULT_MASTER_REFERENCE: MasterDataReferenceState = {
   productTypeOptions: [
@@ -140,7 +152,9 @@ export const DEFAULT_MASTER_REFERENCE: MasterDataReferenceState = {
   rmTypeOptions: DEFAULT_RM_TYPE_OPTIONS,
   productSubtypeOptions: DEFAULT_PRODUCT_SUBTYPE_OPTIONS,
   processOptions: DEFAULT_PROCESS_OPTIONS,
+  processRows: [],
   costingDefaults: { cleaningSolventKgPerJob: 20 },
+  wasteBands: DEFAULT_WASTE_BANDS.map((b) => ({ ...b })),
 };
 
 export function defaultProductTypeValue(options: ProductTypeOption[] = DEFAULT_MASTER_REFERENCE.productTypeOptions): string {

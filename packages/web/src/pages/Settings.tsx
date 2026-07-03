@@ -29,6 +29,7 @@ const Settings = () => {
   // Controlled settings state
   const [tenantName, setTenantName] = useState('');
   const [defaultMarkup, setDefaultMarkup] = useState<number>(15);
+  const [operatingCostMethod, setOperatingCostMethod] = useState<'process_per_kg' | 'markup_over_rm'>('markup_over_rm');
   const [defaultSlabTemplate, setDefaultSlabTemplate] = useState('standard');
   const [displayCurrency, setDisplayCurrency] = useState('AED');
   const [useAutoFx, setUseAutoFx] = useState(true);
@@ -66,6 +67,9 @@ const Settings = () => {
       setFooterText((settings.footerText as string) || (settings.footer as string) || '');
       // BUG-7: load defaultMarkup + defaultSlabTemplate so Save doesn't overwrite with hardcoded defaults
       setDefaultMarkup(Number(settings.defaultMarkupPercent) || 15);
+      setOperatingCostMethod(
+        settings.operatingCostMethod === 'process_per_kg' ? 'process_per_kg' : 'markup_over_rm'
+      );
       setDefaultSlabTemplate(settings.defaultSlabTemplate || 'standard');
     } catch (err) {
       setSettingsError(err instanceof Error ? err.message : 'Failed to load settings');
@@ -128,6 +132,7 @@ const Settings = () => {
         termsAndConditions,
         footerText,
         defaultMarkupPercent: defaultMarkup,
+        operatingCostMethod,
         defaultSlabTemplate,
       });
       alert('Settings saved');
@@ -219,14 +224,37 @@ const Settings = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-brand mb-2">Default Markup %</label>
+                  <label className="block text-sm font-medium text-brand mb-2">Manufacturing &amp; Operating cost</label>
+                  <select
+                    value={operatingCostMethod}
+                    onChange={(e) => setOperatingCostMethod(e.target.value as 'process_per_kg' | 'markup_over_rm')}
+                    className="input w-72"
+                  >
+                    <option value="process_per_kg">Per-kg process cost (Σ process × qty)</option>
+                    <option value="markup_over_rm">Markup over material (Total RM × markup %)</option>
+                  </select>
+                  <p className="text-sm text-text-secondary mt-2">
+                    How the operating cost is added to the price. Per-kg suits companies with defined process costs;
+                    markup-over-material suits single users. This is the only markup applied.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-brand mb-2">
+                    {operatingCostMethod === 'markup_over_rm' ? 'Markup over material %' : 'Default Markup %'}
+                  </label>
                   <input
                     type="number"
                     value={defaultMarkup}
                     onChange={(e) => setDefaultMarkup(Number(e.target.value))}
                     className="input w-32"
+                    disabled={operatingCostMethod === 'process_per_kg'}
                   />
-                  <p className="text-sm text-text-secondary mt-2">Applied to all new estimates unless overridden</p>
+                  <p className="text-sm text-text-secondary mt-2">
+                    {operatingCostMethod === 'markup_over_rm'
+                      ? 'Percentage added over Total RM as Manufacturing & Operating.'
+                      : 'Not used while operating cost is per-kg process cost.'}
+                  </p>
                 </div>
 
                 <div>

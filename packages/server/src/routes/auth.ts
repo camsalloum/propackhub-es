@@ -66,6 +66,8 @@ export async function registerRoute(
       .values({
         name: tenantName,
         type: tenantType,
+        // Default M&O method by tenant type: company → per-kg process cost, individual → markup over RM.
+        operatingCostMethod: tenantType === 'company' ? 'process_per_kg' : 'markup_over_rm',
         displayCurrency,
         exchangeRateUsdToDisplay: exchangeRate.toString(),
         useAutoFx: true, // Enable auto-refresh by default
@@ -227,6 +229,7 @@ export async function loginRoute(
         id: tenant.id,
         name: tenant.name,
         displayCurrency: tenant.displayCurrency,
+        operatingCostMethod: tenant.operatingCostMethod,
       },
     });
   } catch (error: any) {
@@ -274,6 +277,7 @@ export async function meRoute(
         id: tenantData.id,
         name: tenantData.name,
         displayCurrency: tenantData.displayCurrency,
+        operatingCostMethod: tenantData.operatingCostMethod,
       },
     });
   } catch (error) {

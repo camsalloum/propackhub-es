@@ -118,12 +118,12 @@ describe('Engine calculator — bag costing', () => {
     expect(pouchResult.estimate.piecesPerKg / bagResult.estimate.piecesPerKg).toBeGreaterThan(2);
   });
 
-  it('pcs_per_min process cost is correct (no /1000 bug)', () => {
-    // piecesPerKg ≈ 72.46; orderQuantity = 1000 kg → 72,460 pieces
-    // process speed = 100 pcs/min → 60×100 = 6000 pcs/hr → 72460/6000 = 12.08 hrs
+  it('bag piecesPerKg conversion is sane (no /1000 bug) and M&O is per-kg', () => {
+    // piecesPerKg ≈ 72.46; M&O uses per-kg process cost (no machine time / web width).
     const estimate: Estimate = {
       ...baseEstimate,
       id: 'bag-3',
+      operatingCostMethod: 'process_per_kg',
       orderQuantityKg: 1000,
       orderQuantityUnit: 'kgs',
       dimensions: {
@@ -140,28 +140,26 @@ describe('Engine calculator — bag costing', () => {
         {
           id: 'bag-making',
           name: 'Bag making',
-          costPerHour: 50,
-          speedBasis: 'pcs_per_min',
-          speedValue: 100,
-          setupHours: 0,
+          costPerKgUsd: 0.5,
+          processQuantity: 1,
           enabled: true,
         },
       ],
     } as Estimate;
 
     const result = calculateEstimate(estimate, materials);
-    const pieces = 1000 * (result.estimate.piecesPerKg ?? 0);
-    const expectedRunHours = pieces / (100 * 60);
-    expect(result.estimate.processes?.[0].runHours).toBeCloseTo(expectedRunHours, 2);
-    // Sanity: ~11 hrs, NOT ~0.011 hrs (the old /1000 bug)
-    expect(result.estimate.processes?.[0].runHours).toBeGreaterThan(1);
+    // M&O (process_per_kg) = 0.5 × 1 = 0.5, independent of run size / machine speed.
+    expect(result.estimate.operationCostPerKg).toBeCloseTo(0.5, 6);
+    // Sanity: piecesPerKg ~72, NOT ~0.072 (the old /1000 bug)
+    expect(result.estimate.piecesPerKg ?? 0).toBeGreaterThan(1);
   });
 
-  it('orderQuantityUnit=kpcs converts to kg for process costs', () => {
+  it('orderQuantityUnit=kpcs converts to kg for order quantities', () => {
     // 10 kpcs = 10,000 pieces; piecesPerKg ≈ 72.46 → kg = 10000/72.46 ≈ 138.02 kg
     const estimate: Estimate = {
       ...baseEstimate,
       id: 'bag-4',
+      operatingCostMethod: 'process_per_kg',
       orderQuantityKg: 10, // 10 kpcs
       orderQuantityUnit: 'kpcs',
       dimensions: {
@@ -178,22 +176,18 @@ describe('Engine calculator — bag costing', () => {
         {
           id: 'bag-making',
           name: 'Bag making',
-          costPerHour: 50,
-          speedBasis: 'kg_per_hour',
-          speedValue: 100,
-          setupHours: 0,
+          costPerKgUsd: 0.5,
+          processQuantity: 1,
           enabled: true,
         },
       ],
     } as Estimate;
 
     const result = calculateEstimate(estimate, materials);
-    // runHours = trueKg / 100. trueKg ≈ 138.02 → runHours ≈ 1.380
-    const expectedKg = (10 * 1000) / (result.estimate.piecesPerKg ?? 1);
-    const expectedRunHours = expectedKg / 100;
-    expect(result.estimate.processes?.[0].runHours).toBeCloseTo(expectedRunHours, 2);
     // orderQuantityKpcs output should reflect the converted kg
     expect(result.estimate.orderQuantityKpcs).toBeCloseTo(10, 1);
+    // M&O stays per-kg regardless of the entered unit.
+    expect(result.estimate.operationCostPerKg).toBeCloseTo(0.5, 6);
   });
 
   it('orderQuantityUnit=sqm converts to kg', () => {

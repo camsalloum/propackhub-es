@@ -117,7 +117,7 @@ const LAYER_TYPE_TABLE_LABELS: Record<string, string> = {
 
 const EstimateEditor = () => {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, tenant } = useAuth();
   const { can } = useVisibilityProfile(user?.role);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -1086,11 +1086,19 @@ const EstimateEditor = () => {
         processes: processesState,
         orderQuantityKg: orderQuantity,
         orderQuantityUnit,
-        orderQuantityUnitDef: (
-          masterReference as {
-            unitRows?: Array<{ code: string; basis: 'kg' | 'pieces' | 'sqm' | 'lm'; multiplier: number }>;
-          } | null
-        )?.unitRows?.find((u) => u.code === orderQuantityUnit),
+        orderQuantityUnitDef: (() => {
+          const def = (
+            masterReference as {
+              unitRows?: Array<{ code: string; basis: 'kg' | 'pieces' | 'sqm' | 'lm'; multiplier: number; variableMultiplier?: boolean }>;
+            } | null
+          )?.unitRows?.find((u) => u.code === orderQuantityUnit);
+          if (!def) return undefined;
+          const override = Number(dimensions.orderUnitMultiplier);
+          if (def.variableMultiplier && Number.isFinite(override) && override > 0) {
+            return { basis: def.basis, multiplier: override };
+          }
+          return { basis: def.basis, multiplier: def.multiplier };
+        })(),
         displayCurrency: estimate?.displayCurrency || 'USD',
         exchangeRateUsdToDisplay: parseFloat(estimate?.exchangeRateUsdToDisplay) || 1,
         solventCostPerKgUsd: resolvedSolventCostPerKgUsd,
@@ -1100,6 +1108,7 @@ const EstimateEditor = () => {
         inkSolventRatio: hasSbInk ? effectiveInkSolventRatio : undefined,
         pricingMethod,
         marginValuePerKgUsd,
+        operatingCostMethod: tenant?.operatingCostMethod ?? undefined,
         toolingChargeUsd,
         toolingBilledToCustomer: toolingChargeUsd > 0,
         deliveryTerm,
@@ -1117,6 +1126,7 @@ const EstimateEditor = () => {
     hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, layers.length, accessories,
     orderQuantity, orderQuantityUnit, masterReference,
     pricingMethod, marginValuePerKgUsd, toolingChargeUsd, deliveryTerm, deliveryChargeUsd,
+    tenant?.operatingCostMethod, processesState,
   ]);
 
   const solventCostLines = useMemo(() => {
@@ -2042,6 +2052,10 @@ const EstimateEditor = () => {
           orderQuantityUnit={orderQuantityUnit}
           onOrderQuantityUnitChange={setOrderQuantityUnit}
           unitOptions={availableUnitOptions}
+          orderQuantityUnitMultiplier={dimensions.orderUnitMultiplier}
+          onOrderQuantityUnitMultiplierChange={(value) =>
+            setDimensions((prev) => ({ ...prev, orderUnitMultiplier: value }))
+          }
           orderQuantityHint={orderQuantityHint}
           dimensionHints={dimensionHints}
           bagDimensionsPanel={
@@ -3024,131 +3038,111 @@ const EstimateEditor = () => {
               <div className="card lg:col-span-1">
                 <h3 className="font-display font-semibold text-brand mb-4">Cost breakdown</h3>
                 {(() => {
-                  // Use engine result when available (accurate); fall back to saved estimate fields
-                  const cb = clientCalcResult?.costBreakdown;
                   const ce = clientCalcResult?.estimate;
-                  const matPct = cb ? Math.round(cb.materialPercent) : (() => {
-                    const mat = Number(estimate?.materialCostPerKg) || 0;
-                    const sale = Number(estimate?.salePricePerKg) || 0;
-                    return sale ? Math.round((mat / sale) * 100) : 0;
-                  })();
-                  const mkupPct = cb ? Math.round(cb.markupPercent) : 0;
-                  const procPct = cb ? Math.round(cb.processPercent) : 0;
-                  const devPct = cb?.developmentPercent ? Math.round(cb.developmentPercent) : 0;
-                  const logiPct = cb?.logisticsPercent ? Math.round(cb.logisticsPercent) : 0;
-                  const wasteAdjPct = Math.max(0, 100 - matPct - mkupPct - procPct - devPct - logiPct);
-                  // New-model per-kg components (USD).
-                  const devUsd = ce?.developmentCostPerKg ?? 0;
-                  const logiUsd = ce?.logisticsCostPerKg ?? 0;
-                  const wasteUsd = (ce?.wasteAdjustedMaterialPerKg ?? 0) - (ce?.materialCostPerKg ?? 0);
-                  // Sum of selected enabled processes' cost $/kg (platform Master Data → Processes).
-                  const mfgOpPerKgUsd = (processesState ?? [])
+                  const cur = estimate?.displayCurrency || 'USD';
+                  const gsmLocal = ce?.totalGsm ?? totalGsm ?? 0;
+                  const widthM = (dimensions?.reelWidthMm ?? 0) / 1000;
+                  const showM2 = gsmLocal > 0;
+                  const showLm = allowedUnitBases.has('lm') && widthM > 0;
+                  const m2ToKg = (v: number) => (gsmLocal > 0 ? (v / gsmLocal) * 1000 : 0);
+                  const kgToM2 = (v: number) => (showM2 ? v * (gsmLocal / 1000) : 0);
+                  const m2ToLm = (v: number) => (showLm ? v * widthM : 0);
+                  const fmtKg = (v: number) => usdToDisplayPrecise(v, fxRate).toFixed(2);
+                  const fmtM2 = (v: number) => usdToDisplayPrecise(v, fxRate).toFixed(4);
+                  const fmtLm = (v: number) => usdToDisplayPrecise(v, fxRate).toFixed(4);
+
+                  // Per-family raw-material split (per m²) from the current layer stack.
+                  let subM2 = 0, inkAdhM2 = 0, pkgM2 = 0;
+                  for (const l of layers) {
+                    const mat = materials.find((m) => m.id === l.materialId);
+                    const fam = (mat?.substrateFamily ?? '').toLowerCase();
+                    const t = (l.materialType || mat?.type || 'substrate') as string;
+                    const lineM2 = ((l.gsm || 0) / 1000) * (l.costPerKgUsd || 0);
+                    if (t === 'substrate') {
+                      if (fam === 'packaging') pkgM2 += lineM2; else subM2 += lineM2;
+                    } else if (t === 'ink' || t === 'adhesive') {
+                      inkAdhM2 += lineM2;
+                    }
+                  }
+                  inkAdhM2 += solventTotalPerM2Usd; // Ink, Solvent, Adhesive & Coating family
+
+                  const substratesKg = m2ToKg(subM2);
+                  const inkAdhKg = m2ToKg(inkAdhM2);
+                  const packagingKg = m2ToKg(pkgM2);
+                  const materialNoWasteKg = ce?.materialCostPerKg ?? (substratesKg + inkAdhKg + packagingKg);
+                  const totalRmKg = ce?.wasteAdjustedMaterialPerKg ?? materialNoWasteKg;
+                  const wasteKg = Math.max(0, totalRmKg - materialNoWasteKg);
+                  const wastePct = ce?.wastePercentApplied ?? 0;
+                  const baseM2 = subM2 + inkAdhM2 + pkgM2;
+                  const wasteM2 = baseM2 * (wastePct / 100);
+                  const totalRmM2 = baseM2 + wasteM2;
+
+                  // Manufacturing & Operating — resolved by the tenant method.
+                  const processSumPerKgUsd = (processesState ?? [])
                     .filter((p: any) => p.enabled !== false)
                     .reduce((sum: number, p: any) => {
                       const qty = Math.max(1, Number(p.processQuantity) || 1);
-                      const processCost = resolveProcessPerKgUsd(p, processCostCatalog);
-                      return sum + processCost * qty;
+                      return sum + resolveProcessPerKgUsd(p, processCostCatalog) * qty;
                     }, 0);
+                  const mfgOpKg = ce?.operationCostPerKg ?? processSumPerKgUsd;
+                  const prepressKg = ce?.developmentCostPerKg ?? 0;
+                  const transportKg = ce?.logisticsCostPerKg ?? 0;
+                  const accessoryKg = ce?.accessoryCostPerKg ?? 0;
+                  const saleKg = ce?.salePricePerKg ?? Number(estimate?.salePricePerKg) ?? 0;
 
-                  const matCostUsd = clientCalcResult?.estimate.materialCostPerKg ?? Number(estimate?.materialCostPerKg) ?? 0;
-                  const rmPerM2Usd = rmTotals?.rmPerM2 ?? clientCalcResult?.estimate.rmCostPerM2 ?? 0;
-                  const saleUsd = clientCalcResult?.estimate.salePricePerKg ?? Number(estimate?.salePricePerKg) ?? 0;
-                  const _salePerM2Usd = clientCalcResult?.estimate.sqmPerKg
-                    ? saleUsd / clientCalcResult.estimate.sqmPerKg
-                    : totalGsm > 0
-                      ? (saleUsd * totalGsm) / 1000
-                      : 0;
-                  void _salePerM2Usd;
-                  const effMargin = effectiveMarginPercent(matCostUsd, markupPercent, saleUsd);
+                  type CostRow = { label: string; kgVal: number; m2Val?: number; strong?: boolean; show?: boolean };
+                  const rows: CostRow[] = [
+                    { label: 'Substrates', kgVal: substratesKg, m2Val: subM2 },
+                    { label: 'Ink, Solvent, Adhesive & Coating', kgVal: inkAdhKg, m2Val: inkAdhM2 },
+                    { label: 'Waste', kgVal: wasteKg, m2Val: wasteM2 },
+                    { label: 'Packaging', kgVal: packagingKg, m2Val: pkgM2, show: packagingKg > 0 },
+                    { label: 'Total RM', kgVal: totalRmKg, m2Val: totalRmM2, strong: true },
+                    { label: 'Manufacturing & Operating', kgVal: mfgOpKg, m2Val: kgToM2(mfgOpKg) },
+                    { label: 'PrePress', kgVal: prepressKg, m2Val: kgToM2(prepressKg), show: prepressKg > 0 },
+                    { label: 'Transportation', kgVal: transportKg, m2Val: kgToM2(transportKg), show: transportKg > 0 },
+                    { label: 'Accessories', kgVal: accessoryKg, m2Val: kgToM2(accessoryKg), show: accessoryKg > 0 },
+                    { label: 'Selling price', kgVal: saleKg, m2Val: kgToM2(saleKg), strong: true },
+                  ];
 
                   return (
-                    <div className="space-y-3">
-                      {can('rmCostPerKg') && (
-                        <div className="flex justify-between text-sm font-semibold border-b border-border pb-2">
-                          <span className="text-text-primary">Total RM</span>
-                          <span className="font-mono text-text-primary text-right tabular">
-                            <span className="block">{estimate?.displayCurrency || 'USD'} {usdToDisplayPrecise(matCostUsd, fxRate).toFixed(4)}/kg</span>
-                            {(can('costPerSqm') || can('rmCostPerKg')) && rmPerM2Usd > 0 && (
-                              <span className="block text-xs font-normal text-text-secondary mt-0.5">
-                                {estimate?.displayCurrency || 'USD'} {usdToDisplayPrecise(rmPerM2Usd, fxRate).toFixed(4)}/m²
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      )}
-                      {can('markupAmount') && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-text-secondary">Margin</span>
-                          <span className="font-mono font-semibold tabular text-mist">—</span>
-                        </div>
-                      )}
-                      {wasteUsd > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-text-secondary">Waste</span>
-                          <span className="font-mono font-semibold tabular">{estimate?.displayCurrency || 'USD'} {usdToDisplay(wasteUsd, fxRate).toFixed(2)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-sm">
-                        <span className="text-text-secondary">Manufacturing &amp; Operating</span>
-                        <span className="font-mono font-semibold tabular">{estimate?.displayCurrency || 'USD'} {usdToDisplay(mfgOpPerKgUsd, fxRate).toFixed(2)}/kg</span>
-                      </div>
-                      {devUsd > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-text-secondary">Tooling / development</span>
-                          <span className="font-mono font-semibold tabular">{estimate?.displayCurrency || 'USD'} {usdToDisplay(devUsd, fxRate).toFixed(2)}/kg</span>
-                        </div>
-                      )}
-                      {logiUsd > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-text-secondary">Delivery / logistics</span>
-                          <span className="font-mono font-semibold tabular">{estimate?.displayCurrency || 'USD'} {usdToDisplay(logiUsd, fxRate).toFixed(2)}/kg</span>
-                        </div>
-                      )}
-                      {/* Effective margin % — always shown to admin (PRD §7.3 label) */}
-                      {saleUsd > 0 && (
-                        <div className="flex justify-between text-sm pt-2 border-t border-border">
-                          <span className="text-mist" title="Markup amount ÷ sale price">Effective margin %</span>
-                          <span className="font-mono font-semibold text-success">{effMargin.toFixed(1)}%</span>
-                        </div>
-                      )}
-                      {/* Visual breakdown bars */}
-                      <div className="space-y-2 pt-1">
-                        <div>
-                          <div className="flex justify-between text-xs mb-1"><span>Material</span><span>{matPct}%</span></div>
-                          <div className="w-full bg-slate rounded-full h-1.5"><div className="bg-brand rounded-full h-1.5" style={{ width: `${matPct}%` }} /></div>
-                        </div>
-                        <div>
-                          <div className="flex justify-between text-xs mb-1"><span>Markup (on RM)</span><span>{mkupPct}%</span></div>
-                          <div className="w-full bg-slate rounded-full h-1.5"><div className="bg-gold rounded-full h-1.5" style={{ width: `${mkupPct}%` }} /></div>
-                        </div>
-                        {procPct > 0 && (
-                          <div>
-                            <div className="flex justify-between text-xs mb-1"><span>Process</span><span>{procPct}%</span></div>
-                            <div className="w-full bg-slate rounded-full h-1.5"><div className="bg-success rounded-full h-1.5" style={{ width: `${procPct}%` }} /></div>
-                          </div>
-                        )}
-                        {devPct > 0 && (
-                          <div>
-                            <div className="flex justify-between text-xs mb-1"><span>Tooling / development</span><span>{devPct}%</span></div>
-                            <div className="w-full bg-slate rounded-full h-1.5"><div className="bg-info rounded-full h-1.5" style={{ width: `${devPct}%` }} /></div>
-                          </div>
-                        )}
-                        {logiPct > 0 && (
-                          <div>
-                            <div className="flex justify-between text-xs mb-1"><span>Delivery / logistics</span><span>{logiPct}%</span></div>
-                            <div className="w-full bg-slate rounded-full h-1.5"><div className="bg-accent rounded-full h-1.5" style={{ width: `${logiPct}%` }} /></div>
-                          </div>
-                        )}
-                        {wasteAdjPct > 0 && (
-                          <div>
-                            <div className="flex justify-between text-xs mb-1"><span>Waste / other</span><span>{wasteAdjPct}%</span></div>
-                            <div className="w-full bg-slate rounded-full h-1.5"><div className="bg-warning rounded-full h-1.5" style={{ width: `${wasteAdjPct}%` }} /></div>
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-xs text-mist pt-1">
-                        {clientCalcResult ? 'Live engine preview' : 'Calculate to refresh pricing'}
-                      </p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className="text-left py-2 px-3 text-xs font-medium text-mist"> </th>
+                            <th className="text-right py-2 px-3 text-xs font-medium text-mist whitespace-nowrap">{cur} / kg</th>
+                            {showM2 && <th className="text-right py-2 px-3 text-xs font-medium text-mist whitespace-nowrap">{cur} / m²</th>}
+                            {showLm && <th className="text-right py-2 px-3 text-xs font-medium text-mist whitespace-nowrap">{cur} / LM</th>}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows
+                            .filter((r) => r.show !== false)
+                            .map((r, i) => (
+                              <tr
+                                key={r.label}
+                                className={`${r.strong ? 'border-t border-border' : ''} ${i % 2 === 1 ? 'bg-slate/40' : ''}`}
+                              >
+                                <td className={`py-2 px-3 ${r.strong ? 'font-semibold text-text-primary' : 'text-text-secondary'}`}>
+                                  {r.label}
+                                </td>
+                                <td className={`py-2 px-3 text-right font-mono tabular whitespace-nowrap ${r.strong ? 'font-semibold text-text-primary' : ''}`}>
+                                  {fmtKg(r.kgVal)}
+                                </td>
+                                {showM2 && (
+                                  <td className={`py-2 px-3 text-right font-mono tabular whitespace-nowrap ${r.strong ? 'font-semibold text-text-primary' : ''}`}>
+                                    {fmtM2(r.m2Val ?? 0)}
+                                  </td>
+                                )}
+                                {showLm && (
+                                  <td className={`py-2 px-3 text-right font-mono tabular whitespace-nowrap ${r.strong ? 'font-semibold text-text-primary' : ''}`}>
+                                    {fmtLm(m2ToLm(r.m2Val ?? 0))}
+                                  </td>
+                                )}
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
                     </div>
                   );
                 })()}

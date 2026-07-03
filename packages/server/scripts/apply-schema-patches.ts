@@ -27,6 +27,14 @@ async function main() {
         WHEN duplicate_object THEN NULL;
       END $$;
     `);
+    // Third Manufacturing & Operating method: fixed CoRM per product group.
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TYPE operating_cost_method ADD VALUE IF NOT EXISTS 'fixed_per_group';
+      EXCEPTION
+        WHEN duplicate_object THEN NULL;
+      END $$;
+    `);
     await client.query(`
       UPDATE materials SET price_source = 'platform' WHERE price_source = 'excel';
     `);

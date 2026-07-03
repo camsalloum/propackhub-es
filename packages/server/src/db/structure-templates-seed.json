@@ -251,9 +251,10 @@
       ],
       "default_printing_web_class": "wide_web",
       "default_processes": [
-        { "process_key": "printing", "enabled": true },
-        { "process_key": "lamination", "enabled": true },
-        { "process_key": "slitting", "enabled": true }
+        { "process_key": "extrusion", "enabled": true, "process_quantity": 1 },
+        { "process_key": "printing", "enabled": true, "process_quantity": 1 },
+        { "process_key": "lamination", "enabled": true, "process_quantity": 1 },
+        { "process_key": "slitting", "enabled": true, "process_quantity": 1 }
       ],
       "solvent_mix_enabled": true
     },
@@ -277,9 +278,10 @@
       ],
       "default_printing_web_class": "wide_web",
       "default_processes": [
-        { "process_key": "printing", "enabled": true },
-        { "process_key": "lamination", "enabled": true },
-        { "process_key": "slitting", "enabled": true }
+        { "process_key": "extrusion", "enabled": true, "process_quantity": 1 },
+        { "process_key": "printing", "enabled": true, "process_quantity": 1 },
+        { "process_key": "lamination", "enabled": true, "process_quantity": 2 },
+        { "process_key": "slitting", "enabled": true, "process_quantity": 1 }
       ],
       "solvent_mix_enabled": true
     },
@@ -304,9 +306,10 @@
       ],
       "default_printing_web_class": "wide_web",
       "default_processes": [
-        { "process_key": "printing", "enabled": true },
-        { "process_key": "lamination", "enabled": true },
-        { "process_key": "slitting", "enabled": true }
+        { "process_key": "extrusion", "enabled": true, "process_quantity": 1 },
+        { "process_key": "printing", "enabled": true, "process_quantity": 1 },
+        { "process_key": "lamination", "enabled": true, "process_quantity": 3 },
+        { "process_key": "slitting", "enabled": true, "process_quantity": 1 }
       ],
       "solvent_mix_enabled": true
     }

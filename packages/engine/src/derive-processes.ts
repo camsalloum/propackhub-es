@@ -90,15 +90,19 @@ function normalizeProcessQuantity(key: DerivedProcessKey, quantity: number): num
 
 function buildRules(input: ProcessDerivationInput): ProcessRule[] {
   const inkLayerCount = input.layers.filter((layer) => layer.type === 'ink').length;
-  const adhesiveLayerCount = input.layers.filter((layer) => layer.type === 'adhesive').length;
+  const substrateLayerCount = input.layers.filter((layer) => layer.type === 'substrate').length;
+  // Lamination passes = number of substrate-to-substrate bonds = (substrates - 1).
+  // Using substrate count (not raw adhesive-layer count) is correct even when an interface
+  // has a double adhesive coat (e.g. primer + adhesive) — that is still ONE lamination pass.
+  const laminationPasses = Math.max(0, substrateLayerCount - 1);
 
   return [
     { key: 'extrusion', enabled: true, processQuantity: 1 },
     { key: 'printing', enabled: inkLayerCount >= 1, processQuantity: 1 },
     {
       key: 'lamination',
-      enabled: adhesiveLayerCount >= 1,
-      processQuantity: adhesiveLayerCount,
+      enabled: laminationPasses >= 1,
+      processQuantity: laminationPasses,
     },
     {
       key: 'slitting',

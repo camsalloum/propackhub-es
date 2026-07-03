@@ -20,6 +20,7 @@ export const estimateStatusEnum = pgEnum('estimate_status', ['draft', 'sent', 'w
 export const layerTypeEnum = pgEnum('layer_type', ['substrate', 'ink', 'adhesive', 'solvent', 'accessory']);
 export const productTypeEnum = pgEnum('product_type', ['roll', 'sleeve', 'pouch', 'bag']);
 export const tenantTypeEnum = pgEnum('tenant_type', ['individual', 'company']);
+export const operatingCostMethodEnum = pgEnum('operating_cost_method', ['process_per_kg', 'markup_over_rm', 'fixed_per_group']);
 export const printingWebClassEnum = pgEnum('printing_web_class', ['wide_web', 'narrow_web']);
 export const materialPriceSourceEnum = pgEnum('material_price_source', ['excel', 'manual', 'platform']);
 export const platformReferenceCategoryEnum = pgEnum('platform_reference_category', [
@@ -164,6 +165,9 @@ export const tenants = pgTable('tenants', {
   termsAndConditions: text('terms_and_conditions'),
   footerText: text('footer_text'),
   defaultMarkupPercent: decimal('default_markup_percent', { precision: 5, scale: 2 }).default('15.00'),
+  // Manufacturing & Operating cost method. company → process_per_kg, individual → markup_over_rm
+  // (set at registration from `type`; admin can override). This markup is the only markup.
+  operatingCostMethod: operatingCostMethodEnum('operating_cost_method').notNull().default('markup_over_rm'),
   defaultSlabTemplate: varchar('default_slab_template', { length: 50 }).default('standard'),
   quotationValidDays: integer('quotation_valid_days').notNull().default(30),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
@@ -626,6 +630,28 @@ export const platformStandardTemplates = pgTable('platform_standard_templates', 
   templateKeyIdx: index('platform_standard_templates_template_key_idx').on(table.templateKey),
   displayOrderIdx: index('platform_standard_templates_display_order_idx').on(table.displayOrder),
   isActiveIdx: index('platform_standard_templates_is_active_idx').on(table.isActive),
+}));
+
+/**
+ * Per-product-group platform settings (Manufacturing & Operating — fixed CoRM).
+ *
+ * `corm_per_kg_usd` is a fixed USD/kg amount the platform admin sets per PEBI
+ * product group (`pebi_parent_pg`). When a tenant's operating-cost method is
+ * `fixed_per_group`, this value is used as the Manufacturing & Operating figure
+ * added on top of Total RM in the cost breakdown. The group list itself is
+ * derived live from the templates catalog; this table only stores the CoRM.
+ */
+export const platformProductGroupSettings = pgTable('platform_product_group_settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  /** PEBI product group name — matches structure_templates.pebi_parent_pg. */
+  pebiParentPg: varchar('pebi_parent_pg', { length: 255 }).notNull().unique(),
+  /** Fixed Manufacturing & Operating add-on, USD/kg. */
+  cormPerKgUsd: decimal('corm_per_kg_usd', { precision: 12, scale: 4 }).notNull().default('0'),
+  updatedByUserId: uuid('updated_by_user_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  pebiParentPgIdx: index('platform_product_group_settings_pg_idx').on(table.pebiParentPg),
 }));
 
 // Sessions (Phase 2.3 — refresh token rotation)

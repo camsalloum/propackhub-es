@@ -499,10 +499,12 @@ describe('Engine calculator — golden tests', () => {
     };
 
     const result = calculateEstimate(estimate, materials);
-    // mat_cost_kg = 1.2 USD/kg (no waste)
-    // markup = 1.2 × 15/100 = 0.18 USD/kg
-    // sale_price = 1.2 + 0.18 + 0.2 + 0.1 = 1.68 USD/kg
-    expect(result.estimate.salePricePerKg).toBeCloseTo(1.68, 2);
+    // Final breakup (order 1000kg → band waste 7%):
+    //   Total RM  = 1.2 × 1.07 = 1.284
+    //   M&O (markup over RM, default individual) = 1.284 × 15% = 0.1926
+    //   PrePress (plates) = 0.2 ; Transport (deliveryPerKg) = 0.1
+    //   sale = 1.284 + 0.1926 + 0.2 + 0.1 = 1.7766
+    expect(result.estimate.salePricePerKg).toBeCloseTo(1.7766, 2);
   });
 
   it('should compute waste percentage in cost breakdown', () => {
@@ -544,9 +546,9 @@ describe('Engine calculator — golden tests', () => {
     };
 
     const result = calculateEstimate(estimate, materials);
-    // PE waste = 3%, so wastePercent should be > 0
+    // Band waste (order 1000kg → 7%) is now part of Total RM, so wastePercent > 0.
     expect(result.costBreakdown.wastePercent).toBeGreaterThan(0);
-    expect(result.costBreakdown.wastePercent).toBeLessThan(5); // waste is typically small
+    expect(result.costBreakdown.wastePercent).toBeLessThan(8);
   });
 
   it('should calculate slab pricing correctly', () => {
@@ -592,10 +594,15 @@ describe('Engine calculator — golden tests', () => {
     };
 
     const result = calculateEstimate(estimate, materials);
+    // Each slab uses its own band waste, so $/kg is non-increasing as quantity grows
+    // (bigger runs → lower waste → lower price). The order-qty slab (1000kg) matches the headline.
     result.slabs.forEach((slab) => {
-      expect(slab.pricePerKg).toBeCloseTo(result.estimate.salePricePerKg!, 4);
       expect(slab.total).toBeCloseTo(slab.quantityKg * slab.pricePerKg, 4);
+      expect(slab.pricePerKg).toBeGreaterThan(0);
     });
+    expect(result.slabs[0].pricePerKg).toBeCloseTo(result.estimate.salePricePerKg!, 4); // 1000kg == headline
+    expect(result.slabs[1].pricePerKg).toBeLessThanOrEqual(result.slabs[0].pricePerKg + 1e-9);
+    expect(result.slabs[2].pricePerKg).toBeLessThanOrEqual(result.slabs[1].pricePerKg + 1e-9);
   });
 
   it('should vary slab $/kg when setup hours amortize across run sizes', () => {

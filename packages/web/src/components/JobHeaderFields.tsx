@@ -55,6 +55,8 @@ export function JobHeaderFields({
   orderQuantityUnit,
   onOrderQuantityUnitChange,
   unitOptions,
+  orderQuantityUnitMultiplier,
+  onOrderQuantityUnitMultiplierChange,
   orderQuantityHint,
   dimensionHints,
   bagDimensionsPanel,
@@ -82,6 +84,9 @@ export function JobHeaderFields({
   orderQuantityUnit?: string;
   onOrderQuantityUnitChange?: (unit: string) => void;
   unitOptions?: UnitOption[];
+  /** Per-estimate length (e.g. LM) for units flagged `variableMultiplier` — e.g. a custom roll length. */
+  orderQuantityUnitMultiplier?: number;
+  onOrderQuantityUnitMultiplierChange?: (value: number) => void;
   /** Tooltip for the order-quantity input — e.g. the entered qty converted to every unit. */
   orderQuantityHint?: string;
   /** Per-dimension tooltips (key → text), e.g. reel width → resulting LM/kg & pcs/kg. */
@@ -103,6 +108,10 @@ export function JobHeaderFields({
     unitOptions &&
     unitOptions.length > 0;
 
+  const selectedUnitOption = unitOptions?.find((o) => o.value === orderQuantityUnit);
+  const showUnitMultiplier =
+    showOrderQty && selectedUnitOption?.variableMultiplier === true && onOrderQuantityUnitMultiplierChange != null;
+
   const showDimensions =
     !bagDimensionsPanel && dimensionFields.length > 0 && onDimensionChange != null;
 
@@ -118,6 +127,7 @@ export function JobHeaderFields({
       showSubtype ? 'minmax(12rem, 2.2fr)' : null,
       showOrderQty ? 'minmax(6.5rem, 0.75fr)' : null,
       showOrderQty ? 'minmax(4.75rem, 0.5fr)' : null,
+      showUnitMultiplier ? 'minmax(6rem, 0.75fr)' : null,
       ...dimensionFields.map(() => 'minmax(5.75rem, 1fr)'),
     ]
       .filter(Boolean)
@@ -229,6 +239,21 @@ export function JobHeaderFields({
                   </select>
                 </SpecField>
               </>
+            )}
+
+            {showUnitMultiplier && (
+              <SpecField label="Roll length (LM)" title="Length of one roll — used to convert this order to kg">
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={Number.isFinite(orderQuantityUnitMultiplier) ? orderQuantityUnitMultiplier : ''}
+                  onChange={(e) => onOrderQuantityUnitMultiplierChange!(Number(e.target.value) || 0)}
+                  onFocus={selectOnFocus}
+                  placeholder="e.g. 500"
+                  className="input input-compact w-full text-center tabular-nums"
+                />
+              </SpecField>
             )}
 
             {showDimensions &&

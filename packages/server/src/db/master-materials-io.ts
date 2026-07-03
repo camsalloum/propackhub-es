@@ -57,6 +57,13 @@ export interface UnitRow {
   basis: UnitBasis;
   /** Base physical units per entered unit (e.g. Kpcs → 1000). */
   multiplier: number;
+  /**
+   * When true, `multiplier` is only a fallback default — the actual value is
+   * entered per-estimate at order time (e.g. "Roll (custom length)": the user
+   * types the roll's linear-metre length, which becomes that estimate's
+   * multiplier). See `resolveOrderUnitDef()` in tenant-reference-data.ts.
+   */
+  variableMultiplier?: boolean;
 }
 
 export interface MasterDataReference {
@@ -109,7 +116,9 @@ export const DEFAULT_UNIT_ROWS: UnitRow[] = [
   { label: 'Kpcs', code: 'kpcs', basis: 'pieces', multiplier: 1000 },
   { label: 'SQM', code: 'sqm', basis: 'sqm', multiplier: 1 },
   { label: 'LM', code: 'lm', basis: 'lm', multiplier: 1 },
-  { label: 'Roll 500 LM', code: 'roll_500_lm', basis: 'lm', multiplier: 500 },
+  // User enters the roll's linear-metre length at order time (see variableMultiplier).
+  // `multiplier` is kept as the fallback used until a length is entered.
+  { label: 'Roll (custom length)', code: 'roll_500_lm', basis: 'lm', multiplier: 500, variableMultiplier: true },
 ];
 
 /** Legacy unit code → basis/multiplier, for units stored without metadata. */

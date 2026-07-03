@@ -53,6 +53,12 @@ export async function calculateAndPersistEstimate(
     .where(eq(schema.slabs.estimateId, estimateId))
     .orderBy(schema.slabs.quantityKg);
 
+  // Manufacturing & Operating method is a tenant setting (admin-defined).
+  const [tenantRow] = await db
+    .select({ operatingCostMethod: schema.tenants.operatingCostMethod })
+    .from(schema.tenants)
+    .where(eq(schema.tenants.id, tenantId));
+
   const { estimateForEngine, materialMap } = buildEngineEstimateFromRows({
     estimate,
     tenantId,
@@ -61,7 +67,12 @@ export async function calculateAndPersistEstimate(
     processes,
     slabs,
     layerPriceOverrides,
-    orderQuantityUnitDef: await resolveOrderUnitDef(tenantId, estimate.orderQuantityUnit),
+    operatingCostMethod: tenantRow?.operatingCostMethod ?? 'markup_over_rm',
+    orderQuantityUnitDef: await resolveOrderUnitDef(
+      tenantId,
+      estimate.orderQuantityUnit,
+      (estimate.dimensions as { orderUnitMultiplier?: number } | null)?.orderUnitMultiplier
+    ),
   });
 
   const layerRefs = layers.map((l) => ({

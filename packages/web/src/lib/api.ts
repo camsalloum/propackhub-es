@@ -64,6 +64,8 @@ export type UnitRow = {
   code: string;
   basis: UnitBasis;
   multiplier: number;
+  /** When true, the multiplier is entered per-estimate (e.g. a roll's linear-metre length). */
+  variableMultiplier?: boolean;
 };
 
 /** Shape returned by both the tenant (`/master-data/reference`) and platform reference endpoints. */

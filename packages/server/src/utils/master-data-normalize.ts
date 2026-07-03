@@ -79,7 +79,7 @@ export interface ProductSubtypeOption {
 
 export interface MasterDataReferenceResponse extends MasterDataReference {
   productTypeOptions: ProductTypeOption[];
-  unitOptions: Array<{ label: string; value: string; basis?: 'kg' | 'pieces' | 'sqm' | 'lm' }>;
+  unitOptions: Array<{ label: string; value: string; basis?: 'kg' | 'pieces' | 'sqm' | 'lm'; variableMultiplier?: boolean }>;
   printingWebClassOptions: PrintingWebOption[];
   rmTypeOptions: RmTypeOption[];
   productSubtypeOptions: ProductSubtypeOption[];
@@ -190,7 +190,7 @@ export function enrichMasterDataReference(ref: MasterDataReference): MasterDataR
 
   const unitOptions =
     ref.unitRows && ref.unitRows.length > 0
-      ? ref.unitRows.map((u) => ({ label: u.label, value: u.code, basis: u.basis }))
+      ? ref.unitRows.map((u) => ({ label: u.label, value: u.code, basis: u.basis, variableMultiplier: u.variableMultiplier === true }))
       : ref.units
           .map((label) => {
             const value = normalizeUnitLabel(label);

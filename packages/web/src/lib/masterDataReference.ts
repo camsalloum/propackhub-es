@@ -20,6 +20,8 @@ export interface UnitOption {
   value: string;
   /** Conversion basis — used to filter units by product family (lm/sqm hidden for bag/pouch). */
   basis?: 'kg' | 'pieces' | 'sqm' | 'lm';
+  /** When true, the multiplier (e.g. a roll's linear-metre length) is entered per-estimate, not fixed in Master Data. */
+  variableMultiplier?: boolean;
 }
 
 /**
@@ -147,7 +149,7 @@ export const DEFAULT_MASTER_REFERENCE: MasterDataReferenceState = {
     { label: 'Kpcs', value: 'kpcs', basis: 'pieces' },
     { label: 'SQM', value: 'sqm', basis: 'sqm' },
     { label: 'LM', value: 'lm', basis: 'lm' },
-    { label: 'Roll 500 LM', value: 'roll_500_lm', basis: 'lm' },
+    { label: 'Roll (custom length)', value: 'roll_500_lm', basis: 'lm', variableMultiplier: true },
   ],
   rmTypeOptions: DEFAULT_RM_TYPE_OPTIONS,
   productSubtypeOptions: DEFAULT_PRODUCT_SUBTYPE_OPTIONS,

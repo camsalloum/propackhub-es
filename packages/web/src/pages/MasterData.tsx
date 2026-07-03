@@ -248,7 +248,7 @@ const MasterData = () => {
         ? ref.unitRows.map((u) => ({
             label: u.label,
             code: u.code,
-            metadata: { basis: u.basis, multiplier: u.multiplier } as Record<string, unknown>,
+            metadata: { basis: u.basis, multiplier: u.multiplier, variableMultiplier: u.variableMultiplier === true } as Record<string, unknown>,
           }))
         : (ref.units ?? []).map((l) => ({ label: l }))),
       rm_type: (ref.rmTypeRows ?? ref.rmTypes ?? []).map((r) =>
@@ -691,10 +691,11 @@ const MasterData = () => {
         <div className="min-w-0">
           <h1 className="text-2xl font-display font-bold text-navy flex items-center gap-2">
             <Database className="w-7 h-7 text-gold shrink-0" />
-            Raw Materials
+            Platform Variables
           </h1>
           <p className="text-mist mt-1 text-sm">
-            Material catalog — the single source of truth for all estimates.
+            Platform variables — materials, units, processes, product types, templates and
+            waste bands: the single source of truth for all estimates.
             {canEdit && ' Changes sync to all users automatically.'}
             {!canEdit && ' Contact an admin to update prices or add materials.'}
           </p>
@@ -1373,7 +1374,9 @@ const MasterData = () => {
             <p className="text-xs text-mist mb-2">
               Each unit converts the order quantity to kg via a <strong>basis</strong> (kg, pieces, m²,
               or reel-width linear metre) times a <strong>multiplier</strong>. E.g. Kpcs = pieces × 1000,
-              Roll 500 LM = linear metre × 500, 1 MT = kg × 1000.
+              Roll 500 LM = linear metre × 500, 1 MT = kg × 1000. Check <strong>Variable length</strong> to let
+              the user enter the length (e.g. a roll's linear metres) on each estimate instead of using a fixed
+              multiplier — the multiplier column then becomes just the fallback default.
             </p>
           )}
           {tab === 'product_subtype' && (
@@ -1400,6 +1403,7 @@ const MasterData = () => {
                     <>
                       <th>Basis</th>
                       <th className="text-right">Multiplier</th>
+                      <th className="text-center">Variable length</th>
                     </>
                   )}
                   <th />
@@ -1461,13 +1465,33 @@ const MasterData = () => {
                             step="any"
                             min={0}
                             className="cell-input w-24 text-right font-mono"
-                            title="Base units per entered unit (e.g. Kpcs = 1000)"
+                            title={
+                              item.metadata?.variableMultiplier
+                                ? 'Fallback default until the user enters a length on the estimate'
+                                : 'Base units per entered unit (e.g. Kpcs = 1000)'
+                            }
                             value={String((item.metadata?.multiplier as number) ?? 1)}
                             onChange={(e) => {
                               const next = [...refItems];
                               next[i] = {
                                 ...next[i],
                                 metadata: { ...(next[i].metadata ?? {}), multiplier: Number(e.target.value) || 0 },
+                              };
+                              setRefItems(next);
+                            }}
+                          />
+                        </td>
+                        <td className="text-center">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4"
+                            title="User enters the length (multiplier) per estimate, e.g. a roll's linear metres"
+                            checked={item.metadata?.variableMultiplier === true}
+                            onChange={(e) => {
+                              const next = [...refItems];
+                              next[i] = {
+                                ...next[i],
+                                metadata: { ...(next[i].metadata ?? {}), variableMultiplier: e.target.checked },
                               };
                               setRefItems(next);
                             }}

@@ -108,12 +108,23 @@ export interface Slab {
 export interface Process {
   id: string;
   name: string;
-  costPerHour: number;
-  speedBasis: 'kg_per_hour' | 'm_per_min' | 'pcs_per_min';
-  speedValue: number;
-  setupHours: number;
+  /** Stable master-data process code (e.g. 'lamination'). Used for M&O per-kg costing. */
+  processKey?: string;
+  /**
+   * Fixed operating cost per kg for this process (USD). This is the sales-level
+   * Manufacturing & Operating cost model — no machine time / web width needed.
+   * Mfg & Operating (process_per_kg method) = Σ(costPerKgUsd × processQuantity) for enabled rows.
+   */
+  costPerKgUsd?: number;
+  /** How many times this process is applied (e.g. lamination ×2 for triplex). Default 1. */
+  processQuantity?: number;
+  // ── Legacy machine-time fields (retained for compatibility; NOT used for costing) ──
+  costPerHour?: number;
+  speedBasis?: 'kg_per_hour' | 'm_per_min' | 'pcs_per_min';
+  speedValue?: number;
+  setupHours?: number;
   runHours?: number; // Calculated
-  totalCost?: number; // Calculated
+  totalCost?: number; // Calculated (per-kg cost × order qty when process_per_kg)
   enabled: boolean;
 }
 
@@ -134,6 +145,15 @@ export interface Estimate {
   deliveryPerKg: number; // Legacy flat per-kg (display currency) — superseded by delivery below
   processes: Process[];
   slabs: Slab[];
+
+  /**
+   * Manufacturing & Operating cost method (final price breakup):
+   *   'process_per_kg' — Σ(process.costPerKgUsd × processQuantity) for enabled processes.
+   *                      Default for company tenants (Interplast-style, multi-user).
+   *   'markup_over_rm' — Total RM/kg × markupPercent%. Default for individual (single-user) tenants.
+   * This markup is the ONLY markup in the price build-up (no separate profit markup).
+   */
+  operatingCostMethod?: 'process_per_kg' | 'markup_over_rm';
 
   // ── Pricing model (new) ──────────────────────────────────────────────────
   // When `pricingMethod` is set, the engine uses the quantity-band waste +
@@ -245,6 +265,8 @@ export interface Estimate {
   marginPerKg?: number;
   /** Pricing method actually used by the engine. */
   pricingMethodResolved?: 'markup' | 'margin_per_kg';
+  /** Manufacturing & Operating method actually used by the engine. */
+  operatingCostMethodResolved?: 'process_per_kg' | 'markup_over_rm';
 }
 
 export interface CalculationResult {

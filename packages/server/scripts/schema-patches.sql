@@ -21,6 +21,15 @@ ALTER TABLE tenants ADD COLUMN IF NOT EXISTS primary_color VARCHAR(7) DEFAULT '#
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS terms_and_conditions TEXT;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS footer_text TEXT;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS default_markup_percent DECIMAL(5, 2) DEFAULT 15.00;
+-- Manufacturing & Operating cost method (company → process_per_kg, individual → markup_over_rm).
+DO $$ BEGIN
+  CREATE TYPE operating_cost_method AS ENUM ('process_per_kg', 'markup_over_rm');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS operating_cost_method operating_cost_method NOT NULL DEFAULT 'markup_over_rm';
+-- Backfill: company tenants default to per-kg process costing.
+UPDATE tenants SET operating_cost_method = 'process_per_kg' WHERE type = 'company';
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS default_slab_template VARCHAR(50) DEFAULT 'standard';
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS quotation_valid_days INTEGER NOT NULL DEFAULT 30;
 
@@ -320,3 +329,32 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS pricing_method VARCHAR(20) NOT NULL D
 -- Editable per-estimate waste bands (quantity ranges + waste %). Defaults are
 -- seeded in the engine; this stores admin/manager edits.
 ALTER TABLE estimates ADD COLUMN IF NOT EXISTS waste_bands JSONB;
+
+-- ---------------------------------------------------------------------------
+-- Manufacturing & Operating method 3 (2026-07-03) — fixed CoRM per product group.
+-- The `fixed_per_group` enum value is added by apply-schema-patches.ts (enum
+-- values must commit before use). This table stores the per-product-group CoRM
+-- (USD/kg) used as the Manufacturing & Operating figure for that method.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS platform_product_group_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pebi_parent_pg VARCHAR(255) NOT NULL UNIQUE,
+  corm_per_kg_usd DECIMAL(12, 4) NOT NULL DEFAULT 0,
+  updated_by_user_id UUID,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS platform_product_group_settings_pg_idx
+  ON platform_product_group_settings (pebi_parent_pg);
+
+-- Seed a 0 CoRM row for every product group currently present in the catalog
+-- (platform standards + tenant templates), so the admin page lists them all.
+INSERT INTO platform_product_group_settings (pebi_parent_pg, corm_per_kg_usd)
+SELECT DISTINCT pebi_parent_pg, 0
+FROM (
+  SELECT pebi_parent_pg FROM platform_standard_templates WHERE pebi_parent_pg IS NOT NULL
+  UNION
+  SELECT pebi_parent_pg FROM structure_templates WHERE pebi_parent_pg IS NOT NULL
+) g
+ON CONFLICT (pebi_parent_pg) DO NOTHING;
+

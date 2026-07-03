@@ -67,14 +67,15 @@ describe('wastePercentForQuantity', () => {
   });
 });
 
-describe('new pricing model — markup method', () => {
-  it('builds sale price as (waste-adj material + logistics + development) + markup', () => {
-    // order 1000kg → band waste 7% → material 2 × 1.07 = 2.14
-    // tooling $500 billed → 0.5/kg ; delivery $200 → 0.2/kg
-    // costBase = 2.14 + 0.2 + 0.5 = 2.84 ; markup 20% → 0.568 ; sale = 3.408
+describe('final price breakup — markup over RM (M&O = markup)', () => {
+  it('sale = Total RM + (RM × markup%) + PrePress + Transport', () => {
+    // order 1000kg → band waste 7% → Total RM = 2 × 1.07 = 2.14
+    // M&O (markup over RM) = 2.14 × 20% = 0.428
+    // PrePress (tooling $500 billed / 1000) = 0.5 ; Transport (delivery $200 / 1000) = 0.2
+    // sale = 2.14 + 0.428 + 0.5 + 0.2 = 3.268
     const result = calculateEstimate(
       baseEstimate({
-        pricingMethod: 'markup',
+        operatingCostMethod: 'markup_over_rm',
         markupPercent: 20,
         toolingChargeUsd: 500,
         toolingBilledToCustomer: true,
@@ -86,18 +87,19 @@ describe('new pricing model — markup method', () => {
     const e = result.estimate;
     expect(e.wastePercentApplied).toBe(7);
     expect(e.wasteAdjustedMaterialPerKg).toBeCloseTo(2.14, 6);
-    expect(e.developmentCostPerKg).toBeCloseTo(0.5, 6);
-    expect(e.logisticsCostPerKg).toBeCloseTo(0.2, 6);
-    expect(e.marginPerKg).toBeCloseTo(0.568, 6);
-    expect(e.salePricePerKg).toBeCloseTo(3.408, 6);
-    expect(e.pricingMethodResolved).toBe('markup');
+    expect(e.developmentCostPerKg).toBeCloseTo(0.5, 6); // PrePress
+    expect(e.logisticsCostPerKg).toBeCloseTo(0.2, 6);   // Transport
+    expect(e.operationCostPerKg).toBeCloseTo(0.428, 6); // M&O
+    expect(e.marginPerKg).toBeCloseTo(0.428, 6);
+    expect(e.salePricePerKg).toBeCloseTo(3.268, 6);
+    expect(e.operatingCostMethodResolved).toBe('markup_over_rm');
   });
 
-  it('excludes tooling when not billed to the customer; EXW gives zero logistics', () => {
-    // costBase = 2.14 ; markup 20% → 0.428 ; sale = 2.568
+  it('excludes tooling when not billed; EXW gives zero transport', () => {
+    // Total RM 2.14 + M&O 0.428 + 0 + 0 = 2.568
     const result = calculateEstimate(
       baseEstimate({
-        pricingMethod: 'markup',
+        operatingCostMethod: 'markup_over_rm',
         markupPercent: 20,
         toolingChargeUsd: 500,
         toolingBilledToCustomer: false,
@@ -113,13 +115,15 @@ describe('new pricing model — markup method', () => {
   });
 });
 
-describe('new pricing model — margin per kg method', () => {
-  it('adds a fixed margin/kg on top of the cost base', () => {
-    // costBase = 2.14 + 0.2 + 0.5 = 2.84 ; margin 1.00/kg ; sale = 3.84
+describe('final price breakup — per-kg process cost (M&O = Σ process/kg)', () => {
+  it('adds the process cost/kg as M&O (the only markup)', () => {
+    // Total RM 2.14 + M&O (0.5 × ×2 = 1.0) + PrePress 0.5 + Transport 0.2 = 3.84
     const result = calculateEstimate(
       baseEstimate({
-        pricingMethod: 'margin_per_kg',
-        marginValuePerKgUsd: 1.0,
+        operatingCostMethod: 'process_per_kg',
+        processes: [
+          { id: 'p1', name: 'Lamination', enabled: true, costPerKgUsd: 0.5, processQuantity: 2 },
+        ],
         toolingChargeUsd: 500,
         toolingBilledToCustomer: true,
         deliveryChargeUsd: 200,
@@ -127,22 +131,24 @@ describe('new pricing model — margin per kg method', () => {
       materials
     );
     const e = result.estimate;
-    expect(e.marginPerKg).toBeCloseTo(1.0, 6);
+    expect(e.operationCostPerKg).toBeCloseTo(1.0, 6);
     expect(e.salePricePerKg).toBeCloseTo(3.84, 6);
-    expect(e.pricingMethodResolved).toBe('margin_per_kg');
+    expect(e.operatingCostMethodResolved).toBe('process_per_kg');
   });
 });
 
-describe('new pricing model — slab ladder', () => {
-  it('varies waste per band while keeping logistics/development flat over the order qty', () => {
+describe('final price breakup — slab ladder', () => {
+  it('varies waste per band while keeping M&O/PrePress/Transport flat over the order qty', () => {
     const result = calculateEstimate(
       baseEstimate({
-        pricingMethod: 'margin_per_kg',
-        marginValuePerKgUsd: 1.0,
+        operatingCostMethod: 'process_per_kg',
+        processes: [
+          { id: 'p1', name: 'Lamination', enabled: true, costPerKgUsd: 1.0, processQuantity: 1 },
+        ],
         toolingChargeUsd: 500,
         toolingBilledToCustomer: true,
         deliveryChargeUsd: 200,
-        orderQuantityKg: 1000, // logistics 0.2, development 0.5 (flat across slabs)
+        orderQuantityKg: 1000, // PrePress 0.5, Transport 0.2 (flat across slabs)
         slabs: [
           { quantityKg: 100, pricePerKg: 0 },   // band 81–150 → waste 22%
           { quantityKg: 5000, pricePerKg: 0 },  // band 3001–5000 → waste 4%
@@ -150,24 +156,28 @@ describe('new pricing model — slab ladder', () => {
       }),
       materials
     );
-    // slab 100kg: material 2×1.22=2.44 + 0.2 + 0.5 = 3.14 + margin 1 = 4.14
-    // slab 5000kg: material 2×1.04=2.08 + 0.2 + 0.5 = 2.78 + margin 1 = 3.78
+    // slab 100kg: RM 2×1.22=2.44 + M&O 1.0 + 0.5 + 0.2 = 4.14
+    // slab 5000kg: RM 2×1.04=2.08 + M&O 1.0 + 0.5 + 0.2 = 3.78
     expect(result.slabs[0].pricePerKg).toBeCloseTo(4.14, 6);
     expect(result.slabs[1].pricePerKg).toBeCloseTo(3.78, 6);
   });
 });
 
-describe('legacy model (backward compatibility)', () => {
-  it('runs the legacy additive formula when pricingMethod is unset', () => {
-    // material 2 + markup 20% (0.4) + plates 0.3 + delivery 0.1 = 2.8 ; no band waste
+describe('band waste always applies (single unified model)', () => {
+  it('applies band waste + M&O markup + prepress + transport', () => {
+    // Total RM 2×1.07=2.14 + M&O 2.14×20%=0.428 + plates 0.3 + deliveryPerKg 0.1 = 2.968
     const result = calculateEstimate(
-      baseEstimate({ markupPercent: 20, platesPerKg: 0.3, deliveryPerKg: 0.1 }),
+      baseEstimate({
+        operatingCostMethod: 'markup_over_rm',
+        markupPercent: 20,
+        platesPerKg: 0.3,
+        deliveryPerKg: 0.1,
+      }),
       materials
     );
     const e = result.estimate;
-    expect(e.salePricePerKg).toBeCloseTo(2.8, 6);
-    expect(e.pricingMethodResolved).toBeUndefined();
-    expect(e.wastePercentApplied).toBeUndefined();
+    expect(e.salePricePerKg).toBeCloseTo(2.968, 6);
+    expect(e.wastePercentApplied).toBe(7);
   });
 });
 

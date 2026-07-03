@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx watch --exclude src/db/master-materials-seed.json --exclude src/db/master-data-reference.json src/index.ts",
     "db:patch": "tsx scripts/apply-schema-patches.ts",
+    "db:migrate-roll-unit": "tsx scripts/migrate-roll-variable-unit.ts",
     "db:sync-materials": "tsx scripts/sync-materials.ts",
     "db:backfill-platform-keys": "tsx scripts/backfill-platform-master-keys.ts",
     "build": "tsup",

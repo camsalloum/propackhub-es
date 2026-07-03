@@ -16,7 +16,15 @@ describe('Laravel golden reference rows', () => {
     expect(e.totalMicron).toBeCloseTo(expected.totalMicron, 2);
     expect(e.filmDensity).toBeCloseTo(expected.filmDensity, 3);
     expect(e.materialCostPerKg).toBeCloseTo(expected.materialCostPerKg, 2);
-    expect(e.salePricePerKg).toBeCloseTo(expected.salePricePerKg, 2);
+    // Sale price now follows the final breakup (Total RM + M&O + PrePress + Transport + accessory),
+    // not the legacy Laravel additive value. Assert the breakup identity instead of a hardcoded price.
+    const breakup =
+      (e.wasteAdjustedMaterialPerKg ?? e.materialCostPerKg ?? 0) +
+      (e.operationCostPerKg ?? 0) +
+      (e.developmentCostPerKg ?? 0) +
+      (e.logisticsCostPerKg ?? 0) +
+      (e.accessoryCostPerKg ?? 0);
+    expect(e.salePricePerKg).toBeCloseTo(breakup, 4);
 
     if (expected.solventMixCostPerKg !== undefined) {
       expect(e.solventMixCostPerKg ?? 0).toBeCloseTo(expected.solventMixCostPerKg, 3);
@@ -30,9 +38,6 @@ describe('Laravel golden reference rows', () => {
     }
     if (expected.linearMPerKgReel !== undefined) {
       expect(e.linearMPerKgReel).toBeCloseTo(expected.linearMPerKgReel, 1);
-    }
-    if (expected.operationCostPerKg !== undefined) {
-      expect(e.operationCostPerKg).toBeCloseTo(expected.operationCostPerKg, 2);
     }
   });
 
@@ -49,18 +54,17 @@ describe('Laravel golden reference rows', () => {
     expect(layer.costPerM2).toBeCloseTo(0.01765, 3);
   });
 
-  it('sale price is additive — operation is not folded into markup % (Laravel §5)', () => {
+  it('sale price follows the final breakup — Total RM + M&O + PrePress + Transport (only one markup)', () => {
     const materials = new Map(LARAVEL_REFERENCE_MATERIALS);
     const scenario = GOLDEN_SCENARIOS.find((s) => s.name.includes('Operation cost'))!;
     const result = calculateEstimate(scenario.estimate, materials);
-    const mat = result.estimate.materialCostPerKg!;
-    const op = result.estimate.operationCostPerKg!;
-    const markup = mat * (scenario.estimate.markupPercent / 100);
-    const correct =
-      mat + markup + scenario.estimate.platesPerKg + scenario.estimate.deliveryPerKg + op;
-    const wrongMarginOnAll = (mat + op) * (1 + scenario.estimate.markupPercent / 100) +
-      scenario.estimate.platesPerKg + scenario.estimate.deliveryPerKg;
-    expect(result.estimate.salePricePerKg).toBeCloseTo(correct, 4);
-    expect(result.estimate.salePricePerKg).not.toBeCloseTo(wrongMarginOnAll, 2);
+    const e = result.estimate;
+    // Default method (no operatingCostMethod) is markup_over_rm → M&O = Total RM × markup%.
+    const totalRm = e.wasteAdjustedMaterialPerKg!;
+    const mo = totalRm * (scenario.estimate.markupPercent / 100);
+    const expectedSale =
+      totalRm + mo + (e.developmentCostPerKg ?? 0) + (e.logisticsCostPerKg ?? 0) + (e.accessoryCostPerKg ?? 0);
+    expect(e.operationCostPerKg).toBeCloseTo(mo, 4);
+    expect(e.salePricePerKg).toBeCloseTo(expectedSale, 4);
   });
 });

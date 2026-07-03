@@ -24,10 +24,13 @@ export interface ClientCalcMaterial {
 export interface ClientCalcProcess {
   id?: string;
   name: string;
-  costPerHour: number;
-  speedBasis: 'kg_per_hour' | 'm_per_min' | 'pcs_per_min';
-  speedValue: number;
-  setupHours: number;
+  processKey?: string | null;
+  processQuantity?: number;
+  costPerKgUsd?: number;
+  costPerHour?: number;
+  speedBasis?: 'kg_per_hour' | 'm_per_min' | 'pcs_per_min';
+  speedValue?: number;
+  setupHours?: number;
   enabled: boolean;
 }
 
@@ -49,6 +52,8 @@ export interface ClientCalcInput {
   inkPrintingProcess?: 'flexo' | 'rotogravure' | null;
   inkSolventRatio?: number;
   orderQuantityKg?: number;
+  /** Manufacturing & Operating method (tenant setting): process_per_kg | markup_over_rm. */
+  operatingCostMethod?: 'process_per_kg' | 'markup_over_rm';
   // Pricing model v2 — when pricingMethod is set, the engine uses waste bands +
   // lump-sum tooling/delivery + margin instead of the legacy additive model.
   pricingMethod?: 'markup' | 'margin_per_kg';
@@ -120,13 +125,17 @@ export function runClientCalculation(input: ClientCalcInput) {
     markupPercent: input.markupPercent,
     platesPerKg: input.platesPerKg,
     deliveryPerKg: input.deliveryPerKg,
+    operatingCostMethod: input.operatingCostMethod ?? undefined,
     processes: (input.processes || []).map((p, i) => ({
       id: p.id || `proc-${i}`,
       name: p.name,
-      costPerHour: p.costPerHour,
-      speedBasis: p.speedBasis,
-      speedValue: p.speedValue,
-      setupHours: p.setupHours,
+      processKey: p.processKey ?? undefined,
+      processQuantity: p.processQuantity ?? 1,
+      costPerKgUsd: p.costPerKgUsd ?? 0,
+      costPerHour: p.costPerHour ?? 0,
+      speedBasis: p.speedBasis ?? 'kg_per_hour',
+      speedValue: p.speedValue ?? 0,
+      setupHours: p.setupHours ?? 0,
       enabled: p.enabled,
     })),
     slabs: input.slabs.map((s) => ({

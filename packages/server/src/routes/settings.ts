@@ -44,6 +44,7 @@ async function updateTenantSettingsRoute(
       termsAndConditions?: string;
       footerText?: string;
       defaultMarkupPercent?: number;
+      operatingCostMethod?: 'process_per_kg' | 'markup_over_rm';
       quotationValidDays?: number;
       defaultSlabTemplate?: string;
     };
@@ -80,6 +81,9 @@ async function updateTenantSettingsRoute(
     }
     if (request.body.defaultMarkupPercent !== undefined) {
       updates.defaultMarkupPercent = request.body.defaultMarkupPercent.toString();
+    }
+    if (request.body.operatingCostMethod !== undefined) {
+      updates.operatingCostMethod = request.body.operatingCostMethod;
     }
     if (request.body.quotationValidDays !== undefined) {
       updates.quotationValidDays = request.body.quotationValidDays;

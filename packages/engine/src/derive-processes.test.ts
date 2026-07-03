@@ -93,7 +93,7 @@ describe('deriveProcessesFromStructure — edges', () => {
     expect(processByKey(processes, 'lamination')).toBeUndefined();
   });
 
-  it('3 adhesives derives lamination x3', () => {
+  it('4 substrates (3 bonds) derives lamination x3', () => {
     const processes = deriveProcessesFromStructure(
       {
         layers: [
@@ -112,6 +112,29 @@ describe('deriveProcessesFromStructure — edges', () => {
     );
 
     expect(processByKey(processes, 'lamination')?.process_quantity).toBe(3);
+  });
+
+  it('double-adhesive interface counts as one lamination pass (3 substrates → x2)', () => {
+    // Real Triplex seed: PET · ink · adh · adh · Alu · adh · LDPE (3 substrates, 3 adhesive layers).
+    // Lamination passes = substrate bonds = 3 - 1 = 2 (NOT the raw adhesive-layer count of 3).
+    const processes = deriveProcessesFromStructure(
+      {
+        layers: [
+          { type: 'substrate' },
+          { type: 'ink' },
+          { type: 'adhesive' },
+          { type: 'adhesive' },
+          { type: 'substrate' },
+          { type: 'adhesive' },
+          { type: 'substrate' },
+        ],
+        productType: 'roll',
+        materialClass: 'Non PE',
+      },
+      CATALOG
+    );
+
+    expect(processByKey(processes, 'lamination')?.process_quantity).toBe(2);
   });
 
   it('no ink produces no printing row', () => {

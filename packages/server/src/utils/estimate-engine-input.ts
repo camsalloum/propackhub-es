@@ -15,6 +15,9 @@ type MaterialRow = typeof materials.$inferSelect;
 type ProcessRow = {
   id: string;
   name: string;
+  processKey?: string | null;
+  processQuantity?: number | null;
+  costPerKgUsd?: string | null;
   costPerHour: string;
   speedBasis: string;
   speedValue: string;
@@ -31,10 +34,12 @@ export function buildEngineEstimateFromRows(opts: {
   processes: ProcessRow[];
   slabs: SlabRow[];
   layerPriceOverrides?: Map<string, number>;
+  /** Manufacturing & Operating method (from tenant); defaults to markup_over_rm. */
+  operatingCostMethod?: 'process_per_kg' | 'markup_over_rm';
   /** Resolved {basis, multiplier} for the estimate's order-quantity unit (custom/tenant units). */
   orderQuantityUnitDef?: import('@es/engine').UnitDef;
 }): { estimateForEngine: EngineEstimate; materialMap: Map<string, import('@es/engine').Material> } {
-  const { estimate, tenantId, layers, materials, processes, slabs, layerPriceOverrides, orderQuantityUnitDef } = opts;
+  const { estimate, tenantId, layers, materials, processes, slabs, layerPriceOverrides, operatingCostMethod, orderQuantityUnitDef } = opts;
   const materialMap = buildEngineMaterialMap(materials);
   const patchedMaterialMap = new Map(materialMap);
 
@@ -79,6 +84,8 @@ export function buildEngineEstimateFromRows(opts: {
     // Pricing model v2 — present only when the estimate uses the new model.
     pricingMethod: (estimate.pricingMethod as 'markup' | 'margin_per_kg' | null) ?? undefined,
     marginValuePerKgUsd: estimate.marginValuePerKgUsd != null ? parseFloat(estimate.marginValuePerKgUsd) : undefined,
+    // Manufacturing & Operating method (tenant setting) — drives M&O in the price build-up.
+    operatingCostMethod: operatingCostMethod ?? undefined,
     toolingChargeUsd: estimate.toolingChargeUsd != null ? parseFloat(estimate.toolingChargeUsd) : undefined,
     toolingBilledToCustomer: estimate.toolingBilledToCustomer ?? undefined,
     deliveryTerm: estimate.deliveryTerm ?? undefined,
@@ -87,6 +94,9 @@ export function buildEngineEstimateFromRows(opts: {
     processes: processes.map((p) => ({
       id: p.id,
       name: p.name,
+      processKey: p.processKey ?? undefined,
+      processQuantity: p.processQuantity != null ? Number(p.processQuantity) : 1,
+      costPerKgUsd: p.costPerKgUsd != null ? parseFloat(p.costPerKgUsd) : 0,
       costPerHour: parseFloat(p.costPerHour),
       speedBasis: p.speedBasis as 'kg_per_hour' | 'm_per_min' | 'pcs_per_min',
       speedValue: parseFloat(p.speedValue),

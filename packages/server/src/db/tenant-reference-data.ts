@@ -66,7 +66,7 @@ function deriveCode(label: string, code?: string | null): string {
 }
 
 function unitRowFromItem(label: string, code: string, metadata: Record<string, unknown> | null): UnitRow {
-  const meta = (metadata || {}) as { basis?: UnitBasis; multiplier?: number };
+  const meta = (metadata || {}) as { basis?: UnitBasis; multiplier?: number; variableMultiplier?: boolean };
   const legacy = LEGACY_UNIT_METADATA[code] ?? LEGACY_UNIT_METADATA[label.trim().toLowerCase()] ?? {
     basis: 'kg' as UnitBasis,
     multiplier: 1,
@@ -76,7 +76,7 @@ function unitRowFromItem(label: string, code: string, metadata: Record<string, u
       ? meta.basis
       : legacy.basis;
   const multiplier = typeof meta.multiplier === 'number' && meta.multiplier > 0 ? meta.multiplier : legacy.multiplier;
-  return { label, code, basis, multiplier };
+  return { label, code, basis, multiplier, variableMultiplier: meta.variableMultiplier === true };
 }
 
 /**
@@ -205,24 +205,37 @@ function mergeProcessRowsByCode(
  * Resolve a tenant's order-quantity unit code to {basis, multiplier}. Used at
  * calc time so custom tenant units convert correctly. Returns undefined when the
  * code is a built-in legacy unit (the engine resolves those itself).
+ *
+ * `estimateMultiplierOverride` is the per-estimate, user-entered length (e.g. a
+ * roll's linear metres) for units flagged `variableMultiplier`. It wins over the
+ * unit's stored default multiplier; the default remains only as a fallback for
+ * estimates that have not entered a length yet.
  */
 export async function resolveOrderUnitDef(
   tenantId: string,
-  unitCode: string | null | undefined
+  unitCode: string | null | undefined,
+  estimateMultiplierOverride?: number | null
 ): Promise<{ basis: UnitBasis; multiplier: number } | undefined> {
   if (!unitCode) return undefined;
   const code = unitCode.trim().toLowerCase();
+  const applyOverride = (def: UnitRow): { basis: UnitBasis; multiplier: number } => {
+    const override = Number(estimateMultiplierOverride);
+    if (def.variableMultiplier && Number.isFinite(override) && override > 0) {
+      return { basis: def.basis, multiplier: override };
+    }
+    return { basis: def.basis, multiplier: def.multiplier };
+  };
   // Tenant override first
   const tenantUnits = await listTenantReferenceItems(tenantId, 'unit');
   const tenantMatch = tenantUnits.find((r) => deriveCode(r.label, r.code) === code);
   if (tenantMatch) {
     const def = unitRowFromItem(tenantMatch.label, code, tenantMatch.metadata as Record<string, unknown> | null);
-    return { basis: def.basis, multiplier: def.multiplier };
+    return applyOverride(def);
   }
   // Platform unit
   const base = await buildMasterDataReferenceFromDb();
   const match = (base.unitRows ?? []).find((u) => u.code.toLowerCase() === code);
-  if (match) return { basis: match.basis, multiplier: match.multiplier };
+  if (match) return applyOverride(match);
   return undefined;
 }
 

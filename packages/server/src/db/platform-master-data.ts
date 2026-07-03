@@ -533,7 +533,7 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
   const unitRows = items
     .filter((i: PlatformReferenceItemRow) => i.category === 'unit')
     .map((i: PlatformReferenceItemRow) => {
-      const meta = (i.metadata || {}) as { basis?: UnitBasis; multiplier?: number };
+      const meta = (i.metadata || {}) as { basis?: UnitBasis; multiplier?: number; variableMultiplier?: boolean };
       const code =
         (i.code || '').trim() ||
         i.label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
@@ -547,7 +547,7 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
           : legacy.basis;
       const multiplier =
         typeof meta.multiplier === 'number' && meta.multiplier > 0 ? meta.multiplier : legacy.multiplier;
-      return { label: i.label, code, basis, multiplier };
+      return { label: i.label, code, basis, multiplier, variableMultiplier: meta.variableMultiplier === true };
     });
 
   const processRows = items

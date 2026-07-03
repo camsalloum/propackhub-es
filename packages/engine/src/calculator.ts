@@ -88,8 +88,9 @@ export function calculateEstimate(
   const solventCostPerKg = solventDetail.totalCostPerKg;
 
   // Step 8: Manufacturing & Operating (M&O) — sales-level model (no machine time).
-  // process_per_kg: Σ(process.costPerKgUsd × processQuantity) for enabled rows.
+  // process_per_kg : Σ(process.costPerKgUsd × processQuantity) for enabled rows.
   // markup_over_rm : Total RM/kg × markupPercent% (computed inside the price build-up).
+  // fixed_per_group: Per-template fixed CoRM (USD/kg) from the source template.
   const mfg = computeMfgProcessCosts(estimate.processes, trueOrderQuantityKg);
 
   // ── Step 9: Pricing ──────────────────────────────────────────────────────
@@ -98,11 +99,11 @@ export function calculateEstimate(
 
   // Unified final-price breakup (single model — no legacy/per-hour branch):
   //   Total RM  = material × (1 + band waste%)         (substrates + ink/adh/solvent + packaging + waste)
-  //   M&O       = markup over Total RM  OR  Σ process cost/kg   (the ONLY markup)
+  //   M&O       = markup over Total RM  OR  Σ process cost/kg  OR  fixed CoRM  (the ONLY markup)
   //   PrePress  = plates + tooling(amortized)          (development charge)
   //   Transport = deliveryPerKg + delivery(amortized)  (as defined)
   //   Sale      = Total RM + M&O + PrePress + Transport + accessory
-  const operatingCostMethod: 'process_per_kg' | 'markup_over_rm' =
+  const operatingCostMethod: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group' =
     estimate.operatingCostMethod ?? 'markup_over_rm';
 
   const charges = {
@@ -118,12 +119,14 @@ export function calculateEstimate(
     operatingCostMethod,
     markupPercent: estimate.markupPercent,
     mfgProcessPerKg: mfg.operationCostPerKg,
+    cormPerKgUsd: estimate.cormPerKgUsd ?? 0,
   };
 
   const priced = priceWithNewModel({ ...charges, wasteQtyKg: trueOrderQuantityKg });
   const salePricePerKg = priced.salePricePerKg;
   const mfgOperatingPerKg = priced.mfgOperatingPerKg;
-  const markupAmount = operatingCostMethod === 'markup_over_rm' ? mfgOperatingPerKg : 0;
+  const markupAmount =
+    operatingCostMethod === 'markup_over_rm' ? mfgOperatingPerKg : 0;
   const totalCost = salePricePerKg;
 
   // Slab ladder: only the waste band varies per slab quantity; M&O per-kg,
@@ -140,6 +143,7 @@ export function calculateEstimate(
     wastePercent: denom > 0 ? (wasteAmount / denom) * 100 : 0,
     markupPercent: denom > 0 && operatingCostMethod === 'markup_over_rm' ? (mfgOperatingPerKg / denom) * 100 : 0,
     processPercent: denom > 0 && operatingCostMethod === 'process_per_kg' ? (mfgOperatingPerKg / denom) * 100 : 0,
+    cormPercent: denom > 0 && operatingCostMethod === 'fixed_per_group' ? (mfgOperatingPerKg / denom) * 100 : 0,
     accessoryPercent: denom > 0 ? (accessoryCostPerKg / denom) * 100 : 0,
     logisticsPercent: denom > 0 ? (priced.transportCostPerKg / denom) * 100 : 0,
     developmentPercent: denom > 0 ? (priced.prepressCostPerKg / denom) * 100 : 0,
@@ -437,8 +441,10 @@ function computeMfgProcessCosts(processes: Process[], orderQuantityKg: number) {
 /**
  * Final price build-up (per kg, USD base) — single unified model:
  *   Total RM  = material × (1 + band waste%)      (substrates + ink/adh/solvent + packaging + waste)
- *   M&O       = process_per_kg ? Σ(process cost/kg)   :   markup_over_rm ? Total RM × markup%
- *               (this markup is the ONLY markup in the price)
+ *   M&O       = process_per_kg ? Σ(process cost/kg)
+ *             : markup_over_rm ? Total RM × markup%
+ *             : fixed_per_group ? cormPerKgUsd
+ *               (this M&O figure is the ONLY markup in the price)
  *   PrePress  = platesPerKg + tooling(amortized over order qty)   (development charge)
  *   Transport = deliveryPerKg + delivery(amortized over order qty)
  *   Sale      = Total RM + M&O + PrePress + Transport + accessory
@@ -456,9 +462,11 @@ function priceWithNewModel(params: {
   toolingChargeUsd: number;
   toolingBilled: boolean;
   deliveryChargeUsd: number;
-  operatingCostMethod: 'process_per_kg' | 'markup_over_rm';
+  operatingCostMethod: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
   markupPercent: number;
   mfgProcessPerKg: number;
+  /** Fixed CoRM (USD/kg) used when operatingCostMethod === 'fixed_per_group'. */
+  cormPerKgUsd: number;
 }): {
   wastePct: number;
   wasteAdjustedMaterialPerKg: number;
@@ -479,10 +487,15 @@ function priceWithNewModel(params: {
     params.deliveryPerKg + (amort > 0 ? params.deliveryChargeUsd / amort : 0);
 
   // Manufacturing & Operating — the ONLY markup mechanism.
+  // process_per_kg  → Σ(enabled process cost/kg)
+  // markup_over_rm  → Total RM × markupPercent%
+  // fixed_per_group → cormPerKgUsd (admin-tunable per template)
   const mfgOperatingPerKg =
     params.operatingCostMethod === 'process_per_kg'
       ? params.mfgProcessPerKg
-      : wasteAdjustedMaterialPerKg * (params.markupPercent / 100);
+      : params.operatingCostMethod === 'fixed_per_group'
+        ? Math.max(0, params.cormPerKgUsd)
+        : wasteAdjustedMaterialPerKg * (params.markupPercent / 100);
 
   const salePricePerKg =
     wasteAdjustedMaterialPerKg +

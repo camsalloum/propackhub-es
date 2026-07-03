@@ -147,6 +147,17 @@ export type PlatformMasterMaterialRow = PlatformMasterMaterialInput & {
   liquidCostUsd?: number | null;
 };
 
+/**
+ * Return shape of any platform-templates admin endpoint that mirrors a row
+ * plus live-sync telemetry. Callers (e.g. `TemplateBuilder`) cast the row
+ * part back to their template type, and read the telemetry off the rest.
+ */
+type PlatformTemplateSync = {
+  syncedTenants: number;
+  deactivatedTenants: number;
+  inserted: number;
+};
+
 export class ApiClient {
   private token: string | null = null;
   private refreshTokenValue: string | null = null;
@@ -871,7 +882,11 @@ export class ApiClient {
   }
 
   updatePlatformTemplate(id: string, data: Record<string, unknown>) {
-    return this.request<any>('PATCH', `/api/v1/admin/platform-templates/${id}`, data);
+    return this.request<Record<string, unknown> & PlatformTemplateSync>(
+      'PATCH',
+      `/api/v1/admin/platform-templates/${id}`,
+      data
+    );
   }
 
   /**
@@ -880,7 +895,7 @@ export class ApiClient {
    * row carries the cross-table key.
    */
   updatePlatformTemplateByKey(templateKey: string, data: Record<string, unknown>) {
-    return this.request<any>(
+    return this.request<Record<string, unknown> & PlatformTemplateSync>(
       'PATCH',
       `/api/v1/admin/platform-templates/by-key/${encodeURIComponent(templateKey)}`,
       data
@@ -888,14 +903,25 @@ export class ApiClient {
   }
 
   deletePlatformTemplate(id: string) {
-    return this.request<{ ok: boolean; deactivated?: boolean; alreadyInactive?: boolean }>(
-      'DELETE',
-      `/api/v1/admin/platform-templates/${id}`
-    );
+    return this.request<{
+      ok: boolean;
+      deactivated?: boolean;
+      alreadyInactive?: boolean;
+      /** How many tenant `structure_templates` rows were deactivated by this call. */
+      deactivatedTenants?: number;
+      /** How many tenant rows were updated in place (e.g. content drift fix). */
+      syncedTenants?: number;
+    }>('DELETE', `/api/v1/admin/platform-templates/${id}`);
   }
 
   deletePlatformTemplateByKey(templateKey: string) {
-    return this.request<{ ok: boolean; deactivated?: boolean; alreadyInactive?: boolean }>(
+    return this.request<{
+      ok: boolean;
+      deactivated?: boolean;
+      alreadyInactive?: boolean;
+      deactivatedTenants?: number;
+      syncedTenants?: number;
+    }>(
       'DELETE',
       `/api/v1/admin/platform-templates/by-key/${encodeURIComponent(templateKey)}`
     );

@@ -331,30 +331,21 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS pricing_method VARCHAR(20) NOT NULL D
 ALTER TABLE estimates ADD COLUMN IF NOT EXISTS waste_bands JSONB;
 
 -- ---------------------------------------------------------------------------
--- Manufacturing & Operating method 3 (2026-07-03) — fixed CoRM per product group.
+-- Manufacturing & Operating method 3 (2026-07-03) — fixed CoRM per template.
 -- The `fixed_per_group` enum value is added by apply-schema-patches.ts (enum
--- values must commit before use). This table stores the per-product-group CoRM
--- (USD/kg) used as the Manufacturing & Operating figure for that method.
+-- values must commit before use). The CoRM (USD/kg) is stored PER TEMPLATE
+-- on `platform_standard_templates.corm_per_kg_usd` (and mirrored to each
+-- tenant's `structure_templates.corm_per_kg_usd` by `syncPlatformStandardsToTenant`).
+-- Per-template (not per product group) so the admin can tune CoRM
+-- independently for each laminate stack.
 -- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS platform_product_group_settings (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  pebi_parent_pg VARCHAR(255) NOT NULL UNIQUE,
-  corm_per_kg_usd DECIMAL(12, 4) NOT NULL DEFAULT 0,
-  updated_by_user_id UUID,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS platform_product_group_settings_pg_idx
-  ON platform_product_group_settings (pebi_parent_pg);
+ALTER TABLE platform_standard_templates
+  ADD COLUMN IF NOT EXISTS corm_per_kg_usd DECIMAL(12, 4);
 
--- Seed a 0 CoRM row for every product group currently present in the catalog
--- (platform standards + tenant templates), so the admin page lists them all.
-INSERT INTO platform_product_group_settings (pebi_parent_pg, corm_per_kg_usd)
-SELECT DISTINCT pebi_parent_pg, 0
-FROM (
-  SELECT pebi_parent_pg FROM platform_standard_templates WHERE pebi_parent_pg IS NOT NULL
-  UNION
-  SELECT pebi_parent_pg FROM structure_templates WHERE pebi_parent_pg IS NOT NULL
-) g
-ON CONFLICT (pebi_parent_pg) DO NOTHING;
+ALTER TABLE structure_templates
+  ADD COLUMN IF NOT EXISTS corm_per_kg_usd DECIMAL(12, 4);
+
+-- Per-estimate CoRM snapshot (display currency per kg; legacy column name).
+ALTER TABLE estimates
+  ADD COLUMN IF NOT EXISTS corm_per_kg_usd DECIMAL(12, 4);
 

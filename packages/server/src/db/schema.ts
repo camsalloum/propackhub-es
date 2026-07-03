@@ -397,6 +397,12 @@ export const estimates = pgTable('estimates', {
   masterDataVersion: integer('master_data_version'),
   /** Structure template key when created from template (MES Phase B / D) */
   sourceTemplateKey: varchar('source_template_key', { length: 128 }),
+  /**
+   * Fixed CoRM per kg in the **estimate display currency** (legacy column name
+   * `corm_per_kg_usd`). Snapshotted from the source template at instantiate/save.
+   * Converted to USD at engine boundary using `exchangeRateUsdToDisplay`.
+   */
+  cormPerKgUsd: decimal('corm_per_kg_usd', { precision: 12, scale: 4 }),
   /** True when the estimate layer stack diverges from the source template stack. */
   structureForked: boolean('structure_forked').notNull().default(false),
   /** True after the user manually edits derived process toggles/quantities. */
@@ -562,6 +568,11 @@ export const structureTemplates = pgTable('structure_templates', {
   substrateOrigin: varchar('substrate_origin', { length: 50 }), // PE or null
   /** Product-group margin over raw material, USD/kg. Admin sets it; estimates default from it. */
   marginOverRmPerKgUsd: decimal('margin_over_rm_per_kg_usd', { precision: 12, scale: 4 }),
+  /**
+   * Per-template fixed M&O add-on (CoRM) in **tenant display currency per kg**
+   * (legacy column `corm_per_kg_usd`). Mirrored from platform standards.
+   */
+  cormPerKgUsd: decimal('corm_per_kg_usd', { precision: 12, scale: 4 }),
   displayOrder: integer('display_order').notNull().default(0),
   // Flag to indicate standard (built‑in) templates vs. tenant‑created (B2)
   isStandard: boolean('is_standard').notNull().default(true),
@@ -620,6 +631,11 @@ export const platformStandardTemplates = pgTable('platform_standard_templates', 
   inkSystemOptions: jsonb('ink_system_options'),
   substrateOptions: jsonb('substrate_options'),
   isActive: boolean('is_active').notNull().default(true),
+  /**
+   * Per-template fixed M&O add-on (CoRM) in **display currency per kg**
+   * (legacy column `corm_per_kg_usd`). Synced to tenant `structure_templates`.
+   */
+  cormPerKgUsd: decimal('corm_per_kg_usd', { precision: 12, scale: 4 }),
   /** Audit: original platform_admin who created the row (uuid, FK not enforced) */
   createdByUserId: uuid('created_by_user_id'),
   /** Audit: most recent platform_admin who edited the row (uuid, FK not enforced) */
@@ -630,28 +646,6 @@ export const platformStandardTemplates = pgTable('platform_standard_templates', 
   templateKeyIdx: index('platform_standard_templates_template_key_idx').on(table.templateKey),
   displayOrderIdx: index('platform_standard_templates_display_order_idx').on(table.displayOrder),
   isActiveIdx: index('platform_standard_templates_is_active_idx').on(table.isActive),
-}));
-
-/**
- * Per-product-group platform settings (Manufacturing & Operating — fixed CoRM).
- *
- * `corm_per_kg_usd` is a fixed USD/kg amount the platform admin sets per PEBI
- * product group (`pebi_parent_pg`). When a tenant's operating-cost method is
- * `fixed_per_group`, this value is used as the Manufacturing & Operating figure
- * added on top of Total RM in the cost breakdown. The group list itself is
- * derived live from the templates catalog; this table only stores the CoRM.
- */
-export const platformProductGroupSettings = pgTable('platform_product_group_settings', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  /** PEBI product group name — matches structure_templates.pebi_parent_pg. */
-  pebiParentPg: varchar('pebi_parent_pg', { length: 255 }).notNull().unique(),
-  /** Fixed Manufacturing & Operating add-on, USD/kg. */
-  cormPerKgUsd: decimal('corm_per_kg_usd', { precision: 12, scale: 4 }).notNull().default('0'),
-  updatedByUserId: uuid('updated_by_user_id'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-}, (table) => ({
-  pebiParentPgIdx: index('platform_product_group_settings_pg_idx').on(table.pebiParentPg),
 }));
 
 // Sessions (Phase 2.3 — refresh token rotation)

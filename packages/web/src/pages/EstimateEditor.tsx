@@ -23,8 +23,8 @@ import {
 } from '../lib/pouchConfiguratorCatalog';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
+import { runClientCalculation, effectiveMarginPercent, type ClientCalcInput } from '../lib/estimateCalc';
 import { usdToDisplay, usdToDisplayPrecise } from '../lib/currency';
-import { runClientCalculation, effectiveMarginPercent } from '../lib/estimateCalc';
 import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
 import {
   buildProcessCostCatalogFromReference,
@@ -195,6 +195,7 @@ const EstimateEditor = () => {
   // Pricing model v2 (USD base). pricingMethod is assigned per user by the admin.
   const [pricingMethod, setPricingMethod] = useState<'markup' | 'margin_per_kg'>('markup');
   const [marginValuePerKgUsd, setMarginValuePerKgUsd] = useState(0);
+  const [cormPerKgUsd, setCormPerKgUsd] = useState(0);
   const [toolingChargeUsd, setToolingChargeUsd] = useState(0);
   const [deliveryTerm, setDeliveryTerm] = useState('EXW');
   const [deliveryChargeUsd, setDeliveryChargeUsd] = useState(0);
@@ -724,6 +725,7 @@ const EstimateEditor = () => {
     // Pricing method from the user; margin/kg default from the template (product group).
     setPricingMethod(user?.pricingMethod ?? 'markup');
     setMarginValuePerKgUsd(parseFloat((pe as { marginValuePerKgUsd?: string }).marginValuePerKgUsd ?? '') || 0);
+    setCormPerKgUsd(parseFloat((pe as { cormPerKgUsd?: string }).cormPerKgUsd ?? '') || 0);
     setToolingChargeUsd(0);
     setDeliveryTerm('EXW');
     setDeliveryChargeUsd(0);
@@ -816,6 +818,7 @@ const EstimateEditor = () => {
           (user?.pricingMethod ?? 'markup')
       );
       setMarginValuePerKgUsd(parseFloat(data.marginValuePerKgUsd) || 0);
+      setCormPerKgUsd(parseFloat(data.cormPerKgUsd) || 0);
       setToolingChargeUsd(parseFloat(data.toolingChargeUsd) || 0);
       setDeliveryTerm(typeof data.deliveryTerm === 'string' && data.deliveryTerm ? data.deliveryTerm : 'EXW');
       setDeliveryChargeUsd(parseFloat(data.deliveryChargeUsd) || 0);
@@ -995,6 +998,7 @@ const EstimateEditor = () => {
       deliveryPerKg,
       pricingMethod,
       marginValuePerKgUsd,
+      cormPerKgUsd,
       toolingChargeUsd,
       toolingBilledToCustomer: toolingChargeUsd > 0,
       deliveryTerm: deliveryTerm || undefined,
@@ -1034,7 +1038,7 @@ const EstimateEditor = () => {
       }));
     }
     return payload;
-  }, [jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, productType, productTypeOptions, productSubtype, needsSolventMix, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, toolingChargeUsd, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
+  }, [jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, productType, productTypeOptions, productSubtype, needsSolventMix, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, toolingChargeUsd, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   /** Link estimate to a customer row — create customer record if user typed a new name. */
   const ensureCustomerForSave = async (): Promise<string | undefined> => {
@@ -1109,6 +1113,7 @@ const EstimateEditor = () => {
         pricingMethod,
         marginValuePerKgUsd,
         operatingCostMethod: tenant?.operatingCostMethod ?? undefined,
+        cormPerKgUsd,
         toolingChargeUsd,
         toolingBilledToCustomer: toolingChargeUsd > 0,
         deliveryTerm,
@@ -1125,7 +1130,7 @@ const EstimateEditor = () => {
     solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob,
     hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, layers.length, accessories,
     orderQuantity, orderQuantityUnit, masterReference,
-    pricingMethod, marginValuePerKgUsd, toolingChargeUsd, deliveryTerm, deliveryChargeUsd,
+    pricingMethod, marginValuePerKgUsd, cormPerKgUsd, toolingChargeUsd, deliveryTerm, deliveryChargeUsd,
     tenant?.operatingCostMethod, processesState,
   ]);
 
@@ -1829,7 +1834,7 @@ const EstimateEditor = () => {
             ))}
           </select>
           <label className="inline-flex items-center gap-1 shrink-0">
-            <span className="text-xs text-mist">$/kg</span>
+            <span className="text-xs text-mist">{estimate?.displayCurrency || 'USD'}/kg</span>
             <input
               type="number"
               min="0"
@@ -2189,12 +2194,17 @@ const EstimateEditor = () => {
                       />
                     </div>
                   )}
-                  {layers.map((layer, idx) => (
+                  {layers.map((layer, idx) => {
+                    const costPerKgDisplay = can('materialCostPerKg') 
+                      ? usdToDisplay(layer.costPerKgUsd, fxRate) 
+                      : undefined;
+                    return (
                     <LayerCard
                       key={layer.id}
                       index={idx}
-                      layer={{ ...layer, type: layer.materialType, material: layer.materialName, costPerKg: can('materialCostPerKg') ? layer.costPerKgUsd : undefined }}
+                      layer={{ ...layer, type: layer.materialType, material: layer.materialName, costPerKg: costPerKgDisplay }}
                       showCost={can('materialCostPerKg')}
+                      displayCurrency={estimate?.displayCurrency || 'USD'}
                       onEdit={() => openLayerEdit(layer.id)}
                       showFormula={canConfigureSolvent && layer.materialType === 'adhesive' && layer.isSolventBased}
                       formulaOverridden={!!laminationRecipeOverrides[layer.id]}
@@ -2222,7 +2232,8 @@ const EstimateEditor = () => {
                       }}
                       isDragging={dragFromIndex === idx}
                     />
-                  ))}
+                    );
+                  })}
                   <button
                     type="button"
                     onClick={() => setAddLayerSheetOpen(true)}
@@ -2299,10 +2310,10 @@ const EstimateEditor = () => {
                         {showStructureCosts && (
                           <>
                             <th className="text-right align-middle py-2.5 px-2 text-[10px] font-medium text-mist leading-tight">
-                              $/kg
+                              {estimate?.displayCurrency || 'USD'}/kg
                             </th>
                             <th className="text-right align-middle py-2.5 px-2 text-[10px] font-medium text-mist leading-tight">
-                              $/m²
+                              {estimate?.displayCurrency || 'USD'}/m²
                             </th>
                           </>
                         )}

@@ -35,11 +35,16 @@ export function buildEngineEstimateFromRows(opts: {
   slabs: SlabRow[];
   layerPriceOverrides?: Map<string, number>;
   /** Manufacturing & Operating method (from tenant); defaults to markup_over_rm. */
-  operatingCostMethod?: 'process_per_kg' | 'markup_over_rm';
+  operatingCostMethod?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
+  /**
+   * Fixed CoRM per kg in **display currency** (legacy field name `cormPerKgUsd`).
+   * Converted to USD before passing to the engine — see `estimate-calculation.ts`.
+   */
+  cormPerKgUsd?: number | null;
   /** Resolved {basis, multiplier} for the estimate's order-quantity unit (custom/tenant units). */
   orderQuantityUnitDef?: import('@es/engine').UnitDef;
 }): { estimateForEngine: EngineEstimate; materialMap: Map<string, import('@es/engine').Material> } {
-  const { estimate, tenantId, layers, materials, processes, slabs, layerPriceOverrides, operatingCostMethod, orderQuantityUnitDef } = opts;
+  const { estimate, tenantId, layers, materials, processes, slabs, layerPriceOverrides, operatingCostMethod, cormPerKgUsd, orderQuantityUnitDef } = opts;
   const materialMap = buildEngineMaterialMap(materials);
   const patchedMaterialMap = new Map(materialMap);
 
@@ -86,6 +91,8 @@ export function buildEngineEstimateFromRows(opts: {
     marginValuePerKgUsd: estimate.marginValuePerKgUsd != null ? parseFloat(estimate.marginValuePerKgUsd) : undefined,
     // Manufacturing & Operating method (tenant setting) — drives M&O in the price build-up.
     operatingCostMethod: operatingCostMethod ?? undefined,
+    // Fixed CoRM (USD/kg) — only used when operatingCostMethod === 'fixed_per_group'.
+    cormPerKgUsd: cormPerKgUsd != null ? cormPerKgUsd : undefined,
     toolingChargeUsd: estimate.toolingChargeUsd != null ? parseFloat(estimate.toolingChargeUsd) : undefined,
     toolingBilledToCustomer: estimate.toolingBilledToCustomer ?? undefined,
     deliveryTerm: estimate.deliveryTerm ?? undefined,

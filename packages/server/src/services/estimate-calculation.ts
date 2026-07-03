@@ -7,6 +7,7 @@ import { getMasterDataVersion } from '../db/platform-master-data';
 import { resolveOrderUnitDef } from '../db/tenant-reference-data';
 import { buildEngineEstimateFromRows } from '../utils/estimate-engine-input';
 import { resolveEstimateProcesses } from '../utils/estimate-processes';
+import { cormDisplayPerKgToEngineUsd } from '../utils/currency';
 
 type Db = ReturnType<typeof import('../db').getDatabase>;
 
@@ -59,6 +60,30 @@ export async function calculateAndPersistEstimate(
     .from(schema.tenants)
     .where(eq(schema.tenants.id, tenantId));
 
+  // Fixed CoRM (display currency per kg) for the `fixed_per_group` method.
+  // Stored on estimate/template in display currency; converted to USD for the engine.
+  let cormPerKgUsd: number | null = 0;
+  if (tenantRow?.operatingCostMethod === 'fixed_per_group') {
+    const fx = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;
+    let cormDisplayPerKg = 0;
+    if (estimate.cormPerKgUsd != null) {
+      cormDisplayPerKg = parseFloat(estimate.cormPerKgUsd);
+    } else if (estimate.sourceTemplateKey) {
+      const [tpl] = await db
+        .select({ cormPerKgUsd: schema.structureTemplates.cormPerKgUsd })
+        .from(schema.structureTemplates)
+        .where(
+          and(
+            eq(schema.structureTemplates.tenantId, tenantId),
+            eq(schema.structureTemplates.templateKey, estimate.sourceTemplateKey)
+          )
+        )
+        .limit(1);
+      cormDisplayPerKg = tpl?.cormPerKgUsd != null ? parseFloat(tpl.cormPerKgUsd) : 0;
+    }
+    cormPerKgUsd = cormDisplayPerKgToEngineUsd(cormDisplayPerKg, fx);
+  }
+
   const { estimateForEngine, materialMap } = buildEngineEstimateFromRows({
     estimate,
     tenantId,
@@ -68,6 +93,7 @@ export async function calculateAndPersistEstimate(
     slabs,
     layerPriceOverrides,
     operatingCostMethod: tenantRow?.operatingCostMethod ?? 'markup_over_rm',
+    cormPerKgUsd,
     orderQuantityUnitDef: await resolveOrderUnitDef(
       tenantId,
       estimate.orderQuantityUnit,

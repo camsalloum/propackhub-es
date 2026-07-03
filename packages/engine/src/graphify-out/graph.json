@@ -90,7 +90,7 @@
       "source_location": "L93",
       "_origin": "ast",
       "id": "bag_flat_sheet_calculatebagflatsheetaream2",
-      "community": 4,
+      "community": 1,
       "norm_label": "calculatebagflatsheetaream2()"
     },
     {
@@ -127,7 +127,7 @@
       "label": "calculateLayer()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L274",
+      "source_location": "L212",
       "_origin": "ast",
       "id": "calculator_calculatelayer",
       "community": 1,
@@ -137,7 +137,7 @@
       "label": "calculatePrintingWebWidth()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L308",
+      "source_location": "L246",
       "_origin": "ast",
       "id": "calculator_calculateprintingwebwidth",
       "community": 1,
@@ -147,41 +147,251 @@
       "label": "calculateProductMetrics()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L329",
+      "source_location": "L267",
       "_origin": "ast",
       "id": "calculator_calculateproductmetrics",
       "community": 1,
       "norm_label": "calculateproductmetrics()"
     },
     {
-      "label": "calculateProcessCosts()",
+      "label": "computeMfgProcessCosts()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L469",
+      "source_location": "L412",
       "_origin": "ast",
-      "id": "calculator_calculateprocesscosts",
+      "id": "calculator_computemfgprocesscosts",
       "community": 1,
-      "norm_label": "calculateprocesscosts()"
-    },
-    {
-      "label": "calculateSalePrice()",
-      "file_type": "code",
-      "source_file": "calculator.ts",
-      "source_location": "L525",
-      "_origin": "ast",
-      "id": "calculator_calculatesaleprice",
-      "community": 1,
-      "norm_label": "calculatesaleprice()"
+      "norm_label": "computemfgprocesscosts()"
     },
     {
       "label": "priceWithNewModel()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L548",
+      "source_location": "L448",
       "_origin": "ast",
       "id": "calculator_pricewithnewmodel",
       "community": 1,
       "norm_label": "pricewithnewmodel()"
+    },
+    {
+      "label": "derive-processes.test.ts",
+      "file_type": "code",
+      "source_file": "derive-processes.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "derive_processes_test",
+      "community": 0,
+      "norm_label": "derive-processes.test.ts"
+    },
+    {
+      "label": "CATALOG",
+      "file_type": "code",
+      "source_file": "derive-processes.test.ts",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "derive_processes_test_catalog",
+      "community": 0,
+      "norm_label": "catalog"
+    },
+    {
+      "label": "totalCost()",
+      "file_type": "code",
+      "source_file": "derive-processes.test.ts",
+      "source_location": "L18",
+      "_origin": "ast",
+      "id": "derive_processes_test_totalcost",
+      "community": 0,
+      "norm_label": "totalcost()"
+    },
+    {
+      "label": "processByKey()",
+      "file_type": "code",
+      "source_file": "derive-processes.test.ts",
+      "source_location": "L27",
+      "_origin": "ast",
+      "id": "derive_processes_test_processbykey",
+      "community": 0,
+      "norm_label": "processbykey()"
+    },
+    {
+      "label": "derive-processes.ts",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "derive_processes",
+      "community": 0,
+      "norm_label": "derive-processes.ts"
+    },
+    {
+      "label": "ProcessLayerType",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "derive_processes_processlayertype",
+      "community": 0,
+      "norm_label": "processlayertype"
+    },
+    {
+      "label": "ProcessProductType",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L2",
+      "_origin": "ast",
+      "id": "derive_processes_processproducttype",
+      "community": 0,
+      "norm_label": "processproducttype"
+    },
+    {
+      "label": "ProcessMaterialClass",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "derive_processes_processmaterialclass",
+      "community": 0,
+      "norm_label": "processmaterialclass"
+    },
+    {
+      "label": "DerivedProcessKey",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "derive_processes_derivedprocesskey",
+      "community": 0,
+      "norm_label": "derivedprocesskey"
+    },
+    {
+      "label": "ProcessDerivationLayer",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L14",
+      "_origin": "ast",
+      "id": "derive_processes_processderivationlayer",
+      "community": 0,
+      "norm_label": "processderivationlayer"
+    },
+    {
+      "label": "ProcessCatalogEntry",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "derive_processes_processcatalogentry",
+      "community": 0,
+      "norm_label": "processcatalogentry"
+    },
+    {
+      "label": "ProcessCatalog",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L24",
+      "_origin": "ast",
+      "id": "derive_processes_processcatalog",
+      "community": 0,
+      "norm_label": "processcatalog"
+    },
+    {
+      "label": "ProcessDerivationOverride",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "derive_processes_processderivationoverride",
+      "community": 0,
+      "norm_label": "processderivationoverride"
+    },
+    {
+      "label": "ProcessDerivationInput",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L32",
+      "_origin": "ast",
+      "id": "derive_processes_processderivationinput",
+      "community": 0,
+      "norm_label": "processderivationinput"
+    },
+    {
+      "label": "DerivedProcess",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L39",
+      "_origin": "ast",
+      "id": "derive_processes_derivedprocess",
+      "community": 0,
+      "norm_label": "derivedprocess"
+    },
+    {
+      "label": "ProcessRule",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L47",
+      "_origin": "ast",
+      "id": "derive_processes_processrule",
+      "community": 0,
+      "norm_label": "processrule"
+    },
+    {
+      "label": "PROCESS_LABELS",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L53",
+      "_origin": "ast",
+      "id": "derive_processes_process_labels",
+      "community": 0,
+      "norm_label": "process_labels"
+    },
+    {
+      "label": "parseFiniteNumber()",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L63",
+      "_origin": "ast",
+      "id": "derive_processes_parsefinitenumber",
+      "community": 0,
+      "norm_label": "parsefinitenumber()"
+    },
+    {
+      "label": "processQuantityFromOverride()",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L76",
+      "_origin": "ast",
+      "id": "derive_processes_processquantityfromoverride",
+      "community": 0,
+      "norm_label": "processquantityfromoverride()"
+    },
+    {
+      "label": "normalizeProcessQuantity()",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L81",
+      "_origin": "ast",
+      "id": "derive_processes_normalizeprocessquantity",
+      "community": 0,
+      "norm_label": "normalizeprocessquantity()"
+    },
+    {
+      "label": "buildRules()",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L91",
+      "_origin": "ast",
+      "id": "derive_processes_buildrules",
+      "community": 0,
+      "norm_label": "buildrules()"
+    },
+    {
+      "label": "deriveProcessesFromStructure()",
+      "file_type": "code",
+      "source_file": "derive-processes.ts",
+      "source_location": "L130",
+      "_origin": "ast",
+      "id": "derive_processes_deriveprocessesfromstructure",
+      "community": 0,
+      "norm_label": "deriveprocessesfromstructure()"
     },
     {
       "label": "golden-fixtures.ts",
@@ -260,7 +470,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "index",
-      "community": 7,
+      "community": 4,
       "norm_label": "index.ts"
     },
     {
@@ -450,7 +660,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "lamination_recipe_laminationrecipe",
-      "community": 7,
+      "community": 6,
       "norm_label": "laminationrecipe"
     },
     {
@@ -550,7 +760,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "layer_stack_test",
-      "community": 0,
+      "community": 6,
       "norm_label": "layer-stack.test.ts"
     },
     {
@@ -560,7 +770,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "layer_stack_test_sbink",
-      "community": 0,
+      "community": 6,
       "norm_label": "sbink"
     },
     {
@@ -570,7 +780,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "layer_stack_test_uvink",
-      "community": 0,
+      "community": 6,
       "norm_label": "uvink"
     },
     {
@@ -580,7 +790,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "layer_stack_test_adhesivesb",
-      "community": 0,
+      "community": 6,
       "norm_label": "adhesivesb"
     },
     {
@@ -590,7 +800,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "layer_stack_test_pet",
-      "community": 0,
+      "community": 6,
       "norm_label": "pet"
     },
     {
@@ -600,7 +810,7 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "layer_stack_test_materials",
-      "community": 0,
+      "community": 6,
       "norm_label": "materials"
     },
     {
@@ -610,7 +820,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "layer_stack",
-      "community": 0,
+      "community": 6,
       "norm_label": "layer-stack.ts"
     },
     {
@@ -620,7 +830,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "layer_stack_layermaterialref",
-      "community": 0,
+      "community": 6,
       "norm_label": "layermaterialref"
     },
     {
@@ -630,7 +840,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "layer_stack_materiallookup",
-      "community": 0,
+      "community": 6,
       "norm_label": "materiallookup"
     },
     {
@@ -640,7 +850,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "layer_stack_getmaterial",
-      "community": 0,
+      "community": 6,
       "norm_label": "getmaterial()"
     },
     {
@@ -650,7 +860,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "layer_stack_deriveprintingwebclass",
-      "community": 0,
+      "community": 6,
       "norm_label": "deriveprintingwebclass()"
     },
     {
@@ -660,7 +870,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "layer_stack_stackhasuvink",
-      "community": 0,
+      "community": 6,
       "norm_label": "stackhasuvink()"
     },
     {
@@ -680,7 +890,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "layer_stack_stackneedssolventmix",
-      "community": 4,
+      "community": 6,
       "norm_label": "stackneedssolventmix()"
     },
     {
@@ -1064,6 +1274,56 @@
       "norm_label": "calculatestructuredensity()"
     },
     {
+      "label": "structure-signature.ts",
+      "file_type": "code",
+      "source_file": "structure-signature.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "structure_signature",
+      "community": 4,
+      "norm_label": "structure-signature.ts"
+    },
+    {
+      "label": "StructureSignatureLayer",
+      "file_type": "code",
+      "source_file": "structure-signature.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "structure_signature_structuresignaturelayer",
+      "community": 4,
+      "norm_label": "structuresignaturelayer"
+    },
+    {
+      "label": "normalizeToken()",
+      "file_type": "code",
+      "source_file": "structure-signature.ts",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "structure_signature_normalizetoken",
+      "community": 4,
+      "norm_label": "normalizetoken()"
+    },
+    {
+      "label": "fnv1a32()",
+      "file_type": "code",
+      "source_file": "structure-signature.ts",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "structure_signature_fnv1a32",
+      "community": 4,
+      "norm_label": "fnv1a32()"
+    },
+    {
+      "label": "computeStructureSignature()",
+      "file_type": "code",
+      "source_file": "structure-signature.ts",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "structure_signature_computestructuresignature",
+      "community": 4,
+      "norm_label": "computestructuresignature()"
+    },
+    {
       "label": "template-classification.test.ts",
       "file_type": "code",
       "source_file": "template-classification.test.ts",
@@ -1390,7 +1650,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "types_material",
-      "community": 1,
+      "community": 6,
       "norm_label": "material"
     },
     {
@@ -1437,7 +1697,7 @@
       "label": "Estimate",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L120",
+      "source_location": "L131",
       "_origin": "ast",
       "id": "types_estimate",
       "community": 3,
@@ -1447,7 +1707,7 @@
       "label": "CalculationResult",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L250",
+      "source_location": "L272",
       "_origin": "ast",
       "id": "types_calculationresult",
       "community": 7,
@@ -1457,7 +1717,7 @@
       "label": "MissingMaterialsError",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L269",
+      "source_location": "L291",
       "_origin": "ast",
       "id": "types_missingmaterialserror",
       "community": 7,
@@ -1467,7 +1727,7 @@
       "label": ".constructor()",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L272",
+      "source_location": "L294",
       "_origin": "ast",
       "id": "types_missingmaterialserror_constructor",
       "community": 7,
@@ -1477,7 +1737,7 @@
       "label": "VisibilityProfile",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L279",
+      "source_location": "L301",
       "_origin": "ast",
       "id": "types_visibilityprofile",
       "community": 7,
@@ -1660,7 +1920,7 @@
       "source_location": "L178",
       "_origin": "ast",
       "id": "validator_hassolventbasedlayers",
-      "community": 4,
+      "community": 6,
       "norm_label": "hassolventbasedlayers()"
     },
     {
@@ -2139,16 +2399,6 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "calculator.ts",
-      "source_location": "L350",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "calculator",
-      "target": "calculator_calculateprocesscosts"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "calculator.ts",
       "source_location": "L231",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -2159,11 +2409,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "calculator.ts",
-      "source_location": "L403",
+      "source_location": "L412",
       "weight": 1.0,
-      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "calculator_calculatesaleprice"
+      "target": "calculator_computemfgprocesscosts",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -2499,17 +2749,6 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "calculator.ts",
-      "source_location": "L57",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "calculator_calculateestimate",
-      "target": "calculator_calculateprocesscosts"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "calculator.ts",
       "source_location": "L51",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -2521,11 +2760,11 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "calculator.ts",
-      "source_location": "L60",
+      "source_location": "L93",
       "weight": 1.0,
-      "confidence_score": 1.0,
       "source": "calculator_calculateestimate",
-      "target": "calculator_calculatesaleprice"
+      "target": "calculator_computemfgprocesscosts",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -2658,6 +2897,305 @@
       "confidence_score": 1.0,
       "source": "calculator_pricewithnewmodel",
       "target": "waste_bands_wastepercentforquantity"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "derive_processes_test",
+      "target": "derive_processes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "derive_processes_test",
+      "target": "derive_processes_derivedprocess",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "derive_processes_test",
+      "target": "derive_processes_deriveprocessesfromstructure",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "derive_processes_test",
+      "target": "derive_processes_processcatalog",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.test.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "derive_processes_test",
+      "target": "derive_processes_test_catalog",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.test.ts",
+      "source_location": "L27",
+      "weight": 1.0,
+      "source": "derive_processes_test",
+      "target": "derive_processes_test_processbykey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.test.ts",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "derive_processes_test",
+      "target": "derive_processes_test_totalcost",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L91",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_buildrules",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L39",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_derivedprocess",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_derivedprocesskey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L130",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_deriveprocessesfromstructure",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L81",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_normalizeprocessquantity",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L63",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_parsefinitenumber",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L53",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_process_labels",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_processcatalog",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_processcatalogentry",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L32",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_processderivationinput",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_processderivationlayer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L26",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_processderivationoverride",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_processlayertype",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_processmaterialclass",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_processproducttype",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L76",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_processquantityfromoverride",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L47",
+      "weight": 1.0,
+      "source": "derive_processes",
+      "target": "derive_processes_processrule",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "index.ts",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "index",
+      "target": "derive_processes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L155",
+      "weight": 1.0,
+      "source": "derive_processes_deriveprocessesfromstructure",
+      "target": "derive_processes_parsefinitenumber",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L143",
+      "weight": 1.0,
+      "source": "derive_processes_deriveprocessesfromstructure",
+      "target": "derive_processes_processquantityfromoverride",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L144",
+      "weight": 1.0,
+      "source": "derive_processes_deriveprocessesfromstructure",
+      "target": "derive_processes_normalizeprocessquantity",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "derive-processes.ts",
+      "source_location": "L134",
+      "weight": 1.0,
+      "source": "derive_processes_deriveprocessesfromstructure",
+      "target": "derive_processes_buildrules",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -2895,6 +3433,17 @@
       "confidence_score": 1.0,
       "source": "index",
       "target": "structure_metrics"
+    },
+    {
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "index.ts",
+      "source_location": "L20",
+      "weight": 1.0,
+      "source": "index",
+      "target": "structure_signature",
+      "confidence_score": 1.0
     },
     {
       "relation": "re_exports",
@@ -4832,6 +5381,68 @@
       "confidence_score": 1.0,
       "source": "structure_metrics",
       "target": "types_material"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "structure-signature.ts",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "structure_signature",
+      "target": "structure_signature_computestructuresignature",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "structure-signature.ts",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "structure_signature",
+      "target": "structure_signature_fnv1a32",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "structure-signature.ts",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "structure_signature",
+      "target": "structure_signature_normalizetoken",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "structure-signature.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "structure_signature",
+      "target": "structure_signature_structuresignaturelayer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "structure-signature.ts",
+      "source_location": "L35",
+      "weight": 1.0,
+      "source": "structure_signature_computestructuresignature",
+      "target": "structure_signature_normalizetoken",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "structure-signature.ts",
+      "source_location": "L36",
+      "weight": 1.0,
+      "source": "structure_signature_computestructuresignature",
+      "target": "structure_signature_fnv1a32",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports_from",

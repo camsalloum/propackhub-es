@@ -137,6 +137,58 @@ describe('final price breakup — per-kg process cost (M&O = Σ process/kg)', ()
   });
 });
 
+describe('final price breakup — fixed CoRM per template (M&O = cormPerKgUsd)', () => {
+  it('uses the per-template cormPerKgUsd as M&O regardless of markup%/processes', () => {
+    // Total RM 2.14 + M&O (corm 0.75) + PrePress 0.5 + Transport 0.2 = 3.59
+    // Note: markupPercent / processes are ignored for this method.
+    const result = calculateEstimate(
+      baseEstimate({
+        operatingCostMethod: 'fixed_per_group',
+        cormPerKgUsd: 0.75,
+        markupPercent: 99, // ignored on purpose — must not influence the price
+        processes: [
+          { id: 'p1', name: 'Lamination', enabled: true, costPerKgUsd: 9.9, processQuantity: 1 },
+        ],
+        toolingChargeUsd: 500,
+        toolingBilledToCustomer: true,
+        deliveryChargeUsd: 200,
+      }),
+      materials
+    );
+    const e = result.estimate;
+    expect(e.operationCostPerKg).toBeCloseTo(0.75, 6);
+    expect(e.salePricePerKg).toBeCloseTo(3.59, 6);
+    expect(e.operatingCostMethodResolved).toBe('fixed_per_group');
+  });
+
+  it('clamps a negative CoRM to zero (engine guard)', () => {
+    // Total RM 2.14 + M&O 0 + PrePress 0 + Transport 0 = 2.14
+    const result = calculateEstimate(
+      baseEstimate({
+        operatingCostMethod: 'fixed_per_group',
+        cormPerKgUsd: -1.0,
+      }),
+      materials
+    );
+    const e = result.estimate;
+    expect(e.operationCostPerKg).toBe(0);
+    expect(e.salePricePerKg).toBeCloseTo(2.14, 6);
+  });
+
+  it('cormPercent branch is populated in the cost breakdown', () => {
+    const result = calculateEstimate(
+      baseEstimate({
+        operatingCostMethod: 'fixed_per_group',
+        cormPerKgUsd: 0.5,
+      }),
+      materials
+    );
+    expect(result.costBreakdown.cormPercent).toBeGreaterThan(0);
+    expect(result.costBreakdown.markupPercent).toBe(0);
+    expect(result.costBreakdown.processPercent).toBe(0);
+  });
+});
+
 describe('final price breakup — slab ladder', () => {
   it('varies waste per band while keeping M&O/PrePress/Transport flat over the order qty', () => {
     const result = calculateEstimate(

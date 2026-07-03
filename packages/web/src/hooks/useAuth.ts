@@ -16,7 +16,7 @@ export interface AuthTenant {
   type: 'individual' | 'company';
   displayCurrency: string;
   /** Manufacturing & Operating cost method (admin-defined). */
-  operatingCostMethod?: 'process_per_kg' | 'markup_over_rm';
+  operatingCostMethod?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
 }
 
 export interface AuthState {

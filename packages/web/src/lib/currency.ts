@@ -22,6 +22,17 @@ export function roundUsd(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+/**
+ * CoRM is stored in display currency per kg (legacy DB/API field `cormPerKgUsd`).
+ * Engine price build-up runs in USD — convert at the boundary using the estimate FX snapshot.
+ */
+export function cormDisplayPerKgToEngineUsd(
+  cormDisplayPerKg: number,
+  exchangeRateUsdToDisplay: number
+): number {
+  return displayToUsd(cormDisplayPerKg, exchangeRateUsdToDisplay);
+}
+
 export function formatPrice(amount: number, currency: string, decimals = 2): string {
   return `${currency} ${roundUsd(amount).toFixed(decimals)}`;
 }

@@ -16,7 +16,7 @@ import { SectionTitle } from '../components/SectionTitle';
 import { deriveBinderConcentrateStats, type LaminationRecipe } from '@es/engine';
 
 type MaterialTab = string; // now dynamic — any rm_type code can be a material tab
-type RefTab = 'product_type' | 'product_subtype' | 'unit' | 'rm_type' | 'process' | 'waste_bands';
+type RefTab = 'product_type' | 'product_subtype' | 'unit' | 'rm_type' | 'process' | 'waste_bands' | 'templates';
 type Tab = MaterialTab | RefTab;
 
 // Static ref tabs — these never change
@@ -26,10 +26,11 @@ const REF_TABS: { id: RefTab; label: string }[] = [
   { id: 'unit', label: 'Units' },
   { id: 'process', label: 'Processes' },
   { id: 'waste_bands', label: 'Waste Bands' },
+  { id: 'templates', label: 'Templates' },
 ];
 
 // Static reference tab IDs — used to distinguish material tabs from ref tabs
-const REF_TAB_IDS = new Set<string>(['product_type', 'product_subtype', 'unit', 'rm_type', 'process', 'waste_bands']);
+const REF_TAB_IDS = new Set<string>(['product_type', 'product_subtype', 'unit', 'rm_type', 'process', 'waste_bands', 'templates']);
 
 const PACKAGING_FAMILY = 'Packaging';
 
@@ -180,12 +181,29 @@ const MasterData = () => {
   const [processRows, setProcessRows] = useState<Array<{ label: string; code: string; description: string; costPerHour: number; speedBasis: string; speedValue: number; setupHours: number; costPerKgUsd: number }>>([]);
   /** Platform-wide waste bands (single source of truth for all estimates). */
   const [wasteBands, setWasteBands] = useState<Array<{ minKg: number; maxKg: number | null; wastePercent: number }>>([]);
+  /**
+   * Platform standard templates — one row per template with per-template CoRM
+   * (display currency per kg; legacy API field `cormPerKgUsd`). Used by the
+   * `fixed_per_group` operating-cost method as the M&O figure on top of Total RM.
+   */
+  const [platformTemplates, setPlatformTemplates] = useState<Array<{
+    id: string;
+    templateKey: string;
+    name: string;
+    pebiParentPg: string;
+    productType: string;
+    cormPerKgUsd: string | null;
+    savedCormPerKgUsd: string;
+    cormPerKgDisplay: string | null;
+  }>>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingTemplateId, setSavingTemplateId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [formulaMaterialId, setFormulaMaterialId] = useState<string | null>(null);
   const [cleaningDefaultKg, setCleaningDefaultKg] = useState(20);
+  const [tenantSettings, setTenantSettings] = useState<{ displayCurrency: string, exchangeRateUsdToDisplay: number } | null>(null);
 
   const formulaMaterial = materials.find((m) => m.id === formulaMaterialId) ?? null;
   const formulaRecipe = (formulaMaterial?.laminationRecipe as LaminationRecipe | null) ?? null;
@@ -238,26 +256,20 @@ const MasterData = () => {
         return healed;
       })(),
       product_subtype: (() => {
-        const rows = ((ref as { productSubtypeRows?: Array<{ label: string; code: string }> })
-          .productSubtypeRows ?? []);
-        return rows.length > 0
-          ? rows.map((r) => ({ label: r.label, code: r.code }))
-          : DEFAULT_PRODUCT_SUBTYPE_OPTIONS.map((s) => ({ label: s.label, code: s.code }));
+        const rows = (ref.productSubtypeRows ?? []).map((r) => ({
+          label: r.label,
+          code: (r.code || '').toLowerCase(),
+        }));
+        return rows;
       })(),
-      unit: (ref.unitRows && ref.unitRows.length > 0
-        ? ref.unitRows.map((u) => ({
-            label: u.label,
-            code: u.code,
-            metadata: { basis: u.basis, multiplier: u.multiplier, variableMultiplier: u.variableMultiplier === true } as Record<string, unknown>,
-          }))
-        : (ref.units ?? []).map((l) => ({ label: l }))),
-      rm_type: (ref.rmTypeRows ?? ref.rmTypes ?? []).map((r) =>
-        typeof r === 'string'
-          ? { label: r, code: '' }
-          : { label: (r as { label: string }).label, code: (r as { code: string }).code ?? '' }
-      ),
-      process: [],  // process tab managed separately via processRows state
+      unit: (ref.unitRows ?? []).map((r) => ({ label: r.label })),
+      rm_type: (ref.rmTypeRows ?? []).map((r) => ({ label: r.label, code: r.code })),
+      process: [],
       waste_bands: [],
+      // Templates tab is loaded separately (own endpoint, own data shape) — the
+      // Templates tab renders its own table, so the ref slot is unused. We keep
+      // it as an empty array so the RefTab contract is satisfied.
+      templates: [],
     };
 
     // Build dynamic material tabs from RM types.
@@ -321,13 +333,27 @@ const MasterData = () => {
 
   const canEdit = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
 
+  const normalizeCorm = useCallback((value: string | null | undefined) => {
+    const raw = value?.trim() ?? '';
+    const numeric = raw === '' || raw === '.' ? 0 : Number(raw);
+    return Number.isFinite(numeric) ? numeric.toFixed(2) : null;
+  }, []);
+
   useEffect(() => {
     (async () => {
       setLoading(true);
       setError(null);
       try {
-        await loadMaterials();
-        await loadReference();
+        await Promise.all([
+          loadMaterials(),
+          loadReference(),
+          apiClient.getSettings().then((settings) => {
+            setTenantSettings({
+              displayCurrency: settings.displayCurrency,
+              exchangeRateUsdToDisplay: Number(settings.exchangeRateUsdToDisplay) || 1,
+            });
+          })
+        ]);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load materials');
       } finally {
@@ -341,6 +367,123 @@ const MasterData = () => {
       loadReference().catch(() => {});
     }
   }, [tab, loadReference]);
+
+  const loadPlatformTemplates = useCallback(async () => {
+    try {
+      const rows = await apiClient.listPlatformTemplates();
+      const settings = await apiClient.getSettings();
+      const exchangeRate = Number(settings.exchangeRateUsdToDisplay) || 1;
+      setTenantSettings({
+        displayCurrency: settings.displayCurrency,
+        exchangeRateUsdToDisplay: exchangeRate,
+      });
+      setPlatformTemplates(
+        (rows ?? [])
+          .filter((r: { isActive?: boolean | null }) => r.isActive !== false)
+          .map(
+            (r: {
+              id: string;
+              templateKey: string;
+              name: string;
+              pebiParentPg: string;
+              productType: string;
+              cormPerKgUsd: string | null;
+            }) => {
+              const cormDisplay =
+                r.cormPerKgUsd == null ? '0.00' : Number(r.cormPerKgUsd).toFixed(2);
+              return {
+                id: r.id,
+                templateKey: r.templateKey,
+                name: r.name,
+                pebiParentPg: r.pebiParentPg,
+                productType: r.productType,
+                cormPerKgUsd: cormDisplay,
+                savedCormPerKgUsd: cormDisplay,
+                cormPerKgDisplay: cormDisplay,
+              };
+            }
+          )
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load templates');
+    }
+  }, []);
+
+  // Templates tab needs its own load (separate endpoint, separate data shape).
+  useEffect(() => {
+    if (tab !== 'templates') return;
+    loadPlatformTemplates().catch(() => {});
+  }, [tab, loadPlatformTemplates]);
+
+  useEffect(() => {
+    const handlePlatformTemplatesChanged = () => {
+      if (tab !== 'templates') return;
+      loadPlatformTemplates().catch(() => {});
+    };
+    window.addEventListener('platform-templates-changed', handlePlatformTemplatesChanged);
+    return () => window.removeEventListener('platform-templates-changed', handlePlatformTemplatesChanged);
+  }, [tab, loadPlatformTemplates]);
+
+  const handleCormBlur = useCallback(
+    async (templateId: string) => {
+      const tpl = platformTemplates.find((row) => row.id === templateId);
+      if (!tpl) return;
+
+      const displayNormalized = normalizeCorm(tpl.cormPerKgDisplay);
+
+      if (displayNormalized == null) {
+        setError(`Invalid CoRM value for "${tpl.name}"`);
+        return;
+      }
+
+      setPlatformTemplates((prev) =>
+        prev.map((row) =>
+          row.id === templateId
+            ? {
+                ...row,
+                cormPerKgUsd: displayNormalized,
+                cormPerKgDisplay: displayNormalized,
+              }
+            : row
+        )
+      );
+
+      if (displayNormalized === tpl.savedCormPerKgUsd) return;
+
+      setSavingTemplateId(templateId);
+      setError(null);
+      try {
+        const res = await apiClient.updatePlatformTemplate(templateId, {
+          cormPerKgUsd: displayNormalized,
+        });
+        const total =
+          (res.syncedTenants ?? 0) + (res.deactivatedTenants ?? 0) + (res.inserted ?? 0);
+        setPlatformTemplates((prev) =>
+          prev.map((row) =>
+            row.id === templateId
+              ? {
+                  ...row,
+                  cormPerKgUsd: displayNormalized,
+                  savedCormPerKgUsd: displayNormalized,
+                  cormPerKgDisplay: displayNormalized,
+                }
+              : row
+          )
+        );
+        setStatus(
+          total > 0
+            ? `Saved CoRM for "${tpl.name}" — synced to ${total} tenant copy/copies`
+            : `Saved CoRM for "${tpl.name}"`
+        );
+        invalidate();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to save CoRM');
+      } finally {
+        setSavingTemplateId(null);
+      }
+    },
+    [invalidate, normalizeCorm, platformTemplates, tenantSettings]
+  );
 
   const visibleMaterials = useMemo(() => {
     if (!isMaterialTab(tab)) return [];
@@ -486,6 +629,49 @@ const MasterData = () => {
         const result = await apiClient.updatePlatformWasteBands(normalized);
         setWasteBands(result.wasteBands);
         setStatus(`Saved ${result.wasteBands.length} waste band(s) — synced to all tenants`);
+        invalidate();
+        return;
+      }
+      if (tab === 'templates') {
+        // Per-template CoRM (display currency per kg) — only the changed rows are PATCHed.
+        let updated = 0;
+        let totalSynced = 0;
+        let totalDeactivated = 0;
+        let totalInserted = 0;
+        for (const tpl of platformTemplates) {
+          const normalized = normalizeCorm(tpl.cormPerKgDisplay);
+          if (normalized == null) {
+            setError(`Invalid CoRM value for "${tpl.name}"`);
+            return;
+          }
+          if (normalized === tpl.savedCormPerKgUsd) continue;
+          const res = await apiClient.updatePlatformTemplate(tpl.id, {
+            cormPerKgUsd: normalized,
+          });
+          updated++;
+          totalSynced += res.syncedTenants ?? 0;
+          totalDeactivated += res.deactivatedTenants ?? 0;
+          totalInserted += res.inserted ?? 0;
+        }
+        setPlatformTemplates((prev) =>
+          prev.map((tpl) => {
+            const normalized = normalizeCorm(tpl.cormPerKgDisplay);
+            return normalized == null
+              ? tpl
+              : {
+                  ...tpl,
+                  cormPerKgUsd: normalized,
+                  savedCormPerKgUsd: normalized,
+                  cormPerKgDisplay: normalized,
+                };
+          })
+        );
+        const total = totalSynced + totalDeactivated + totalInserted;
+        setStatus(
+          total > 0
+            ? `Saved CoRM for ${updated} template(s) — synced to ${total} tenant copy/copies`
+            : `Saved CoRM for ${updated} template(s) — no tenant copies to update`
+        );
         invalidate();
         return;
       }
@@ -1346,6 +1532,89 @@ const MasterData = () => {
                       </td>
                     </tr>
                   ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : tab === 'templates' ? (
+        <div className="card p-3 space-y-3">
+          <div className="flex justify-between items-center">
+            <SectionTitle
+              as="span"
+              className="text-sm text-mist"
+              hint="Per-template CoRM (Cost of Raw Material add-on, in the tenant display currency per kg) used as the Manufacturing & Operating figure when a tenant picks the 'Fixed CoRM per template' operating-cost method."
+            >
+              {platformTemplates.length} template(s)
+            </SectionTitle>
+          </div>
+          <p className="text-xs text-mist">
+            Set the CoRM ({tenantSettings?.displayCurrency || 'display currency'}/kg) for each platform standard. Saved values are live-synced to
+            every tenant's copy of the template by the server (the toast shows the count).
+            Tenants with the <strong>Fixed CoRM per template</strong> operating-cost method use
+            this value as the M&O figure in any estimate whose source template matches.
+          </p>
+          <div className="table-wrap">
+            <table className="data-table min-w-[640px]">
+              <colgroup>
+                <col />
+                <col />
+                <col />
+                <col className="w-[180px]" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th className="text-center">Product Group</th>
+                  <th className="text-center">Product Type</th>
+                  <th className="text-center">Template Name</th>
+                  <th className="text-center">
+                    <div className="mx-auto w-32 text-center">
+                      CoRM ({tenantSettings?.displayCurrency || 'USD'}/kg)
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {platformTemplates.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="text-center text-mist py-4">
+                      No platform templates yet. Create one in the platform admin catalog.
+                    </td>
+                  </tr>
+                ) : (
+                  [...platformTemplates]
+                    .sort((a, b) =>
+                      a.pebiParentPg.localeCompare(b.pebiParentPg) || a.name.localeCompare(b.name)
+                    )
+                    .map((tpl) => (
+                      <tr key={tpl.id}>
+                        <td className="text-mist text-sm">{tpl.pebiParentPg}</td>
+                        <td className="text-mist text-sm">{tpl.productType}</td>
+                        <td className="font-medium">{tpl.name}</td>
+                        <td className="text-center">
+                          <div className="flex justify-center">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              className="input block !min-h-[30px] !py-0.5 !px-2 text-xs w-32 text-center tabular-nums"
+                              value={tpl.cormPerKgDisplay ?? ''}
+                              disabled={!canEdit || savingTemplateId === tpl.id}
+                              onChange={(e) => {
+                                const next = e.target.value;
+                                if (!/^\d*(\.\d{0,2})?$/.test(next)) return;
+                                setPlatformTemplates((prev) =>
+                                  prev.map((p) =>
+                                    p.id === tpl.id ? { ...p, cormPerKgDisplay: next } : p
+                                  )
+                                );
+                              }}
+                              onBlur={() => void handleCormBlur(tpl.id)}
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    ))
                 )}
               </tbody>
             </table>

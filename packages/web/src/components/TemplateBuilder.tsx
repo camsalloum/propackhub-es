@@ -679,7 +679,11 @@ export function TemplateBuilder({
             );
           }
           savedAsPlatformStandard = true;
-          saved = await apiClient.updatePlatformTemplateByKey(key, {
+          // The admin PATCH returns the full platform row plus live-sync
+          // telemetry ({ syncedTenants, deactivatedTenants, inserted }). The
+          // row part is shape-compatible with TemplateForEdit; the telemetry
+          // is ignored. Cast through `unknown` to drop the extra fields.
+          saved = (await apiClient.updatePlatformTemplateByKey(key, {
             name: name.trim(),
             productType: engineProductType,
             productSubtype: productSubtype ?? null,
@@ -688,7 +692,7 @@ export function TemplateBuilder({
             printMode,
             defaultLayers: layerPayload,
             defaultProcesses: processes,
-          });
+          })) as unknown as TemplateForEdit;
         } else {
           saved = await apiClient.updateTemplate(template!.id, {
             name: name.trim(),
@@ -703,11 +707,37 @@ export function TemplateBuilder({
           });
         }
       }
+      if (savedAsPlatformStandard || editingPlatformStandard) {
+        window.dispatchEvent(new Event('platform-templates-changed'));
+      }
       onSaved(saved, { savedAsPlatformStandard });
     } catch (err) {
       alert('Failed to save template: ' + (err instanceof Error ? err.message : 'Unknown'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!isPlatformAdmin || !editingPlatformStandard || !template?.templateKey) return;
+
+    const ok = window.confirm(
+      `Delete platform template "${template.name}"?\n\n` +
+        `This will:\n` +
+        `  • mark the platform row inactive (no hard delete — reversible from the DB)\n` +
+        `  • deactivate the template in EVERY tenant's catalog (live-sync)\n` +
+        `  • hide it from new-estimate dropdowns everywhere\n\n` +
+        `Existing estimates that reference this template will keep working.\n\n` +
+        `Continue?`
+    );
+    if (!ok) return;
+
+    try {
+      await apiClient.deletePlatformTemplateByKey(template.templateKey);
+      window.dispatchEvent(new Event('platform-templates-changed'));
+      onClose();
+    } catch (err) {
+      alert('Failed to delete template: ' + (err instanceof Error ? err.message : 'Unknown'));
     }
   };
 
@@ -729,14 +759,26 @@ export function TemplateBuilder({
           <h2 id={titleId} className="text-lg font-display font-bold text-brand">
             {mode === 'create' ? 'New template' : 'Edit template'}
           </h2>
-          <button
-            type="button"
-            className="p-2 rounded-lg text-text-secondary hover:text-brand hover:bg-surface-base"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {isPlatformAdmin && editingPlatformStandard && (
+              <button
+                type="button"
+                className="p-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={handleDelete}
+                aria-label="Delete template"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            )}
+            <button
+              type="button"
+              className="p-2 rounded-lg text-text-secondary hover:text-brand hover:bg-surface-base"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </header>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-6 lg:px-10 py-6">

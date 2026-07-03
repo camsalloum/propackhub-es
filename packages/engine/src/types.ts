@@ -148,12 +148,20 @@ export interface Estimate {
 
   /**
    * Manufacturing & Operating cost method (final price breakup):
-   *   'process_per_kg' — Σ(process.costPerKgUsd × processQuantity) for enabled processes.
-   *                      Default for company tenants (Interplast-style, multi-user).
-   *   'markup_over_rm' — Total RM/kg × markupPercent%. Default for individual (single-user) tenants.
+   *   'process_per_kg'  — Σ(process.costPerKgUsd × processQuantity) for enabled processes.
+   *                       Default for company tenants (Interplast-style, multi-user).
+   *   'markup_over_rm'  — Total RM/kg × markupPercent%. Default for individual (single-user) tenants.
+   *   'fixed_per_group' — Fixed display-currency/kg CoRM from the source template
+   *                       (converted to USD inside the engine price build-up).
    * This markup is the ONLY markup in the price build-up (no separate profit markup).
    */
-  operatingCostMethod?: 'process_per_kg' | 'markup_over_rm';
+  operatingCostMethod?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
+  /**
+   * Fixed CoRM per kg as **USD** for engine math. Server/client convert from
+   * display-currency storage (`estimates.cormPerKgUsd` / template mirror) using
+   * the estimate's frozen `exchangeRateUsdToDisplay`.
+   */
+  cormPerKgUsd?: number | null;
 
   // ── Pricing model (new) ──────────────────────────────────────────────────
   // When `pricingMethod` is set, the engine uses the quantity-band waste +
@@ -266,7 +274,7 @@ export interface Estimate {
   /** Pricing method actually used by the engine. */
   pricingMethodResolved?: 'markup' | 'margin_per_kg';
   /** Manufacturing & Operating method actually used by the engine. */
-  operatingCostMethodResolved?: 'process_per_kg' | 'markup_over_rm';
+  operatingCostMethodResolved?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
 }
 
 export interface CalculationResult {
@@ -277,6 +285,12 @@ export interface CalculationResult {
     wastePercent: number;
     markupPercent: number;
     processPercent: number;
+    /**
+     * Fixed CoRM (per-template USD/kg) share of total cost — populated when
+     * `operatingCostMethod === 'fixed_per_group'`. Mirrors the markupPercent /
+     * processPercent branches for the third M&O method.
+     */
+    cormPercent?: number;
     /** Accessory hardware share of total cost (pouch zipper/spout/valve/etc.). */
     accessoryPercent?: number;
     /** Logistics (delivery) share of the sale price — new pricing model. */

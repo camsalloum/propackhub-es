@@ -22,6 +22,7 @@ import {
   substrateFamilyAllowed,
 } from '@es/engine';
 import { buildEngineMaterialMap } from '../services/estimate-calculation';
+import { syncSinglePlatformStandardToAllTenants } from '../db/seed-templates';
 
 // ─── Schemas ────────────────────────────────────────────────────────────────
 
@@ -84,6 +85,14 @@ const UpdatePlatformTemplateSchema = z.object({
   defaultDimensions: z.record(z.any()).optional(),
   displayOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
+  /**
+   * Per-template fixed Manufacturing & Operating add-on (CoRM), USD/kg.
+   * Used as the M&O figure for the `fixed_per_group` operating-cost method.
+   * String (decimal) so it round-trips cleanly through the API.
+   */
+  cormPerKgUsd: z
+    .union([z.string().regex(/^\d+(\.\d{1,4})?$/), z.number().nonnegative()])
+    .optional(),
 });
 
 // ─── Guard ─────────────────────────────────────────────────────────────────
@@ -334,6 +343,7 @@ export async function listPlatformTemplatesRoute(
   const rows = await db
     .select()
     .from(schema.platformStandardTemplates)
+    .where(eq(schema.platformStandardTemplates.isActive, true))
     .orderBy(
       asc(schema.platformStandardTemplates.displayOrder),
       desc(schema.platformStandardTemplates.updatedAt)
@@ -600,6 +610,12 @@ async function applyPlatformUpdate(
     updates.structureType = tierToStructureType(body.structureTier);
   if (body.displayOrder !== undefined) updates.displayOrder = body.displayOrder;
   if (body.isActive !== undefined) updates.isActive = body.isActive;
+  if (body.cormPerKgUsd !== undefined) {
+    // Normalize numeric → string (decimal) so the pg `decimal(12,4)` column
+    // gets a string and we don't lose precision.
+    updates.cormPerKgUsd =
+      typeof body.cormPerKgUsd === 'number' ? body.cormPerKgUsd.toFixed(4) : body.cormPerKgUsd;
+  }
 
   // Layer / process / dimension updates require validation + normalization.
   if (body.defaultLayers !== undefined) {
@@ -638,7 +654,26 @@ async function applyPlatformUpdate(
     .where(eq(schema.platformStandardTemplates.id, existing.id))
     .returning();
 
-  return reply.send(updated);
+  // Live-sync the change to all tenant `structure_templates` copies of this
+  // templateKey so the platform edit is visible everywhere immediately. Errors
+  // here are logged but do not fail the PATCH (the next manual sync run will
+  // catch any tenant that didn't make it through).
+  let syncedTenants = 0;
+  let deactivatedTenants = 0;
+  let inserted = 0;
+  try {
+    const result = await syncSinglePlatformStandardToAllTenants(existing.templateKey);
+    syncedTenants = result.syncedTenants;
+    deactivatedTenants = result.deactivatedTenants;
+    inserted = result.inserted;
+  } catch (err) {
+    console.error(
+      `Failed to live-sync platform standard "${existing.templateKey}" to tenants after PATCH:`,
+      err
+    );
+  }
+
+  return reply.send({ ...updated, syncedTenants, deactivatedTenants, inserted });
 }
 
 /** DELETE /api/v1/admin/platform-templates/:id (soft delete) */
@@ -703,7 +738,25 @@ async function applyPlatformDelete(
     .set({ isActive: false, updatedAt: new Date(), updatedByUserId: user.userId })
     .where(eq(schema.platformStandardTemplates.id, existing.id));
 
-  return reply.send({ ok: true, deactivated: true });
+  // Live-sync the deactivation to all tenant `structure_templates` copies so
+  // the platform row being retired immediately drops out of every tenant's
+  // active catalog (the structureTemplates row's id is preserved so existing
+  // estimates that reference it keep working — the template is just hidden
+  // from the tenant's "active" list).
+  let deactivatedTenants = 0;
+  let syncedTenants = 0;
+  try {
+    const result = await syncSinglePlatformStandardToAllTenants(existing.templateKey);
+    deactivatedTenants = result.deactivatedTenants;
+    syncedTenants = result.syncedTenants;
+  } catch (err) {
+    console.error(
+      `Failed to live-sync platform standard "${existing.templateKey}" to tenants after DELETE:`,
+      err
+    );
+  }
+
+  return reply.send({ ok: true, deactivated: true, deactivatedTenants, syncedTenants });
 }
 
 // ─── Registration ───────────────────────────────────────────────────────────

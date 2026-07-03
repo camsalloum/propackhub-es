@@ -29,7 +29,7 @@ const Settings = () => {
   // Controlled settings state
   const [tenantName, setTenantName] = useState('');
   const [defaultMarkup, setDefaultMarkup] = useState<number>(15);
-  const [operatingCostMethod, setOperatingCostMethod] = useState<'process_per_kg' | 'markup_over_rm'>('markup_over_rm');
+  const [operatingCostMethod, setOperatingCostMethod] = useState<'process_per_kg' | 'markup_over_rm' | 'fixed_per_group'>('markup_over_rm');
   const [defaultSlabTemplate, setDefaultSlabTemplate] = useState('standard');
   const [displayCurrency, setDisplayCurrency] = useState('AED');
   const [useAutoFx, setUseAutoFx] = useState(true);
@@ -68,7 +68,10 @@ const Settings = () => {
       // BUG-7: load defaultMarkup + defaultSlabTemplate so Save doesn't overwrite with hardcoded defaults
       setDefaultMarkup(Number(settings.defaultMarkupPercent) || 15);
       setOperatingCostMethod(
-        settings.operatingCostMethod === 'process_per_kg' ? 'process_per_kg' : 'markup_over_rm'
+        settings.operatingCostMethod === 'process_per_kg' ||
+          settings.operatingCostMethod === 'fixed_per_group'
+          ? settings.operatingCostMethod
+          : 'markup_over_rm'
       );
       setDefaultSlabTemplate(settings.defaultSlabTemplate || 'standard');
     } catch (err) {
@@ -227,15 +230,18 @@ const Settings = () => {
                   <label className="block text-sm font-medium text-brand mb-2">Manufacturing &amp; Operating cost</label>
                   <select
                     value={operatingCostMethod}
-                    onChange={(e) => setOperatingCostMethod(e.target.value as 'process_per_kg' | 'markup_over_rm')}
-                    className="input w-72"
+                    onChange={(e) => setOperatingCostMethod(e.target.value as 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group')}
+                    className="input w-full max-w-[32rem]"
                   >
                     <option value="process_per_kg">Per-kg process cost (Σ process × qty)</option>
                     <option value="markup_over_rm">Markup over material (Total RM × markup %)</option>
+                    <option value="fixed_per_group">Fixed CoRM per template ({displayCurrency}/kg)</option>
                   </select>
                   <p className="text-sm text-text-secondary mt-2">
                     How the operating cost is added to the price. Per-kg suits companies with defined process costs;
-                    markup-over-material suits single users. This is the only markup applied.
+                    markup-over-material suits single users. Fixed CoRM uses the per-template value
+                    set in <strong>Platform Master → Templates</strong> (or the estimate's source template)
+                    as the M&O figure. This is the only markup applied.
                   </p>
                 </div>
 
@@ -248,12 +254,19 @@ const Settings = () => {
                     value={defaultMarkup}
                     onChange={(e) => setDefaultMarkup(Number(e.target.value))}
                     className="input w-32"
-                    disabled={operatingCostMethod === 'process_per_kg'}
+                    disabled={operatingCostMethod !== 'markup_over_rm'}
                   />
                   <p className="text-sm text-text-secondary mt-2">
-                    {operatingCostMethod === 'markup_over_rm'
-                      ? 'Percentage added over Total RM as Manufacturing & Operating.'
-                      : 'Not used while operating cost is per-kg process cost.'}
+                    {(() => {
+                      // Per-method hint for the markup % input.
+                      if (operatingCostMethod === 'markup_over_rm') {
+                        return 'Percentage added over Total RM as Manufacturing & Operating.';
+                      }
+                      if (operatingCostMethod === 'fixed_per_group') {
+                        return 'Not used — the per-template CoRM (set in Platform Master → Templates) is used as M&O.';
+                      }
+                      return 'Not used while operating cost is per-kg process cost.';
+                    })()}
                   </p>
                 </div>
 

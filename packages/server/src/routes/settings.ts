@@ -44,7 +44,7 @@ async function updateTenantSettingsRoute(
       termsAndConditions?: string;
       footerText?: string;
       defaultMarkupPercent?: number;
-      operatingCostMethod?: 'process_per_kg' | 'markup_over_rm';
+      operatingCostMethod?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
       quotationValidDays?: number;
       defaultSlabTemplate?: string;
     };

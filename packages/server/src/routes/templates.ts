@@ -521,6 +521,8 @@ export async function instantiateTemplateRoute(
           structureSignature: templateStructureSignature,
           // Product-group margin (USD/kg) — estimates default their margin/kg from it.
           marginValuePerKgUsd: template.marginOverRmPerKgUsd ?? null,
+          // Per-template fixed CoRM (USD/kg) for fixed_per_group operating cost method
+          cormPerKgUsd: template.cormPerKgUsd ?? null,
         },
         layers: previewLayers,
         processes: previewProcesses,
@@ -529,31 +531,32 @@ export async function instantiateTemplateRoute(
     }
 
     const [estimate] = (await db
-      .insert(schema.estimates)
-      .values({
-        tenantId,
-        customerId: customerId || null,
-        refNumber,
-        jobName: jobName || template.name,
-        productType: template.productType,
-        productSubtype: template.productSubtype ?? undefined,
-        printingWebClass,
-        dimensions,
-        markupPercent: tenant.defaultMarkupPercent || '15.00',
-        platesPerKg: '0',
-        deliveryPerKg: '0',
-        displayCurrency: tenant.displayCurrency,
-        exchangeRateUsdToDisplay: tenant.exchangeRateUsdToDisplay,
-        status: 'draft',
-        masterDataVersion,
-        sourceTemplateKey,
-        structureForked: false,
-        processesCustomized: false,
-        structureSignature: templateStructureSignature,
-        orderQuantityKg: orderQuantityKg != null ? String(orderQuantityKg) : undefined,
-        orderQuantityUnit: orderQuantityUnit ?? 'kgs',
-      })
-      .returning()) as EstimateRow[];
+    .insert(schema.estimates)
+    .values({
+      tenantId,
+      customerId: customerId || null,
+      refNumber,
+      jobName: jobName || template.name,
+      productType: template.productType,
+      productSubtype: template.productSubtype ?? undefined,
+      printingWebClass,
+      dimensions,
+      markupPercent: tenant.defaultMarkupPercent || '15.00',
+      platesPerKg: '0',
+      deliveryPerKg: '0',
+      displayCurrency: tenant.displayCurrency,
+      exchangeRateUsdToDisplay: tenant.exchangeRateUsdToDisplay,
+      status: 'draft',
+      masterDataVersion,
+      sourceTemplateKey,
+      cormPerKgUsd: template.cormPerKgUsd,
+      structureForked: false,
+      processesCustomized: false,
+      structureSignature: templateStructureSignature,
+      orderQuantityKg: orderQuantityKg != null ? String(orderQuantityKg) : undefined,
+      orderQuantityUnit: orderQuantityUnit ?? 'kgs',
+    })
+    .returning()) as EstimateRow[];
 
     // Use the seed's default_micron hint so estimates open with meaningful values.
     // Users can still change microns freely — these are just starting points.

@@ -14,6 +14,7 @@ interface LayerCardProps {
   layer: LayerCardLayer;
   index: number;
   showCost?: boolean;
+  displayCurrency?: string;
   onEdit?: () => void;
   onFormula?: () => void;
   showFormula?: boolean;
@@ -31,6 +32,7 @@ const LayerCard = ({
   layer,
   index,
   showCost = false,
+  displayCurrency = 'USD',
   onEdit,
   onFormula,
   showFormula = false,
@@ -140,7 +142,7 @@ const LayerCard = ({
             <div className="font-medium text-sm truncate">{layer.material}</div>
             <div className="text-xs text-text-secondary mt-0.5">
               {layer.micron} µ · {(layer.gsm ?? 0).toFixed(1)} GSM
-              {showCost && layer.costPerKg != null ? ` · $${layer.costPerKg.toFixed(2)}/kg` : ''}
+              {showCost && layer.costPerKg != null ? ` · ${displayCurrency} ${layer.costPerKg.toFixed(2)}/kg` : ''}
             </div>
           </div>
 

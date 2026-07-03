@@ -989,7 +989,7 @@ export async function ensureLaminationAdhesivesSeeded(): Promise<{ upserted: num
   const existing = await db.select().from(schema.platformMasterMaterials);
   const byKey = new Map(existing.map((r) => [r.key, r]));
 
-  let upserted = 0;
+  let inserted = 0;
   for (let i = 0; i < seed.length; i++) {
     const m = seed[i]!;
     const values = masterMaterialInputToDbValues({ ...m, sortOrder: 800 + i });
@@ -1001,8 +1001,8 @@ export async function ensureLaminationAdhesivesSeeded(): Promise<{ upserted: num
         .where(eq(schema.platformMasterMaterials.id, match.id));
     } else {
       await db.insert(schema.platformMasterMaterials).values(values);
+      inserted++;
     }
-    upserted++;
   }
 
   let retired = 0;
@@ -1017,6 +1017,7 @@ export async function ensureLaminationAdhesivesSeeded(): Promise<{ upserted: num
     }
   }
 
+  let monoChanged = false;
   const mono = byKey.get('adhesive-mono-component');
   if (mono && (mono.solidPercent !== 100 || mono.isSolventBased)) {
     await db
@@ -1027,19 +1028,20 @@ export async function ensureLaminationAdhesivesSeeded(): Promise<{ upserted: num
         updatedAt: new Date(),
       })
       .where(eq(schema.platformMasterMaterials.id, mono.id));
+    monoChanged = true;
   }
 
-  if (upserted > 0 || retired > 0) {
+  if (inserted > 0 || retired > 0 || monoChanged) {
     await incrementMasterDataVersion();
     const materials = await listPlatformMasterMaterials();
     const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);
     for (const t of tenants) {
       await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
     }
-    console.log(`✓ Lamination adhesives: ${upserted} upserted, ${retired} retired, tenants synced`);
+    console.log(`✓ Lamination adhesives: ${inserted} inserted, ${retired} retired, tenants synced`);
   }
 
-  return { upserted, retired };
+  return { upserted: inserted + retired + (monoChanged ? 1 : 0), retired };
 }
 
 /** Persist platform default cleaning EA kg/job (Master Data → Solvent tab). */

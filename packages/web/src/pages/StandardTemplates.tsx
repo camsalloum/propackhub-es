@@ -445,6 +445,7 @@ const StandardTemplates = () => {
         // Platform admin deletes the canonical row, then the next sync mirrors
         // the deactivation into every tenant copy.
         await apiClient.deletePlatformTemplateByKey(template.templateKey!);
+        window.dispatchEvent(new Event('platform-templates-changed'));
       } else {
         await apiClient.deleteTemplate(template.id);
       }

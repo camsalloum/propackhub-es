@@ -183,6 +183,7 @@ const EstimateCreateSchema = z.object({
   // Pricing model v2
   pricingMethod: z.enum(['markup', 'margin_per_kg']).optional(),
   marginValuePerKgUsd: z.coerce.number().nonnegative().optional(),
+  cormPerKgUsd: z.coerce.number().nonnegative().optional(),
   toolingChargeUsd: z.coerce.number().nonnegative().optional(),
   toolingBilledToCustomer: z.boolean().optional(),
   deliveryTerm: z.string().max(32).optional(),
@@ -399,6 +400,7 @@ export async function createEstimateRoute(
         sourceTemplateKey: data.sourceTemplateKey ?? undefined,
         pricingMethod: data.pricingMethod ?? undefined,
         marginValuePerKgUsd: data.marginValuePerKgUsd != null ? String(data.marginValuePerKgUsd) : undefined,
+        cormPerKgUsd: data.cormPerKgUsd != null ? String(data.cormPerKgUsd) : undefined,
         toolingChargeUsd: data.toolingChargeUsd != null ? String(data.toolingChargeUsd) : undefined,
         toolingBilledToCustomer: data.toolingBilledToCustomer ?? false,
         deliveryTerm: data.deliveryTerm ?? undefined,
@@ -763,6 +765,9 @@ async function updateEstimateRoute(
     if (data.marginValuePerKgUsd !== undefined) {
       updates.marginValuePerKgUsd = String(data.marginValuePerKgUsd);
     }
+    if (data.cormPerKgUsd !== undefined) {
+      updates.cormPerKgUsd = String(data.cormPerKgUsd);
+    }
     if (data.toolingChargeUsd !== undefined) {
       updates.toolingChargeUsd = String(data.toolingChargeUsd);
     }
@@ -1123,6 +1128,13 @@ async function requoteEstimateRoute(
         cleaningSolventKgPerJob: source.cleaningSolventKgPerJob,
         inkPrintingProcess: source.inkPrintingProcess,
         orderQuantityKg: source.orderQuantityKg,
+        pricingMethod: source.pricingMethod,
+        marginValuePerKgUsd: source.marginValuePerKgUsd,
+        cormPerKgUsd: source.cormPerKgUsd,
+        toolingChargeUsd: source.toolingChargeUsd,
+        toolingBilledToCustomer: source.toolingBilledToCustomer,
+        deliveryTerm: source.deliveryTerm,
+        deliveryChargeUsd: source.deliveryChargeUsd,
         sourceEstimationId: id,
         masterDataVersion,
         sourceTemplateKey: source.sourceTemplateKey,
@@ -1323,6 +1335,13 @@ async function duplicateEstimateRoute(
         inkPrintingProcess: source.inkPrintingProcess,
         orderQuantityKg: source.orderQuantityKg,
         orderQuantityUnit: source.orderQuantityUnit,
+        pricingMethod: source.pricingMethod,
+        marginValuePerKgUsd: source.marginValuePerKgUsd,
+        cormPerKgUsd: source.cormPerKgUsd,
+        toolingChargeUsd: source.toolingChargeUsd,
+        toolingBilledToCustomer: source.toolingBilledToCustomer,
+        deliveryTerm: source.deliveryTerm,
+        deliveryChargeUsd: source.deliveryChargeUsd,
         totalGsm: source.totalGsm,
         totalMicron: source.totalMicron,
         materialCostPerKg: source.materialCostPerKg,

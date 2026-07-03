@@ -84,13 +84,20 @@ printing_web_width_mm = (reel_width_mm × number_of_ups) + extra_printing_trim_m
 
 Product types: `roll` | `sleeve` | `pouch`. Roll-after-slitting block V1 for roll/sleeve.
 
-### Currency (Decision #22)
+### Currency (Decision #22 — clarified 2026-07-03)
 
-- **Library:** admin always enters **`cost_per_kg_usd`**
-- **User display:** picks currency at registration (e.g. AED); system **fetches USD→currency rate from web** by default
-- **Manual override:** Settings → Currency — user can switch to fixed rate
-- **Engine:** USD internally; UI/PDF/slabs = display currency
-- **Quotes:** freeze `exchange_rate_usd_to_display` on each estimate
+| What | Currency | Notes |
+|------|----------|--------|
+| **Material library** (`cost_per_kg_usd`) | **USD** | Global commodity pricing; admin enters USD only |
+| **Freight / delivery lump sums** (`deliveryChargeUsd`) | **USD** | International freight quoted in USD |
+| **Solvent catalog** (RM type) | **USD** | Part of raw-material layer |
+| **Everything else in the price build-up** | **Display currency** | CoRM, process $/hr, plates/tooling per-kg, margin $/kg, slabs, PDF, dashboard |
+| **Engine internal math** | **USD** | RM + freight USD inputs; display-native charges converted at boundary via `display ÷ exchangeRate` |
+| **Estimate snapshot** | Frozen `display_currency` + `exchange_rate_usd_to_display` | Old quotes unaffected by FX moves |
+
+**CoRM (`corm_per_kg_usd` column):** stored and edited in **display currency per kg** (legacy column name). Settings dropdown and Platform Master → Templates label use `{displayCurrency}/kg`. Server/client convert to USD only when calling `@es/engine`.
+
+**UI rule:** sales reps see display currency only; tenant admin sees USD in Library for RM rows.
 
 ### Client-side engine (Decision #23)
 

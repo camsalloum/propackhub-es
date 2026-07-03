@@ -27,7 +27,7 @@ async function main() {
         WHEN duplicate_object THEN NULL;
       END $$;
     `);
-    // Third Manufacturing & Operating method: fixed CoRM per product group.
+    // Third Manufacturing & Operating method: fixed CoRM per template.
     await client.query(`
       DO $$ BEGIN
         ALTER TYPE operating_cost_method ADD VALUE IF NOT EXISTS 'fixed_per_group';

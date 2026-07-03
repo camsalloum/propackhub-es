@@ -4,6 +4,24 @@ export function usdToDisplay(usd: number, exchangeRateUsdToDisplay: number): num
   return usd * rate;
 }
 
+/** Convert a display-currency amount back to USD (engine internal math). */
+export function displayToUsd(display: number, exchangeRateUsdToDisplay: number): number {
+  const rate = exchangeRateUsdToDisplay > 0 ? exchangeRateUsdToDisplay : 1;
+  if (!Number.isFinite(display)) return 0;
+  return display / rate;
+}
+
+/**
+ * CoRM is stored in display currency per kg (legacy column name `corm_per_kg_usd`).
+ * Engine price build-up runs in USD — convert at the boundary using the estimate FX snapshot.
+ */
+export function cormDisplayPerKgToEngineUsd(
+  cormDisplayPerKg: number,
+  exchangeRateUsdToDisplay: number
+): number {
+  return displayToUsd(cormDisplayPerKg, exchangeRateUsdToDisplay);
+}
+
 export function formatDisplayAmount(amount: number, decimals = 2): string {
   return amount.toFixed(decimals);
 }

@@ -165,6 +165,7 @@ export function stripEstimateRow(row: any, profile: VisibilityProfile): any {
     // Pricing model v2 inputs (cost-sensitive — gated with markup).
     visible.pricingMethod = row.pricingMethod;
     visible.marginValuePerKgUsd = row.marginValuePerKgUsd;
+    visible.cormPerKgUsd = row.cormPerKgUsd;
     visible.toolingChargeUsd = row.toolingChargeUsd;
     visible.toolingBilledToCustomer = row.toolingBilledToCustomer;
     visible.deliveryChargeUsd = row.deliveryChargeUsd;

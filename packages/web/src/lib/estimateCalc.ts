@@ -8,6 +8,7 @@ import {
   type LaminationRecipe,
   type WasteBand,
 } from '@es/engine';
+import { cormDisplayPerKgToEngineUsd } from './currency';
 
 export interface ClientCalcMaterial {
   id: string;
@@ -52,8 +53,10 @@ export interface ClientCalcInput {
   inkPrintingProcess?: 'flexo' | 'rotogravure' | null;
   inkSolventRatio?: number;
   orderQuantityKg?: number;
-  /** Manufacturing & Operating method (tenant setting): process_per_kg | markup_over_rm. */
-  operatingCostMethod?: 'process_per_kg' | 'markup_over_rm';
+  /** Manufacturing & Operating method (tenant setting): process_per_kg | markup_over_rm | fixed_per_group. */
+  operatingCostMethod?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
+  /** Per-template CoRM (display currency per kg) — only used when operatingCostMethod === 'fixed_per_group'. */
+  cormPerKgUsd?: number | null;
   // Pricing model v2 — when pricingMethod is set, the engine uses waste bands +
   // lump-sum tooling/delivery + margin instead of the legacy additive model.
   pricingMethod?: 'markup' | 'margin_per_kg';
@@ -126,6 +129,10 @@ export function runClientCalculation(input: ClientCalcInput) {
     platesPerKg: input.platesPerKg,
     deliveryPerKg: input.deliveryPerKg,
     operatingCostMethod: input.operatingCostMethod ?? undefined,
+    cormPerKgUsd:
+      input.cormPerKgUsd != null
+        ? cormDisplayPerKgToEngineUsd(input.cormPerKgUsd, input.exchangeRateUsdToDisplay)
+        : undefined,
     processes: (input.processes || []).map((p, i) => ({
       id: p.id || `proc-${i}`,
       name: p.name,

@@ -8,6 +8,7 @@ import {
 import type { materials, estimates, layers } from '../db/schema';
 import { buildEngineMaterialMap } from './material-map';
 import { resolveSolventCostPerKgUsd } from './resolve-solvent-cost';
+import { displayToUsd } from './currency';
 
 type EstimateRow = typeof estimates.$inferSelect;
 type LayerRow = typeof layers.$inferSelect;
@@ -37,8 +38,8 @@ export function buildEngineEstimateFromRows(opts: {
   /** Manufacturing & Operating method (from tenant); defaults to markup_over_rm. */
   operatingCostMethod?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
   /**
-   * Fixed CoRM per kg in **display currency** (legacy field name `cormPerKgUsd`).
-   * Converted to USD before passing to the engine — see `estimate-calculation.ts`.
+   * Fixed CoRM per kg already converted to **USD** by the caller
+   * (`estimate-calculation.ts` converts from display-currency storage).
    */
   cormPerKgUsd?: number | null;
   /** Resolved {basis, multiplier} for the estimate's order-quantity unit (custom/tenant units). */
@@ -47,6 +48,10 @@ export function buildEngineEstimateFromRows(opts: {
   const { estimate, tenantId, layers, materials, processes, slabs, layerPriceOverrides, operatingCostMethod, cormPerKgUsd, orderQuantityUnitDef } = opts;
   const materialMap = buildEngineMaterialMap(materials);
   const patchedMaterialMap = new Map(materialMap);
+  // Engine math is USD. RM + freight lump sums are already USD; all other charges
+  // are stored/edited in display currency and converted here.
+  const fx = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;
+  const toUsd = (display: number) => displayToUsd(display, fx);
 
   for (const layer of layers) {
     const override = layerPriceOverrides?.get(layer.materialId);
@@ -84,27 +89,33 @@ export function buildEngineEstimateFromRows(opts: {
         : {}),
     },
     markupPercent: parseFloat(estimate.markupPercent),
-    platesPerKg: parseFloat(estimate.platesPerKg),
-    deliveryPerKg: parseFloat(estimate.deliveryPerKg),
+    platesPerKg: toUsd(parseFloat(estimate.platesPerKg)),
+    deliveryPerKg: toUsd(parseFloat(estimate.deliveryPerKg)),
     // Pricing model v2 — present only when the estimate uses the new model.
     pricingMethod: (estimate.pricingMethod as 'markup' | 'margin_per_kg' | null) ?? undefined,
-    marginValuePerKgUsd: estimate.marginValuePerKgUsd != null ? parseFloat(estimate.marginValuePerKgUsd) : undefined,
+    marginValuePerKgUsd:
+      estimate.marginValuePerKgUsd != null
+        ? toUsd(parseFloat(estimate.marginValuePerKgUsd))
+        : undefined,
     // Manufacturing & Operating method (tenant setting) — drives M&O in the price build-up.
     operatingCostMethod: operatingCostMethod ?? undefined,
-    // Fixed CoRM (USD/kg) — only used when operatingCostMethod === 'fixed_per_group'.
+    // Fixed CoRM already USD (caller converts from display-currency storage).
     cormPerKgUsd: cormPerKgUsd != null ? cormPerKgUsd : undefined,
-    toolingChargeUsd: estimate.toolingChargeUsd != null ? parseFloat(estimate.toolingChargeUsd) : undefined,
+    toolingChargeUsd:
+      estimate.toolingChargeUsd != null ? toUsd(parseFloat(estimate.toolingChargeUsd)) : undefined,
     toolingBilledToCustomer: estimate.toolingBilledToCustomer ?? undefined,
     deliveryTerm: estimate.deliveryTerm ?? undefined,
-    deliveryChargeUsd: estimate.deliveryChargeUsd != null ? parseFloat(estimate.deliveryChargeUsd) : undefined,
+    // Freight lump sum stays USD (Decision #22).
+    deliveryChargeUsd:
+      estimate.deliveryChargeUsd != null ? parseFloat(estimate.deliveryChargeUsd) : undefined,
     wasteBands: (estimate.wasteBands as import('@es/engine').WasteBand[] | null) ?? undefined,
     processes: processes.map((p) => ({
       id: p.id,
       name: p.name,
       processKey: p.processKey ?? undefined,
       processQuantity: p.processQuantity != null ? Number(p.processQuantity) : 1,
-      costPerKgUsd: p.costPerKgUsd != null ? parseFloat(p.costPerKgUsd) : 0,
-      costPerHour: parseFloat(p.costPerHour),
+      costPerKgUsd: toUsd(p.costPerKgUsd != null ? parseFloat(p.costPerKgUsd) : 0),
+      costPerHour: toUsd(parseFloat(p.costPerHour)),
       speedBasis: p.speedBasis as 'kg_per_hour' | 'm_per_min' | 'pcs_per_min',
       speedValue: parseFloat(p.speedValue),
       setupHours: parseFloat(p.setupHours),

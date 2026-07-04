@@ -11,10 +11,6 @@ import { calculateEstimateFromRows } from '../utils/estimate-engine-input';
 
 type Db = ReturnType<typeof import('../db').getDatabase>;
 
-type ProposalLayerRow = { id: string; materialId: string; micron: string };
-type ProposalProcessRow = typeof schema.processes.$inferSelect;
-type ProposalSlabRow = typeof schema.slabs.$inferSelect;
-
 async function getUserVisibilityProfile(db: Db, userId: string): Promise<VisibilityProfile> {
   const [userRecord] = await db
     .select({ visibilityProfile: schema.users.visibilityProfile, role: schema.users.role })
@@ -73,12 +69,7 @@ export async function buildProposalPdfBuffer(
   const profile = await getUserVisibilityProfile(db, userId);
 
   const layers = await db
-    .select({
-      id: schema.layers.id,
-      materialId: schema.layers.materialId,
-      micron: schema.layers.micron,
-      position: schema.layers.position,
-    })
+    .select()
     .from(schema.layers)
     .where(eq(schema.layers.estimateId, estimateId))
     .orderBy(schema.layers.position);

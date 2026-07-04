@@ -84,20 +84,22 @@ printing_web_width_mm = (reel_width_mm × number_of_ups) + extra_printing_trim_m
 
 Product types: `roll` | `sleeve` | `pouch`. Roll-after-slitting block V1 for roll/sleeve.
 
-### Currency (Decision #22 — clarified 2026-07-03)
+### Currency (Decision #22 — clarified 2026-07-03, enforced 2026-07-04)
 
 | What | Currency | Notes |
 |------|----------|--------|
 | **Material library** (`cost_per_kg_usd`) | **USD** | Global commodity pricing; admin enters USD only |
 | **Freight / delivery lump sums** (`deliveryChargeUsd`) | **USD** | International freight quoted in USD |
 | **Solvent catalog** (RM type) | **USD** | Part of raw-material layer |
-| **Everything else in the price build-up** | **Display currency** | CoRM, process $/hr, plates/tooling per-kg, margin $/kg, slabs, PDF, dashboard |
+| **Everything else in the price build-up** | **Display currency** | CoRM, process $/hr & $/kg, plates/tooling, margin $/kg, slabs, PDF, dashboard |
 | **Engine internal math** | **USD** | RM + freight USD inputs; display-native charges converted at boundary via `display ÷ exchangeRate` |
 | **Estimate snapshot** | Frozen `display_currency` + `exchange_rate_usd_to_display` | Old quotes unaffected by FX moves |
 
-**CoRM (`corm_per_kg_usd` column):** stored and edited in **display currency per kg** (legacy column name). Settings dropdown and Platform Master → Templates label use `{displayCurrency}/kg`. Server/client convert to USD only when calling `@es/engine`.
+**Boundary conversion:** `estimate-engine-input.ts` (server) and `estimateCalc.ts` (client) call `displayToUsd` for plates, deliveryPerKg, margin, tooling, process costs, and CoRM. Freight (`deliveryChargeUsd`) is **not** converted.
 
-**UI rule:** sales reps see display currency only; tenant admin sees USD in Library for RM rows.
+**CoRM (`corm_per_kg_usd` column):** display currency per kg (legacy name). Data restore: `npm run db:migrate-corm-display` (one-shot; multiplies USD-era values &lt; 1 by admin FX).
+
+**UI rule:** sales reps see display currency only; tenant admin sees USD in Library for RM rows. Tooling/margin labels use `{displayCurrency}`; delivery/freight label stays USD.
 
 ### Client-side engine (Decision #23)
 
@@ -862,3 +864,38 @@ This forced repeated restarts before login could succeed.
 **Validation:**
 - `npm run build --workspace=packages/server` ✅
 - changed TS files report no diagnostics via direct file checks.
+
+### 2026-07-03 — Fixed CoRM feature fallout (Trae agent + Cursor fixes)
+
+**Context:** External agent implemented per-template Fixed CoRM (`fixed_per_group` operating-cost method). Feature code landed but broke dev startup, dashboard, and mislabeled CoRM as USD/kg.
+
+**Fixes applied:**
+
+1. **Dev startup port conflict** — `npm run dev` used `concurrently "npm:dev:*"` which started two Vite dev servers; second stole port 5001 from API. Fixed: explicit api+web only.
+2. **API boot hang (~8 min)** — `ensureLaminationAdhesivesSeeded()` always incremented `upserted` on routine updates → full `syncMaterialsForTenant` every boot. Fixed: sync only on insert/retire/mono-fix.
+3. **Dashboard 500** — `column "corm_per_kg_usd" does not exist` on `estimates`. Migration 0011 existed but not in `drizzle/meta/_journal.json`; `schema-patches.sql` added column for templates only. Fixed: estimates column in patches + journal; migration idempotent.
+4. **Currency model (Decision #22 clarified)** — Only **RM library** and **freight lump sums** are USD. **CoRM is display currency per kg** (legacy DB column name `corm_per_kg_usd`). Settings dropdown + Platform Master Templates tab updated. Server/client convert display→USD at engine boundary only.
+5. **Estimate API typo** — removed `'fixed_per_group'` from estimate `pricingMethod` enum (belongs on tenant `operatingCostMethod`).
+
+**Tomorrow smoke test:** `RUN-ES.bat` → dashboard → Settings M&O label → Platform Master CoRM → estimate with fixed_per_group. Re-enter CoRM values if saved before this fix.
+
+**Open (closed 2026-07-04):** Currency audit, CoRM data restore, Part B backfill, tsc clean — see session log below.
+
+### 2026-07-04 — Closed open follow-ups
+
+1. **CoRM data:** `scripts/migrate-corm-to-display-currency.ts` restored platform CoRM (0.41→1.517, 0.54→1.998 AED at FX 3.7) and mirrored to tenant copies.
+2. **Currency audit:** `displayToUsd` at engine boundary for plates, deliveryPerKg, margin, tooling, process costs (server + client). Freight (`deliveryChargeUsd`) remains USD. UI labels: tooling/margin use display currency.
+3. **Part B Phase 5:** `scripts/backfill-processes.ts` + `db:backfill-processes` npm script.
+4. **tsc:** server and web `tsc --noEmit` clean.
+5. **Deferred:** DB column rename `corm_per_kg_usd` → display name (optional, no behavior gap).
+
+### 2026-07-04 — Settings page layout cleanup
+
+- Removed redundant Master Data card from Settings (Platform Master already in app sidebar for platform admins).
+- Replaced nested vertical settings sidebar with horizontal tabs (same pattern as Platform Master).
+
+### 2026-07-04 — M&O method reset on every restart
+
+**Bug:** Settings → Manufacturing & Operating cost always reverted to "Per-kg process cost" after logout/restart.
+**Cause:** `schema-patches.sql` had `UPDATE tenants SET operating_cost_method = 'process_per_kg' WHERE type = 'company'` — not idempotent; `db:patch` on every RUN-ES/startup overwrote admin choices. Default admin tenant is `type = 'company'`.
+**Fix:** Removed that mass UPDATE. Registration still sets method for new tenants.

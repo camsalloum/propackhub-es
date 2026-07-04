@@ -127,7 +127,7 @@
       "label": "calculateLayer()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L212",
+      "source_location": "L216",
       "_origin": "ast",
       "id": "calculator_calculatelayer",
       "community": 1,
@@ -137,7 +137,7 @@
       "label": "calculatePrintingWebWidth()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L246",
+      "source_location": "L250",
       "_origin": "ast",
       "id": "calculator_calculateprintingwebwidth",
       "community": 1,
@@ -147,7 +147,7 @@
       "label": "calculateProductMetrics()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L267",
+      "source_location": "L271",
       "_origin": "ast",
       "id": "calculator_calculateproductmetrics",
       "community": 1,
@@ -157,7 +157,7 @@
       "label": "computeMfgProcessCosts()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L412",
+      "source_location": "L416",
       "_origin": "ast",
       "id": "calculator_computemfgprocesscosts",
       "community": 1,
@@ -167,7 +167,7 @@
       "label": "priceWithNewModel()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L448",
+      "source_location": "L454",
       "_origin": "ast",
       "id": "calculator_pricewithnewmodel",
       "community": 1,
@@ -1707,7 +1707,7 @@
       "label": "CalculationResult",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L272",
+      "source_location": "L280",
       "_origin": "ast",
       "id": "types_calculationresult",
       "community": 7,
@@ -1717,7 +1717,7 @@
       "label": "MissingMaterialsError",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L291",
+      "source_location": "L305",
       "_origin": "ast",
       "id": "types_missingmaterialserror",
       "community": 7,
@@ -1727,7 +1727,7 @@
       "label": ".constructor()",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L294",
+      "source_location": "L308",
       "_origin": "ast",
       "id": "types_missingmaterialserror_constructor",
       "community": 7,
@@ -1737,7 +1737,7 @@
       "label": "VisibilityProfile",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L301",
+      "source_location": "L315",
       "_origin": "ast",
       "id": "types_visibilityprofile",
       "community": 7,
@@ -2411,9 +2411,9 @@
       "source_file": "calculator.ts",
       "source_location": "L412",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "calculator_computemfgprocesscosts",
-      "confidence_score": 1.0
+      "target": "calculator_computemfgprocesscosts"
     },
     {
       "relation": "contains",
@@ -2762,9 +2762,9 @@
       "source_file": "calculator.ts",
       "source_location": "L93",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator_calculateestimate",
-      "target": "calculator_computemfgprocesscosts",
-      "confidence_score": 1.0
+      "target": "calculator_computemfgprocesscosts"
     },
     {
       "relation": "calls",
@@ -2905,9 +2905,9 @@
       "source_file": "derive-processes.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes_test",
-      "target": "derive_processes",
-      "confidence_score": 1.0
+      "target": "derive_processes"
     },
     {
       "relation": "imports",
@@ -2916,9 +2916,9 @@
       "source_file": "derive-processes.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes_test",
-      "target": "derive_processes_derivedprocess",
-      "confidence_score": 1.0
+      "target": "derive_processes_derivedprocess"
     },
     {
       "relation": "imports",
@@ -2927,9 +2927,9 @@
       "source_file": "derive-processes.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes_test",
-      "target": "derive_processes_deriveprocessesfromstructure",
-      "confidence_score": 1.0
+      "target": "derive_processes_deriveprocessesfromstructure"
     },
     {
       "relation": "imports",
@@ -2938,9 +2938,9 @@
       "source_file": "derive-processes.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes_test",
-      "target": "derive_processes_processcatalog",
-      "confidence_score": 1.0
+      "target": "derive_processes_processcatalog"
     },
     {
       "relation": "contains",
@@ -2948,9 +2948,9 @@
       "source_file": "derive-processes.test.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes_test",
-      "target": "derive_processes_test_catalog",
-      "confidence_score": 1.0
+      "target": "derive_processes_test_catalog"
     },
     {
       "relation": "contains",
@@ -2958,9 +2958,9 @@
       "source_file": "derive-processes.test.ts",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes_test",
-      "target": "derive_processes_test_processbykey",
-      "confidence_score": 1.0
+      "target": "derive_processes_test_processbykey"
     },
     {
       "relation": "contains",
@@ -2968,9 +2968,9 @@
       "source_file": "derive-processes.test.ts",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes_test",
-      "target": "derive_processes_test_totalcost",
-      "confidence_score": 1.0
+      "target": "derive_processes_test_totalcost"
     },
     {
       "relation": "contains",
@@ -2978,9 +2978,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L91",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_buildrules",
-      "confidence_score": 1.0
+      "target": "derive_processes_buildrules"
     },
     {
       "relation": "contains",
@@ -2988,9 +2988,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L39",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_derivedprocess",
-      "confidence_score": 1.0
+      "target": "derive_processes_derivedprocess"
     },
     {
       "relation": "contains",
@@ -2998,9 +2998,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_derivedprocesskey",
-      "confidence_score": 1.0
+      "target": "derive_processes_derivedprocesskey"
     },
     {
       "relation": "contains",
@@ -3008,9 +3008,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L130",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_deriveprocessesfromstructure",
-      "confidence_score": 1.0
+      "target": "derive_processes_deriveprocessesfromstructure"
     },
     {
       "relation": "contains",
@@ -3018,9 +3018,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L81",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_normalizeprocessquantity",
-      "confidence_score": 1.0
+      "target": "derive_processes_normalizeprocessquantity"
     },
     {
       "relation": "contains",
@@ -3028,9 +3028,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L63",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_parsefinitenumber",
-      "confidence_score": 1.0
+      "target": "derive_processes_parsefinitenumber"
     },
     {
       "relation": "contains",
@@ -3038,9 +3038,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L53",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_process_labels",
-      "confidence_score": 1.0
+      "target": "derive_processes_process_labels"
     },
     {
       "relation": "contains",
@@ -3048,9 +3048,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_processcatalog",
-      "confidence_score": 1.0
+      "target": "derive_processes_processcatalog"
     },
     {
       "relation": "contains",
@@ -3058,9 +3058,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_processcatalogentry",
-      "confidence_score": 1.0
+      "target": "derive_processes_processcatalogentry"
     },
     {
       "relation": "contains",
@@ -3068,9 +3068,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L32",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_processderivationinput",
-      "confidence_score": 1.0
+      "target": "derive_processes_processderivationinput"
     },
     {
       "relation": "contains",
@@ -3078,9 +3078,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_processderivationlayer",
-      "confidence_score": 1.0
+      "target": "derive_processes_processderivationlayer"
     },
     {
       "relation": "contains",
@@ -3088,9 +3088,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_processderivationoverride",
-      "confidence_score": 1.0
+      "target": "derive_processes_processderivationoverride"
     },
     {
       "relation": "contains",
@@ -3098,9 +3098,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_processlayertype",
-      "confidence_score": 1.0
+      "target": "derive_processes_processlayertype"
     },
     {
       "relation": "contains",
@@ -3108,9 +3108,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_processmaterialclass",
-      "confidence_score": 1.0
+      "target": "derive_processes_processmaterialclass"
     },
     {
       "relation": "contains",
@@ -3118,9 +3118,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_processproducttype",
-      "confidence_score": 1.0
+      "target": "derive_processes_processproducttype"
     },
     {
       "relation": "contains",
@@ -3128,9 +3128,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L76",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_processquantityfromoverride",
-      "confidence_score": 1.0
+      "target": "derive_processes_processquantityfromoverride"
     },
     {
       "relation": "contains",
@@ -3138,9 +3138,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L47",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes",
-      "target": "derive_processes_processrule",
-      "confidence_score": 1.0
+      "target": "derive_processes_processrule"
     },
     {
       "relation": "re_exports",
@@ -3149,9 +3149,9 @@
       "source_file": "index.ts",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "derive_processes",
-      "confidence_score": 1.0
+      "target": "derive_processes"
     },
     {
       "relation": "calls",
@@ -3160,9 +3160,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L155",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes_deriveprocessesfromstructure",
-      "target": "derive_processes_parsefinitenumber",
-      "confidence_score": 1.0
+      "target": "derive_processes_parsefinitenumber"
     },
     {
       "relation": "calls",
@@ -3171,9 +3171,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L143",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes_deriveprocessesfromstructure",
-      "target": "derive_processes_processquantityfromoverride",
-      "confidence_score": 1.0
+      "target": "derive_processes_processquantityfromoverride"
     },
     {
       "relation": "calls",
@@ -3182,9 +3182,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L144",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes_deriveprocessesfromstructure",
-      "target": "derive_processes_normalizeprocessquantity",
-      "confidence_score": 1.0
+      "target": "derive_processes_normalizeprocessquantity"
     },
     {
       "relation": "calls",
@@ -3193,9 +3193,9 @@
       "source_file": "derive-processes.ts",
       "source_location": "L134",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "derive_processes_deriveprocessesfromstructure",
-      "target": "derive_processes_buildrules",
-      "confidence_score": 1.0
+      "target": "derive_processes_buildrules"
     },
     {
       "relation": "contains",
@@ -3441,9 +3441,9 @@
       "source_file": "index.ts",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "structure_signature",
-      "confidence_score": 1.0
+      "target": "structure_signature"
     },
     {
       "relation": "re_exports",
@@ -5388,9 +5388,9 @@
       "source_file": "structure-signature.ts",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_signature",
-      "target": "structure_signature_computestructuresignature",
-      "confidence_score": 1.0
+      "target": "structure_signature_computestructuresignature"
     },
     {
       "relation": "contains",
@@ -5398,9 +5398,9 @@
       "source_file": "structure-signature.ts",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_signature",
-      "target": "structure_signature_fnv1a32",
-      "confidence_score": 1.0
+      "target": "structure_signature_fnv1a32"
     },
     {
       "relation": "contains",
@@ -5408,9 +5408,9 @@
       "source_file": "structure-signature.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_signature",
-      "target": "structure_signature_normalizetoken",
-      "confidence_score": 1.0
+      "target": "structure_signature_normalizetoken"
     },
     {
       "relation": "contains",
@@ -5418,9 +5418,9 @@
       "source_file": "structure-signature.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_signature",
-      "target": "structure_signature_structuresignaturelayer",
-      "confidence_score": 1.0
+      "target": "structure_signature_structuresignaturelayer"
     },
     {
       "relation": "calls",
@@ -5429,9 +5429,9 @@
       "source_file": "structure-signature.ts",
       "source_location": "L35",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_signature_computestructuresignature",
-      "target": "structure_signature_normalizetoken",
-      "confidence_score": 1.0
+      "target": "structure_signature_normalizetoken"
     },
     {
       "relation": "calls",
@@ -5440,9 +5440,9 @@
       "source_file": "structure-signature.ts",
       "source_location": "L36",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "structure_signature_computestructuresignature",
-      "target": "structure_signature_fnv1a32",
-      "confidence_score": 1.0
+      "target": "structure_signature_fnv1a32"
     },
     {
       "relation": "imports_from",

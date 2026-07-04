@@ -9,7 +9,6 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { sql } from 'drizzle-orm';
 import { buildApp } from '../app';
 import type { FastifyInstance } from 'fastify';
 import { initializeDatabase, closeDatabase } from '../db';

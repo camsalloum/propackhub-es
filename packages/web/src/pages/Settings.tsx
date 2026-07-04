@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Settings as SettingsIcon, Users, DollarSign, FileText, Globe, Database } from 'lucide-react';
+import { Settings as SettingsIcon, Users, DollarSign, FileText, Globe } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { useVisibilityProfile, VISIBILITY_KEYS } from '../hooks/useVisibilityProfile';
@@ -159,21 +158,7 @@ const Settings = () => {
 
   return (
     <div ref={entranceRef}>
-      <div className="mb-8">
-        {isAdmin && (
-          <Link
-            to="/platform/master-data"
-            className="card p-4 mb-6 flex items-center gap-3 hover:border-accent/40 transition-colors duration-micro ease-micro"
-          >
-            <Database className="w-6 h-6 text-accent-text shrink-0" />
-            <div>
-              <p className="font-medium text-brand">Master Data</p>
-              <p className="text-sm text-text-secondary">
-                Platform materials, product types, units — changes sync to all tenants
-              </p>
-            </div>
-          </Link>
-        )}
+      <div className="mb-6">
         <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand">Settings</h1>
         <p className="text-text-secondary mt-2">Configure your Estimation Studio workspace</p>
         {settingsError && (
@@ -186,32 +171,35 @@ const Settings = () => {
         )}
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Sidebar */}
-        <div className="lg:w-64">
-          <nav className="space-y-1">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-micro ease-micro ${
-                    isActive ? 'bg-accent/10 text-accent-text' : 'hover:bg-surface-base text-text-primary'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="font-medium">{tab.name}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
+      <nav
+        className="flex gap-1.5 mb-6 overflow-x-auto pb-1"
+        role="tablist"
+        aria-label="Settings sections"
+      >
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors duration-micro ease-micro shrink-0 ${
+                isActive
+                  ? 'bg-accent/10 text-accent-text'
+                  : 'bg-surface-raised text-text-primary hover:bg-surface-base'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.name}
+            </button>
+          );
+        })}
+      </nav>
 
-        {/* Content */}
-        <div className="flex-1">
-          {activeTab === 'general' && (
+      {activeTab === 'general' && (
             <div className="card">
               <h2 className="text-xl font-display font-semibold text-brand mb-6">General Settings</h2>
               
@@ -583,8 +571,6 @@ const Settings = () => {
               </div>
             </div>
           )}
-        </div>
-      </div>
     </div>
   );
 };

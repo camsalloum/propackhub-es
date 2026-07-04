@@ -1,55 +1,68 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-03 (dev startup port-conflict fix)
-**Session focus:** Audited Part B (Smart Structure-Driven Process Costing) implementation across
-Phases 0–5. Phases 0–2 and part of Phase 3 were already implemented in prior un-logged sessions
-(no SESSION_LOG entries existed for them). Found and fixed 3 real bugs; Phase 4 (TemplateBuilder)
-and Phase 5 (backfill script) were NOT done — Phase 4 fixed this session, Phase 5 still open.
+**Last updated:** 2026-07-04 (closed open follow-ups — currency audit + CoRM data + Part B backfill + tsc clean)
+**Session focus:** Walked every open item from 2026-07-03; fixed remaining gaps.
 
 ---
 
 ## Where we stopped (read this first next session)
 
-### **START HERE:** `docs/PROCESS_COSTING_AND_ESTIMATE_FLOW_HANDOFF.md` → Part B
+### **START HERE:** Smoke-test currency + Fixed CoRM, then optional column rename
 
-Part B is the approved implementation plan (3-state model: template-locked / user-owned /
-forked, with snap-back). See Part B §B.7 for phase status below.
+1. **Start:** `RUN-ES.bat`
+2. **Platform Master → Templates:** CoRM should show ~**1.52 / 2.00 AED** (restored from 0.41 / 0.54 USD-era values). Adjust if you want different numbers.
+3. **Estimate editor:** Tooling / Margin labels use **display currency**; Delivery/freight stays **USD**.
+4. **Settings:** Fixed CoRM option shows `{currency}/kg`.
 
-### Part B phase status (verified against code 2026-07-02, not just session log)
+### Open follow-ups closed this session (2026-07-04)
+
+| Item | Status | What we did |
+|------|--------|-------------|
+| Re-enter CoRM values | ✅ Automated | `db:migrate-corm-display` — 0.41→1.517, 0.54→1.998 AED; mirrored to all tenant copies |
+| Currency audit (plates/tooling/margin/process) | ✅ Fixed | `displayToUsd` at engine boundary (server `estimate-engine-input.ts` + client `estimateCalc.ts`); freight stays USD; UI labels updated |
+| Column rename `corm_per_kg_usd` | ⏸ Deferred | Optional only — behavior correct; legacy name documented |
+| Part B Phase 5 backfill | ✅ Done | `db:backfill-processes` — structure_signature / fork flags (1 estimate already current) |
+| `tsc --noEmit` server/web | ✅ Clean | Fixed estimate-audit, proposal-pdf, solvent-common test, unused imports, audit entity type |
+
+### Scripts added
+
+- `npm run db:migrate-corm-display --workspace=packages/server` — one-shot CoRM USD→display restore (skip if values already ≥ 1)
+- `npm run db:backfill-processes --workspace=packages/server` — Part B signature backfill
+
+### Still optional (not a bug)
+
+- Rename DB column `corm_per_kg_usd` → `corm_per_kg_display` when convenient.
+- Manual tweak of CoRM numbers if 1.52/2.00 AED are not the intended business values (migration used admin FX 3.7).
+
+### Session 2026-07-03 — Completed fixes (summary)
+
+Port conflict, API boot hang, dashboard missing column, CoRM display-currency model, pricingMethod enum typo — all fixed. See SESSION_LOG.
+
+---
+
+## Earlier context (Part B — 2026-07-02)
+
+Part B handoff: `docs/PROCESS_COSTING_AND_ESTIMATE_FLOW_HANDOFF.md`. Phases 0–4 done; Phase 5 backfill script added 2026-07-04.
+
+<details>
+<summary>Part B phase table</summary>
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| 0 — shared derivation engine | ✅ Done | `derive-processes.ts`, `structure-signature.ts`, 7/7 golden tests pass |
-| 1 — schema columns | ✅ Done | `structure_forked`, `processes_customized`, `structure_signature` on `estimates` |
-| 2 — server authority (3-way resolve) | ✅ Done, 1 bug fixed | `resolveEstimateProcesses()` implements template-locked / derived / frozen. **Fixed 2026-07-02:** it trusted the persisted `structureForked` column on read, so pre-existing/never-resaved drafts (incl. the original QT-2026-00007) could still serve stale admin-template processes even if their layers had diverged. Now recomputes live fork status via structure-signature comparison on every read (GET/calculate), no DB write needed. |
-| 3 — web fork-on-edit + confirm UX | ⚠️ Partial | Fork/customize/snap-back badges + "Lock in changes" button + `EstimateProcessesPanel` all wired and functional. **Deviates from approved plan:** no confirmation *modal* (inline panel instead — may be acceptable, flagged for owner). **Gap:** `processesState` is not live-recomputed client-side as layers change before Save — Mfg & Op only reflects the new derivation after Save + refetch, not instantly. **Bug fixed 2026-07-02:** server had a hard 409 block preventing ANY layer edit once `processesCustomized=true`, forcing users into "Snap back" (which discards their confirmed processes) as the only way forward — contradicted the approved "stale banner, not block" rule. Block removed; frozen processes already persist correctly regardless of layer edits. |
-| 4 — template builder + seed alignment | ✅ Fixed 2026-07-02 | `TemplateBuilder.tsx`'s local `deriveDefaultProcesses()` still had the **exact original bug** — lamination hardcoded to qty 1 (never scaled with adhesive count) and extrusion only for Mono+PE. This meant any NEW template created via the builder would reproduce the 1.20-vs-1.90 bug. Replaced with a call into the shared `deriveProcessesFromStructure` engine function (lamination = adhesive count, extrusion default-enabled). |
-| 5 — backfill script + full verification | ❌ Not done | `backfill-processes.ts` was never created. Mitigated by the Phase 2 read-path fix above (live recompute means no backfill migration is strictly required), but the planned one-shot audit/verification pass (checklist in Part B §B.5) has not been run. |
+| 0 — shared derivation engine | ✅ Done | `derive-processes.ts`, 7/7 golden tests |
+| 1 — schema columns | ✅ Done | `structure_forked`, `processes_customized`, `structure_signature` |
+| 2 — server authority | ✅ Done | Live fork recompute on read |
+| 3 — web fork UX | ⚠️ Partial | No confirmation modal; no live client re-derivation before Save |
+| 4 — template builder | ✅ Done | Shared `deriveProcessesFromStructure` |
+| 5 — backfill + verification | ✅ Script done | `db:backfill-processes`; live recompute remains source of truth |
 
-### Audit fixes applied this session (2026-07-02)
+</details>
 
-1. `estimate-processes.ts` — `resolveEstimateProcesses()` now computes fork status live from
-   structure signatures instead of trusting the persisted column (fixes stale legacy drafts).
-2. `estimates.ts` / `state-validation.ts` — removed the Rule 2 hard-block (409) on layer edits
-   after `processesCustomized=true`; frozen processes already survive layer edits correctly via
-   Phase 2, so blocking the save was both unnecessary and contradicted the approved plan.
-3. `TemplateBuilder.tsx` — `deriveDefaultProcesses()` now delegates to the shared engine
-   `deriveProcessesFromStructure` (lamination × adhesive count, extrusion default-enabled)
-   instead of its own stale, pre-Part-B logic.
+---
 
-Verified: `packages/engine` build + tests (7/7) pass; `packages/server` and `packages/web`
-`tsc --noEmit` clean.
+## Legacy sections below (pre-2026-07-03)
 
-### Open follow-ups (not yet done — for next session)
-
-- Phase 5: write `backfill-processes.ts` (mostly for audit-trail/signature backfill now, not
-  correctness) + run the Part B §B.5 verification checklist end-to-end against a live DB.
-- Phase 3 gap: consider live client-side re-derivation of `processesState` as layers change
-  (currently only refreshed after Save + refetch) — matches Decision #23 "instant price on edit".
-- Confirm with owner whether the inline panel + "Lock in changes" button satisfies the
-  originally-requested "confirmation modal that appears", or whether an actual modal is required.
-
-
+**Prior session focus (2026-07-02):** Part B audit — 3 bugs fixed; Phase 5 still open.
 
 ### Session 2026-07-02 — Part B Phase 1 (completed)
 

@@ -11,7 +11,7 @@ export type AuditActor = {
 
 export type AppendMasterAuditInput = {
   masterDataVersion: number;
-  entityType: 'material' | 'reference_item';
+  entityType: 'material' | 'reference_item' | 'platform_master_state';
   entityKey: string;
   action: MasterAuditAction;
   beforeJson?: Record<string, unknown> | null;

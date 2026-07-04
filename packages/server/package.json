@@ -9,6 +9,8 @@
     "db:migrate-roll-unit": "tsx scripts/migrate-roll-variable-unit.ts",
     "db:sync-materials": "tsx scripts/sync-materials.ts",
     "db:backfill-platform-keys": "tsx scripts/backfill-platform-master-keys.ts",
+    "db:migrate-corm-display": "tsx scripts/migrate-corm-to-display-currency.ts",
+    "db:backfill-processes": "tsx scripts/backfill-processes.ts",
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "start": "node dist/index.js",

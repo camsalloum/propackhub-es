@@ -28,8 +28,9 @@ EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS operating_cost_method operating_cost_method NOT NULL DEFAULT 'markup_over_rm';
--- Backfill: company tenants default to per-kg process costing.
-UPDATE tenants SET operating_cost_method = 'process_per_kg' WHERE type = 'company';
+-- Do NOT mass-update company tenants here. That ran once as a backfill and must not
+-- re-run on every db:patch (RUN-ES / startup) — it overwrote Settings → M&O choices.
+-- New tenants get the method at registration (company → process_per_kg, individual → markup_over_rm).
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS default_slab_template VARCHAR(50) DEFAULT 'standard';
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS quotation_valid_days INTEGER NOT NULL DEFAULT 30;
 

@@ -8,7 +8,7 @@ import {
   type LaminationRecipe,
   type WasteBand,
 } from '@es/engine';
-import { cormDisplayPerKgToEngineUsd } from './currency';
+import { displayToUsd } from './currency';
 
 export interface ClientCalcMaterial {
   id: string;
@@ -60,7 +60,9 @@ export interface ClientCalcInput {
   // Pricing model v2 — when pricingMethod is set, the engine uses waste bands +
   // lump-sum tooling/delivery + margin instead of the legacy additive model.
   pricingMethod?: 'markup' | 'margin_per_kg';
+  /** Margin per kg in display currency (converted to USD at engine boundary). */
   marginValuePerKgUsd?: number;
+  /** Tooling lump sum in display currency (converted to USD at engine boundary). Freight stays USD. */
   toolingChargeUsd?: number;
   toolingBilledToCustomer?: boolean;
   deliveryTerm?: string;
@@ -106,6 +108,10 @@ export function runClientCalculation(input: ClientCalcInput) {
   const layerRefs = input.layers.filter((l) => l.materialId);
   const printingWebClass = derivePrintingWebClass(layerRefs, materialMap);
   const needsSolvent = stackNeedsSolventMix(layerRefs, materialMap);
+  // Engine math is USD. RM + freight lump sums are already USD; other charges
+  // are display currency and convert here (Decision #22).
+  const fx = input.exchangeRateUsdToDisplay;
+  const toUsd = (display: number) => displayToUsd(display, fx);
 
   const estimate: Estimate = {
     id: 'client-preview',
@@ -126,20 +132,17 @@ export function runClientCalculation(input: ClientCalcInput) {
       ...input.dimensions,
     },
     markupPercent: input.markupPercent,
-    platesPerKg: input.platesPerKg,
-    deliveryPerKg: input.deliveryPerKg,
+    platesPerKg: toUsd(input.platesPerKg),
+    deliveryPerKg: toUsd(input.deliveryPerKg),
     operatingCostMethod: input.operatingCostMethod ?? undefined,
-    cormPerKgUsd:
-      input.cormPerKgUsd != null
-        ? cormDisplayPerKgToEngineUsd(input.cormPerKgUsd, input.exchangeRateUsdToDisplay)
-        : undefined,
+    cormPerKgUsd: input.cormPerKgUsd != null ? toUsd(input.cormPerKgUsd) : undefined,
     processes: (input.processes || []).map((p, i) => ({
       id: p.id || `proc-${i}`,
       name: p.name,
       processKey: p.processKey ?? undefined,
       processQuantity: p.processQuantity ?? 1,
-      costPerKgUsd: p.costPerKgUsd ?? 0,
-      costPerHour: p.costPerHour ?? 0,
+      costPerKgUsd: toUsd(p.costPerKgUsd ?? 0),
+      costPerHour: toUsd(p.costPerHour ?? 0),
       speedBasis: p.speedBasis ?? 'kg_per_hour',
       speedValue: p.speedValue ?? 0,
       setupHours: p.setupHours ?? 0,
@@ -160,10 +163,12 @@ export function runClientCalculation(input: ClientCalcInput) {
     inkPrintingProcess: input.inkPrintingProcess ?? undefined,
     inkSolventRatio: input.inkSolventRatio,
     pricingMethod: input.pricingMethod,
-    marginValuePerKgUsd: input.marginValuePerKgUsd,
-    toolingChargeUsd: input.toolingChargeUsd,
+    marginValuePerKgUsd:
+      input.marginValuePerKgUsd != null ? toUsd(input.marginValuePerKgUsd) : undefined,
+    toolingChargeUsd: input.toolingChargeUsd != null ? toUsd(input.toolingChargeUsd) : undefined,
     toolingBilledToCustomer: input.toolingBilledToCustomer,
     deliveryTerm: input.deliveryTerm,
+    // Freight lump sum stays USD.
     deliveryChargeUsd: input.deliveryChargeUsd,
     wasteBands: input.wasteBands,
     createdAt: new Date(),

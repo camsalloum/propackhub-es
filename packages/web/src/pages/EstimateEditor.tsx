@@ -23,8 +23,8 @@ import {
 } from '../lib/pouchConfiguratorCatalog';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
-import { runClientCalculation, effectiveMarginPercent, type ClientCalcInput } from '../lib/estimateCalc';
-import { usdToDisplay, usdToDisplayPrecise } from '../lib/currency';
+import { runClientCalculation } from '../lib/estimateCalc';
+import { usdToDisplay, usdToDisplayPrecise, displayToUsd } from '../lib/currency';
 import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
 import {
   buildProcessCostCatalogFromReference,
@@ -2087,7 +2087,9 @@ const EstimateEditor = () => {
         {can('markupPercent') && (
           <div className="mt-4 pt-4 border-t border-border/80 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4">
             <div>
-              <label className="block text-xs font-medium text-navy mb-1">Tooling / development charge (USD)</label>
+              <label className="block text-xs font-medium text-navy mb-1">
+                Tooling / development charge ({estimate?.displayCurrency || 'USD'})
+              </label>
               <input
                 type="number"
                 value={toolingChargeUsd}
@@ -2111,7 +2113,7 @@ const EstimateEditor = () => {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy mb-1">Delivery charge (USD)</label>
+              <label className="block text-xs font-medium text-navy mb-1">Delivery / freight charge (USD)</label>
               <input
                 type="number"
                 value={deliveryChargeUsd}
@@ -2860,7 +2862,7 @@ const EstimateEditor = () => {
                 <span className="text-xs text-mist">
                   Margin:{' '}
                   {pricingMethod === 'margin_per_kg'
-                    ? `${estimate?.displayCurrency || 'USD'} ${usdToDisplayPrecise(marginValuePerKgUsd, fxRate).toFixed(2)}/kg`
+                    ? `${estimate?.displayCurrency || 'USD'} ${marginValuePerKgUsd.toFixed(2)}/kg`
                     : `${markupPercent}% on cost`}
                 </span>
               </div>
@@ -2892,11 +2894,11 @@ const EstimateEditor = () => {
                           return wasteBands.map((band, i) => {
                             const wasteAdj = material * (1 + band.wastePercent / 100);
                             const costBase = wasteAdj + logistics + development + accessory;
-                            const margin =
+                            const marginUsd =
                               pricingMethod === 'margin_per_kg'
-                                ? marginValuePerKgUsd
+                                ? displayToUsd(marginValuePerKgUsd, fxRate)
                                 : costBase * (markupPercent / 100);
-                            const priceUsd = costBase + margin;
+                            const priceUsd = costBase + marginUsd;
                             const range =
                               band.maxKg == null
                                 ? `${band.minKg.toLocaleString()}+`
@@ -2959,7 +2961,9 @@ const EstimateEditor = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {pricingMethod === 'margin_per_kg' ? (
                   <div>
-                    <label className="block text-sm font-medium text-navy mb-2">Margin (USD/kg)</label>
+                    <label className="block text-sm font-medium text-navy mb-2">
+                      Margin ({estimate?.displayCurrency || 'USD'}/kg)
+                    </label>
                     <input
                       type="number"
                       value={marginValuePerKgUsd}
@@ -2970,7 +2974,7 @@ const EstimateEditor = () => {
                       className="input w-full"
                     />
                     <p className="text-xs text-mist mt-1">
-                      Added over material + logistics + tooling. Defaults from the template's product group.
+                      Added over material + logistics + tooling (display currency). Defaults from the template&apos;s product group.
                     </p>
                   </div>
                 ) : (

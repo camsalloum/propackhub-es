@@ -169,15 +169,21 @@ export interface Estimate {
   // ignores platesPerKg/deliveryPerKg and process operation cost. When unset,
   // the legacy additive model runs (full backward compatibility).
   pricingMethod?: 'markup' | 'margin_per_kg';
-  /** Margin in USD/kg, used when pricingMethod === 'margin_per_kg' (defaults from the template). */
+  /**
+   * Margin per kg as **USD** for engine math. Server/client convert from
+   * display-currency storage using the estimate's frozen FX rate.
+   */
   marginValuePerKgUsd?: number;
-  /** Tooling (plates/cylinders) lump-sum charge in USD for the whole job. */
+  /**
+   * Tooling (plates/cylinders) lump-sum as **USD** for engine math.
+   * Stored/edited in display currency; converted at the engine boundary.
+   */
   toolingChargeUsd?: number;
   /** Whether the tooling charge is billed to the customer (added to the price). */
   toolingBilledToCustomer?: boolean;
   /** Delivery/Incoterm term label (EXW, FOB, CIF, …). */
   deliveryTerm?: string;
-  /** Delivery/freight lump-sum charge in USD for the whole job (0 for EXW). */
+  /** Delivery/freight lump-sum charge in **USD** for the whole job (0 for EXW). Freight stays USD. */
   deliveryChargeUsd?: number;
   /** Quantity-based waste bands; falls back to engine defaults when omitted. */
   wasteBands?: WasteBand[];

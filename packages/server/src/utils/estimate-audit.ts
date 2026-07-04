@@ -1,13 +1,16 @@
 /**
  * Estimate State Audit Logging Service
- * 
+ *
  * Logs fork/customize/snap-back transitions with before/after state snapshots.
  * Uses the existing activity_logs table with structured JSON in the changes field.
  */
 
-import { Database } from 'drizzle-orm';
+import { and, desc, eq, like, or } from 'drizzle-orm';
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema';
-import { StateTransition, buildStateSnapshot, EstimateState } from './state-validation';
+import { StateTransition, buildStateSnapshot } from './state-validation';
+
+type Db = NodePgDatabase<typeof schema>;
 
 export interface EstimateAuditLog {
   tenantId: string;
@@ -16,22 +19,14 @@ export interface EstimateAuditLog {
   action: StateTransition; // 'fork', 'customize', 'snap_back'
   stateBefore: ReturnType<typeof buildStateSnapshot>;
   stateAfter: ReturnType<typeof buildStateSnapshot>;
-  signature?: string | null; // structureSignature for reference
+  signature?: string | null;
 }
 
 /**
  * Logs an estimate state transition to the activity_logs table.
- * 
- * @param db Database instance
- * @param log Audit log details
- * @returns The inserted activity log row
  */
-export async function logEstimateStateTransition(
-  db: Database<typeof schema>,
-  log: EstimateAuditLog
-) {
+export async function logEstimateStateTransition(db: Db, log: EstimateAuditLog) {
   if (log.action === 'none') {
-    // Skip logging if no actual transition occurred
     return null;
   }
 
@@ -41,7 +36,7 @@ export async function logEstimateStateTransition(
       .values({
         tenantId: log.tenantId,
         userId: log.userId,
-        action: `estimate_${log.action}`, // e.g., 'estimate_fork', 'estimate_customize'
+        action: `estimate_${log.action}`,
         entityType: 'estimate',
         entityId: log.estimateId,
         changes: {
@@ -56,7 +51,6 @@ export async function logEstimateStateTransition(
 
     return inserted;
   } catch (error) {
-    // Log audit failures but don't fail the request
     console.warn('Failed to log estimate state transition:', error);
     return null;
   }
@@ -64,34 +58,21 @@ export async function logEstimateStateTransition(
 
 /**
  * Retrieves audit trail for an estimate (all state transitions).
- * Filters activity_logs for actions like estimate_fork, estimate_customize, estimate_snap_back.
- * 
- * @param db Database instance
- * @param estimateId Estimate ID
- * @param tenantId Tenant ID
- * @returns Array of audit log entries
  */
-export async function getEstimateAuditTrail(
-  db: Database<typeof schema>,
-  estimateId: string,
-  tenantId: string
-) {
-  const auditLogs = await db
+export async function getEstimateAuditTrail(db: Db, estimateId: string, tenantId: string) {
+  return db
     .select()
     .from(schema.activityLogs)
     .where(
-      db
-        .and(
-          db.eq(schema.activityLogs.entityType, 'estimate'),
-          db.eq(schema.activityLogs.entityId, estimateId),
-          db.eq(schema.activityLogs.tenantId, tenantId),
-          db.or(
-            db.like(schema.activityLogs.action, 'estimate_%'),
-            db.eq(schema.activityLogs.action, 'status_change')
-          )
+      and(
+        eq(schema.activityLogs.entityType, 'estimate'),
+        eq(schema.activityLogs.entityId, estimateId),
+        eq(schema.activityLogs.tenantId, tenantId),
+        or(
+          like(schema.activityLogs.action, 'estimate_%'),
+          eq(schema.activityLogs.action, 'status_change')
         )
+      )
     )
-    .orderBy(db.desc(schema.activityLogs.createdAt));
-
-  return auditLogs;
+    .orderBy(desc(schema.activityLogs.createdAt));
 }

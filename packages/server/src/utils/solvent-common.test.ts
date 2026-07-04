@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { MasterMaterial } from '../db/master-materials-io';
 import { applySolventCommonAverage, computeSolventCommonAverage } from './solvent-common';
 
 describe('solvent common average', () => {
@@ -11,7 +12,7 @@ describe('solvent common average', () => {
     const avg = computeSolventCommonAverage(materials);
     expect(avg).toEqual({ costPerKgUsd: 1.5, density: 0.85 });
 
-    const updated = applySolventCommonAverage(materials);
+    const updated = applySolventCommonAverage(materials as MasterMaterial[]);
     const common = updated.find((m) => m.key === 'solvent-common');
     expect(common?.costPerKgUsd).toBe(1.5);
     expect(common?.density).toBe(0.85);

@@ -1,17 +1,32 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-04 (removed Costs & Terms tab)
-**Session focus:** Estimate editor is Structure + Price list; markup from Settings.
+**Last updated:** 2026-07-04 (multi-SKU quote explorer plan)
+**Session focus:** Planned — customer folders + multi-SKU quotes (not built yet).
 
 ---
 
 ## Where we stopped (read this first next session)
 
-### **START HERE:** Commit housekeeping if not yet committed
+### **START HERE:** Multi-SKU quotes & customer explorer (planned)
 
-1. Working tree should show deleted `localhost.har`, `stitch.zip`, and `.gitignore` update — commit when ready.
+Full agent-ready plan: [`docs/MULTI_SKU_QUOTE_EXPLORER_PLAN.md`](./MULTI_SKU_QUOTE_EXPLORER_PLAN.md) (amended: Quote = commercial, Estimate = costing; no Line entity; §0 principles).
+
+| Phase | What | Status |
+|-------|------|--------|
+| 0 | Spec / plan doc (+ peer-review amendments) | ✅ Done |
+| 1 | `quotes` + estimate fields (sku, brand, specs_code, colors, cost/color, billing mode), backfill, APIs | ⬜ Not started |
+| 2 | Customer folders (rich cards) + explorer | ⬜ Not started |
+| 3 | Quote workspace + combined price list + solid-% RM hover | ⬜ Not started |
+| 4 | Structured multi-SKU PDF (incl. separate dev charges) + Excel | ⬜ Not started |
+
+**Next implement session:** Phase 1 only (`schema.ts` + migration + routes). Do not start UI before API/backfill. Read plan **§0** first.
+
+Owner open decisions in plan §12 — defaults recommended in the doc.
+
+### Prior: Commit housekeeping if not yet committed
+
+1. Working tree may still show deleted `localhost.har`, `stitch.zip`, and `.gitignore` update — commit when ready.
 2. No history purge needed (HAR had no JWTs / empty cookies).
-3. Prior smoke: structured logs, CoRM blur+Save, Waste Bands Printed/Plain.
 
 ### Audit 4.x status (2026-07-04)
 

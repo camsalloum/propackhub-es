@@ -13,6 +13,7 @@
 | [LOCKED_DECISIONS.md](./LOCKED_DECISIONS.md) | Strategic locks #2–#23 |
 | [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md) | Build PRD **v3.4** (V1 implemented — see Appendix A.1) |
 | [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) | **Phased build plan** (audit findings, P0–G, DoD) |
+| [MULTI_SKU_QUOTE_EXPLORER_PLAN.md](./MULTI_SKU_QUOTE_EXPLORER_PLAN.md) | **Planned:** multi-SKU quotes, customer folders, explorer, combined price list |
 | [LIVE_STATE.md](./LIVE_STATE.md) | Current phase + what works |
 | [archive/legacy-laravel/COSTING_NOTES.md](../archive/legacy-laravel/COSTING_NOTES.md) | Laravel engine source of truth |
 | [ES_STANDARD_TEMPLATES_SEED.json](./ES_STANDARD_TEMPLATES_SEED.json) | 11 parent PG default stacks (v3) |
@@ -977,6 +978,18 @@ Settings → General no longer shows Default Slab Template. Slab quantities and 
 ### 2026-07-04 — Selling price lists all units
 
 Headline **Selling price** card shows display-currency prices for every applicable unit: `/ kg` (primary), `/ m²` (when GSM known), `/ LM` (reel width), `/ roll` (custom roll length), `/ pc` + `/ Kpcs` (when piece yield known). Removed “Live preview — save to persist”.
+
+### 2026-07-04 — Multi-SKU quotes & customer explorer (planned)
+
+**Doc:** [MULTI_SKU_QUOTE_EXPLORER_PLAN.md](./MULTI_SKU_QUOTE_EXPLORER_PLAN.md) — not implemented yet. Amended after peer review (CPQ separation).
+
+**Model:** Customer → Quote (commercial) → Estimates (costing objects / full engine). **No “Line” entity.** Single-SKU = one-estimate quote. Duplicate estimate = snapshot on same quote (keep RM costs); amend SKU/brand/dimensions/slabs. Re-quote → new quote (version-ready). Quote owns commercial terms; estimates keep engine snapshots (currency freeze).
+
+**Interplast gaps in plan:** `specs_code`; `print_color_count` × `cost_per_color`; `tooling_billing_mode` = amortized (in /kg) | separate (lump, not in /kg) | not_billed. Wire via existing tooling charge flags. **Not** Contract 1/2. Solid-% hover on ink/SB adhesive/coatings. **Contrib. {CUR}/kg** on layer build-up (with µ%/GSM%), not structure table; µ/gsm in chart bars when tall enough; structure table Material/Area only + header/width polish.
+
+**UI:** customer folders; explorer; quote workspace = summary + rail + editor + combined price list (specs, colors, dev cost, billing). Future-proof: `rfq_id`, versioning FKs — no UI yet.
+
+**Phases:** 1 schema/API+backfill → 2 folders+explorer → 3 workspace+colors/specs+solid hover → 4 structured multi-SKU PDF.
 
 ### 2026-07-04 — Editable field highlight (global)
 

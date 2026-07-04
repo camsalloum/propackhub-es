@@ -1,0 +1,2798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interplast FP Costing — Spec 100057892701</title>
+  <style>
+    :root {
+      --bg-a: #f8f4e8;
+      --bg-b: #e8f3ef;
+      --ink: #1e2a2f;
+      --muted: #5f6f75;
+      --accent: #d96b2d;
+      --accent-soft: #ffe0ca;
+      --line: #ced8db;
+      --card: #ffffff;
+      --ok: #1f8f4f;
+      --warn: #c26817;
+      --bad: #b4312f;
+      --shadow: 0 14px 40px rgba(18, 40, 48, 0.12);
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+    }
+
+    body {
+      font-family: "Segoe UI", "Trebuchet MS", "Lucida Sans Unicode", sans-serif;
+      color: var(--ink);
+      background: #f0f0f0;
+      padding: 0;
+    }
+
+    .shell {
+      max-width: 100%;
+      margin: 0;
+      background: #fff;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      overflow: visible;
+    }
+
+
+    .header {
+      padding: 6px 10px;
+      border-bottom: 1px solid #bbb;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #e8e8e8;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 4px 10px;
+      border-bottom: 1px solid #bbb;
+      background: #f4f4f4;
+    }
+
+    .toolbar-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .toolbar-spacer {
+      flex: 1 1 auto;
+    }
+
+    button,
+    select,
+    input {
+      font: inherit;
+    }
+
+    .btn {
+      border: 1px solid #aaa;
+      background: #f0f0f0;
+      color: var(--ink);
+      padding: 3px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+
+    .btn:hover {
+      background: #e0e0e0;
+    }
+
+    .btn:active {
+      background: #d0d0d0;
+    }
+
+    .btn.primary {
+      background: #4472C4;
+      border-color: #3060a0;
+      color: #fff;
+    }
+
+    .btn.tab.active {
+      background: #4472C4;
+      color: #fff;
+      border-color: #3060a0;
+    }
+
+    .btn.warn {
+      color: #fff;
+      background: #c04040;
+      border-color: #a03030;
+    }
+
+    .app {
+      padding: 4px 0 0 0;
+      display: grid;
+      gap: 0;
+      min-width: 0;
+    }
+
+    .panel {
+      background: #fff;
+      border: none;
+      border-radius: 0;
+      padding: 0;
+      min-width: 0;
+    }
+
+
+    .panel h2,
+    .panel h3 {
+      margin: 0 0 4px;
+      font-size: 12px;
+      letter-spacing: 0;
+    }
+
+    .hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 5px;
+    }
+
+    .field label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .field input,
+    .field select {
+      border: 1px solid #bbb;
+      border-radius: 2px;
+      padding: 3px 5px;
+      min-width: 0;
+      background: #fff;
+      color: var(--ink);
+      font-size: 11px;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      outline: none;
+      border-color: #58a18a;
+      box-shadow: 0 0 0 3px rgba(88, 161, 138, 0.15);
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid #bbb;
+      border-radius: 0;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 600px;
+    }
+
+    th,
+    td {
+      padding: 2px 4px;
+      border: 1px solid #d0d0d0;
+      vertical-align: middle;
+      text-align: left;
+      font-size: 11px;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #e2efda;
+      color: #1e2a2f;
+      text-transform: none;
+      letter-spacing: 0;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    td input,
+    td select {
+      width: 100%;
+      border: none;
+      border-radius: 0;
+      padding: 1px 2px;
+      background: transparent;
+      font-size: 11px;
+    }
+
+    td input:focus,
+    td select:focus {
+      outline: 2px solid #4472C4;
+      outline-offset: -1px;
+      background: #fff;
+    }
+
+    td .readonly {
+      color: #1e2a2f;
+      font-weight: 400;
+      white-space: nowrap;
+    }
+
+    .excel-top-scroller {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      height: 14px;
+      border: 1px solid #bbb;
+      border-bottom: none;
+      background: #f4f4f4;
+    }
+
+    .excel-top-scroller div {
+      height: 1px;
+    }
+
+    .excel-grid {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: calc(100vh - 80px);
+      border: 1px solid #bbb;
+    }
+
+    .excel-grid table {
+      min-width: max-content;
+      table-layout: fixed;
+      border-collapse: collapse;
+    }
+
+    /* ── Frozen (sticky-left) columns ── */
+    .excel-grid td.frozen,
+    .excel-grid th.frozen {
+      position: sticky;
+      z-index: 3;
+    }
+    .excel-grid thead th.frozen {
+      z-index: 6;
+    }
+    .excel-grid td.frozen {
+      background: #fff;
+    }
+    .excel-grid tr.warn td.frozen {
+      background: #fff3cd;
+    }
+    .excel-grid td.frozen.excel-read {
+      background: #f2f2f2;
+    }
+    .excel-grid .frozen-last {
+      border-right: 2.5px solid #666 !important;
+    }
+
+    /* ── Column resize handles ── */
+    .excel-grid thead tr.title-row th {
+      position: sticky;
+      overflow: visible;
+    }
+    .resize-handle {
+      position: absolute;
+      right: 0; top: 0; bottom: 0;
+      width: 5px;
+      cursor: col-resize;
+      z-index: 10;
+    }
+    .resize-handle:hover,
+    .resize-handle.active {
+      background: #4472C4;
+    }
+
+    /* Group header row (Reel form, Layer1, etc.) */
+    .excel-grid thead tr.group-row th {
+      top: 0;
+      background: #d9e2f3;
+      color: #1e2a2f;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      padding: 3px 5px;
+      border: 1px solid #b4c6e7;
+    }
+    .excel-grid thead tr.group-row th.frozen {
+      background: #d9e2f3;
+    }
+
+    /* Column title row */
+    .excel-grid thead tr.title-row th {
+      top: 24px;
+      background: #e2efda;
+      color: #1e2a2f;
+      text-transform: none;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      text-align: center;
+      padding: 3px 5px;
+      border: 1px solid #b4c6e7;
+    }
+    .excel-grid thead tr.title-row th.frozen {
+      background: #e2efda;
+    }
+
+    .excel-grid td {
+      padding: 2px 4px;
+      font-size: 12px;
+      border: 1px solid #d0d0d0;
+      height: 24px;
+    }
+
+    .excel-grid td input,
+    .excel-grid td select {
+      font-size: 12px;
+      line-height: 1.3;
+      padding: 1px 3px;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      height: 22px;
+    }
+
+    .excel-grid td input:focus,
+    .excel-grid td select:focus {
+      outline: 2px solid #4472C4;
+      outline-offset: -1px;
+      background: #fff;
+    }
+
+    .excel-grid .excel-read {
+      text-align: right;
+      white-space: nowrap;
+      background: #f2f2f2;
+      color: #1e2a2f;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .excel-grid .excel-row.warn td {
+      background: #fff3cd;
+    }
+
+    .excel-grid .excel-actions {
+      background: #fff;
+      position: sticky;
+      right: 0;
+      border-left: 2px solid #999;
+      z-index: 1;
+      white-space: nowrap;
+      padding: 1px 4px;
+    }
+
+    .excel-grid .action-buttons {
+      display: inline-flex;
+      gap: 2px;
+    }
+
+    .excel-grid .sheet-warning {
+      font-weight: 700;
+      color: #c04040;
+      font-size: 11px;
+      margin-left: 4px;
+    }
+
+    /* Hidden columns (E-H: Pouch dimensions) */
+    col.col-hidden { width: 0 !important; }
+    .col-hidden, td.col-hidden, th.col-hidden {
+      display: none;
+    }
+
+    /* ══════════════════════════════════════
+       Card Layout — 2-panel (left=inputs, right=outputs)
+    ══════════════════════════════════════ */
+    .vc-container {
+      padding: 10px;
+      background: #f0f0f0;
+    }
+
+    .vc-card {
+      background: #fff;
+      border: 1px solid #bbb;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .vc-card.vc-warn { border-color: #e8a030; }
+
+    .vc-card-header {
+      background: #4472C4;
+      color: #fff;
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .vc-card.vc-warn .vc-card-header { background: #c26817; }
+
+    .vc-card-header .vc-actions { display: flex; gap: 4px; }
+
+    /* Two-panel body */
+    .vc-body { display: flex; align-items: stretch; }
+
+    .vc-left {
+      flex: 0 0 370px;
+      border-right: 2px solid #d0d8e8;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .vc-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .vc-section { border-bottom: 1px solid #e8e8e8; }
+    .vc-section:last-child { border-bottom: none; }
+
+    .vc-section-head {
+      background: #d9e2f3;
+      padding: 3px 10px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #1e2a2f;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #b4c6e7;
+    }
+
+    /* Left-panel 2-col input grid */
+    .vc-grid { display: grid; grid-template-columns: 1fr 1fr; }
+
+    .vc-field {
+      display: flex;
+      flex-direction: column;
+      padding: 5px 10px;
+      border-right: 1px solid #f0f0f0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .vc-field:nth-child(2n) { border-right: none; }
+    .vc-field.full { grid-column: 1 / -1; border-right: none; }
+
+    .vc-sub-label {
+      grid-column: 1 / -1;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #4472c4;
+      background: #f0f4fc;
+      padding: 5px 10px 4px;
+      border-bottom: 1px solid #d0daf0;
+    }
+
+    .vc-hint {
+      font-size: 9px;
+      color: #888;
+      font-style: italic;
+      margin-top: 3px;
+      line-height: 1.3;
+    }
+
+    .vc-unit {
+      font-weight: 400;
+      color: #999;
+      font-size: 9px;
+      text-transform: none;
+      letter-spacing: 0;
+      margin-left: 2px;
+    }
+
+    .vc-label {
+      font-size: 9px;
+      font-weight: 700;
+      color: #5f6f75;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 2px;
+    }
+
+    .vc-input {
+      font-size: 12px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      padding: 3px 6px;
+      background: #fff;
+      color: #1e2a2f;
+      width: 100%;
+    }
+
+    .vc-input:focus {
+      outline: none;
+      border-color: #4472C4;
+      box-shadow: 0 0 0 2px rgba(68,114,196,0.15);
+    }
+
+    .vc-select {
+      font-size: 12px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      padding: 3px 6px;
+      background: #fff;
+      color: #1e2a2f;
+      width: 100%;
+    }
+
+    .vc-select:focus {
+      outline: none;
+      border-color: #4472C4;
+      box-shadow: 0 0 0 2px rgba(68,114,196,0.15);
+    }
+
+    .vc-read {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e2a2f;
+      font-variant-numeric: tabular-nums;
+      padding: 2px 0;
+    }
+
+    /* Layer rows (label | micron | material) */
+    .vc-layer-grid {
+      display: grid;
+      grid-template-columns: 50px 60px 1fr;
+      gap: 4px 6px;
+      padding: 6px 10px;
+      align-items: center;
+    }
+
+    .vc-layer-label {
+      font-size: 9px;
+      font-weight: 700;
+      color: #5f6f75;
+      text-transform: uppercase;
+    }
+
+    /* Right-panel horizontal rows */
+    .vc-hgrid {
+      display: flex;
+      padding: 6px 8px;
+      gap: 0;
+    }
+
+    .vc-hfield {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 3px 8px;
+      border-right: 1px solid #f0f0f0;
+    }
+
+    .vc-hfield:first-child { padding-left: 4px; }
+    .vc-hfield:last-child  { border-right: none; }
+
+    /* Result bar */
+    .vc-result-bar {
+      background: #1f8f4f;
+      color: #fff;
+      padding: 10px 16px;
+      display: flex;
+      gap: 40px;
+      align-items: center;
+    }
+
+    .vc-result-bar.has-warning { background: #c04040; }
+
+    .vc-result-item { display: flex; flex-direction: column; }
+
+    .vc-result-label {
+      font-size: 10px;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .vc-result-value {
+      font-size: 28px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+    }
+
+    /* ══════════════════════════════════════
+       Master Data tab layout
+    ══════════════════════════════════════ */
+    .ms-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .ms-section {
+      border-bottom: 1px solid #ccc;
+    }
+
+    .ms-section-head {
+      display: flex;
+      align-items: center;
+      background: #d9e2f3;
+      border-bottom: 1px solid #b4c6e7;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #1e2a2f;
+      letter-spacing: 0.2px;
+    }
+
+    /* Settings row — compact horizontal wrap */
+    .ms-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+      background: #f9f9f9;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .ms-field {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #ddd;
+      padding: 6px 10px;
+      min-width: 140px;
+      flex: 1 1 140px;
+      max-width: 220px;
+    }
+
+    .ms-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #5f6f75;
+      white-space: nowrap;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+    }
+
+    .ms-input {
+      font-size: 12px;
+      border: 1px solid #bbb;
+      border-radius: 2px;
+      padding: 3px 5px;
+      background: #fff;
+      color: #1e2a2f;
+      width: 100%;
+    }
+
+    .ms-input:focus {
+      outline: none;
+      border-color: #4472C4;
+      box-shadow: 0 0 0 2px rgba(68,114,196,0.15);
+    }
+
+    /* Tables inside master */
+    .ms-table-wrap {
+      overflow-x: auto;
+      background: #fff;
+    }
+
+    .ms-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 400px;
+      font-size: 12px;
+    }
+
+    .ms-table thead th {
+      background: #e2efda;
+      border: 1px solid #c0d6b0;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: left;
+      color: #1e2a2f;
+      position: sticky;
+      top: 0;
+      white-space: nowrap;
+    }
+
+    .ms-table tbody td {
+      border: 1px solid #e0e0e0;
+      padding: 2px 6px;
+      font-size: 12px;
+      height: 26px;
+      vertical-align: middle;
+    }
+
+    .ms-table tbody tr:nth-child(even) td {
+      background: #f7f7f7;
+    }
+
+    .ms-table tbody tr:hover td {
+      background: #eef4fb;
+    }
+
+    .ms-table td input,
+    .ms-table td select {
+      width: 100%;
+      border: none;
+      background: transparent;
+      font-size: 12px;
+      padding: 1px 2px;
+    }
+
+    .ms-table td input:focus,
+    .ms-table td select:focus {
+      outline: 2px solid #4472C4;
+      outline-offset: -1px;
+      background: #fff;
+    }
+
+    /* Side-by-side panels in master tab */
+    .ms-panels {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+    }
+    .ms-panels > .ms-section {
+      flex: 1;
+      min-width: 0;
+      border-bottom: none;
+      border-right: 1px solid #ccc;
+    }
+    .ms-panels > .ms-section:last-child {
+      border-right: none;
+    }
+    .ms-panels .ms-table {
+      min-width: 0;
+    }
+
+    .ms-center {
+      text-align: center;
+    }
+
+    /* Status badge — flat small chip */
+    .ms-status-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .ms-badge {
+      display: inline-block;
+      padding: 1px 7px;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 2px;
+      letter-spacing: 0.3px;
+    }
+
+    .ms-badge.ok {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .ms-badge.warn {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffc107;
+    }
+
+    /* Orange fill for AED/m2 group like Excel */
+    .group-aed {
+      background: #e99f71 !important;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .tag {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 0.73rem;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      background: #f1f7f8;
+      color: #3f5f66;
+    }
+
+    .tag.verify {
+      background: #fff2e7;
+      color: #8d4b1c;
+      border: 1px solid #f0c59f;
+    }
+
+    .jobs-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .job-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: #fff;
+      overflow: hidden;
+      animation: rise 350ms ease;
+    }
+
+    .job-head {
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(100deg, #fefcf8, #f3faf7);
+    }
+
+    .job-head h3 {
+      margin: 0;
+      font-size: 1.02rem;
+    }
+
+    .job-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .job-body {
+      padding: 12px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .metrics {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+
+    .metric {
+      border: 1px solid #d6e2e4;
+      border-radius: var(--radius-md);
+      padding: 9px 10px;
+      background: #f9fcfb;
+      min-height: 68px;
+    }
+
+    .metric .label {
+      font-size: 0.75rem;
+      color: #56767d;
+      text-transform: uppercase;
+      letter-spacing: 0.25px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .metric .value {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .metric.good .value {
+      color: var(--ok);
+    }
+
+    .metric.warn .value {
+      color: var(--warn);
+    }
+
+    .metric.bad .value {
+      color: var(--bad);
+    }
+
+    .warn-list {
+      margin: 0;
+      padding-left: 18px;
+      color: #8d4b1c;
+      font-size: 0.86rem;
+      line-height: 1.35;
+    }
+
+    .subtle {
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .split {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .empty {
+      padding: 18px;
+      border: 1px dashed #c1d2d6;
+      border-radius: var(--radius-md);
+      background: #fcfefd;
+      color: #5f7479;
+    }
+
+    @media (max-width: 1180px) {
+      .grid-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .grid-3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding: 12px;
+      }
+
+      .shell {
+        border-radius: 16px;
+      }
+
+      .header,
+      .toolbar,
+      .app {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .grid-2,
+      .grid-3,
+      .grid-4 {
+        grid-template-columns: 1fr;
+      }
+
+      .metric .value {
+        font-size: 0.95rem;
+      }
+
+      .job-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="header">
+      <h1>Interplast FP Costing — Spec 100057892701</h1>
+      <p>OPP 18μ / WPE 70μ | Width 300mm | Cutoff 599mm | 8 colors</p>
+    </header>
+
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <button class="btn tab" id="tabMasterBtn" type="button">Master Data</button>
+        <button class="btn tab" id="tabCalcBtn" type="button">Costing Calculator</button>
+      </div>
+
+      <div class="toolbar-spacer"></div>
+
+      <div class="toolbar-group">
+        <button class="btn" type="button" id="downloadJsonBtn">Save JSON</button>
+        <button class="btn" type="button" id="loadJsonBtn">Load JSON</button>
+        <button class="btn" type="button" id="exportCsvBtn">Export CSV</button>
+        <button class="btn" type="button" id="saveHtmlCopyBtn">Save New HTML Copy</button>
+        <button class="btn warn" type="button" id="resetDefaultsBtn">Reset Defaults</button>
+      </div>
+    </div>
+
+    <main id="app" class="app"></main>
+  </div>
+
+  <input type="file" id="stateImportInput" accept="application/json" style="display:none" />
+
+  <script id="embedded-state" type="application/json">{}</script>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const STORAGE_KEY = "interplast_fp_calculator_v3_spec_100057892701_" + (window.location.pathname || "inline").replace(/[^a-zA-Z0-9]/g, "_");
+
+      const PRODUCT_TYPES = [
+        { value: "film_roll", label: "Film Roll" },
+        { value: "lay_flat_bag", label: "Lay-flat Bag" },
+        { value: "pillow_pouch", label: "Pillow Pouch" },
+        { value: "stick_pack", label: "Stick Pack" },
+        { value: "sachet", label: "Sachet" }
+      ];
+
+      const ANCILLARY_KEYS = [
+        "colorInk",
+        "inkSolventRatio",
+        "adhesiveGsm",
+        "adhesiveType"
+      ];
+
+      const UAE_COLUMN_LETTERS = [
+        "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P",
+        "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "AA", "AB", "AC", "AD", "AE", "AF",
+        "AG", "AH", "AI", "AJ", "AK", "AL", "AM"
+      ];
+
+      const UAE_COLUMN_TITLES = {
+        A: "Specs",
+        B: "10 Digit",
+        C: "Widht",
+        D: "Cutoff",
+        E: "Width",
+        F: "Height",
+        G: "Gusset",
+        H: "Area/1Kpc",
+        I: "Colors",
+        J: "Mic",
+        K: "Mat",
+        L: "Mic",
+        M: "Mat",
+        N: "Mic",
+        O: "Mat",
+        P: "Layer 1",
+        Q: "Layer 2",
+        R: "Layer 3",
+        S: "Ink",
+        T: "Adhesive",
+        U: "Total GSM",
+        V: "Yield",
+        W: "lay 1",
+        X: "lay 2",
+        Y: "Lay 3",
+        Z: "Ink +Adhesive",
+        AA: "Total",
+        AB: "MOQ kg",
+        AC: "MOQ M2",
+        AD: "Conversion",
+        AE: "Freight",
+        AF: "Profit",
+        AG: "UOM",
+        AH: "AED/m2",
+        AI: "AED/kg",
+        AJ: "Contract",
+        AK: "Contract",
+        AL: "",
+        AM: ""
+      };
+
+      /* ── Column pixel widths (optimised for content visibility) ── */
+      const COL_PX = {
+        A: 135, B: 120, C: 62, D: 62,
+        E: 0, F: 0, G: 0, H: 0,
+        I: 52, J: 48, K: 125, L: 48, M: 125, N: 48, O: 125,
+        P: 74, Q: 74, R: 74, S: 56, T: 74, U: 84, V: 80,
+        W: 80, X: 74, Y: 74, Z: 100, AA: 80,
+        AB: 70, AC: 80, AD: 84, AE: 70, AF: 80,
+        AG: 50, AH: 80, AI: 80, AJ: 84, AK: 84
+      };
+
+      /* Columns frozen (sticky-left) – everything up to & including Layer 3 Mat */
+      const FROZEN_LETTERS = ['A','B','C','D','I','J','K','L','M','N','O'];
+
+      /* Session-scoped resized widths (survives across renders) */
+      var customColWidths = {};
+
+      function getColWidth(letter) {
+        return customColWidths[letter] || COL_PX[letter] || 70;
+      }
+
+      function getFrozenOffsets() {
+        var arr = [], left = 0;
+        for (var i = 0; i < FROZEN_LETTERS.length; i++) {
+          var l = FROZEN_LETTERS[i], w = getColWidth(l);
+          arr.push({ letter: l, left: left, width: w, isLast: i === FROZEN_LETTERS.length - 1 });
+          left += w;
+        }
+        return arr;
+      }
+
+      function frozenCellStyle(letter, offsets, isHeader) {
+        for (var i = 0; i < offsets.length; i++) {
+          if (offsets[i].letter === letter) {
+            return 'position:sticky;left:' + offsets[i].left + 'px;z-index:' + (isHeader ? 6 : 1) + ';';
+          }
+        }
+        return '';
+      }
+
+      function frozenGroupStyle(startLetter, endLetter, offsets) {
+        var startIdx = -1, endIdx = -1;
+        for (var i = 0; i < offsets.length; i++) {
+          if (offsets[i].letter === startLetter) startIdx = i;
+          if (offsets[i].letter === endLetter) endIdx = i;
+        }
+        if (startIdx < 0) return '';
+        return 'position:sticky;left:' + offsets[startIdx].left + 'px;z-index:6;';
+      }
+
+      const DEFAULT_STATE = {
+        meta: {
+          version: 1,
+          generatedAt: "2026-04-17"
+        },
+        activeTab: "calculator",
+        settings: {
+          fxRate: 3.7,
+          defaultWastePct: 0,
+          defaultProcessAedPerKg: 0,
+          defaultLogisticsAedPerKg: 0.25,
+          defaultProfitMode: "fixed",
+          defaultProfitValue: 0.5,
+          defaultInkSolventRatio: 1
+        },
+        solvent: {
+          label: "Solvent",
+          priceUsd: 1.25
+        },
+        materials: [
+          { name: "OPP",          density: 0.91, priceUsd: 3.30, solidPct: 100 },
+          { name: "MOPP",         density: 0.91, priceUsd: 4.50, solidPct: 100 },
+          { name: "LDPE",         density: 0.92, priceUsd: 1.44, solidPct: 100 },
+          { name: "WPE",          density: 0.93, priceUsd: 2.10, solidPct: 100 },
+          { name: "ALU/PEPaper",  density: 1.24, priceUsd: 4.30, solidPct: 100 },
+          { name: "LDPE 50%PCR",  density: 0.92, priceUsd: 2.19, solidPct: 100 },
+          { name: "Inks",         density: 1.00, priceUsd: 5.00, solidPct: 35  },
+          { name: "Solvent",      density: 1.00, priceUsd: 1.60, solidPct: 0   },
+          { name: "Adhesive SL",  density: 1.00, priceUsd: 3.75, solidPct: 55  },
+          { name: "Adhesive SB",  density: 1.00, priceUsd: 3.20, solidPct: 40  }
+        ],
+        ancillaries: [],
+        moqTable: [
+          { moqKg: 250,   wastePct: 30, transportAed: 0.18, marginAed: 6.00 },
+          { moqKg: 500,   wastePct: 20, transportAed: 0.18, marginAed: 3.00 },
+          { moqKg: 1000,  wastePct: 18, transportAed: 0.18, marginAed: 5.00 },
+          { moqKg: 3000,  wastePct: 15, transportAed: 0.18, marginAed: 4.50 },
+          { moqKg: 5000,  wastePct: 12, transportAed: 0.18, marginAed: 4.00 },
+          { moqKg: 10000, wastePct: 10, transportAed: 0.18, marginAed: 3.75 },
+          { moqKg: 20000, wastePct: 8,  transportAed: 0.18, marginAed: 3.50 }
+        ],
+        jobs: [
+          {
+            sheetMaterial: "OPP",
+            jobRef: "100057892701",
+            customer: "",
+            specsCode: "1000578927",
+            description: "",
+            productType: "film_roll",
+            cutOffMm: 599,
+            widthMm: 300,
+            pouchWidthMm: null,
+            pouchHeightMm: null,
+            gussetMm: null,
+            areaPer1kpc: null,
+            laneWidthMm: null,
+            perValue: 1,
+            uom: "m2",
+            colors: 8,
+            wastagePct: 0,
+            moqKg: 20000,
+            processCostAedPerKg: 1.71,
+            logisticsCostAedPerKg: 0.25,
+            profitMode: "fixed",
+            profitValue: 0.5493943108233118,
+            inkSolventRatio: null,
+            cylinderCostPerColorAed: 0,
+            contract1: null,
+            contract2: null,
+            layers: [
+              { material: "OPP", micron: 18 },
+              { material: "WPE", micron: 70 },
+              { material: "",    micron: null },
+              { material: "",    micron: null }
+            ],
+            ancillaryGsm: {
+              colorInk: 3,
+              inkSolventRatio: 2.0,
+              adhesiveGsm: 2,
+              adhesiveType: "sl"
+            }
+          }
+        ]
+      };
+      const app = document.getElementById("app");
+      const stateImportInput = document.getElementById("stateImportInput");
+
+      let state = normalizeState(loadInitialState());
+
+      document.getElementById("tabMasterBtn").addEventListener("click", function () {
+        state.activeTab = "master";
+        render();
+      });
+
+      document.getElementById("tabCalcBtn").addEventListener("click", function () {
+        state.activeTab = "calculator";
+        render();
+      });
+
+      document.getElementById("downloadJsonBtn").addEventListener("click", downloadStateJson);
+      document.getElementById("loadJsonBtn").addEventListener("click", function () {
+        stateImportInput.click();
+      });
+      document.getElementById("exportCsvBtn").addEventListener("click", exportJobsCsv);
+      document.getElementById("saveHtmlCopyBtn").addEventListener("click", saveHtmlCopy);
+      document.getElementById("resetDefaultsBtn").addEventListener("click", resetDefaults);
+
+      stateImportInput.addEventListener("change", importStateJson);
+
+      window.updateSetting = updateSetting;
+      window.updateMaterial = updateMaterial;
+      window.toggleMaterialVerify = toggleMaterialVerify;
+      window.addMaterial = addMaterial;
+      window.removeMaterial = removeMaterial;
+      window.updateAncillary = updateAncillary;
+      window.updateSolvent = updateSolvent;
+      window.addJob = addJob;
+      window.duplicateJob = duplicateJob;
+      window.removeJob = removeJob;
+      window.duplicateLastJob = duplicateLastJob;
+      window.removeLastJob = removeLastJob;
+      window.updateJobField = updateJobField;
+      window.setJobFixedProfit = setJobFixedProfit;
+      window.addLayer = addLayer;
+      window.removeLayer = removeLayer;
+      window.updateLayer = updateLayer;
+      window.updateJobAncillary = updateJobAncillary;
+      window.updateJobAncillarySelect = updateJobAncillarySelect;
+      window.updateMoqRow = updateMoqRow;
+      window.addMoqRow = addMoqRow;
+      window.removeMoqRow = removeMoqRow;
+
+      window.addEventListener("resize", function () {
+        if (state.activeTab === "calculator") {
+          initGridScrollbars();
+        }
+      });
+
+      render();
+
+      function loadInitialState() {
+        const embedded = parseEmbeddedState();
+        const local = parseLocalState();
+
+        if (local) {
+          return local;
+        }
+        if (embedded) {
+          return embedded;
+        }
+        return clone(DEFAULT_STATE);
+      }
+
+      function parseEmbeddedState() {
+        const el = document.getElementById("embedded-state");
+        if (!el) {
+          return null;
+        }
+        const raw = (el.textContent || "").trim();
+        if (!raw || raw === "{}") {
+          return null;
+        }
+        try {
+          return JSON.parse(raw);
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function parseLocalState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) {
+            return null;
+          }
+          return JSON.parse(raw);
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function normalizeState(source) {
+        const merged = clone(DEFAULT_STATE);
+        const incoming = source || {};
+
+        merged.activeTab = incoming.activeTab === "master" ? "master" : "calculator";
+        merged.settings = Object.assign({}, merged.settings, incoming.settings || {});
+        merged.solvent = Object.assign({}, merged.solvent, incoming.solvent || {});
+        merged.materials = Array.isArray(incoming.materials) && incoming.materials.length ? incoming.materials : merged.materials;
+        /* Auto-merge any new materials added to DEFAULT_STATE that are missing from localStorage */
+        var _defaultMats = clone(DEFAULT_STATE).materials || [];
+        var _loadedNames = merged.materials.map(function (m) { return m.name; });
+        _defaultMats.forEach(function (dm) {
+          if (_loadedNames.indexOf(dm.name) === -1) {
+            merged.materials.push(dm);
+          }
+        });
+        merged.ancillaries = Array.isArray(incoming.ancillaries) && incoming.ancillaries.length ? incoming.ancillaries : merged.ancillaries;
+        merged.moqTable = Array.isArray(incoming.moqTable) && incoming.moqTable.length
+          ? incoming.moqTable.map(function (r) {
+              return {
+                moqKg:        normalizeNumber(r.moqKg,        0),
+                wastePct:     normalizeNumber(r.wastePct,     0),
+                transportAed: normalizeNumber(r.transportAed, 0),
+                marginAed:    normalizeNumber(r.marginAed,    0)
+              };
+            })
+          : clone(DEFAULT_STATE.moqTable);
+        merged.jobs = Array.isArray(incoming.jobs) && incoming.jobs.length ? incoming.jobs : merged.jobs;
+
+        merged.materials = merged.materials.map(function (m) {
+          return {
+            name: String(m.name || ""),
+            density: normalizeNullableNumber(m.density),
+            priceUsd: normalizeNullableNumber(m.priceUsd),
+            solidPct: m.solidPct !== undefined ? normalizeNumber(m.solidPct, 100) : 100
+          };
+        });
+
+        merged.ancillaries = merged.ancillaries.map(function (a) {
+          return {
+            key: String(a.key || ""),
+            label: String(a.label || ""),
+            priceUsd: normalizeNullableNumber(a.priceUsd),
+            solidPct: normalizeNumber(a.solidPct, 100),
+            solventLinked: Boolean(a.solventLinked)
+          };
+        });
+
+        merged.jobs = merged.jobs.map(function (job) {
+          const normalized = clone(job);
+          normalized.sheetMaterial = String(job.sheetMaterial || (Array.isArray(job.layers) && job.layers[0] ? job.layers[0].material : "") || "");
+          normalized.jobRef = String(job.jobRef || "");
+          normalized.customer = String(job.customer || "");
+          normalized.specsCode = String(job.specsCode || "");
+          normalized.description = String(job.description || "");
+          normalized.productType = PRODUCT_TYPES.some(function (p) { return p.value === job.productType; }) ? job.productType : "film_roll";
+          normalized.cutOffMm = normalizeNullableNumber(job.cutOffMm);
+          normalized.widthMm = normalizeNullableNumber(job.widthMm);
+          normalized.pouchWidthMm = normalizeNullableNumber(job.pouchWidthMm);
+          normalized.pouchHeightMm = normalizeNullableNumber(job.pouchHeightMm);
+          normalized.gussetMm = normalizeNullableNumber(job.gussetMm);
+          normalized.areaPer1kpc = normalizeNullableNumber(job.areaPer1kpc);
+          normalized.laneWidthMm = normalizeNullableNumber(job.laneWidthMm);
+          normalized.perValue = normalizeNullableNumber(job.perValue);
+          normalized.uom = String(job.uom || "m2");
+          normalized.colors = normalizeNullableNumber(job.colors);
+          normalized.wastagePct = normalizeNullableNumber(job.wastagePct);
+          normalized.moqKg = normalizeNullableNumber(job.moqKg);
+          normalized.processCostAedPerKg = normalizeNullableNumber(job.processCostAedPerKg);
+          normalized.logisticsCostAedPerKg = normalizeNullableNumber(job.logisticsCostAedPerKg);
+          normalized.profitMode = job.profitMode === "percent" || job.profitMode === "fixed" ? job.profitMode : null;
+          normalized.profitValue = normalizeNullableNumber(job.profitValue);
+          normalized.inkSolventRatio = normalizeNullableNumber(job.inkSolventRatio);
+          normalized.cylinderCostPerColorAed = normalizeNullableNumber(job.cylinderCostPerColorAed);
+          normalized.contract1 = normalizeNullableNumber(job.contract1);
+          normalized.contract2 = normalizeNullableNumber(job.contract2);
+
+          normalized.layers = Array.isArray(job.layers) && job.layers.length
+            ? job.layers.slice(0, 4).map(function (layer) {
+              return {
+                material: String(layer.material || ""),
+                micron: normalizeNullableNumber(layer.micron)
+              };
+            })
+            : [{ material: "", micron: null }];
+          /* Ensure exactly 4 layer slots */
+          while (normalized.layers.length < 4) {
+            normalized.layers.push({ material: "", micron: null });
+          }
+
+          normalized.ancillaryGsm = {
+            colorInk:         normalizeNumber((job.ancillaryGsm || {}).colorInk, 0),
+            inkSolventRatio:  normalizeNumber((job.ancillaryGsm || {}).inkSolventRatio !== undefined ? (job.ancillaryGsm || {}).inkSolventRatio : 2.0, 0),
+            adhesiveGsm:      normalizeNumber((job.ancillaryGsm || {}).adhesiveGsm !== undefined ? (job.ancillaryGsm || {}).adhesiveGsm : ((job.ancillaryGsm || {}).adhesiveSl || 0), 0),
+            adhesiveType:     (job.ancillaryGsm || {}).adhesiveType || "sl"
+          };
+
+          return normalized;
+        });
+
+        return merged;
+      }
+
+      function persistState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (error) {
+          return;
+        }
+      }
+
+      function clone(value) {
+        return JSON.parse(JSON.stringify(value));
+      }
+
+      function normalizeNumber(value, fallback) {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : fallback;
+      }
+
+      function normalizeNullableNumber(value) {
+        if (value === "" || value === null || typeof value === "undefined") {
+          return null;
+        }
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+
+      function valueOrBlank(value) {
+        return value === null || typeof value === "undefined" ? "" : String(value);
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function toDisplayNumber(value, digits) {
+        if (!Number.isFinite(value)) {
+          return "-";
+        }
+        return value.toLocaleString(undefined, {
+          minimumFractionDigits: digits,
+          maximumFractionDigits: digits
+        });
+      }
+
+      function getMaterialMap() {
+        const map = new Map();
+        state.materials.forEach(function (material) {
+          map.set(material.name.trim().toUpperCase(), material);
+        });
+        return map;
+      }
+
+      function resolveMaterial(name, map) {
+        const key = String(name || "").trim().toUpperCase();
+        if (!key) {
+          return null;
+        }
+        return map.get(key) || null;
+      }
+
+      function computeJob(job) {
+        const settings = state.settings;
+        const materialMap = getMaterialMap();
+        const fx = Math.max(normalizeNumber(settings.fxRate, 3.7), 0);
+
+        const wastePctResolved = job.wastagePct === null
+          ? Math.max(normalizeNumber(settings.defaultWastePct, 0), 0)
+          : Math.max(normalizeNumber(job.wastagePct, 0), 0);
+        const safeWastePct = Math.min(wastePctResolved, 99.9);
+        const wasteFactor = 1 / (1 - safeWastePct / 100);
+
+        const processCost = job.processCostAedPerKg === null
+          ? Math.max(normalizeNumber(settings.defaultProcessAedPerKg, 0), 0)
+          : Math.max(normalizeNumber(job.processCostAedPerKg, 0), 0);
+
+        const logisticsCost = job.logisticsCostAedPerKg === null
+          ? Math.max(normalizeNumber(settings.defaultLogisticsAedPerKg, 0), 0)
+          : Math.max(normalizeNumber(job.logisticsCostAedPerKg, 0), 0);
+
+        const profitMode = job.profitMode || settings.defaultProfitMode;
+        const profitValue = job.profitValue === null
+          ? Math.max(normalizeNumber(settings.defaultProfitValue, 0), 0)
+          : Math.max(normalizeNumber(job.profitValue, 0), 0);
+
+        const inkSolventRatio = job.inkSolventRatio === null
+          ? Math.max(normalizeNumber(settings.defaultInkSolventRatio, 1), 0)
+          : Math.max(normalizeNumber(job.inkSolventRatio, 0), 0);
+
+        const solventPriceAed = Math.max(normalizeNumber(state.solvent.priceUsd, 0), 0) * fx;
+
+        const warnings = [];
+        const layerDetails = [];
+        let totalLayerGsm = 0;
+
+        job.layers.forEach(function (layer, index) {
+          const material = resolveMaterial(layer.material, materialMap);
+          const micron = Math.max(normalizeNumber(layer.micron, 0), 0);
+          const density = material && material.density !== null ? Math.max(normalizeNumber(material.density, 0), 0) : null;
+          const priceUsd = material && material.priceUsd !== null ? Math.max(normalizeNumber(material.priceUsd, 0), 0) : null;
+
+          let gsm = 0;
+          if (micron > 0 && density !== null && density > 0) {
+            gsm = micron * density;
+            totalLayerGsm += gsm;
+          }
+
+          if (layer.material && !material) {
+            warnings.push("Layer " + (index + 1) + ": material not found in master data.");
+          }
+          if (layer.material && material && (material.density === null || material.density <= 0)) {
+            warnings.push("Layer " + (index + 1) + " (" + layer.material + "): missing density.");
+          }
+          if (layer.material && material && (material.priceUsd === null || material.priceUsd < 0)) {
+            warnings.push("Layer " + (index + 1) + " (" + layer.material + "): missing USD/kg price.");
+          }
+
+          layerDetails.push({
+            index: index,
+            materialName: layer.material,
+            micron: micron,
+            density: density,
+            priceUsd: priceUsd,
+            gsm: gsm,
+            costAedPerKg: 0
+          });
+        });
+
+        const ancillaryDetails = state.ancillaries.map(function (anc) {
+          const dryGsm = Math.max(normalizeNumber(job.ancillaryGsm[anc.key], 0), 0);
+          const solidFraction = Math.max(Math.min(normalizeNumber(anc.solidPct, 100), 100), 0) / 100;
+          const priceAed = Math.max(normalizeNumber(anc.priceUsd, 0), 0) * fx;
+          return {
+            key: anc.key,
+            label: anc.label,
+            dryGsm: dryGsm,
+            solidFraction: solidFraction,
+            priceAed: priceAed,
+            solventLinked: Boolean(anc.solventLinked),
+            costAedPerKg: 0,
+            solventCostAedPerKg: 0
+          };
+        });
+
+        const totalAncillaryDryGsm = ancillaryDetails.reduce(function (sum, item) { return sum + item.dryGsm; }, 0);
+        const totalGsm = totalLayerGsm + totalAncillaryDryGsm;
+
+        if (totalGsm <= 0) {
+          warnings.push("Total GSM is zero. Add at least one valid layer micron + material density.");
+        }
+
+        const yieldSqmPerKg = totalGsm > 0 ? 1000 / totalGsm : 0;
+        const effectiveYieldSqmPerKg = yieldSqmPerKg * (1 - safeWastePct / 100);
+
+        let totalLayerCost = 0;
+        layerDetails.forEach(function (layer) {
+          if (layer.gsm <= 0 || !Number.isFinite(layer.priceUsd) || layer.priceUsd === null || totalGsm <= 0) {
+            layer.costAedPerKg = 0;
+            return;
+          }
+          const massShare = layer.gsm / totalGsm;
+          layer.costAedPerKg = massShare * wasteFactor * layer.priceUsd * fx;
+          totalLayerCost += layer.costAedPerKg;
+        });
+
+        let totalAncillaryCost = 0;
+        ancillaryDetails.forEach(function (anc) {
+          if (anc.dryGsm <= 0 || totalGsm <= 0) {
+            anc.costAedPerKg = 0;
+            anc.solventCostAedPerKg = 0;
+            return;
+          }
+          if (anc.solidFraction <= 0) {
+            warnings.push("Ancillary " + anc.label + ": solid % must be greater than 0.");
+            anc.costAedPerKg = 0;
+            anc.solventCostAedPerKg = 0;
+            return;
+          }
+
+          const dryMassPerKgProduct = (anc.dryGsm / totalGsm) * wasteFactor;
+          const wetMassPerKgProduct = dryMassPerKgProduct / anc.solidFraction;
+          const baseCost = wetMassPerKgProduct * anc.priceAed;
+          const solventMass = anc.solventLinked ? wetMassPerKgProduct * inkSolventRatio : 0;
+          const solventCost = solventMass * solventPriceAed;
+
+          anc.solventCostAedPerKg = solventCost;
+          anc.costAedPerKg = baseCost + solventCost;
+          totalAncillaryCost += anc.costAedPerKg;
+        });
+
+        const subTotal = totalLayerCost + totalAncillaryCost + processCost + logisticsCost;
+        const profitAedPerKg = profitMode === "percent"
+          ? subTotal * (profitValue / 100)
+          : profitValue;
+
+        const colors = Math.max(normalizeNumber(job.colors, 0), 0);
+        const moqKg = Math.max(normalizeNumber(job.moqKg, 0), 0);
+        const cylinderCostPerColor = Math.max(normalizeNumber(job.cylinderCostPerColorAed, 0), 0);
+        const cylinderSpreadAedPerKg = moqKg > 0 ? (cylinderCostPerColor * colors) / moqKg : 0;
+
+        const finalAedPerKg = subTotal + profitAedPerKg + cylinderSpreadAedPerKg;
+        const finalAedPerSqm = yieldSqmPerKg > 0 ? finalAedPerKg / yieldSqmPerKg : 0;
+        const finalAedPer100Sqm = finalAedPerSqm * 100;
+
+        const pieces = computePiecesPerKg(job, yieldSqmPerKg, warnings);
+        const finalAedPer1000Pc = pieces > 0 ? (finalAedPerKg / pieces) * 1000 : 0;
+
+        const processAedPerSqm = yieldSqmPerKg > 0 ? processCost / yieldSqmPerKg : 0;
+        const baseLayerAed = [0, 1, 2].map(function (idx) {
+          return normalizeNumber(layerDetails[idx] ? layerDetails[idx].costAedPerKg : 0, 0);
+        });
+        const baseLayerUsd = baseLayerAed.map(function (aed) {
+          return fx > 0 ? aed / fx : 0;
+        });
+        const moqPer100Sqm = yieldSqmPerKg > 0 ? moqKg / yieldSqmPerKg : 0;
+        const moqPc = moqKg * pieces;
+
+        return {
+          warnings: warnings,
+          wastePct: safeWastePct,
+          wasteFactor: wasteFactor,
+          fxRate: fx,
+          totalLayerGsm: totalLayerGsm,
+          totalAncillaryDryGsm: totalAncillaryDryGsm,
+          totalGsm: totalGsm,
+          yieldSqmPerKg: yieldSqmPerKg,
+          effectiveYieldSqmPerKg: effectiveYieldSqmPerKg,
+          piecesPerKg: pieces,
+          processCost: processCost,
+          logisticsCost: logisticsCost,
+          profitMode: profitMode,
+          profitValue: profitValue,
+          profitAedPerKg: profitAedPerKg,
+          cylinderSpreadAedPerKg: cylinderSpreadAedPerKg,
+          totalLayerCost: totalLayerCost,
+          totalAncillaryCost: totalAncillaryCost,
+          subTotal: subTotal,
+          finalAedPerKg: finalAedPerKg,
+          finalAedPerSqm: finalAedPerSqm,
+          finalAedPer100Sqm: finalAedPer100Sqm,
+          finalAedPer1000Pc: finalAedPer1000Pc,
+          processAedPerSqm: processAedPerSqm,
+          baseLayerUsd: baseLayerUsd,
+          baseLayerAed: baseLayerAed,
+          solventAedPerKg: solventPriceAed,
+          moqPer100Sqm: moqPer100Sqm,
+          moqPc: moqPc,
+          layerDetails: layerDetails,
+          ancillaryDetails: ancillaryDetails
+        };
+      }
+
+      function computePiecesPerKg(job, yieldSqmPerKg, warnings) {
+        const cutOff = Math.max(normalizeNumber(job.cutOffMm, 0), 0);
+        const width = Math.max(normalizeNumber(job.widthMm, 0), 0);
+
+        if (cutOff <= 0 || width <= 0 || yieldSqmPerKg <= 0) {
+          return 0;
+        }
+
+        const cutOffM = cutOff / 1000;
+        const widthM = width / 1000;
+        const baseAreaPiece = cutOffM * widthM;
+
+        if (baseAreaPiece <= 0) {
+          return 0;
+        }
+
+        if (job.productType === "film_roll") {
+          return yieldSqmPerKg / baseAreaPiece;
+        }
+
+        if (job.productType === "lay_flat_bag") {
+          const areaPiece = cutOffM * (2 * widthM);
+          return areaPiece > 0 ? yieldSqmPerKg / areaPiece : 0;
+        }
+
+        if (job.productType === "pillow_pouch") {
+          const areaPiece = cutOffM * (2 * widthM);
+          return areaPiece > 0 ? yieldSqmPerKg / areaPiece : 0;
+        }
+
+        if (job.productType === "stick_pack" || job.productType === "sachet") {
+          const laneWidthMm = Math.max(normalizeNumber(job.laneWidthMm, 0), 0);
+          if (laneWidthMm <= 0) {
+            warnings.push("Lane width missing for Stick Pack / Sachet. Fallback to single-lane pieces formula.");
+            return yieldSqmPerKg / baseAreaPiece;
+          }
+          const lanes = Math.max(Math.floor(width / laneWidthMm), 1);
+          return yieldSqmPerKg * (lanes / baseAreaPiece);
+        }
+
+        return yieldSqmPerKg / baseAreaPiece;
+      }
+
+      function render() {
+        updateTabButtons();
+
+        if (state.activeTab === "master") {
+          app.innerHTML = renderMasterTab();
+        } else {
+          app.innerHTML = renderCalculatorTab();
+          initGridScrollbars();
+          initColumnResize();
+          window.requestAnimationFrame(function () {
+            initGridScrollbars();
+          });
+        }
+
+        persistState();
+      }
+
+      function initGridScrollbars() {
+        const top = document.getElementById("excelTopScroller");
+        const topInner = document.getElementById("excelTopScrollerInner");
+        const wrap = document.querySelector(".table-wrap.excel-grid");
+        if (!top || !topInner || !wrap) {
+          return;
+        }
+
+        const table = wrap.querySelector("table");
+        if (!table) {
+          return;
+        }
+
+        topInner.style.width = String(table.scrollWidth) + "px";
+        top.scrollLeft = wrap.scrollLeft;
+
+        const syncTopToWrap = function () {
+          wrap.scrollLeft = top.scrollLeft;
+        };
+        const syncWrapToTop = function () {
+          top.scrollLeft = wrap.scrollLeft;
+        };
+
+        top.onscroll = syncTopToWrap;
+        wrap.onscroll = syncWrapToTop;
+      }
+
+      /* ── Column-resize drag handler ── */
+      function initColumnResize() {
+        var handles = document.querySelectorAll('.resize-handle');
+        for (var h = 0; h < handles.length; h++) {
+          (function (handle) {
+            handle.addEventListener('mousedown', function (e) {
+              e.preventDefault();
+              var col = handle.getAttribute('data-col');
+              var startX = e.clientX;
+              var startWidth = getColWidth(col);
+              handle.classList.add('active');
+              document.body.style.cursor = 'col-resize';
+              document.body.style.userSelect = 'none';
+
+              function onMove(ev) {
+                var diff = ev.clientX - startX;
+                var newW = Math.max(30, startWidth + diff);
+                customColWidths[col] = newW;
+                var colEl = document.querySelector("col[data-col='" + col + "']");
+                if (colEl) colEl.style.width = newW + 'px';
+              }
+              function onUp() {
+                handle.classList.remove('active');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                /* re-render to update frozen offsets & scroller */
+                var wrap = document.querySelector('.excel-grid');
+                var sx = wrap ? wrap.scrollLeft : 0;
+                var sy = wrap ? wrap.scrollTop : 0;
+                render();
+                wrap = document.querySelector('.excel-grid');
+                if (wrap) { wrap.scrollLeft = sx; wrap.scrollTop = sy; }
+              }
+              document.addEventListener('mousemove', onMove);
+              document.addEventListener('mouseup', onUp);
+            });
+          })(handles[h]);
+        }
+      }
+
+      function updateTabButtons() {
+        document.getElementById("tabMasterBtn").classList.toggle("active", state.activeTab === "master");
+        document.getElementById("tabCalcBtn").classList.toggle("active", state.activeTab === "calculator");
+      }
+
+      function renderMasterTab() {
+        /* FX Rate — single compact field at the top */
+        var fxHtml = ""
+          + "<div class='ms-row' style='border-bottom:1px solid #ddd'>"
+          + "<div class='ms-field' style='max-width:200px'>"
+          + "<label class='ms-label'>FX Rate (USD → AED)</label>"
+          + "<input class='ms-input' type='number' step='0.0001' value='" + (state.settings.fxRate !== undefined ? escapeHtml(String(state.settings.fxRate)) : '') + "' oninput=\"updateSetting('fxRate', this.value, false)\" />"
+          + "</div>"
+          + "</div>";
+
+        /* Material Library — left panel */
+        var materialsHtml = ""
+          + "<div class='ms-section'>"
+          + "<div class='ms-section-head'>"
+          + "Material Library"
+          + "<button class='btn primary' type='button' onclick='addMaterial()' style='margin-left:12px;padding:2px 10px;font-size:11px'>+ Add</button>"
+          + "</div>"
+          + "<div class='ms-table-wrap'>"
+          + "<table class='ms-table'><thead><tr>"
+          + "<th style='width:28px'>#</th>"
+          + "<th style='min-width:110px'>Name</th>"
+          + "<th style='width:110px'>Density g/cm³</th>"
+          + "<th style='width:110px'>Solid USD/kg</th>"
+          + "<th style='width:44px'></th>"
+          + "</tr></thead><tbody>"
+          + state.materials.map(function (m, i) {
+            return "<tr>"
+              + "<td class='ms-center'>" + (i + 1) + "</td>"
+              + "<td><input value='" + escapeHtml(m.name) + "' oninput=\"updateMaterial(" + i + ",'name', this.value, true)\" /></td>"
+              + "<td><input type='number' step='0.0001' value='" + valueOrBlank(m.density) + "' oninput=\"updateMaterial(" + i + ",'density', this.value, false)\" /></td>"
+              + "<td><input type='number' step='0.0001' value='" + valueOrBlank(m.priceUsd) + "' oninput=\"updateMaterial(" + i + ",'priceUsd', this.value, false)\" /></td>"
+              + "<td class='ms-center'><button class='btn warn' type='button' style='padding:1px 8px;font-size:11px' onclick='removeMaterial(" + i + ")'>✕</button></td>"
+              + "</tr>";
+          }).join("")
+          + "</tbody></table>"
+          + "</div>"
+          + "</div>";
+
+        /* MOQ Pricing Table — right panel */
+        var moqHtml = ""
+          + "<div class='ms-section'>"
+          + "<div class='ms-section-head'>"
+          + "MOQ Pricing Table"
+          + "<button class='btn primary' type='button' onclick='addMoqRow()' style='margin-left:12px;padding:2px 10px;font-size:11px'>+ Add</button>"
+          + "</div>"
+          + "<div class='ms-table-wrap'>"
+          + "<table class='ms-table'><thead><tr>"
+          + "<th style='width:90px'>MOQ KGS</th>"
+          + "<th style='width:80px'>Waste %</th>"
+          + "<th style='width:130px'>Transport AED/Kg</th>"
+          + "<th style='width:110px'>Margin AED/Kg</th>"
+          + "<th style='width:44px'></th>"
+          + "</tr></thead><tbody>"
+          + state.moqTable.map(function (r, i) {
+            return "<tr>"
+              + "<td><input type='number' step='1' value='" + valueOrBlank(r.moqKg) + "' oninput=\"updateMoqRow(" + i + ",'moqKg', this.value)\" /></td>"
+              + "<td><input type='number' step='1' value='" + valueOrBlank(r.wastePct) + "' oninput=\"updateMoqRow(" + i + ",'wastePct', this.value)\" /></td>"
+              + "<td><input type='number' step='0.01' value='" + valueOrBlank(r.transportAed) + "' oninput=\"updateMoqRow(" + i + ",'transportAed', this.value)\" /></td>"
+              + "<td><input type='number' step='0.01' value='" + valueOrBlank(r.marginAed) + "' oninput=\"updateMoqRow(" + i + ",'marginAed', this.value)\" /></td>"
+              + "<td class='ms-center'><button class='btn warn' type='button' style='padding:1px 8px;font-size:11px' onclick='removeMoqRow(" + i + ")'>✕</button></td>"
+              + "</tr>";
+          }).join("")
+          + "</tbody></table>"
+          + "</div>"
+          + "</div>";
+
+        return ""
+          + "<div class='ms-layout'>"
+          + fxHtml
+          + "<div class='ms-panels'>" + materialsHtml + moqHtml + "</div>"
+          + "</div>";
+      }
+
+      function renderCalculatorTab() {
+        const cards = state.jobs.map(function (job, jobIndex) {
+          return renderVerticalJobCard(job, jobIndex);
+        }).join("");
+
+        return ""
+          + "<div style='padding:5px 12px;display:flex;gap:6px;align-items:center;background:#f4f4f4;border-bottom:1px solid #bbb'>"
+          + "<button class='btn primary' type='button' onclick='addJob()'>+ Spec</button>"
+          + "<button class='btn' type='button' onclick='duplicateLastJob()'>Dup Last</button>"
+          + "<button class='btn warn' type='button' onclick='removeLastJob()'>- Last</button>"
+          + "<span style='flex:1'></span>"
+          + "<span style='font-size:11px;color:#666'>Specs: " + state.jobs.length + "</span>"
+          + "</div>"
+          + "<div class='vc-container'>"
+          + (cards || "<p style='padding:20px;color:#666'>No specs. Click <b>+ Spec</b> to begin.</p>")
+          + "</div>";
+      }
+
+      function renderVerticalJobCard(job, jobIndex) {
+        const result = computeUaeRow(job);
+        const layerSlots = [0, 1, 2, 3].map(function (idx) {
+          return job.layers[idx] || { material: "", micron: null };
+        });
+
+        const profitInputValue = job.profitMode === "fixed"
+          ? valueOrBlank(job.profitValue)
+          : (job.profitValue === null ? valueOrBlank(state.settings.defaultProfitValue) : valueOrBlank(job.profitValue));
+
+        const hasWarning = result.warnings.length > 0;
+        const warningTitle = result.warnings.join(" | ");
+
+        /* Helpers for right-panel horizontal fields */
+        function hf(label, content) {
+          return "<div class='vc-hfield'><div class='vc-label'>" + label + "</div>" + content + "</div>";
+        }
+        function hfRead(label, val) {
+          return hf(label, "<div class='vc-read'>" + val + "</div>");
+        }
+
+        return ""
+          /* Card wrapper */
+          + "<div class='vc-card" + (hasWarning ? " vc-warn" : "") + "' title='" + escapeHtml(warningTitle) + "'>"
+
+          /* Header */
+          + "<div class='vc-card-header'>"
+          + "<span>" + escapeHtml(job.jobRef || "New Spec") + "</span>"
+          + "<div class='vc-actions'>"
+          + "<button class='btn' type='button' onclick='duplicateJob(" + jobIndex + ")' title='Duplicate'>&#x2398;</button>"
+          + "<button class='btn warn' type='button' onclick='removeJob(" + jobIndex + ")' title='Delete'>&#x2715;</button>"
+          + "</div>"
+          + "</div>"
+
+          /* ── Two-panel body ── */
+          + "<div class='vc-body'>"
+
+          /* LEFT: all editable inputs */
+          + "<div class='vc-left'>"
+
+          /* Identification */
+          + "<div class='vc-section'>"
+          + "<div class='vc-section-head'>Identification</div>"
+          + "<div class='vc-grid'>"
+          + "<div class='vc-field'><div class='vc-label'>Job Ref</div><input class='vc-input' value='" + escapeHtml(job.jobRef) + "' oninput=\"updateJobField(" + jobIndex + ",'jobRef', this.value, true)\" /></div>"
+          + "<div class='vc-field'><div class='vc-label'>Specs Code</div><input class='vc-input' value='" + escapeHtml(job.specsCode || "") + "' oninput=\"updateJobField(" + jobIndex + ",'specsCode', this.value, true)\" /></div>"
+          + "</div></div>"
+
+          /* Dimensions */
+          + "<div class='vc-section'>"
+          + "<div class='vc-section-head'>Dimensions</div>"
+          + "<div class='vc-grid'>"
+          + "<div class='vc-field'><div class='vc-label'>Width (mm)</div><input class='vc-input' type='number' step='0.01' value='" + valueOrBlank(job.widthMm) + "' oninput=\"updateJobField(" + jobIndex + ",'widthMm', this.value, false, true)\" /></div>"
+          + "<div class='vc-field'><div class='vc-label'>Cutoff (mm)</div><input class='vc-input' type='number' step='0.01' value='" + valueOrBlank(job.cutOffMm) + "' oninput=\"updateJobField(" + jobIndex + ",'cutOffMm', this.value, false, true)\" /></div>"
+          + "<div class='vc-field'><div class='vc-label'>Colors</div><input class='vc-input' type='number' step='1' value='" + valueOrBlank(job.colors) + "' oninput=\"updateJobField(" + jobIndex + ",'colors', this.value, false, true)\" /></div>"
+          + "<div class='vc-field'><div class='vc-label'>UOM</div><input class='vc-input' value='" + escapeHtml(job.uom || "m2") + "' oninput=\"updateJobField(" + jobIndex + ",'uom', this.value, true)\" /></div>"
+          + "</div></div>"
+
+          /* Structure */
+          + "<div class='vc-section'>"
+          + "<div class='vc-section-head'>Structure</div>"
+          + "<div class='vc-layer-grid'>"
+          + "<div class='vc-layer-label'>Layer 1</div>"
+          + "<input class='vc-input' type='number' step='0.01' placeholder='\u00b5m' value='" + valueOrBlank(layerSlots[0].micron) + "' oninput=\"updateLayer(" + jobIndex + ",0,'micron', this.value, false)\" />"
+          + "<select class='vc-select' onchange=\"updateLayer(" + jobIndex + ",0,'material', this.value, true)\">" + renderLayerMaterialOptions(layerSlots[0].material) + "</select>"
+          + "<div class='vc-layer-label'>Layer 2</div>"
+          + "<input class='vc-input' type='number' step='0.01' placeholder='\u00b5m' value='" + valueOrBlank(layerSlots[1].micron) + "' oninput=\"updateLayer(" + jobIndex + ",1,'micron', this.value, false)\" />"
+          + "<select class='vc-select' onchange=\"updateLayer(" + jobIndex + ",1,'material', this.value, true)\">" + renderLayerMaterialOptions(layerSlots[1].material) + "</select>"
+          + "<div class='vc-layer-label'>Layer 3</div>"
+          + "<input class='vc-input' type='number' step='0.01' placeholder='\u00b5m' value='" + valueOrBlank(layerSlots[2].micron) + "' oninput=\"updateLayer(" + jobIndex + ",2,'micron', this.value, false)\" />"
+          + "<select class='vc-select' onchange=\"updateLayer(" + jobIndex + ",2,'material', this.value, true)\">" + renderLayerMaterialOptions(layerSlots[2].material) + "</select>"
+          + "<div class='vc-layer-label'>Layer 4</div>"
+          + "<input class='vc-input' type='number' step='0.01' placeholder='\u00b5m' value='" + valueOrBlank(layerSlots[3].micron) + "' oninput=\"updateLayer(" + jobIndex + ",3,'micron', this.value, false)\" />"
+          + "<select class='vc-select' onchange=\"updateLayer(" + jobIndex + ",3,'material', this.value, true)\">" + renderLayerMaterialOptions(layerSlots[3].material) + "</select>"
+          + "</div></div>"
+
+          /* Consumables */
+          + "<div class='vc-section'>"
+          + "<div class='vc-section-head'>Consumables</div>"
+          + "<div class='vc-grid'>"
+
+          /* Sub-header: Printing Inks */
+          + "<div class='vc-sub-label'>Printing Inks</div>"
+
+          + "<div class='vc-field'>"
+          +   "<div class='vc-label'>Ink (GSM)</div>"
+          +   "<input class='vc-input' type='number' step='0.001' value='" + valueOrBlank(job.ancillaryGsm.colorInk) + "' oninput=\"updateJobAncillary(" + jobIndex + ",'colorInk', this.value)\" />"
+          + "</div>"
+
+          + "<div class='vc-field'>"
+          +   "<div class='vc-label'>Solvent <span class='vc-unit'>kg per kg ink</span></div>"
+          +   "<input class='vc-input' type='number' step='0.01' min='0' value='" + valueOrBlank(job.ancillaryGsm.inkSolventRatio) + "' oninput=\"updateJobAncillary(" + jobIndex + ",'inkSolventRatio', this.value)\" />"
+          +   "<div class='vc-hint'>\u2192 " + toDisplayNumber(result.solventGsm, 3) + " gsm solvent (evaporates in press)</div>"
+          + "</div>"
+
+          /* Sub-header: Lamination */
+          + "<div class='vc-sub-label'>Lamination Adhesive</div>"
+
+          + "<div class='vc-field'>"
+          +   "<div class='vc-label'>Adhesive Type</div>"
+          +   "<select class='vc-select' onchange=\"updateJobAncillarySelect(" + jobIndex + ",'adhesiveType', this.value)\">"
+          +   "<option value='sl'" + (job.ancillaryGsm.adhesiveType !== 'sb' ? ' selected' : '') + ">Solvent-Less (SL)</option>"
+          +   "<option value='sb'" + (job.ancillaryGsm.adhesiveType === 'sb' ? ' selected' : '') + ">Solvent-Based (SB)</option>"
+          +   "</select>"
+          + "</div>"
+
+          + "<div class='vc-field'>"
+          +   "<div class='vc-label'>Adhesive (GSM)</div>"
+          +   "<input class='vc-input' type='number' step='0.001' value='" + valueOrBlank(job.ancillaryGsm.adhesiveGsm) + "' oninput=\"updateJobAncillary(" + jobIndex + ",'adhesiveGsm', this.value)\" />"
+          +   "<div class='vc-hint'>\u2192 " + toDisplayNumber(result.adhesiveGsm, 3) + " gsm stays in laminate</div>"
+          + "</div>"
+
+          + "</div></div>"
+
+          + "</div>" /* end vc-left */
+
+          /* RIGHT: computed outputs */
+          + "<div class='vc-right'>"
+
+          /* GSM Analysis */
+          + "<div class='vc-section'>"
+          + "<div class='vc-section-head'>GSM Analysis</div>"
+          + "<div class='vc-hgrid'>"
+          + hfRead("Layer 1 GSM", toDisplayNumber(result.layer1Gsm, 3))
+          + hfRead("Layer 2 GSM", toDisplayNumber(result.layer2Gsm, 3))
+          + hfRead("Layer 3 GSM", toDisplayNumber(result.layer3Gsm, 3))
+          + hfRead("Layer 4 GSM", toDisplayNumber(result.layer4Gsm, 3))
+          + hfRead("Ink GSM", toDisplayNumber(result.inkGsm, 3))
+          + hfRead("Adhesive GSM", toDisplayNumber(result.adhesiveGsm, 3))
+          + hfRead("Total GSM", toDisplayNumber(result.totalGsm, 3))
+          + hfRead("Yield m\u00b2/kg", toDisplayNumber(result.yieldSqmPerKg, 4))
+          + "</div></div>"
+
+          /* Cost Buildup */
+          + "<div class='vc-section'>"
+          + "<div class='vc-section-head'>Cost Buildup (AED/m\u00b2)</div>"
+          + "<div class='vc-hgrid'>"
+          + hfRead("Layer 1", toDisplayNumber(result.lay1Cost, 4))
+          + hfRead("Layer 2", toDisplayNumber(result.lay2Cost, 4))
+          + hfRead("Layer 3", toDisplayNumber(result.lay3Cost, 4))
+          + hfRead("Layer 4", toDisplayNumber(result.lay4Cost, 4))
+          + hfRead("Ink", toDisplayNumber(result.inkCost, 4))
+          + hfRead("Solvent", toDisplayNumber(result.solventCost, 4))
+          + hfRead("Adhesive", toDisplayNumber(result.adhesiveCost, 4))
+          + hfRead("Total Material", toDisplayNumber(result.totalCostAA, 4))
+          + "</div></div>"
+
+          /* Economics — 5 items in a row */
+          + "<div class='vc-section'>"
+          + "<div class='vc-section-head'>Economics</div>"
+          + "<div class='vc-hgrid'>"
+          + hf("MOQ (kg)", "<input class='vc-input' type='number' step='1' value='" + valueOrBlank(job.moqKg) + "' oninput=\"updateJobField(" + jobIndex + ",'moqKg', this.value, false, true)\" />")
+          + hfRead("MOQ (m\u00b2)", toDisplayNumber(result.moqM2, 0))
+          + hf("Conversion AED/kg", "<input class='vc-input' type='number' step='0.001' value='" + valueOrBlank(job.processCostAedPerKg) + "' oninput=\"updateJobField(" + jobIndex + ",'processCostAedPerKg', this.value, false, true)\" />")
+          + hf("Freight AED/kg", "<input class='vc-input' type='number' step='0.001' value='" + valueOrBlank(job.logisticsCostAedPerKg) + "' oninput=\"updateJobField(" + jobIndex + ",'logisticsCostAedPerKg', this.value, false, true)\" />")
+          + hf("Profit AED/m\u00b2", "<input class='vc-input' type='number' step='0.0001' value='" + profitInputValue + "' oninput=\"setJobFixedProfit(" + jobIndex + ", this.value)\" />")
+          + "</div></div>"
+
+          /* Result bar */
+          + "<div class='vc-result-bar" + (hasWarning ? " has-warning" : "") + "'>"
+          + "<div class='vc-result-item'><div class='vc-result-label'>AED / m\u00b2</div><div class='vc-result-value'>" + toDisplayNumber(result.aedPerM2, 4) + "</div></div>"
+          + "<div class='vc-result-item'><div class='vc-result-label'>AED / kg</div><div class='vc-result-value'>" + toDisplayNumber(result.aedPerKg, 4) + "</div></div>"
+          + "</div>"
+
+          /* Contracts */
+          + "<div class='vc-section'>"
+          + "<div class='vc-section-head'>Contracts</div>"
+          + "<div class='vc-hgrid'>"
+          + hf("Contract 1", "<input class='vc-input' type='number' step='0.001' value='" + valueOrBlank(job.contract1) + "' oninput=\"updateJobField(" + jobIndex + ",'contract1', this.value, false, true)\" />")
+          + hf("Contract 2", "<input class='vc-input' type='number' step='0.001' value='" + valueOrBlank(job.contract2) + "' oninput=\"updateJobField(" + jobIndex + ",'contract2', this.value, false, true)\" />")
+          + "</div></div>"
+
+          + "</div>" /* end vc-right */
+          + "</div>" /* end vc-body */
+          + "</div>"; /* end vc-card */
+      }
+
+      function renderExcelHeaderRows() {
+        var fo = getFrozenOffsets();
+
+        /* Row 11: group header with merged spans */
+        var groupRow = "<tr class='group-row'>"
+          + "<th class='frozen' style='" + frozenCellStyle('A', fo, true) + "background:#d9e2f3'></th>"
+          + "<th class='frozen' style='" + frozenCellStyle('B', fo, true) + "background:#d9e2f3'></th>"
+          + "<th class='frozen' colspan='2' style='" + frozenGroupStyle('C', 'D', fo) + "background:#d9e2f3'>Reel form</th>"
+          + "<th class='col-hidden' colspan='4'>Pouch</th>"
+          + "<th class='frozen' style='" + frozenCellStyle('I', fo, true) + "background:#d9e2f3'></th>"
+          + "<th class='frozen' colspan='2' style='" + frozenGroupStyle('J', 'K', fo) + "background:#d9e2f3'>Layer 1</th>"
+          + "<th class='frozen' colspan='2' style='" + frozenGroupStyle('L', 'M', fo) + "background:#d9e2f3'>Layer 2</th>"
+          + "<th class='frozen frozen-last' colspan='2' style='" + frozenGroupStyle('N', 'O', fo) + "background:#d9e2f3'>Layer 3</th>"
+          + "<th colspan='7'>GSM</th>"
+          + "<th colspan='5' class='group-aed'>AED/m2</th>"
+          + "<th colspan='2'></th>"
+          + "<th colspan='3'></th>"
+          + "<th></th>"
+          + "<th colspan='2'></th>"
+          + "<th colspan='2'></th>"
+          + "<th></th>"
+          + "</tr>";
+
+        /* Row 12: individual column titles with resize handles */
+        var VISIBLE_COLS = [
+          "A","B","C","D","I",
+          "J","K","L","M","N","O",
+          "P","Q","R","S","T","U","V",
+          "W","X","Y","Z","AA",
+          "AB","AC","AD","AE","AF","AG","AH","AI","AJ","AK"
+        ];
+        var titleRow = "<tr class='title-row'>"
+          + VISIBLE_COLS.map(function (letter) {
+            var title = UAE_COLUMN_TITLES[letter] || "";
+            var fs = frozenCellStyle(letter, fo, true);
+            var isFrozen = fs.length > 0;
+            var isLast = false;
+            for (var fi = 0; fi < fo.length; fi++) { if (fo[fi].letter === letter && fo[fi].isLast) isLast = true; }
+            var cls = (isFrozen ? 'frozen' : '') + (isLast ? ' frozen-last' : '');
+            var bg = isFrozen ? 'background:#e2efda;' : '';
+            return "<th class='" + cls + "' style='" + fs + bg + "'>"
+              + escapeHtml(title)
+              + "<div class='resize-handle' data-col='" + letter + "'></div>"
+              + "</th>";
+          }).join("")
+          + "<th style='min-width:60px'></th>"
+          + "</tr>";
+
+        return groupRow + titleRow;
+      }
+
+      function renderExcelColGroup() {
+        var HIDDEN = { E: true, F: true, G: true, H: true, AL: true, AM: true };
+        var VISIBLE = UAE_COLUMN_LETTERS.filter(function (l) { return !HIDDEN[l]; });
+        var cols = VISIBLE.map(function (letter) {
+          var px = getColWidth(letter);
+          return "<col data-col='" + letter + "' style='width:" + px + "px'>";
+        }).join("");
+        return "<colgroup>" + cols + "<col data-col='_action' style='width:60px'></colgroup>";
+      }
+
+      function renderMaterialOptions(selectedValue) {
+        const blank = "<option value=''" + (!selectedValue ? " selected" : "") + "></option>";
+        const items = state.materials.map(function (material) {
+          return "<option value='" + escapeHtml(material.name) + "'"
+            + (material.name === selectedValue ? " selected" : "")
+            + ">" + escapeHtml(material.name) + "</option>";
+        }).join("");
+        return blank + items;
+      }
+
+      /* Layer dropdowns — substrate films only, consumables excluded */
+      function renderLayerMaterialOptions(selectedValue) {
+        var consumables = ["Inks", "Solvent", "Adhesive SL", "Adhesive SB"];
+        var blank = "<option value=''" + (!selectedValue ? " selected" : "") + "></option>";
+        var items = state.materials
+          .filter(function (m) { return consumables.indexOf(m.name) === -1; })
+          .map(function (material) {
+            return "<option value='" + escapeHtml(material.name) + "'"
+              + (material.name === selectedValue ? " selected" : "")
+              + ">" + escapeHtml(material.name) + "</option>";
+          }).join("");
+        return blank + items;
+      }
+
+      function computeUaeRow(job) {
+        const fx = Math.max(normalizeNumber(state.settings.fxRate, 3.7), 0);
+        const materialMap = getMaterialMap();
+        const warnings = [];
+
+        /* 4 layers */
+        const layers = [0, 1, 2, 3].map(function (idx) {
+          return job.layers[idx] || { material: "", micron: null };
+        });
+
+        const layerValues = layers.map(function (layer, idx) {
+          if (!layer.material) return { gsm: 0, cost: 0 };
+          const material = resolveMaterial(layer.material, materialMap);
+          const density = material && material.density !== null ? Math.max(normalizeNumber(material.density, 0), 0) : null;
+          const priceUsd = material && material.priceUsd !== null ? Math.max(normalizeNumber(material.priceUsd, 0), 0) : null;
+          const micron = Math.max(normalizeNumber(layer.micron, 0), 0);
+          const gsm = density !== null && micron > 0 ? micron * density : 0;
+          const priceAed = priceUsd !== null ? priceUsd * fx : 0;
+          const cost = (gsm * priceAed) / 1000;
+          if (!material) warnings.push("Layer " + (idx + 1) + " not found: " + layer.material);
+          return { gsm, cost };
+        });
+
+        /* Ancillary — costs computed from material library */
+        const anc = job.ancillaryGsm || {};
+        const inkGsm        = Math.max(normalizeNumber(anc.colorInk, 0), 0);
+        const inkRatio       = Math.max(normalizeNumber(anc.inkSolventRatio !== undefined ? anc.inkSolventRatio : 2.0, 0), 0);
+        const solventGsm     = inkGsm * inkRatio;           /* evaporates — cost only, not weight */
+        const adhesiveGsm    = Math.max(normalizeNumber(anc.adhesiveGsm !== undefined ? anc.adhesiveGsm : ((anc.adhesiveSl || 0)), 0), 0);
+        const adhesiveType   = anc.adhesiveType || "sl";    /* "sl" = solvent-less, "sb" = solvent-based */
+
+        /* Look up consumable material prices */
+        function matPrice(nameHint) {
+          var m = resolveMaterial(nameHint, materialMap);
+          return m && m.priceUsd !== null ? Math.max(normalizeNumber(m.priceUsd, 0), 0) * fx : 0;
+        }
+        const inkPriceAed      = matPrice("Inks");
+        const solventPriceAed  = matPrice("Solvent");
+        const adhMat           = adhesiveType === "sb" ? "Adhesive SB" : "Adhesive SL";
+        const adhPriceAed      = matPrice(adhMat);
+
+        const inkCost      = (inkGsm      / 1000) * inkPriceAed;
+        const solventCost  = (solventGsm  / 1000) * solventPriceAed;
+        const adhesiveCost = (adhesiveGsm / 1000) * adhPriceAed;
+        const inkAdhCost   = inkCost + solventCost + adhesiveCost;
+
+        /* Weight (solvent evaporates — not in final film weight) */
+        const totalLayerGsm = layerValues[0].gsm + layerValues[1].gsm + layerValues[2].gsm + layerValues[3].gsm;
+        const totalGsm = totalLayerGsm + inkGsm + adhesiveGsm;
+        const yieldSqmPerKg = totalGsm > 0 ? 1000 / totalGsm : 0;
+
+        const totalLayerCost = layerValues[0].cost + layerValues[1].cost + layerValues[2].cost + layerValues[3].cost;
+        const totalCostAA = totalLayerCost + inkAdhCost;
+
+        const moqKg = Math.max(normalizeNumber(job.moqKg, 0), 0);
+        const moqM2 = yieldSqmPerKg > 0 ? moqKg / yieldSqmPerKg : 0;
+
+        const conversion = job.processCostAedPerKg === null
+          ? Math.max(normalizeNumber(state.settings.defaultProcessAedPerKg, 0), 0)
+          : Math.max(normalizeNumber(job.processCostAedPerKg, 0), 0);
+
+        const freight = job.logisticsCostAedPerKg === null
+          ? Math.max(normalizeNumber(state.settings.defaultLogisticsAedPerKg, 0), 0)
+          : Math.max(normalizeNumber(job.logisticsCostAedPerKg, 0), 0);
+
+        const baseProfit = job.profitValue === null
+          ? Math.max(normalizeNumber(state.settings.defaultProfitValue, 0), 0)
+          : Math.max(normalizeNumber(job.profitValue, 0), 0);
+
+        const profit = job.profitMode === "percent"
+          ? ((conversion + totalCostAA + freight) * baseProfit) / 100
+          : baseProfit;
+
+        const aedPerM2 = yieldSqmPerKg > 0 ? (conversion + totalCostAA + freight + profit) / yieldSqmPerKg : 0;
+        const aedPerKg = totalGsm > 0 ? (aedPerM2 * 1000) / totalGsm : 0;
+
+        return {
+          warnings,
+          layer1Gsm: layerValues[0].gsm,
+          layer2Gsm: layerValues[1].gsm,
+          layer3Gsm: layerValues[2].gsm,
+          layer4Gsm: layerValues[3].gsm,
+          inkGsm, solventGsm, adhesiveGsm,
+          totalGsm, yieldSqmPerKg,
+          lay1Cost: layerValues[0].cost,
+          lay2Cost: layerValues[1].cost,
+          lay3Cost: layerValues[2].cost,
+          lay4Cost: layerValues[3].cost,
+          inkCost, solventCost, adhesiveCost, inkAdhCost,
+          totalCostAA, moqM2, conversion, freight, profit, aedPerM2, aedPerKg
+        };
+      }
+
+      function renderExcelJobRow(job, jobIndex) {
+        const result = computeUaeRow(job);
+        const layerSlots = [0, 1, 2].map(function (idx) {
+          return job.layers[idx] || { material: "", micron: null };
+        });
+
+        const rowWarnings = result.warnings.join(" | ");
+        const rowClass = rowWarnings ? "excel-row warn" : "excel-row";
+
+        const profitInputValue = job.profitMode === "fixed"
+          ? valueOrBlank(job.profitValue)
+          : (job.profitValue === null ? valueOrBlank(state.settings.defaultProfitValue) : valueOrBlank(job.profitValue));
+
+        const fo = getFrozenOffsets();
+        const bg = rowWarnings ? '#fff3cd' : '#fff';
+
+        function fz(letter) {
+          var s = frozenCellStyle(letter, fo, false);
+          return s ? s + 'background:' + bg + ';' : '';
+        }
+        function fzCls(letter) {
+          for (var i = 0; i < fo.length; i++) {
+            if (fo[i].letter === letter) return 'frozen' + (fo[i].isLast ? ' frozen-last' : '');
+          }
+          return '';
+        }
+
+        const rowAction = ""
+          + "<td class='excel-actions'>"
+          + "<div class='action-buttons'>"
+          + "<button class='btn' type='button' onclick='duplicateJob(" + jobIndex + ")' title='Duplicate'>&#x2398;</button>"
+          + "<button class='btn warn' type='button' onclick='removeJob(" + jobIndex + ")' title='Delete'>&#x2715;</button>"
+          + "</div>"
+          + (rowWarnings ? "<span class='sheet-warning' title='" + escapeHtml(rowWarnings) + "'>&#x26A0;</span>" : "")
+          + "</td>";
+
+        return ""
+          + "<tr class='" + rowClass + "' title='" + escapeHtml(rowWarnings) + "'>"
+          + "<td class='" + fzCls('A') + "' style='" + fz('A') + "'><input value='" + escapeHtml(job.jobRef) + "' oninput=\"updateJobField(" + jobIndex + ",'jobRef', this.value, true)\" /></td>"
+          + "<td class='" + fzCls('B') + "' style='" + fz('B') + "'><input value='" + escapeHtml(job.specsCode || "") + "' oninput=\"updateJobField(" + jobIndex + ",'specsCode', this.value, true)\" /></td>"
+          + "<td class='" + fzCls('C') + "' style='" + fz('C') + "'><input type='number' step='0.01' value='" + valueOrBlank(job.widthMm) + "' oninput=\"updateJobField(" + jobIndex + ",'widthMm', this.value, false, true)\" /></td>"
+          + "<td class='" + fzCls('D') + "' style='" + fz('D') + "'><input type='number' step='0.01' value='" + valueOrBlank(job.cutOffMm) + "' oninput=\"updateJobField(" + jobIndex + ",'cutOffMm', this.value, false, true)\" /></td>"
+          /* E-H hidden */
+          + "<td class='" + fzCls('I') + "' style='" + fz('I') + "'><input type='number' step='1' value='" + valueOrBlank(job.colors) + "' oninput=\"updateJobField(" + jobIndex + ",'colors', this.value, false, true)\" /></td>"
+          + "<td class='" + fzCls('J') + "' style='" + fz('J') + "'><input type='number' step='0.01' value='" + valueOrBlank(layerSlots[0].micron) + "' oninput=\"updateLayer(" + jobIndex + ",0,'micron', this.value, false)\" /></td>"
+          + "<td class='" + fzCls('K') + "' style='" + fz('K') + "'><select onchange=\"updateLayer(" + jobIndex + ",0,'material', this.value, true)\">" + renderMaterialOptions(layerSlots[0].material) + "</select></td>"
+          + "<td class='" + fzCls('L') + "' style='" + fz('L') + "'><input type='number' step='0.01' value='" + valueOrBlank(layerSlots[1].micron) + "' oninput=\"updateLayer(" + jobIndex + ",1,'micron', this.value, false)\" /></td>"
+          + "<td class='" + fzCls('M') + "' style='" + fz('M') + "'><select onchange=\"updateLayer(" + jobIndex + ",1,'material', this.value, true)\">" + renderMaterialOptions(layerSlots[1].material) + "</select></td>"
+          + "<td class='" + fzCls('N') + "' style='" + fz('N') + "'><input type='number' step='0.01' value='" + valueOrBlank(layerSlots[2].micron) + "' oninput=\"updateLayer(" + jobIndex + ",2,'micron', this.value, false)\" /></td>"
+          + "<td class='" + fzCls('O') + "' style='" + fz('O') + "'><select onchange=\"updateLayer(" + jobIndex + ",2,'material', this.value, true)\">" + renderMaterialOptions(layerSlots[2].material) + "</select></td>"
+          + "<td class='excel-read'>" + toDisplayNumber(result.layer1Gsm, 3) + "</td>"
+          + "<td class='excel-read'>" + toDisplayNumber(result.layer2Gsm, 3) + "</td>"
+          + "<td class='excel-read'>" + toDisplayNumber(result.layer3Gsm, 3) + "</td>"
+          + "<td><input type='number' step='0.001' value='" + valueOrBlank(job.ancillaryGsm.colorInk) + "' oninput=\"updateJobAncillary(" + jobIndex + ",'colorInk', this.value)\" /></td>"
+          + "<td><input type='number' step='0.001' value='" + valueOrBlank(job.ancillaryGsm.adhesiveGsm) + "' oninput=\"updateJobAncillary(" + jobIndex + ",'adhesiveGsm', this.value)\" /></td>"
+          + "<td class='excel-read'>" + toDisplayNumber(result.totalGsm, 3) + "</td>"
+          + "<td class='excel-read'>" + toDisplayNumber(result.yieldSqmPerKg, 4) + "</td>"
+          + "<td class='excel-read'>" + toDisplayNumber(result.lay1Cost, 4) + "</td>"
+          + "<td class='excel-read'>" + toDisplayNumber(result.lay2Cost, 4) + "</td>"
+          + "<td class='excel-read'>" + toDisplayNumber(result.lay3Cost, 4) + "</td>"
+          + "<td><input type='number' step='0.001' value='" + valueOrBlank(job.ancillaryGsm.inkSolventRatio) + "' oninput=\"updateJobAncillary(" + jobIndex + ",'inkSolventRatio', this.value)\" /></td>"
+          + "<td class='excel-read'>" + toDisplayNumber(result.inkAdhCost, 4) + "</td>"
+          + "<td class='excel-read'>" + toDisplayNumber(result.totalCostAA, 4) + "</td>"
+          + "<td><input type='number' step='0.01' value='" + valueOrBlank(job.moqKg) + "' oninput=\"updateJobField(" + jobIndex + ",'moqKg', this.value, false, true)\" /></td>"
+          + "<td class='excel-read'>" + toDisplayNumber(result.moqM2, 4) + "</td>"
+          + "<td><input type='number' step='0.001' value='" + valueOrBlank(job.processCostAedPerKg) + "' oninput=\"updateJobField(" + jobIndex + ",'processCostAedPerKg', this.value, false, true)\" /></td>"
+          + "<td><input type='number' step='0.001' value='" + valueOrBlank(job.logisticsCostAedPerKg) + "' oninput=\"updateJobField(" + jobIndex + ",'logisticsCostAedPerKg', this.value, false, true)\" /></td>"
+          + "<td><input type='number' step='0.001' value='" + profitInputValue + "' oninput=\"setJobFixedProfit(" + jobIndex + ", this.value)\" /></td>"
+          + "<td><input value='" + escapeHtml(job.uom || "m2") + "' oninput=\"updateJobField(" + jobIndex + ",'uom', this.value, true)\" style='width:30px' /></td>"
+          + "<td class='excel-read'>" + toDisplayNumber(result.aedPerM2, 4) + "</td>"
+          + "<td class='excel-read'>" + toDisplayNumber(result.aedPerKg, 4) + "</td>"
+          + "<td><input type='number' step='0.001' value='" + valueOrBlank(job.contract1) + "' oninput=\"updateJobField(" + jobIndex + ",'contract1', this.value, false, true)\" /></td>"
+          + "<td><input type='number' step='0.001' value='" + valueOrBlank(job.contract2) + "' oninput=\"updateJobField(" + jobIndex + ",'contract2', this.value, false, true)\" /></td>"
+          + rowAction
+          + "</tr>";
+      }
+
+      function renderMetric(label, value, type) {
+        return "<div class='metric " + (type || "") + "'><span class='label'>" + escapeHtml(label) + "</span><span class='value'>" + escapeHtml(value) + "</span></div>";
+      }
+
+      function renderTextField(label, id, value, handler) {
+        return "<div class='field'><label for='" + escapeHtml(id) + "'>" + escapeHtml(label) + "</label><input id='" + escapeHtml(id) + "' value='" + escapeHtml(value || "") + "' oninput=\"" + handler + "\" /></div>";
+      }
+
+      function renderNumberField(label, id, value, handler) {
+        return "<div class='field'><label for='" + escapeHtml(id) + "'>" + escapeHtml(label) + "</label><input id='" + escapeHtml(id) + "' type='number' step='0.0001' value='" + valueOrBlank(value) + "' oninput=\"" + handler + "\" /></div>";
+      }
+
+      function updateSetting(field, value, asText) {
+        if (asText) {
+          state.settings[field] = value;
+        } else {
+          state.settings[field] = normalizeNumber(value, 0);
+        }
+        render();
+      }
+
+      function updateSolvent(field, value) {
+        state.solvent[field] = normalizeNumber(value, 0);
+        render();
+      }
+
+      function updateMaterial(index, field, value, asText) {
+        const material = state.materials[index];
+        if (!material) {
+          return;
+        }
+        if (asText) {
+          material[field] = value;
+        } else {
+          material[field] = normalizeNullableNumber(value);
+        }
+        render();
+      }
+
+      function toggleMaterialVerify(index) {
+        const material = state.materials[index];
+        if (!material) {
+          return;
+        }
+        material.verifyDensity = !material.verifyDensity;
+        render();
+      }
+
+      function addMaterial() {
+        state.materials.push({
+          name: "NEW MATERIAL",
+          density: null,
+          priceUsd: null,
+          solidPct: 100
+        });
+        render();
+      }
+
+      function removeMaterial(index) {
+        state.materials.splice(index, 1);
+        render();
+      }
+
+      function updateMoqRow(rowIndex, key, value) {
+        var row = state.moqTable[rowIndex];
+        if (!row) { return; }
+        var v = parseFloat(value);
+        row[key] = isNaN(v) ? 0 : v;
+        persistState();
+      }
+
+      function addMoqRow() {
+        state.moqTable.push({ moqKg: 0, wastePct: 0, transportAed: 0, marginAed: 0 });
+        render();
+      }
+
+      function removeMoqRow(rowIndex) {
+        state.moqTable.splice(rowIndex, 1);
+        render();
+      }
+
+      function updateAncillary(index, field, value, asText) {
+        const anc = state.ancillaries[index];
+        if (!anc) {
+          return;
+        }
+        if (asText) {
+          if (field === "solventLinked") {
+            anc[field] = value === "true";
+          } else {
+            anc[field] = value;
+          }
+        } else {
+          anc[field] = normalizeNumber(value, 0);
+        }
+        render();
+      }
+
+      function addJob() {
+        state.jobs.push({
+          sheetMaterial: state.materials[0] ? state.materials[0].name : "",
+          jobRef: "",
+          customer: "",
+          specsCode: "",
+          description: "",
+          productType: "film_roll",
+          cutOffMm: null,
+          widthMm: null,
+          pouchWidthMm: null,
+          pouchHeightMm: null,
+          gussetMm: null,
+          areaPer1kpc: null,
+          laneWidthMm: null,
+          perValue: 1,
+          uom: "m2",
+          colors: null,
+          wastagePct: 0,
+          moqKg: null,
+          processCostAedPerKg: null,
+          logisticsCostAedPerKg: null,
+          profitMode: "fixed",
+          profitValue: null,
+          inkSolventRatio: null,
+          cylinderCostPerColorAed: 0,
+          contract1: null,
+          contract2: null,
+          layers: [
+            { material: state.materials[0] ? state.materials[0].name : "", micron: null },
+            { material: "", micron: null },
+            { material: "", micron: null },
+            { material: "", micron: null }
+          ],
+          ancillaryGsm: {
+            colorInk: 0,
+            inkSolventRatio: 2.0,
+            adhesiveGsm: 0,
+            adhesiveType: "sl"
+          }
+        });
+        render();
+      }
+
+      function duplicateLastJob() {
+        if (!state.jobs.length) {
+          return;
+        }
+        duplicateJob(state.jobs.length - 1);
+      }
+
+      function removeLastJob() {
+        if (!state.jobs.length) {
+          return;
+        }
+        removeJob(state.jobs.length - 1);
+      }
+
+      function duplicateJob(index) {
+        const source = state.jobs[index];
+        if (!source) {
+          return;
+        }
+        const copy = clone(source);
+        copy.description = (copy.description || "Job") + " (Copy)";
+        state.jobs.splice(index + 1, 0, copy);
+        render();
+      }
+
+      function removeJob(index) {
+        if (!window.confirm("Delete this job row?")) {
+          return;
+        }
+        state.jobs.splice(index, 1);
+        render();
+      }
+
+      function updateJobField(jobIndex, field, value, asText, nullable) {
+        const job = state.jobs[jobIndex];
+        if (!job) {
+          return;
+        }
+
+        if (asText) {
+          if (nullable && value === "") {
+            job[field] = null;
+          } else {
+            job[field] = value;
+          }
+        } else {
+          if (nullable && String(value).trim() === "") {
+            job[field] = null;
+          } else {
+            job[field] = normalizeNumber(value, 0);
+          }
+        }
+        render();
+      }
+
+      function setJobFixedProfit(jobIndex, value) {
+        const job = state.jobs[jobIndex];
+        if (!job) {
+          return;
+        }
+        job.profitMode = "fixed";
+        if (String(value).trim() === "") {
+          job.profitValue = null;
+        } else {
+          job.profitValue = normalizeNumber(value, 0);
+        }
+        render();
+      }
+
+      function addLayer(jobIndex) {
+        const job = state.jobs[jobIndex];
+        if (!job || job.layers.length >= 4) {
+          return;
+        }
+        job.layers.push({ material: state.materials[0] ? state.materials[0].name : "", micron: null });
+        render();
+      }
+
+      function removeLayer(jobIndex, layerIndex) {
+        const job = state.jobs[jobIndex];
+        if (!job) {
+          return;
+        }
+        if (job.layers.length <= 1) {
+          return;
+        }
+        job.layers.splice(layerIndex, 1);
+        render();
+      }
+
+      function updateLayer(jobIndex, layerIndex, field, value, asText) {
+        const job = state.jobs[jobIndex];
+        if (!job) {
+          return;
+        }
+
+        while (job.layers.length <= layerIndex && job.layers.length < 4) {
+          job.layers.push({ material: "", micron: null });
+        }
+
+        if (!job.layers[layerIndex]) {
+          return;
+        }
+
+        if (asText) {
+          job.layers[layerIndex][field] = value;
+        } else {
+          job.layers[layerIndex][field] = normalizeNullableNumber(value);
+        }
+        render();
+      }
+
+      function updateJobAncillary(jobIndex, key, value) {
+        const job = state.jobs[jobIndex];
+        if (!job || !job.ancillaryGsm) {
+          return;
+        }
+        job.ancillaryGsm[key] = normalizeNumber(value, 0);
+        render();
+      }
+
+      function updateJobAncillarySelect(jobIndex, key, value) {
+        const job = state.jobs[jobIndex];
+        if (!job || !job.ancillaryGsm) {
+          return;
+        }
+        job.ancillaryGsm[key] = value;
+        render();
+      }
+
+      function downloadStateJson() {
+        const filename = "Interplast_FP_Costing_State_" + timestampForFilename() + ".json";
+        const json = JSON.stringify(state, null, 2);
+        downloadBlob(filename, json, "application/json;charset=utf-8");
+      }
+
+      function importStateJson(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function () {
+          try {
+            const parsed = JSON.parse(String(reader.result || "{}"));
+            state = normalizeState(parsed);
+            render();
+            alert("State loaded successfully.");
+          } catch (error) {
+            alert("Failed to load JSON state file. Please verify file content.");
+          }
+          stateImportInput.value = "";
+        };
+        reader.readAsText(file);
+      }
+
+      function exportJobsCsv() {
+        const headers = [
+          "Specs",
+          "10 Digit",
+          "Width",
+          "Cutoff",
+          "Colors",
+          "Mic1",
+          "Mat1",
+          "Mic2",
+          "Mat2",
+          "Mic3",
+          "Mat3",
+          "Layer1",
+          "Layer2",
+          "Layer3",
+          "Ink",
+          "Adhesive",
+          "Total GSM",
+          "Yield",
+          "lay1",
+          "lay2",
+          "lay3",
+          "Ink+Adhesive",
+          "Total",
+          "MOQ kg",
+          "MOQ M2",
+          "Conversion",
+          "Freight",
+          "Profit",
+          "UOM",
+          "AED/m2",
+          "AED/kg"
+        ];
+
+        const rows = state.jobs.map(function (job) {
+          const result = computeUaeRow(job);
+          const layer1 = job.layers[0] || { micron: null, material: "" };
+          const layer2 = job.layers[1] || { micron: null, material: "" };
+          const layer3 = job.layers[2] || { micron: null, material: "" };
+          return [
+            job.jobRef || "",
+            job.specsCode || "",
+            job.widthMm,
+            job.cutOffMm,
+            job.colors,
+            layer1.micron,
+            layer1.material,
+            layer2.micron,
+            layer2.material,
+            layer3.micron,
+            layer3.material,
+            result.layer1Gsm,
+            result.layer2Gsm,
+            result.layer3Gsm,
+            job.ancillaryGsm.colorInk,
+            job.ancillaryGsm.adhesiveGsm,
+            result.totalGsm,
+            result.yieldSqmPerKg,
+            result.lay1Cost,
+            result.lay2Cost,
+            result.lay3Cost,
+            job.ancillaryGsm.inkSolventRatio,
+            result.inkAdhCost,
+            result.totalCostAA,
+            job.moqKg,
+            result.moqM2,
+            result.conversion,
+            result.freight,
+            result.profit,
+            job.uom,
+            result.aedPerM2,
+            result.aedPerKg
+          ];
+        });
+
+        const csv = [headers]
+          .concat(rows)
+          .map(function (row) {
+            return row.map(csvEscape).join(",");
+          })
+          .join("\n");
+
+        const filename = "Interplast_FP_Costing_" + timestampForFilename() + ".csv";
+        downloadBlob(filename, csv, "text/csv;charset=utf-8");
+      }
+
+      function saveHtmlCopy() {
+        const embedJson = JSON.stringify(state).replace(/</g, "\\u003c");
+        const embeddedTagPattern = new RegExp("<script id=\\\"embedded-state\\\" type=\\\"application/json\\\">[\\\\s\\\\S]*?<\\\\/script>");
+        const openTag = "<script id=\"embedded-state\" type=\"application/json\">";
+        const closeTag = "<" + "/script>";
+        const html = document.documentElement.outerHTML.replace(
+          embeddedTagPattern,
+          openTag + embedJson + closeTag
+        );
+
+        const filename = "Interplast_FP_Costing_Calculator_" + timestampForFilename() + ".html";
+        downloadBlob(filename, "<!DOCTYPE html>\n" + html, "text/html;charset=utf-8");
+      }
+
+      function resetDefaults() {
+        if (!window.confirm("Reset calculator to Excel-based defaults?")) {
+          return;
+        }
+        state = normalizeState(clone(DEFAULT_STATE));
+        render();
+      }
+
+      function timestampForFilename() {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        const hh = String(now.getHours()).padStart(2, "0");
+        const min = String(now.getMinutes()).padStart(2, "0");
+        return yyyy + mm + dd + "_" + hh + min;
+      }
+
+      function downloadBlob(filename, content, type) {
+        const blob = new Blob([content], { type: type });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+      }
+
+      function csvEscape(value) {
+        const raw = value === null || typeof value === "undefined" ? "" : String(value);
+        if (raw.includes(",") || raw.includes("\"") || raw.includes("\n")) {
+          return "\"" + raw.replace(/\"/g, "\"\"") + "\"";
+        }
+        return raw;
+      }
+    })();
+  </script>
+</body>
+</html>

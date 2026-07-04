@@ -1,6 +1,15 @@
 # SESSION LOG — Estimation Studio
 
 | DATE | AGENT | Summary | Files | Tech debt |
+| 2026-07-04 | Cursor | **Plan triage** Claude final: per-slab amortize gate (§0.4.1), PKG- prefix, visibility, empty-DB verify; reject backfill supersedes. | MULTI_SKU_QUOTE_EXPLORER_PLAN.md §14.3 | Engine fix before P3 price list |
+| 2026-07-04 | Cursor | **Plan triage** 2nd commentary: FX boundary, Contrib guard, Phase 3a–d, D9 whole-quote re-quote P5; reject optimistic concurrency. | MULTI_SKU_QUOTE_EXPLORER_PLAN.md §14.2 | — |
+| 2026-07-04 | Cursor | **Plan triage** external commentary: adopt sent-lock (P4), quote-ref priority, amortize=order qty; reject live color sync & bulk API. | MULTI_SKU_QUOTE_EXPLORER_PLAN.md §14.1 | — |
+| 2026-07-04 | Cursor | **Plan self-review** §14 (ready Phase 1); personal skill `/consul` for multi-agent consults. | MULTI_SKU_QUOTE_EXPLORER_PLAN.md, ~/.cursor/skills/consul | Implement Phase 1 or /consul |
+| 2026-07-04 | Cursor | **Plan amend:** Contrib. cost on layer build-up (not structure table); µ/gsm in chart; table width/header polish only. | MULTI_SKU_QUOTE_EXPLORER_PLAN.md, ES_MEMORY, SESSION_LOG | Implement Phase 1 next |
+| 2026-07-04 | Cursor | **Plan amend:** structure **Contrib. /kg** column (not “In film”), double-row headers, `xxx.xx` widths. | MULTI_SKU_QUOTE_EXPLORER_PLAN.md, ES_MEMORY, SESSION_LOG | superseded |
+| 2026-07-04 | Cursor | **Plan amend:** Interplast gaps — colors×cost/color, billing amortized/separate/not billed, specs code, solid-% RM hover; no Contract prices. | MULTI_SKU_QUOTE_EXPLORER_PLAN.md, ES_MEMORY, LIVE_STATE, SESSION_LOG | Implement Phase 1 next |
+| 2026-07-04 | Cursor | **Plan amend:** peer CPQ review adopted — Quote vs Estimate (no Line), commercial on quote, richer explorer/rail/price list, future RFQ/versioning/search hooks. | MULTI_SKU_QUOTE_EXPLORER_PLAN.md, ES_MEMORY, LIVE_STATE, SESSION_LOG | Implement Phase 1 next |
+| 2026-07-04 | Cursor | **Plan:** multi-SKU quotes + Estimates customer-folder explorer (agent-ready impl doc). No code. | MULTI_SKU_QUOTE_EXPLORER_PLAN.md, ES_MEMORY, LIVE_STATE, SESSION_LOG | Implement Phase 1 next |
 | 2026-07-04 | Cursor | **Estimate editor:** removed Costs & Terms tab (markup/margin from Settings only). | EstimateEditor.tsx, docs/* | — |
 | 2026-07-04 | Cursor | **Bag first-class:** stop bag→pouch collapse; APIs/seeds/Commercial Items → `bag` + `bag_making`; CoRM shows Bag label. | productCatalog, master-data-normalize, templates APIs, seeds, 0013, MasterData, docs/* | RUN-ES / db:patch applies data fix |
 | 2026-07-04 | Cursor | **Platform Master tab:** renamed Templates → CoRM (Settings copy updated). | MasterData.tsx, Settings.tsx | — |

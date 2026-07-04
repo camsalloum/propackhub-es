@@ -360,7 +360,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_classfilterpanel",
-      "community": 21,
+      "community": 26,
       "norm_label": "classfilterpanel.tsx"
     },
     {
@@ -370,7 +370,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "components_classfilterpanel_empty_class_filter",
-      "community": 21,
+      "community": 26,
       "norm_label": "empty_class_filter"
     },
     {
@@ -380,7 +380,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "components_classfilterpanel_class_filter_rows",
-      "community": 21,
+      "community": 26,
       "norm_label": "class_filter_rows"
     },
     {
@@ -390,7 +390,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "components_classfilterpanel_filterchip",
-      "community": 21,
+      "community": 26,
       "norm_label": "filterchip()"
     },
     {
@@ -400,7 +400,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "components_classfilterpanel_filtercell",
-      "community": 21,
+      "community": 26,
       "norm_label": "filtercell()"
     },
     {
@@ -410,7 +410,7 @@
       "source_location": "L72",
       "_origin": "ast",
       "id": "components_classfilterpanel_classfilterpanelprops",
-      "community": 21,
+      "community": 26,
       "norm_label": "classfilterpanelprops"
     },
     {
@@ -420,7 +420,7 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "components_classfilterpanel_classfilterpanel",
-      "community": 21,
+      "community": 26,
       "norm_label": "classfilterpanel()"
     },
     {
@@ -500,7 +500,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_emptystate",
-      "community": 21,
+      "community": 27,
       "norm_label": "emptystate.tsx"
     },
     {
@@ -510,7 +510,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "components_emptystate_emptystateprops",
-      "community": 21,
+      "community": 27,
       "norm_label": "emptystateprops"
     },
     {
@@ -520,7 +520,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "components_emptystate_emptystate",
-      "community": 21,
+      "community": 27,
       "norm_label": "emptystate()"
     },
     {
@@ -597,7 +597,7 @@
       "label": "materialKey()",
       "file_type": "code",
       "source_file": "components/FilmStackVisualizer.tsx",
-      "source_location": "L188",
+      "source_location": "L110",
       "_origin": "ast",
       "id": "components_filmstackvisualizer_materialkey",
       "community": 10,
@@ -607,7 +607,7 @@
       "label": "isMetallizedName()",
       "file_type": "code",
       "source_file": "components/FilmStackVisualizer.tsx",
-      "source_location": "L192",
+      "source_location": "L114",
       "_origin": "ast",
       "id": "components_filmstackvisualizer_ismetallizedname",
       "community": 10,
@@ -617,7 +617,7 @@
       "label": "isPaperName()",
       "file_type": "code",
       "source_file": "components/FilmStackVisualizer.tsx",
-      "source_location": "L196",
+      "source_location": "L118",
       "_origin": "ast",
       "id": "components_filmstackvisualizer_ispapername",
       "community": 10,
@@ -627,7 +627,7 @@
       "label": "isWhiteName()",
       "file_type": "code",
       "source_file": "components/FilmStackVisualizer.tsx",
-      "source_location": "L200",
+      "source_location": "L122",
       "_origin": "ast",
       "id": "components_filmstackvisualizer_iswhitename",
       "community": 10,
@@ -637,7 +637,7 @@
       "label": "isNaturalName()",
       "file_type": "code",
       "source_file": "components/FilmStackVisualizer.tsx",
-      "source_location": "L204",
+      "source_location": "L126",
       "_origin": "ast",
       "id": "components_filmstackvisualizer_isnaturalname",
       "community": 10,
@@ -647,7 +647,7 @@
       "label": "inkVariant()",
       "file_type": "code",
       "source_file": "components/FilmStackVisualizer.tsx",
-      "source_location": "L208",
+      "source_location": "L130",
       "_origin": "ast",
       "id": "components_filmstackvisualizer_inkvariant",
       "community": 10,
@@ -657,7 +657,7 @@
       "label": "substrateBg()",
       "file_type": "code",
       "source_file": "components/FilmStackVisualizer.tsx",
-      "source_location": "L214",
+      "source_location": "L136",
       "_origin": "ast",
       "id": "components_filmstackvisualizer_substratebg",
       "community": 10,
@@ -667,7 +667,7 @@
       "label": "LayerAppearance",
       "file_type": "code",
       "source_file": "components/FilmStackVisualizer.tsx",
-      "source_location": "L224",
+      "source_location": "L147",
       "_origin": "ast",
       "id": "components_filmstackvisualizer_layerappearance",
       "community": 10,
@@ -677,7 +677,7 @@
       "label": "inkLabelClass()",
       "file_type": "code",
       "source_file": "components/FilmStackVisualizer.tsx",
-      "source_location": "L259",
+      "source_location": "L182",
       "_origin": "ast",
       "id": "components_filmstackvisualizer_inklabelclass",
       "community": 10,
@@ -687,7 +687,7 @@
       "label": "inkPctClass()",
       "file_type": "code",
       "source_file": "components/FilmStackVisualizer.tsx",
-      "source_location": "L269",
+      "source_location": "L192",
       "_origin": "ast",
       "id": "components_filmstackvisualizer_inkpctclass",
       "community": 10,
@@ -697,7 +697,7 @@
       "label": "layerThickness()",
       "file_type": "code",
       "source_file": "components/FilmStackVisualizer.tsx",
-      "source_location": "L276",
+      "source_location": "L199",
       "_origin": "ast",
       "id": "components_filmstackvisualizer_layerthickness",
       "community": 10,
@@ -707,7 +707,7 @@
       "label": "layerLabel()",
       "file_type": "code",
       "source_file": "components/FilmStackVisualizer.tsx",
-      "source_location": "L283",
+      "source_location": "L206",
       "_origin": "ast",
       "id": "components_filmstackvisualizer_layerlabel",
       "community": 10,
@@ -717,7 +717,7 @@
       "label": "typeLabel()",
       "file_type": "code",
       "source_file": "components/FilmStackVisualizer.tsx",
-      "source_location": "L287",
+      "source_location": "L210",
       "_origin": "ast",
       "id": "components_filmstackvisualizer_typelabel",
       "community": 10,
@@ -727,7 +727,7 @@
       "label": "formatPercentLabels()",
       "file_type": "code",
       "source_file": "components/FilmStackVisualizer.tsx",
-      "source_location": "L295",
+      "source_location": "L218",
       "_origin": "ast",
       "id": "components_filmstackvisualizer_formatpercentlabels",
       "community": 10,
@@ -737,7 +737,7 @@
       "label": "FilmStackVisualizer()",
       "file_type": "code",
       "source_file": "components/FilmStackVisualizer.tsx",
-      "source_location": "L312",
+      "source_location": "L235",
       "_origin": "ast",
       "id": "components_filmstackvisualizer_filmstackvisualizer",
       "community": 10,
@@ -780,7 +780,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_laminatevisualizer",
-      "community": 6,
+      "community": 18,
       "norm_label": "laminatevisualizer.tsx"
     },
     {
@@ -790,7 +790,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_laminatevisualizer_layer",
-      "community": 6,
+      "community": 18,
       "norm_label": "layer"
     },
     {
@@ -800,7 +800,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "components_laminatevisualizer_props",
-      "community": 6,
+      "community": 18,
       "norm_label": "props"
     },
     {
@@ -810,7 +810,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "components_laminatevisualizer_layertypecolor",
-      "community": 6,
+      "community": 18,
       "norm_label": "layertypecolor()"
     },
     {
@@ -820,7 +820,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "components_laminatevisualizer_layerthickness",
-      "community": 6,
+      "community": 18,
       "norm_label": "layerthickness()"
     },
     {
@@ -830,7 +830,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "components_laminatevisualizer_layershare",
-      "community": 6,
+      "community": 18,
       "norm_label": "layershare()"
     },
     {
@@ -840,7 +840,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "components_laminatevisualizer_layerlabel",
-      "community": 6,
+      "community": 18,
       "norm_label": "layerlabel()"
     },
     {
@@ -850,7 +850,7 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "components_laminatevisualizer_laminatevisualizer",
-      "community": 6,
+      "community": 18,
       "norm_label": "laminatevisualizer()"
     },
     {
@@ -910,7 +910,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_layercard",
-      "community": 35,
+      "community": 34,
       "norm_label": "layercard.tsx"
     },
     {
@@ -920,7 +920,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "components_layercard_layercardlayer",
-      "community": 35,
+      "community": 34,
       "norm_label": "layercardlayer"
     },
     {
@@ -930,7 +930,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "components_layercard_layercardprops",
-      "community": 35,
+      "community": 34,
       "norm_label": "layercardprops"
     },
     {
@@ -940,7 +940,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "components_layercard_layercard",
-      "community": 35,
+      "community": 34,
       "norm_label": "layercard()"
     },
     {
@@ -1344,6 +1344,146 @@
       "norm_label": "flatbottom()"
     },
     {
+      "label": "PriceListPanel.tsx",
+      "file_type": "code",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "components_pricelistpanel",
+      "community": 5,
+      "norm_label": "pricelistpanel.tsx"
+    },
+    {
+      "label": "PriceListUnit",
+      "file_type": "code",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "components_pricelistpanel_pricelistunit",
+      "community": 5,
+      "norm_label": "pricelistunit"
+    },
+    {
+      "label": "UNIT_LABELS",
+      "file_type": "code",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "components_pricelistpanel_unit_labels",
+      "community": 5,
+      "norm_label": "unit_labels"
+    },
+    {
+      "label": "UNIT_QTY_DECIMALS",
+      "file_type": "code",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L18",
+      "_origin": "ast",
+      "id": "components_pricelistpanel_unit_qty_decimals",
+      "community": 5,
+      "norm_label": "unit_qty_decimals"
+    },
+    {
+      "label": "PriceListPanelProps",
+      "file_type": "code",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L27",
+      "_origin": "ast",
+      "id": "components_pricelistpanel_pricelistpanelprops",
+      "community": 5,
+      "norm_label": "pricelistpanelprops"
+    },
+    {
+      "label": "PriceListRow",
+      "file_type": "code",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L56",
+      "_origin": "ast",
+      "id": "components_pricelistpanel_pricelistrow",
+      "community": 5,
+      "norm_label": "pricelistrow"
+    },
+    {
+      "label": "bandKey()",
+      "file_type": "code",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L65",
+      "_origin": "ast",
+      "id": "components_pricelistpanel_bandkey",
+      "community": 5,
+      "norm_label": "bandkey()"
+    },
+    {
+      "label": "formatQty()",
+      "file_type": "code",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L69",
+      "_origin": "ast",
+      "id": "components_pricelistpanel_formatqty",
+      "community": 5,
+      "norm_label": "formatqty()"
+    },
+    {
+      "label": "smartPriceDecimals()",
+      "file_type": "code",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L77",
+      "_origin": "ast",
+      "id": "components_pricelistpanel_smartpricedecimals",
+      "community": 5,
+      "norm_label": "smartpricedecimals()"
+    },
+    {
+      "label": "formatSmartPrice()",
+      "file_type": "code",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L87",
+      "_origin": "ast",
+      "id": "components_pricelistpanel_formatsmartprice",
+      "community": 5,
+      "norm_label": "formatsmartprice()"
+    },
+    {
+      "label": "smartPriceShownDecimals()",
+      "file_type": "code",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L97",
+      "_origin": "ast",
+      "id": "components_pricelistpanel_smartpriceshowndecimals",
+      "community": 5,
+      "norm_label": "smartpriceshowndecimals()"
+    },
+    {
+      "label": "themeArgb()",
+      "file_type": "code",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L106",
+      "_origin": "ast",
+      "id": "components_pricelistpanel_themeargb",
+      "community": 5,
+      "norm_label": "themeargb()"
+    },
+    {
+      "label": "bandRangeKg()",
+      "file_type": "code",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L119",
+      "_origin": "ast",
+      "id": "components_pricelistpanel_bandrangekg",
+      "community": 5,
+      "norm_label": "bandrangekg()"
+    },
+    {
+      "label": "PriceListPanel()",
+      "file_type": "code",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L125",
+      "_origin": "ast",
+      "id": "components_pricelistpanel_pricelistpanel",
+      "community": 5,
+      "norm_label": "pricelistpanel()"
+    },
+    {
       "label": "QuickThemeSwitcher.tsx",
       "file_type": "code",
       "source_file": "components/QuickThemeSwitcher.tsx",
@@ -1480,7 +1620,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_routetransition",
-      "community": 2,
+      "community": 16,
       "norm_label": "routetransition.tsx"
     },
     {
@@ -1490,7 +1630,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "components_routetransition_routetransitionprops",
-      "community": 2,
+      "community": 16,
       "norm_label": "routetransitionprops"
     },
     {
@@ -1500,7 +1640,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "components_routetransition_readdurationms",
-      "community": 2,
+      "community": 16,
       "norm_label": "readdurationms()"
     },
     {
@@ -1510,7 +1650,7 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "components_routetransition_readstring",
-      "community": 2,
+      "community": 16,
       "norm_label": "readstring()"
     },
     {
@@ -1520,7 +1660,7 @@
       "source_location": "L92",
       "_origin": "ast",
       "id": "components_routetransition_routetransition",
-      "community": 2,
+      "community": 16,
       "norm_label": "routetransition()"
     },
     {
@@ -1610,7 +1750,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_sparkline",
-      "community": 21,
+      "community": 12,
       "norm_label": "sparkline.tsx"
     },
     {
@@ -1620,7 +1760,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "components_sparkline_sparklinetone",
-      "community": 21,
+      "community": 12,
       "norm_label": "sparklinetone"
     },
     {
@@ -1630,7 +1770,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "components_sparkline_sparklineprops",
-      "community": 21,
+      "community": 12,
       "norm_label": "sparklineprops"
     },
     {
@@ -1640,7 +1780,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "components_sparkline_tonevar",
-      "community": 21,
+      "community": 12,
       "norm_label": "tonevar()"
     },
     {
@@ -1650,7 +1790,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "components_sparkline_sparkline",
-      "community": 21,
+      "community": 12,
       "norm_label": "sparkline()"
     },
     {
@@ -1660,7 +1800,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_structuregradeselect",
-      "community": 35,
+      "community": 37,
       "norm_label": "structuregradeselect.tsx"
     },
     {
@@ -1670,7 +1810,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "components_structuregradeselect_gradeoption",
-      "community": 35,
+      "community": 37,
       "norm_label": "gradeoption"
     },
     {
@@ -1680,7 +1820,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "components_structuregradeselect_props",
-      "community": 35,
+      "community": 37,
       "norm_label": "props"
     },
     {
@@ -1690,7 +1830,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "components_structuregradeselect_structuregradeselect",
-      "community": 35,
+      "community": 37,
       "norm_label": "structuregradeselect()"
     },
     {
@@ -1700,44 +1840,44 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_templatebuilder",
-      "community": 6,
+      "community": 1,
       "norm_label": "templatebuilder.tsx"
     },
     {
       "label": "BuilderLayer",
       "file_type": "code",
       "source_file": "components/TemplateBuilder.tsx",
-      "source_location": "L36",
+      "source_location": "L37",
       "_origin": "ast",
       "id": "components_templatebuilder_builderlayer",
-      "community": 6,
+      "community": 1,
       "norm_label": "builderlayer"
     },
     {
       "label": "MaterialOption",
       "file_type": "code",
       "source_file": "components/TemplateBuilder.tsx",
-      "source_location": "L44",
+      "source_location": "L45",
       "_origin": "ast",
       "id": "components_templatebuilder_materialoption",
-      "community": 6,
+      "community": 1,
       "norm_label": "materialoption"
     },
     {
       "label": "TemplateForEdit",
       "file_type": "code",
       "source_file": "components/TemplateBuilder.tsx",
-      "source_location": "L52",
+      "source_location": "L53",
       "_origin": "ast",
       "id": "components_templatebuilder_templateforedit",
-      "community": 6,
+      "community": 1,
       "norm_label": "templateforedit"
     },
     {
       "label": "TemplateBuilderProps",
       "file_type": "code",
       "source_file": "components/TemplateBuilder.tsx",
-      "source_location": "L74",
+      "source_location": "L77",
       "_origin": "ast",
       "id": "components_templatebuilder_templatebuilderprops",
       "community": 1,
@@ -1747,107 +1887,107 @@
       "label": "STRUCTURE_TIERS",
       "file_type": "code",
       "source_file": "components/TemplateBuilder.tsx",
-      "source_location": "L103",
+      "source_location": "L106",
       "_origin": "ast",
       "id": "components_templatebuilder_structure_tiers",
-      "community": 6,
+      "community": 1,
       "norm_label": "structure_tiers"
     },
     {
       "label": "buildProcessCatalogFromOptions()",
       "file_type": "code",
       "source_file": "components/TemplateBuilder.tsx",
-      "source_location": "L111",
+      "source_location": "L114",
       "_origin": "ast",
       "id": "components_templatebuilder_buildprocesscatalogfromoptions",
-      "community": 6,
+      "community": 1,
       "norm_label": "buildprocesscatalogfromoptions()"
     },
     {
       "label": "deriveDefaultProcesses()",
       "file_type": "code",
       "source_file": "components/TemplateBuilder.tsx",
-      "source_location": "L131",
+      "source_location": "L134",
       "_origin": "ast",
       "id": "components_templatebuilder_derivedefaultprocesses",
-      "community": 6,
+      "community": 1,
       "norm_label": "derivedefaultprocesses()"
     },
     {
       "label": "genId()",
       "file_type": "code",
       "source_file": "components/TemplateBuilder.tsx",
-      "source_location": "L162",
+      "source_location": "L165",
       "_origin": "ast",
       "id": "components_templatebuilder_genid",
-      "community": 6,
+      "community": 1,
       "norm_label": "genid()"
     },
     {
       "label": "pickDefaultMaterial()",
       "file_type": "code",
       "source_file": "components/TemplateBuilder.tsx",
-      "source_location": "L168",
+      "source_location": "L171",
       "_origin": "ast",
       "id": "components_templatebuilder_pickdefaultmaterial",
-      "community": 6,
+      "community": 1,
       "norm_label": "pickdefaultmaterial()"
     },
     {
       "label": "stripFamilySuffix()",
       "file_type": "code",
       "source_file": "components/TemplateBuilder.tsx",
-      "source_location": "L188",
+      "source_location": "L191",
       "_origin": "ast",
       "id": "components_templatebuilder_stripfamilysuffix",
-      "community": 6,
+      "community": 1,
       "norm_label": "stripfamilysuffix()"
     },
     {
       "label": "buildMaterialOptions()",
       "file_type": "code",
       "source_file": "components/TemplateBuilder.tsx",
-      "source_location": "L197",
+      "source_location": "L200",
       "_origin": "ast",
       "id": "components_templatebuilder_buildmaterialoptions",
-      "community": 6,
+      "community": 1,
       "norm_label": "buildmaterialoptions()"
     },
     {
       "label": "FamilyGroup",
       "file_type": "code",
       "source_file": "components/TemplateBuilder.tsx",
-      "source_location": "L210",
+      "source_location": "L213",
       "_origin": "ast",
       "id": "components_templatebuilder_familygroup",
-      "community": 6,
+      "community": 1,
       "norm_label": "familygroup"
     },
     {
       "label": "groupByFamily()",
       "file_type": "code",
       "source_file": "components/TemplateBuilder.tsx",
-      "source_location": "L215",
+      "source_location": "L218",
       "_origin": "ast",
       "id": "components_templatebuilder_groupbyfamily",
-      "community": 6,
+      "community": 1,
       "norm_label": "groupbyfamily()"
     },
     {
       "label": "MaterialSelect()",
       "file_type": "code",
       "source_file": "components/TemplateBuilder.tsx",
-      "source_location": "L227",
+      "source_location": "L230",
       "_origin": "ast",
       "id": "components_templatebuilder_materialselect",
-      "community": 6,
+      "community": 1,
       "norm_label": "materialselect()"
     },
     {
       "label": "TemplateBuilder()",
       "file_type": "code",
       "source_file": "components/TemplateBuilder.tsx",
-      "source_location": "L269",
+      "source_location": "L272",
       "_origin": "ast",
       "id": "components_templatebuilder_templatebuilder",
       "community": 6,
@@ -1860,7 +2000,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_templatestructurecard",
-      "community": 6,
+      "community": 18,
       "norm_label": "templatestructurecard.tsx"
     },
     {
@@ -1870,7 +2010,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "components_templatestructurecard_templatecardlayer",
-      "community": 6,
+      "community": 18,
       "norm_label": "templatecardlayer"
     },
     {
@@ -1880,7 +2020,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "components_templatestructurecard_templatestructurecard",
-      "community": 6,
+      "community": 18,
       "norm_label": "templatestructurecard()"
     },
     {
@@ -2040,7 +2180,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "contexts_masterdatacontext",
-      "community": 1,
+      "community": 36,
       "norm_label": "masterdatacontext.tsx"
     },
     {
@@ -2050,7 +2190,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "contexts_masterdatacontext_masterdatacontextvalue",
-      "community": 1,
+      "community": 36,
       "norm_label": "masterdatacontextvalue"
     },
     {
@@ -2060,7 +2200,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "contexts_masterdatacontext_masterdatacontext",
-      "community": 1,
+      "community": 36,
       "norm_label": "masterdatacontext"
     },
     {
@@ -2070,14 +2210,14 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "contexts_masterdatacontext_masterdataprovider",
-      "community": 1,
+      "community": 16,
       "norm_label": "masterdataprovider()"
     },
     {
       "label": "useMasterDataContext()",
       "file_type": "code",
       "source_file": "contexts/MasterDataContext.tsx",
-      "source_location": "L93",
+      "source_location": "L109",
       "_origin": "ast",
       "id": "contexts_masterdatacontext_usemasterdatacontext",
       "community": 23,
@@ -2087,10 +2227,10 @@
       "label": "useMasterDataContextOptional()",
       "file_type": "code",
       "source_file": "contexts/MasterDataContext.tsx",
-      "source_location": "L102",
+      "source_location": "L118",
       "_origin": "ast",
       "id": "contexts_masterdatacontext_usemasterdatacontextoptional",
-      "community": 1,
+      "community": 36,
       "norm_label": "usemasterdatacontextoptional()"
     },
     {
@@ -2190,7 +2330,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "hooks_usedensity_usedensity",
-      "community": 9,
+      "community": 25,
       "norm_label": "usedensity()"
     },
     {
@@ -2200,7 +2340,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "hooks_useentrance",
-      "community": 16,
+      "community": 19,
       "norm_label": "useentrance.ts"
     },
     {
@@ -2210,7 +2350,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "hooks_useentrance_useentranceoptions",
-      "community": 16,
+      "community": 19,
       "norm_label": "useentranceoptions"
     },
     {
@@ -2220,7 +2360,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "hooks_useentrance_useentranceresult",
-      "community": 16,
+      "community": 19,
       "norm_label": "useentranceresult"
     },
     {
@@ -2230,7 +2370,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "hooks_useentrance_useentrance",
-      "community": 16,
+      "community": 19,
       "norm_label": "useentrance()"
     },
     {
@@ -2280,7 +2420,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "hooks_usemasterdatareference",
-      "community": 1,
+      "community": 36,
       "norm_label": "usemasterdatareference.ts"
     },
     {
@@ -2290,7 +2430,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "hooks_usemasterdatareference_usemasterdatareference",
-      "community": 1,
+      "community": 36,
       "norm_label": "usemasterdatareference()"
     },
     {
@@ -2390,7 +2530,7 @@
       "source_location": "L118",
       "_origin": "ast",
       "id": "hooks_usestagger_usestagger",
-      "community": 21,
+      "community": 2,
       "norm_label": "usestagger()"
     },
     {
@@ -2430,7 +2570,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "hooks_useviewtransition",
-      "community": 21,
+      "community": 27,
       "norm_label": "useviewtransition.ts"
     },
     {
@@ -2440,7 +2580,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "hooks_useviewtransition_documentwithviewtransition",
-      "community": 21,
+      "community": 27,
       "norm_label": "documentwithviewtransition"
     },
     {
@@ -2450,7 +2590,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "hooks_useviewtransition_useviewtransition",
-      "community": 21,
+      "community": 27,
       "norm_label": "useviewtransition()"
     },
     {
@@ -2597,7 +2737,7 @@
       "label": "PlatformMasterMaterialInput",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L116",
+      "source_location": "L121",
       "_origin": "ast",
       "id": "lib_api_platformmastermaterialinput",
       "community": 20,
@@ -2607,7 +2747,7 @@
       "label": "PlatformMasterMaterialRow",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L143",
+      "source_location": "L148",
       "_origin": "ast",
       "id": "lib_api_platformmastermaterialrow",
       "community": 20,
@@ -2617,7 +2757,7 @@
       "label": "PlatformTemplateSync",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L155",
+      "source_location": "L160",
       "_origin": "ast",
       "id": "lib_api_platformtemplatesync",
       "community": 20,
@@ -2627,7 +2767,7 @@
       "label": "ApiClient",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L161",
+      "source_location": "L166",
       "_origin": "ast",
       "id": "lib_api_apiclient",
       "community": 0,
@@ -2637,7 +2777,7 @@
       "label": ".init()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L170",
+      "source_location": "L175",
       "_origin": "ast",
       "id": "lib_api_apiclient_init",
       "community": 0,
@@ -2647,7 +2787,7 @@
       "label": ".setToken()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L175",
+      "source_location": "L180",
       "_origin": "ast",
       "id": "lib_api_apiclient_settoken",
       "community": 0,
@@ -2657,7 +2797,7 @@
       "label": ".getToken()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L180",
+      "source_location": "L185",
       "_origin": "ast",
       "id": "lib_api_apiclient_gettoken",
       "community": 0,
@@ -2667,7 +2807,7 @@
       "label": ".clearToken()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L189",
+      "source_location": "L191",
       "_origin": "ast",
       "id": "lib_api_apiclient_cleartoken",
       "community": 0,
@@ -2677,7 +2817,7 @@
       "label": ".setRefreshToken()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L195",
+      "source_location": "L197",
       "_origin": "ast",
       "id": "lib_api_apiclient_setrefreshtoken",
       "community": 0,
@@ -2687,7 +2827,7 @@
       "label": ".getRefreshToken()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L200",
+      "source_location": "L202",
       "_origin": "ast",
       "id": "lib_api_apiclient_getrefreshtoken",
       "community": 0,
@@ -2697,7 +2837,7 @@
       "label": ".request()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L207",
+      "source_location": "L209",
       "_origin": "ast",
       "id": "lib_api_apiclient_request",
       "community": 0,
@@ -2707,7 +2847,7 @@
       "label": ".register()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L313",
+      "source_location": "L315",
       "_origin": "ast",
       "id": "lib_api_apiclient_register",
       "community": 0,
@@ -2717,7 +2857,7 @@
       "label": ".login()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L327",
+      "source_location": "L329",
       "_origin": "ast",
       "id": "lib_api_apiclient_login",
       "community": 0,
@@ -2727,7 +2867,7 @@
       "label": ".ensureRefreshed()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L344",
+      "source_location": "L345",
       "_origin": "ast",
       "id": "lib_api_apiclient_ensurerefreshed",
       "community": 0,
@@ -2737,7 +2877,7 @@
       "label": ".refreshToken()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L355",
+      "source_location": "L356",
       "_origin": "ast",
       "id": "lib_api_apiclient_refreshtoken",
       "community": 0,
@@ -2747,7 +2887,7 @@
       "label": ".logout()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L366",
+      "source_location": "L367",
       "_origin": "ast",
       "id": "lib_api_apiclient_logout",
       "community": 0,
@@ -2757,7 +2897,7 @@
       "label": ".getMe()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L372",
+      "source_location": "L373",
       "_origin": "ast",
       "id": "lib_api_apiclient_getme",
       "community": 0,
@@ -2767,7 +2907,7 @@
       "label": ".getPebiSsoUrl()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L385",
+      "source_location": "L386",
       "_origin": "ast",
       "id": "lib_api_apiclient_getpebissourl",
       "community": 0,
@@ -2777,7 +2917,7 @@
       "label": ".getMasterMaterials()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L389",
+      "source_location": "L390",
       "_origin": "ast",
       "id": "lib_api_apiclient_getmastermaterials",
       "community": 0,
@@ -2787,7 +2927,7 @@
       "label": ".updateMasterMaterials()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L393",
+      "source_location": "L394",
       "_origin": "ast",
       "id": "lib_api_apiclient_updatemastermaterials",
       "community": 0,
@@ -2797,7 +2937,7 @@
       "label": ".updateCostingDefaults()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L401",
+      "source_location": "L402",
       "_origin": "ast",
       "id": "lib_api_apiclient_updatecostingdefaults",
       "community": 0,
@@ -2807,7 +2947,7 @@
       "label": ".getPlatformWasteBands()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L409",
+      "source_location": "L410",
       "_origin": "ast",
       "id": "lib_api_apiclient_getplatformwastebands",
       "community": 0,
@@ -2817,7 +2957,7 @@
       "label": ".updatePlatformWasteBands()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L416",
+      "source_location": "L418",
       "_origin": "ast",
       "id": "lib_api_apiclient_updateplatformwastebands",
       "community": 0,
@@ -2827,7 +2967,7 @@
       "label": ".getPlatformMasterDataMaterials()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L424",
+      "source_location": "L430",
       "_origin": "ast",
       "id": "lib_api_apiclient_getplatformmasterdatamaterials",
       "community": 0,
@@ -2837,7 +2977,7 @@
       "label": ".createPlatformMasterMaterial()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L428",
+      "source_location": "L434",
       "_origin": "ast",
       "id": "lib_api_apiclient_createplatformmastermaterial",
       "community": 0,
@@ -2847,7 +2987,7 @@
       "label": ".updatePlatformMasterMaterial()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L436",
+      "source_location": "L442",
       "_origin": "ast",
       "id": "lib_api_apiclient_updateplatformmastermaterial",
       "community": 0,
@@ -2857,7 +2997,7 @@
       "label": ".deletePlatformMasterMaterial()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L444",
+      "source_location": "L450",
       "_origin": "ast",
       "id": "lib_api_apiclient_deleteplatformmastermaterial",
       "community": 0,
@@ -2867,7 +3007,7 @@
       "label": ".getPlatformMasterDataReference()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L451",
+      "source_location": "L457",
       "_origin": "ast",
       "id": "lib_api_apiclient_getplatformmasterdatareference",
       "community": 0,
@@ -2877,7 +3017,7 @@
       "label": ".saveTenantReferenceCategory()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L461",
+      "source_location": "L467",
       "_origin": "ast",
       "id": "lib_api_apiclient_savetenantreferencecategory",
       "community": 0,
@@ -2887,7 +3027,7 @@
       "label": ".getTenantCustomReference()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L470",
+      "source_location": "L476",
       "_origin": "ast",
       "id": "lib_api_apiclient_gettenantcustomreference",
       "community": 0,
@@ -2897,7 +3037,7 @@
       "label": ".savePlatformReferenceCategory()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L477",
+      "source_location": "L483",
       "_origin": "ast",
       "id": "lib_api_apiclient_saveplatformreferencecategory",
       "community": 0,
@@ -2907,7 +3047,7 @@
       "label": ".syncMaterialsFromPlatform()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L488",
+      "source_location": "L494",
       "_origin": "ast",
       "id": "lib_api_apiclient_syncmaterialsfromplatform",
       "community": 0,
@@ -2917,7 +3057,7 @@
       "label": ".getMaterials()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L497",
+      "source_location": "L503",
       "_origin": "ast",
       "id": "lib_api_apiclient_getmaterials",
       "community": 0,
@@ -2927,7 +3067,7 @@
       "label": ".getCustomers()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L509",
+      "source_location": "L515",
       "_origin": "ast",
       "id": "lib_api_apiclient_getcustomers",
       "community": 0,
@@ -2937,7 +3077,7 @@
       "label": ".autocompleteCustomers()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L518",
+      "source_location": "L524",
       "_origin": "ast",
       "id": "lib_api_apiclient_autocompletecustomers",
       "community": 0,
@@ -2947,7 +3087,7 @@
       "label": ".getCustomer()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L525",
+      "source_location": "L531",
       "_origin": "ast",
       "id": "lib_api_apiclient_getcustomer",
       "community": 0,
@@ -2957,7 +3097,7 @@
       "label": ".getCustomerEstimates()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L529",
+      "source_location": "L535",
       "_origin": "ast",
       "id": "lib_api_apiclient_getcustomerestimates",
       "community": 0,
@@ -2967,7 +3107,7 @@
       "label": ".createCustomer()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L533",
+      "source_location": "L539",
       "_origin": "ast",
       "id": "lib_api_apiclient_createcustomer",
       "community": 0,
@@ -2977,7 +3117,7 @@
       "label": ".createMaterial()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L537",
+      "source_location": "L543",
       "_origin": "ast",
       "id": "lib_api_apiclient_creatematerial",
       "community": 0,
@@ -2987,7 +3127,7 @@
       "label": ".updateMaterial()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L541",
+      "source_location": "L547",
       "_origin": "ast",
       "id": "lib_api_apiclient_updatematerial",
       "community": 0,
@@ -2997,7 +3137,7 @@
       "label": ".deleteMaterial()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L545",
+      "source_location": "L551",
       "_origin": "ast",
       "id": "lib_api_apiclient_deletematerial",
       "community": 0,
@@ -3007,7 +3147,7 @@
       "label": ".refreshMaterialPrices()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L549",
+      "source_location": "L555",
       "_origin": "ast",
       "id": "lib_api_apiclient_refreshmaterialprices",
       "community": 0,
@@ -3017,7 +3157,7 @@
       "label": ".refreshMaterialsFromExcel()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L560",
+      "source_location": "L566",
       "_origin": "ast",
       "id": "lib_api_apiclient_refreshmaterialsfromexcel",
       "community": 0,
@@ -3027,7 +3167,7 @@
       "label": ".getMasterDataReference()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L579",
+      "source_location": "L585",
       "_origin": "ast",
       "id": "lib_api_apiclient_getmasterdatareference",
       "community": 0,
@@ -3037,7 +3177,7 @@
       "label": ".pruneOrphanSubstrates()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L583",
+      "source_location": "L589",
       "_origin": "ast",
       "id": "lib_api_apiclient_pruneorphansubstrates",
       "community": 0,
@@ -3047,7 +3187,7 @@
       "label": ".getEstimates()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L588",
+      "source_location": "L594",
       "_origin": "ast",
       "id": "lib_api_apiclient_getestimates",
       "community": 0,
@@ -3057,7 +3197,7 @@
       "label": ".getLatestDraftForTemplate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L604",
+      "source_location": "L610",
       "_origin": "ast",
       "id": "lib_api_apiclient_getlatestdraftfortemplate",
       "community": 0,
@@ -3067,7 +3207,7 @@
       "label": ".getDashboardSummary()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L610",
+      "source_location": "L616",
       "_origin": "ast",
       "id": "lib_api_apiclient_getdashboardsummary",
       "community": 0,
@@ -3077,7 +3217,7 @@
       "label": ".getEstimate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L622",
+      "source_location": "L628",
       "_origin": "ast",
       "id": "lib_api_apiclient_getestimate",
       "community": 0,
@@ -3087,7 +3227,7 @@
       "label": ".createEstimate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L626",
+      "source_location": "L632",
       "_origin": "ast",
       "id": "lib_api_apiclient_createestimate",
       "community": 0,
@@ -3097,7 +3237,7 @@
       "label": ".updateEstimate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L630",
+      "source_location": "L636",
       "_origin": "ast",
       "id": "lib_api_apiclient_updateestimate",
       "community": 0,
@@ -3107,7 +3247,7 @@
       "label": ".deleteEstimate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L634",
+      "source_location": "L640",
       "_origin": "ast",
       "id": "lib_api_apiclient_deleteestimate",
       "community": 0,
@@ -3117,7 +3257,7 @@
       "label": ".calculateEstimate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L638",
+      "source_location": "L644",
       "_origin": "ast",
       "id": "lib_api_apiclient_calculateestimate",
       "community": 0,
@@ -3127,7 +3267,7 @@
       "label": ".requoteEstimate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L642",
+      "source_location": "L648",
       "_origin": "ast",
       "id": "lib_api_apiclient_requoteestimate",
       "community": 0,
@@ -3137,7 +3277,7 @@
       "label": ".duplicateEstimate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L646",
+      "source_location": "L652",
       "_origin": "ast",
       "id": "lib_api_apiclient_duplicateestimate",
       "community": 0,
@@ -3147,7 +3287,7 @@
       "label": ".getSupportedCurrencies()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L650",
+      "source_location": "L656",
       "_origin": "ast",
       "id": "lib_api_apiclient_getsupportedcurrencies",
       "community": 0,
@@ -3157,7 +3297,7 @@
       "label": ".getCategories()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L655",
+      "source_location": "L661",
       "_origin": "ast",
       "id": "lib_api_apiclient_getcategories",
       "community": 0,
@@ -3167,7 +3307,7 @@
       "label": ".getSlabTemplates()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L659",
+      "source_location": "L665",
       "_origin": "ast",
       "id": "lib_api_apiclient_getslabtemplates",
       "community": 0,
@@ -3177,7 +3317,7 @@
       "label": ".createTemplate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L663",
+      "source_location": "L669",
       "_origin": "ast",
       "id": "lib_api_apiclient_createtemplate",
       "community": 0,
@@ -3187,7 +3327,7 @@
       "label": ".createTemplateFromDefinition()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L671",
+      "source_location": "L677",
       "_origin": "ast",
       "id": "lib_api_apiclient_createtemplatefromdefinition",
       "community": 0,
@@ -3197,7 +3337,7 @@
       "label": ".getEstimateProposals()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L692",
+      "source_location": "L698",
       "_origin": "ast",
       "id": "lib_api_apiclient_getestimateproposals",
       "community": 0,
@@ -3207,7 +3347,7 @@
       "label": ".getStoredProposalPdf()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L703",
+      "source_location": "L709",
       "_origin": "ast",
       "id": "lib_api_apiclient_getstoredproposalpdf",
       "community": 0,
@@ -3217,7 +3357,7 @@
       "label": ".getProposalPdf()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L721",
+      "source_location": "L727",
       "_origin": "ast",
       "id": "lib_api_apiclient_getproposalpdf",
       "community": 0,
@@ -3227,7 +3367,7 @@
       "label": ".getSettings()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L740",
+      "source_location": "L746",
       "_origin": "ast",
       "id": "lib_api_apiclient_getsettings",
       "community": 0,
@@ -3237,7 +3377,7 @@
       "label": ".updateSettings()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L744",
+      "source_location": "L750",
       "_origin": "ast",
       "id": "lib_api_apiclient_updatesettings",
       "community": 0,
@@ -3247,7 +3387,7 @@
       "label": ".refreshFx()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L748",
+      "source_location": "L754",
       "_origin": "ast",
       "id": "lib_api_apiclient_refreshfx",
       "community": 0,
@@ -3257,7 +3397,7 @@
       "label": ".getUsers()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L753",
+      "source_location": "L759",
       "_origin": "ast",
       "id": "lib_api_apiclient_getusers",
       "community": 0,
@@ -3267,7 +3407,7 @@
       "label": ".updateUserVisibility()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L757",
+      "source_location": "L763",
       "_origin": "ast",
       "id": "lib_api_apiclient_updateuservisibility",
       "community": 0,
@@ -3277,7 +3417,7 @@
       "label": ".getVisibilityPresets()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L761",
+      "source_location": "L767",
       "_origin": "ast",
       "id": "lib_api_apiclient_getvisibilitypresets",
       "community": 0,
@@ -3287,7 +3427,7 @@
       "label": ".getTemplates()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L766",
+      "source_location": "L772",
       "_origin": "ast",
       "id": "lib_api_apiclient_gettemplates",
       "community": 0,
@@ -3297,7 +3437,7 @@
       "label": ".getMyTemplates()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L774",
+      "source_location": "L780",
       "_origin": "ast",
       "id": "lib_api_apiclient_getmytemplates",
       "community": 0,
@@ -3307,7 +3447,7 @@
       "label": ".getTemplate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L778",
+      "source_location": "L784",
       "_origin": "ast",
       "id": "lib_api_apiclient_gettemplate",
       "community": 0,
@@ -3317,7 +3457,7 @@
       "label": ".updateTemplate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L782",
+      "source_location": "L788",
       "_origin": "ast",
       "id": "lib_api_apiclient_updatetemplate",
       "community": 0,
@@ -3327,7 +3467,7 @@
       "label": ".deleteTemplate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L786",
+      "source_location": "L792",
       "_origin": "ast",
       "id": "lib_api_apiclient_deletetemplate",
       "community": 0,
@@ -3337,7 +3477,7 @@
       "label": ".instantiateTemplate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L793",
+      "source_location": "L799",
       "_origin": "ast",
       "id": "lib_api_apiclient_instantiatetemplate",
       "community": 0,
@@ -3347,7 +3487,7 @@
       "label": ".previewTemplate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L806",
+      "source_location": "L812",
       "_origin": "ast",
       "id": "lib_api_apiclient_previewtemplate",
       "community": 0,
@@ -3357,7 +3497,7 @@
       "label": ".listPlatformTemplates()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L853",
+      "source_location": "L859",
       "_origin": "ast",
       "id": "lib_api_apiclient_listplatformtemplates",
       "community": 0,
@@ -3367,7 +3507,7 @@
       "label": ".getPlatformTemplate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L857",
+      "source_location": "L863",
       "_origin": "ast",
       "id": "lib_api_apiclient_getplatformtemplate",
       "community": 0,
@@ -3377,7 +3517,7 @@
       "label": ".createPlatformTemplate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L861",
+      "source_location": "L867",
       "_origin": "ast",
       "id": "lib_api_apiclient_createplatformtemplate",
       "community": 0,
@@ -3387,7 +3527,7 @@
       "label": ".updatePlatformTemplate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L884",
+      "source_location": "L892",
       "_origin": "ast",
       "id": "lib_api_apiclient_updateplatformtemplate",
       "community": 0,
@@ -3397,7 +3537,7 @@
       "label": ".updatePlatformTemplateByKey()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L897",
+      "source_location": "L905",
       "_origin": "ast",
       "id": "lib_api_apiclient_updateplatformtemplatebykey",
       "community": 0,
@@ -3407,7 +3547,7 @@
       "label": ".deletePlatformTemplate()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L905",
+      "source_location": "L913",
       "_origin": "ast",
       "id": "lib_api_apiclient_deleteplatformtemplate",
       "community": 0,
@@ -3417,7 +3557,7 @@
       "label": ".deletePlatformTemplateByKey()",
       "file_type": "code",
       "source_file": "lib/api.ts",
-      "source_location": "L917",
+      "source_location": "L925",
       "_origin": "ast",
       "id": "lib_api_apiclient_deleteplatformtemplatebykey",
       "community": 0,
@@ -3650,7 +3790,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "lib_currency_usdtodisplayprecise",
-      "community": 14,
+      "community": 35,
       "norm_label": "usdtodisplayprecise()"
     },
     {
@@ -3700,7 +3840,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_estimatecalc",
-      "community": 5,
+      "community": 32,
       "norm_label": "estimatecalc.ts"
     },
     {
@@ -3710,7 +3850,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "lib_estimatecalc_clientcalcmaterial",
-      "community": 5,
+      "community": 32,
       "norm_label": "clientcalcmaterial"
     },
     {
@@ -3720,7 +3860,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "lib_estimatecalc_clientcalcprocess",
-      "community": 5,
+      "community": 32,
       "norm_label": "clientcalcprocess"
     },
     {
@@ -3730,37 +3870,37 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "lib_estimatecalc_clientcalcinput",
-      "community": 5,
+      "community": 32,
       "norm_label": "clientcalcinput"
     },
     {
       "label": "toMaterial()",
       "file_type": "code",
       "source_file": "lib/estimateCalc.ts",
-      "source_location": "L77",
+      "source_location": "L79",
       "_origin": "ast",
       "id": "lib_estimatecalc_tomaterial",
-      "community": 5,
+      "community": 32,
       "norm_label": "tomaterial()"
     },
     {
       "label": "runClientCalculation()",
       "file_type": "code",
       "source_file": "lib/estimateCalc.ts",
-      "source_location": "L101",
+      "source_location": "L103",
       "_origin": "ast",
       "id": "lib_estimatecalc_runclientcalculation",
-      "community": 5,
+      "community": 32,
       "norm_label": "runclientcalculation()"
     },
     {
       "label": "effectiveMarginPercent()",
       "file_type": "code",
       "source_file": "lib/estimateCalc.ts",
-      "source_location": "L182",
+      "source_location": "L185",
       "_origin": "ast",
       "id": "lib_estimatecalc_effectivemarginpercent",
-      "community": 5,
+      "community": 35,
       "norm_label": "effectivemarginpercent()"
     },
     {
@@ -3900,14 +4040,14 @@
       "source_location": "L137",
       "_origin": "ast",
       "id": "lib_estimateconfigure_producttypeforsave",
-      "community": 36,
+      "community": 11,
       "norm_label": "producttypeforsave()"
     },
     {
       "label": "dimensionsForSave()",
       "file_type": "code",
       "source_file": "lib/estimateConfigure.ts",
-      "source_location": "L152",
+      "source_location": "L149",
       "_origin": "ast",
       "id": "lib_estimateconfigure_dimensionsforsave",
       "community": 11,
@@ -3917,7 +4057,7 @@
       "label": "estimateNeedsConfiguration()",
       "file_type": "code",
       "source_file": "lib/estimateConfigure.ts",
-      "source_location": "L160",
+      "source_location": "L157",
       "_origin": "ast",
       "id": "lib_estimateconfigure_estimateneedsconfiguration",
       "community": 11,
@@ -3927,7 +4067,7 @@
       "label": "hasConfiguredProcesses()",
       "file_type": "code",
       "source_file": "lib/estimateConfigure.ts",
-      "source_location": "L164",
+      "source_location": "L161",
       "_origin": "ast",
       "id": "lib_estimateconfigure_hasconfiguredprocesses",
       "community": 11,
@@ -3937,7 +4077,7 @@
       "label": "validateConfiguredEstimate()",
       "file_type": "code",
       "source_file": "lib/estimateConfigure.ts",
-      "source_location": "L170",
+      "source_location": "L167",
       "_origin": "ast",
       "id": "lib_estimateconfigure_validateconfiguredestimate",
       "community": 11,
@@ -3950,7 +4090,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_estimatesession",
-      "community": 6,
+      "community": 33,
       "norm_label": "estimatesession.ts"
     },
     {
@@ -3960,7 +4100,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "lib_estimatesession_key",
-      "community": 6,
+      "community": 33,
       "norm_label": "key()"
     },
     {
@@ -3970,7 +4110,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "lib_estimatesession_setworkingestimatefortemplate",
-      "community": 6,
+      "community": 33,
       "norm_label": "setworkingestimatefortemplate()"
     },
     {
@@ -3980,7 +4120,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "lib_estimatesession_getworkingestimatefortemplate",
-      "community": 6,
+      "community": 33,
       "norm_label": "getworkingestimatefortemplate()"
     },
     {
@@ -3990,7 +4130,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "lib_estimatesession_clearworkingestimatefortemplate",
-      "community": 6,
+      "community": 33,
       "norm_label": "clearworkingestimatefortemplate()"
     },
     {
@@ -4150,7 +4290,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "lib_masterdatareference_productsubtypeoption",
-      "community": 1,
+      "community": 36,
       "norm_label": "productsubtypeoption"
     },
     {
@@ -4160,14 +4300,14 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "lib_masterdatareference_masterdatareferencestate",
-      "community": 1,
+      "community": 36,
       "norm_label": "masterdatareferencestate"
     },
     {
       "label": "ProcessOption",
       "file_type": "code",
       "source_file": "lib/masterDataReference.ts",
-      "source_location": "L70",
+      "source_location": "L75",
       "_origin": "ast",
       "id": "lib_masterdatareference_processoption",
       "community": 1,
@@ -4177,7 +4317,7 @@
       "label": "DEFAULT_PROCESS_OPTIONS",
       "file_type": "code",
       "source_file": "lib/masterDataReference.ts",
-      "source_location": "L82",
+      "source_location": "L87",
       "_origin": "ast",
       "id": "lib_masterdatareference_default_process_options",
       "community": 11,
@@ -4187,37 +4327,37 @@
       "label": "DEFAULT_RM_TYPE_OPTIONS",
       "file_type": "code",
       "source_file": "lib/masterDataReference.ts",
-      "source_location": "L92",
+      "source_location": "L97",
       "_origin": "ast",
       "id": "lib_masterdatareference_default_rm_type_options",
-      "community": 1,
+      "community": 36,
       "norm_label": "default_rm_type_options"
     },
     {
       "label": "DEFAULT_PRODUCT_SUBTYPE_OPTIONS",
       "file_type": "code",
       "source_file": "lib/masterDataReference.ts",
-      "source_location": "L101",
+      "source_location": "L106",
       "_origin": "ast",
       "id": "lib_masterdatareference_default_product_subtype_options",
-      "community": 36,
+      "community": 15,
       "norm_label": "default_product_subtype_options"
     },
     {
       "label": "DEFAULT_MASTER_REFERENCE",
       "file_type": "code",
       "source_file": "lib/masterDataReference.ts",
-      "source_location": "L124",
+      "source_location": "L129",
       "_origin": "ast",
       "id": "lib_masterdatareference_default_master_reference",
-      "community": 1,
+      "community": 36,
       "norm_label": "default_master_reference"
     },
     {
       "label": "defaultProductTypeValue()",
       "file_type": "code",
       "source_file": "lib/masterDataReference.ts",
-      "source_location": "L162",
+      "source_location": "L171",
       "_origin": "ast",
       "id": "lib_masterdatareference_defaultproducttypevalue",
       "community": 36,
@@ -4227,17 +4367,17 @@
       "label": "defaultUnitValue()",
       "file_type": "code",
       "source_file": "lib/masterDataReference.ts",
-      "source_location": "L166",
+      "source_location": "L175",
       "_origin": "ast",
       "id": "lib_masterdatareference_defaultunitvalue",
-      "community": 36,
+      "community": 6,
       "norm_label": "defaultunitvalue()"
     },
     {
       "label": "normalizeProductType()",
       "file_type": "code",
       "source_file": "lib/masterDataReference.ts",
-      "source_location": "L170",
+      "source_location": "L179",
       "_origin": "ast",
       "id": "lib_masterdatareference_normalizeproducttype",
       "community": 36,
@@ -4247,10 +4387,10 @@
       "label": "normalizeUnitValue()",
       "file_type": "code",
       "source_file": "lib/masterDataReference.ts",
-      "source_location": "L178",
+      "source_location": "L187",
       "_origin": "ast",
       "id": "lib_masterdatareference_normalizeunitvalue",
-      "community": 36,
+      "community": 6,
       "norm_label": "normalizeunitvalue()"
     },
     {
@@ -4340,7 +4480,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "lib_pouchconfiguratorcatalog_pouchconfiguratortype",
-      "community": 14,
+      "community": 4,
       "norm_label": "pouchconfiguratortype"
     },
     {
@@ -4594,30 +4734,30 @@
       "norm_label": "productcatalog.ts"
     },
     {
-      "label": "EngineProductType",
+      "label": "ProductTypeCode",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L27",
+      "source_location": "L23",
       "_origin": "ast",
-      "id": "lib_productcatalog_engineproducttype",
+      "id": "lib_productcatalog_producttypecode",
       "community": 30,
-      "norm_label": "engineproducttype"
+      "norm_label": "producttypecode"
     },
     {
       "label": "ProductFamily",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L33",
+      "source_location": "L29",
       "_origin": "ast",
       "id": "lib_productcatalog_productfamily",
-      "community": 11,
+      "community": 30,
       "norm_label": "productfamily"
     },
     {
       "label": "DimensionFieldDef",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L36",
+      "source_location": "L32",
       "_origin": "ast",
       "id": "lib_productcatalog_dimensionfielddef",
       "community": 30,
@@ -4627,7 +4767,7 @@
       "label": "ProductSubtype",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L48",
+      "source_location": "L44",
       "_origin": "ast",
       "id": "lib_productcatalog_productsubtype",
       "community": 30,
@@ -4637,17 +4777,17 @@
       "label": "engineTypeForFamily()",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L68",
+      "source_location": "L60",
       "_origin": "ast",
       "id": "lib_productcatalog_enginetypeforfamily",
-      "community": 6,
+      "community": 11,
       "norm_label": "enginetypeforfamily()"
     },
     {
       "label": "PRODUCT_FAMILY_LABELS",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L74",
+      "source_location": "L69",
       "_origin": "ast",
       "id": "lib_productcatalog_product_family_labels",
       "community": 30,
@@ -4657,7 +4797,7 @@
       "label": "F",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L85",
+      "source_location": "L80",
       "_origin": "ast",
       "id": "lib_productcatalog_f",
       "community": 13,
@@ -4667,7 +4807,7 @@
       "label": "ESTIMATION_HIDDEN_DIMENSION_KEYS",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L119",
+      "source_location": "L114",
       "_origin": "ast",
       "id": "lib_productcatalog_estimation_hidden_dimension_keys",
       "community": 30,
@@ -4677,7 +4817,7 @@
       "label": "ROLL_FIELDS",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L124",
+      "source_location": "L119",
       "_origin": "ast",
       "id": "lib_productcatalog_roll_fields",
       "community": 30,
@@ -4687,7 +4827,7 @@
       "label": "SLEEVE_FIELDS",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L125",
+      "source_location": "L120",
       "_origin": "ast",
       "id": "lib_productcatalog_sleeve_fields",
       "community": 30,
@@ -4697,7 +4837,7 @@
       "label": "POUCH_BASE",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L127",
+      "source_location": "L122",
       "_origin": "ast",
       "id": "lib_productcatalog_pouch_base",
       "community": 30,
@@ -4707,7 +4847,7 @@
       "label": "BAG_BASE",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L128",
+      "source_location": "L123",
       "_origin": "ast",
       "id": "lib_productcatalog_bag_base",
       "community": 30,
@@ -4717,7 +4857,7 @@
       "label": "POUCH_SUBTYPES",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L134",
+      "source_location": "L129",
       "_origin": "ast",
       "id": "lib_productcatalog_pouch_subtypes",
       "community": 30,
@@ -4727,7 +4867,7 @@
       "label": "BAG_SUBTYPES",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L148",
+      "source_location": "L143",
       "_origin": "ast",
       "id": "lib_productcatalog_bag_subtypes",
       "community": 30,
@@ -4737,7 +4877,7 @@
       "label": "LEGACY_BAG_SUBTYPES",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L165",
+      "source_location": "L160",
       "_origin": "ast",
       "id": "lib_productcatalog_legacy_bag_subtypes",
       "community": 30,
@@ -4747,7 +4887,7 @@
       "label": "ALL_SUBTYPES",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L170",
+      "source_location": "L165",
       "_origin": "ast",
       "id": "lib_productcatalog_all_subtypes",
       "community": 30,
@@ -4757,7 +4897,7 @@
       "label": "SUBTYPE_BY_KEY",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L172",
+      "source_location": "L167",
       "_origin": "ast",
       "id": "lib_productcatalog_subtype_by_key",
       "community": 30,
@@ -4767,7 +4907,7 @@
       "label": "subtypesForFamily()",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L175",
+      "source_location": "L170",
       "_origin": "ast",
       "id": "lib_productcatalog_subtypesforfamily",
       "community": 30,
@@ -4777,7 +4917,7 @@
       "label": "getSubtype()",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L181",
+      "source_location": "L176",
       "_origin": "ast",
       "id": "lib_productcatalog_getsubtype",
       "community": 30,
@@ -4787,7 +4927,7 @@
       "label": "dimensionFieldsFor()",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L186",
+      "source_location": "L181",
       "_origin": "ast",
       "id": "lib_productcatalog_dimensionfieldsfor",
       "community": 30,
@@ -4797,7 +4937,7 @@
       "label": "dimensionFieldsForEstimation()",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L199",
+      "source_location": "L194",
       "_origin": "ast",
       "id": "lib_productcatalog_dimensionfieldsforestimation",
       "community": 30,
@@ -4807,7 +4947,7 @@
       "label": "defaultSubtypeForFamily()",
       "file_type": "code",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L209",
+      "source_location": "L204",
       "_origin": "ast",
       "id": "lib_productcatalog_defaultsubtypeforfamily",
       "community": 30,
@@ -4870,7 +5010,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_templatecatalog",
-      "community": 6,
+      "community": 17,
       "norm_label": "templatecatalog.ts"
     },
     {
@@ -4880,7 +5020,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_templatecatalog_templatecatalogfilter",
-      "community": 6,
+      "community": 17,
       "norm_label": "templatecatalogfilter"
     },
     {
@@ -4890,7 +5030,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "lib_templatecatalog_template_catalog_filters",
-      "community": 6,
+      "community": 17,
       "norm_label": "template_catalog_filters"
     },
     {
@@ -4900,7 +5040,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "lib_templatecatalog_templatecataloginput",
-      "community": 6,
+      "community": 17,
       "norm_label": "templatecataloginput"
     },
     {
@@ -4910,7 +5050,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "lib_templatecatalog_substratecount",
-      "community": 6,
+      "community": 17,
       "norm_label": "substratecount()"
     },
     {
@@ -4920,7 +5060,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "lib_templatecatalog_isprintedtemplate",
-      "community": 6,
+      "community": 17,
       "norm_label": "isprintedtemplate()"
     },
     {
@@ -4930,7 +5070,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "lib_templatecatalog_derivetemplatecatalogkey",
-      "community": 6,
+      "community": 17,
       "norm_label": "derivetemplatecatalogkey()"
     },
     {
@@ -4940,7 +5080,7 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "lib_templatecatalog_matchescatalogfilter",
-      "community": 6,
+      "community": 17,
       "norm_label": "matchescatalogfilter()"
     },
     {
@@ -4950,7 +5090,7 @@
       "source_location": "L92",
       "_origin": "ast",
       "id": "lib_templatecatalog_templatestructuretier",
-      "community": 21,
+      "community": 26,
       "norm_label": "templatestructuretier"
     },
     {
@@ -4960,7 +5100,7 @@
       "source_location": "L94",
       "_origin": "ast",
       "id": "lib_templatecatalog_templateclassification",
-      "community": 6,
+      "community": 17,
       "norm_label": "templateclassification"
     },
     {
@@ -4970,7 +5110,7 @@
       "source_location": "L101",
       "_origin": "ast",
       "id": "lib_templatecatalog_derivestructuretierfromsubstrates",
-      "community": 6,
+      "community": 17,
       "norm_label": "derivestructuretierfromsubstrates()"
     },
     {
@@ -4980,7 +5120,7 @@
       "source_location": "L109",
       "_origin": "ast",
       "id": "lib_templatecatalog_gettemplateclassification",
-      "community": 6,
+      "community": 17,
       "norm_label": "gettemplateclassification()"
     },
     {
@@ -5000,7 +5140,7 @@
       "source_location": "L124",
       "_origin": "ast",
       "id": "lib_templatecatalog_classfilter",
-      "community": 21,
+      "community": 26,
       "norm_label": "classfilter"
     },
     {
@@ -5010,7 +5150,7 @@
       "source_location": "L131",
       "_origin": "ast",
       "id": "lib_templatecatalog_matchesclassfilter",
-      "community": 6,
+      "community": 17,
       "norm_label": "matchesclassfilter()"
     },
     {
@@ -5020,7 +5160,7 @@
       "source_location": "L139",
       "_origin": "ast",
       "id": "lib_templatecatalog_estimateclassificationsnapshot",
-      "community": 6,
+      "community": 17,
       "norm_label": "estimateclassificationsnapshot"
     },
     {
@@ -5030,7 +5170,7 @@
       "source_location": "L147",
       "_origin": "ast",
       "id": "lib_templatecatalog_getestimateclassification",
-      "community": 6,
+      "community": 17,
       "norm_label": "getestimateclassification()"
     },
     {
@@ -5040,7 +5180,7 @@
       "source_location": "L186",
       "_origin": "ast",
       "id": "lib_templatecatalog_matchesestimateclassfilter",
-      "community": 6,
+      "community": 17,
       "norm_label": "matchesestimateclassfilter()"
     },
     {
@@ -5050,7 +5190,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_templateestimatelink",
-      "community": 20,
+      "community": 38,
       "norm_label": "templateestimatelink.ts"
     },
     {
@@ -5060,7 +5200,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "lib_templateestimatelink_structuretemplatelike",
-      "community": 20,
+      "community": 38,
       "norm_label": "structuretemplatelike"
     },
     {
@@ -5070,7 +5210,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "lib_templateestimatelink_finddraftestimateforstructure",
-      "community": 20,
+      "community": 38,
       "norm_label": "finddraftestimateforstructure()"
     },
     {
@@ -5080,47 +5220,77 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_tokenstore",
-      "community": 20,
+      "community": 31,
       "norm_label": "tokenstore.ts"
     },
     {
       "label": "getPreferences()",
       "file_type": "code",
       "source_file": "lib/tokenStore.ts",
-      "source_location": "L15",
+      "source_location": "L11",
       "_origin": "ast",
       "id": "lib_tokenstore_getpreferences",
-      "community": 20,
+      "community": 31,
       "norm_label": "getpreferences()"
     },
     {
       "label": "KEYS",
       "file_type": "code",
       "source_file": "lib/tokenStore.ts",
-      "source_location": "L20",
+      "source_location": "L16",
       "_origin": "ast",
       "id": "lib_tokenstore_keys",
-      "community": 20,
+      "community": 31,
       "norm_label": "keys"
     },
     {
       "label": "isNative",
       "file_type": "code",
       "source_file": "lib/tokenStore.ts",
-      "source_location": "L25",
+      "source_location": "L21",
       "_origin": "ast",
       "id": "lib_tokenstore_isnative",
-      "community": 20,
+      "community": 31,
       "norm_label": "isnative"
+    },
+    {
+      "label": "webGet()",
+      "file_type": "code",
+      "source_file": "lib/tokenStore.ts",
+      "source_location": "L23",
+      "_origin": "ast",
+      "id": "lib_tokenstore_webget",
+      "community": 31,
+      "norm_label": "webget()"
+    },
+    {
+      "label": "webSet()",
+      "file_type": "code",
+      "source_file": "lib/tokenStore.ts",
+      "source_location": "L31",
+      "_origin": "ast",
+      "id": "lib_tokenstore_webset",
+      "community": 31,
+      "norm_label": "webset()"
+    },
+    {
+      "label": "webRemove()",
+      "file_type": "code",
+      "source_file": "lib/tokenStore.ts",
+      "source_location": "L39",
+      "_origin": "ast",
+      "id": "lib_tokenstore_webremove",
+      "community": 31,
+      "norm_label": "webremove()"
     },
     {
       "label": "tokenStore",
       "file_type": "code",
       "source_file": "lib/tokenStore.ts",
-      "source_location": "L27",
+      "source_location": "L47",
       "_origin": "ast",
       "id": "lib_tokenstore_tokenstore",
-      "community": 20,
+      "community": 31,
       "norm_label": "tokenstore"
     },
     {
@@ -5210,7 +5380,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "pages_customerdetail_customerdetail",
-      "community": 21,
+      "community": 19,
       "norm_label": "customerdetail()"
     },
     {
@@ -5220,7 +5390,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "pages_customerslist",
-      "community": 21,
+      "community": 27,
       "norm_label": "customerslist.tsx"
     },
     {
@@ -5230,7 +5400,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "pages_customerslist_customerslist",
-      "community": 21,
+      "community": 27,
       "norm_label": "customerslist()"
     },
     {
@@ -5240,7 +5410,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "pages_dashboard",
-      "community": 21,
+      "community": 12,
       "norm_label": "dashboard.tsx"
     },
     {
@@ -5250,7 +5420,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "pages_dashboard_summaryestimate",
-      "community": 21,
+      "community": 12,
       "norm_label": "summaryestimate"
     },
     {
@@ -5260,7 +5430,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "pages_dashboard_dashboardsummary",
-      "community": 21,
+      "community": 12,
       "norm_label": "dashboardsummary"
     },
     {
@@ -5270,7 +5440,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "pages_dashboard_statdef",
-      "community": 21,
+      "community": 12,
       "norm_label": "statdef"
     },
     {
@@ -5280,7 +5450,7 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "pages_dashboard_stat_defs",
-      "community": 21,
+      "community": 12,
       "norm_label": "stat_defs"
     },
     {
@@ -5290,7 +5460,7 @@
       "source_location": "L93",
       "_origin": "ast",
       "id": "pages_dashboard_resolvedstat",
-      "community": 21,
+      "community": 12,
       "norm_label": "resolvedstat"
     },
     {
@@ -5300,7 +5470,7 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "pages_dashboard_weeklybuckets",
-      "community": 21,
+      "community": 12,
       "norm_label": "weeklybuckets()"
     },
     {
@@ -5310,7 +5480,7 @@
       "source_location": "L110",
       "_origin": "ast",
       "id": "pages_dashboard_resolvestat",
-      "community": 21,
+      "community": 12,
       "norm_label": "resolvestat()"
     },
     {
@@ -5320,7 +5490,7 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "pages_dashboard_statcard",
-      "community": 21,
+      "community": 12,
       "norm_label": "statcard()"
     },
     {
@@ -5330,7 +5500,7 @@
       "source_location": "L192",
       "_origin": "ast",
       "id": "pages_dashboard_entrancecard",
-      "community": 21,
+      "community": 12,
       "norm_label": "entrancecard()"
     },
     {
@@ -5340,7 +5510,7 @@
       "source_location": "L209",
       "_origin": "ast",
       "id": "pages_dashboard_dashboard",
-      "community": 21,
+      "community": 2,
       "norm_label": "dashboard()"
     },
     {
@@ -5357,7 +5527,7 @@
       "label": "MaterialItem",
       "file_type": "code",
       "source_file": "pages/EstimateEditor.tsx",
-      "source_location": "L67",
+      "source_location": "L68",
       "_origin": "ast",
       "id": "pages_estimateeditor_materialitem",
       "community": 35,
@@ -5367,7 +5537,7 @@
       "label": "LayerItem",
       "file_type": "code",
       "source_file": "pages/EstimateEditor.tsx",
-      "source_location": "L81",
+      "source_location": "L82",
       "_origin": "ast",
       "id": "pages_estimateeditor_layeritem",
       "community": 35,
@@ -5377,7 +5547,7 @@
       "label": "DimensionState",
       "file_type": "code",
       "source_file": "pages/EstimateEditor.tsx",
-      "source_location": "L89",
+      "source_location": "L90",
       "_origin": "ast",
       "id": "pages_estimateeditor_dimensionstate",
       "community": 35,
@@ -5387,17 +5557,27 @@
       "label": "LEGACY_UNIT_BASIS",
       "file_type": "code",
       "source_file": "pages/EstimateEditor.tsx",
-      "source_location": "L101",
+      "source_location": "L102",
       "_origin": "ast",
       "id": "pages_estimateeditor_legacy_unit_basis",
       "community": 35,
       "norm_label": "legacy_unit_basis"
     },
     {
+      "label": "isExwDelivery()",
+      "file_type": "code",
+      "source_file": "pages/EstimateEditor.tsx",
+      "source_location": "L107",
+      "_origin": "ast",
+      "id": "pages_estimateeditor_isexwdelivery",
+      "community": 35,
+      "norm_label": "isexwdelivery()"
+    },
+    {
       "label": "LAYER_TYPE_LABELS",
       "file_type": "code",
       "source_file": "pages/EstimateEditor.tsx",
-      "source_location": "L105",
+      "source_location": "L110",
       "_origin": "ast",
       "id": "pages_estimateeditor_layer_type_labels",
       "community": 35,
@@ -5407,7 +5587,7 @@
       "label": "LAYER_TYPE_TABLE_LABELS",
       "file_type": "code",
       "source_file": "pages/EstimateEditor.tsx",
-      "source_location": "L112",
+      "source_location": "L117",
       "_origin": "ast",
       "id": "pages_estimateeditor_layer_type_table_labels",
       "community": 35,
@@ -5417,10 +5597,10 @@
       "label": "EstimateEditor()",
       "file_type": "code",
       "source_file": "pages/EstimateEditor.tsx",
-      "source_location": "L118",
+      "source_location": "L123",
       "_origin": "ast",
       "id": "pages_estimateeditor_estimateeditor",
-      "community": 14,
+      "community": 35,
       "norm_label": "estimateeditor()"
     },
     {
@@ -5460,7 +5640,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "pages_estimateslist_estimateslist",
-      "community": 21,
+      "community": 27,
       "norm_label": "estimateslist()"
     },
     {
@@ -5627,7 +5807,7 @@
       "label": "MaterialTab",
       "file_type": "code",
       "source_file": "pages/MasterData.tsx",
-      "source_location": "L18",
+      "source_location": "L19",
       "_origin": "ast",
       "id": "pages_masterdata_materialtab",
       "community": 15,
@@ -5637,7 +5817,7 @@
       "label": "RefTab",
       "file_type": "code",
       "source_file": "pages/MasterData.tsx",
-      "source_location": "L19",
+      "source_location": "L20",
       "_origin": "ast",
       "id": "pages_masterdata_reftab",
       "community": 15,
@@ -5647,7 +5827,7 @@
       "label": "Tab",
       "file_type": "code",
       "source_file": "pages/MasterData.tsx",
-      "source_location": "L20",
+      "source_location": "L21",
       "_origin": "ast",
       "id": "pages_masterdata_tab",
       "community": 15,
@@ -5657,7 +5837,7 @@
       "label": "REF_TABS",
       "file_type": "code",
       "source_file": "pages/MasterData.tsx",
-      "source_location": "L23",
+      "source_location": "L24",
       "_origin": "ast",
       "id": "pages_masterdata_ref_tabs",
       "community": 15,
@@ -5667,7 +5847,7 @@
       "label": "REF_TAB_IDS",
       "file_type": "code",
       "source_file": "pages/MasterData.tsx",
-      "source_location": "L33",
+      "source_location": "L34",
       "_origin": "ast",
       "id": "pages_masterdata_ref_tab_ids",
       "community": 15,
@@ -5677,7 +5857,7 @@
       "label": "STANDARD_MATERIAL_TABS",
       "file_type": "code",
       "source_file": "pages/MasterData.tsx",
-      "source_location": "L38",
+      "source_location": "L39",
       "_origin": "ast",
       "id": "pages_masterdata_standard_material_tabs",
       "community": 15,
@@ -5687,7 +5867,7 @@
       "label": "ACCESSORY_KIND_OPTIONS",
       "file_type": "code",
       "source_file": "pages/MasterData.tsx",
-      "source_location": "L48",
+      "source_location": "L49",
       "_origin": "ast",
       "id": "pages_masterdata_accessory_kind_options",
       "community": 15,
@@ -5697,7 +5877,7 @@
       "label": "accessoryBasis()",
       "file_type": "code",
       "source_file": "pages/MasterData.tsx",
-      "source_location": "L56",
+      "source_location": "L57",
       "_origin": "ast",
       "id": "pages_masterdata_accessorybasis",
       "community": 15,
@@ -5707,7 +5887,7 @@
       "label": "dbTypeForRmCode()",
       "file_type": "code",
       "source_file": "pages/MasterData.tsx",
-      "source_location": "L61",
+      "source_location": "L62",
       "_origin": "ast",
       "id": "pages_masterdata_dbtypeforrmcode",
       "community": 15,
@@ -5717,7 +5897,7 @@
       "label": "defaultFamilyForRmCode()",
       "file_type": "code",
       "source_file": "pages/MasterData.tsx",
-      "source_location": "L70",
+      "source_location": "L71",
       "_origin": "ast",
       "id": "pages_masterdata_defaultfamilyforrmcode",
       "community": 15,
@@ -5727,7 +5907,7 @@
       "label": "slugKey()",
       "file_type": "code",
       "source_file": "pages/MasterData.tsx",
-      "source_location": "L81",
+      "source_location": "L82",
       "_origin": "ast",
       "id": "pages_masterdata_slugkey",
       "community": 15,
@@ -5737,7 +5917,7 @@
       "label": "filterMaterialsForTab()",
       "file_type": "code",
       "source_file": "pages/MasterData.tsx",
-      "source_location": "L90",
+      "source_location": "L91",
       "_origin": "ast",
       "id": "pages_masterdata_filtermaterialsfortab",
       "community": 15,
@@ -5747,7 +5927,7 @@
       "label": "newMaterialRow()",
       "file_type": "code",
       "source_file": "pages/MasterData.tsx",
-      "source_location": "L121",
+      "source_location": "L122",
       "_origin": "ast",
       "id": "pages_masterdata_newmaterialrow",
       "community": 15,
@@ -5757,7 +5937,7 @@
       "label": "MasterData()",
       "file_type": "code",
       "source_file": "pages/MasterData.tsx",
-      "source_location": "L170",
+      "source_location": "L171",
       "_origin": "ast",
       "id": "pages_masterdata_masterdata",
       "community": 23,
@@ -5770,7 +5950,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "pages_masterlibrary",
-      "community": 16,
+      "community": 19,
       "norm_label": "masterlibrary.tsx"
     },
     {
@@ -5780,7 +5960,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "pages_masterlibrary_mastermaterial",
-      "community": 16,
+      "community": 19,
       "norm_label": "mastermaterial"
     },
     {
@@ -5790,7 +5970,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "pages_masterlibrary_masterlibrary",
-      "community": 16,
+      "community": 19,
       "norm_label": "masterlibrary()"
     },
     {
@@ -5800,7 +5980,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "pages_rawmaterials",
-      "community": 23,
+      "community": 28,
       "norm_label": "rawmaterials.tsx"
     },
     {
@@ -5810,7 +5990,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "pages_rawmaterials_materialrow",
-      "community": 23,
+      "community": 28,
       "norm_label": "materialrow"
     },
     {
@@ -5820,7 +6000,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "pages_rawmaterials_tabid",
-      "community": 23,
+      "community": 28,
       "norm_label": "tabid"
     },
     {
@@ -5830,7 +6010,7 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "pages_rawmaterials_tabs",
-      "community": 23,
+      "community": 28,
       "norm_label": "tabs"
     },
     {
@@ -5840,7 +6020,7 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "pages_rawmaterials_accessory_kinds",
-      "community": 23,
+      "community": 28,
       "norm_label": "accessory_kinds"
     },
     {
@@ -5850,7 +6030,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "pages_rawmaterials_num",
-      "community": 23,
+      "community": 28,
       "norm_label": "num()"
     },
     {
@@ -5860,7 +6040,7 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "pages_rawmaterials_fmt2",
-      "community": 23,
+      "community": 28,
       "norm_label": "fmt2()"
     },
     {
@@ -5870,7 +6050,7 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "pages_rawmaterials_rowmatchestab",
-      "community": 23,
+      "community": 28,
       "norm_label": "rowmatchestab()"
     },
     {
@@ -5880,7 +6060,7 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "pages_rawmaterials_newrowfortab",
-      "community": 23,
+      "community": 28,
       "norm_label": "newrowfortab()"
     },
     {
@@ -5900,7 +6080,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "pages_register",
-      "community": 16,
+      "community": 19,
       "norm_label": "register.tsx"
     },
     {
@@ -5910,7 +6090,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "pages_register_register",
-      "community": 16,
+      "community": 19,
       "norm_label": "register()"
     },
     {
@@ -6080,7 +6260,7 @@
       "source_location": "L151",
       "_origin": "ast",
       "id": "pages_standardtemplates_templategridcell",
-      "community": 6,
+      "community": 19,
       "norm_label": "templategridcell()"
     },
     {
@@ -10824,6 +11004,213 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L65",
+      "weight": 1.0,
+      "source": "components_pricelistpanel",
+      "target": "components_pricelistpanel_bandkey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L119",
+      "weight": 1.0,
+      "source": "components_pricelistpanel",
+      "target": "components_pricelistpanel_bandrangekg",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L69",
+      "weight": 1.0,
+      "source": "components_pricelistpanel",
+      "target": "components_pricelistpanel_formatqty",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L87",
+      "weight": 1.0,
+      "source": "components_pricelistpanel",
+      "target": "components_pricelistpanel_formatsmartprice",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L125",
+      "weight": 1.0,
+      "source": "components_pricelistpanel",
+      "target": "components_pricelistpanel_pricelistpanel",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L27",
+      "weight": 1.0,
+      "source": "components_pricelistpanel",
+      "target": "components_pricelistpanel_pricelistpanelprops",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L56",
+      "weight": 1.0,
+      "source": "components_pricelistpanel",
+      "target": "components_pricelistpanel_pricelistrow",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "components_pricelistpanel",
+      "target": "components_pricelistpanel_pricelistunit",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L77",
+      "weight": 1.0,
+      "source": "components_pricelistpanel",
+      "target": "components_pricelistpanel_smartpricedecimals",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L97",
+      "weight": 1.0,
+      "source": "components_pricelistpanel",
+      "target": "components_pricelistpanel_smartpriceshowndecimals",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L106",
+      "weight": 1.0,
+      "source": "components_pricelistpanel",
+      "target": "components_pricelistpanel_themeargb",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "components_pricelistpanel",
+      "target": "components_pricelistpanel_unit_labels",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "components_pricelistpanel",
+      "target": "components_pricelistpanel_unit_qty_decimals",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "components_pricelistpanel",
+      "target": "lib_currency",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "components_pricelistpanel",
+      "target": "lib_currency_displaytousd",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "components_pricelistpanel",
+      "target": "lib_currency_usdtodisplayprecise",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "pages/EstimateEditor.tsx",
+      "source_location": "L45",
+      "weight": 1.0,
+      "source": "pages_estimateeditor",
+      "target": "components_pricelistpanel",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "pages/EstimateEditor.tsx",
+      "source_location": "L45",
+      "weight": 1.0,
+      "source": "pages_estimateeditor",
+      "target": "components_pricelistpanel_pricelistunit",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L89",
+      "weight": 1.0,
+      "source": "components_pricelistpanel_formatsmartprice",
+      "target": "components_pricelistpanel_smartpricedecimals",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "components/PriceListPanel.tsx",
+      "source_location": "L98",
+      "weight": 1.0,
+      "source": "components_pricelistpanel_smartpriceshowndecimals",
+      "target": "components_pricelistpanel_smartpricedecimals",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "components/QuickThemeSwitcher.tsx",
       "source_location": "L30",
       "weight": 1.0,
@@ -11696,6 +12083,28 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "components/TemplateBuilder.tsx",
+      "source_location": "L31",
+      "weight": 1.0,
+      "source": "components_templatebuilder",
+      "target": "hooks_useauth",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/TemplateBuilder.tsx",
+      "source_location": "L31",
+      "weight": 1.0,
+      "source": "components_templatebuilder",
+      "target": "hooks_useauth_useauth",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/TemplateBuilder.tsx",
       "source_location": "L27",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -11888,6 +12297,17 @@
       "confidence_score": 1.0,
       "source": "components_templatebuilder_materialselect",
       "target": "components_templatebuilder_groupbyfamily"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "components/TemplateBuilder.tsx",
+      "source_location": "L285",
+      "weight": 1.0,
+      "source": "components_templatebuilder_templatebuilder",
+      "target": "hooks_useauth_useauth"
     },
     {
       "relation": "calls",
@@ -14158,9 +14578,9 @@
       "source_file": "lib/api.ts",
       "source_location": "L155",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_api",
-      "target": "lib_api_platformtemplatesync",
-      "confidence_score": 1.0
+      "target": "lib_api_platformtemplatesync"
     },
     {
       "relation": "contains",
@@ -16608,9 +17028,9 @@
       "source_file": "lib/currency.ts",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_currency",
-      "target": "lib_currency_cormdisplayperkgtoengineusd",
-      "confidence_score": 1.0
+      "target": "lib_currency_cormdisplayperkgtoengineusd"
     },
     {
       "relation": "contains",
@@ -16669,9 +17089,9 @@
       "source_file": "lib/estimateCalc.ts",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_estimatecalc",
-      "target": "lib_currency",
-      "confidence_score": 1.0
+      "target": "lib_currency"
     },
     {
       "relation": "imports_from",
@@ -16757,9 +17177,9 @@
       "source_file": "lib/currency.ts",
       "source_location": "L33",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_currency_cormdisplayperkgtoengineusd",
-      "target": "lib_currency_displaytousd",
-      "confidence_score": 1.0
+      "target": "lib_currency_displaytousd"
     },
     {
       "relation": "calls",
@@ -16779,9 +17199,9 @@
       "source_file": "lib/estimateCalc.ts",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_estimatecalc",
-      "target": "lib_currency_displaytousd",
-      "confidence_score": 1.0
+      "target": "lib_currency_displaytousd"
     },
     {
       "relation": "imports",
@@ -18691,16 +19111,6 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "lib/productCatalog.ts",
-      "source_location": "L21",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "lib_productcatalog",
-      "target": "lib_productcatalog_engineproducttype"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "lib/productCatalog.ts",
       "source_location": "L48",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -18801,6 +19211,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "lib/productCatalog.ts",
+      "source_location": "L23",
+      "weight": 1.0,
+      "source": "lib_productcatalog",
+      "target": "lib_productcatalog_producttypecode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/productCatalog.ts",
       "source_location": "L101",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -18849,6 +19269,17 @@
       "target": "lib_productcatalog"
     },
     {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "pages/MasterData.tsx",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "pages_masterdata",
+      "target": "lib_productcatalog",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -18880,6 +19311,17 @@
       "confidence_score": 1.0,
       "source": "pages_estimateeditor",
       "target": "lib_productcatalog_product_family_labels"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "pages/MasterData.tsx",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "pages_masterdata",
+      "target": "lib_productcatalog_product_family_labels",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports",
@@ -19537,6 +19979,36 @@
       "target": "lib_tokenstore_tokenstore"
     },
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/tokenStore.ts",
+      "source_location": "L23",
+      "weight": 1.0,
+      "source": "lib_tokenstore",
+      "target": "lib_tokenstore_webget",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/tokenStore.ts",
+      "source_location": "L39",
+      "weight": 1.0,
+      "source": "lib_tokenstore",
+      "target": "lib_tokenstore_webremove",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/tokenStore.ts",
+      "source_location": "L31",
+      "weight": 1.0,
+      "source": "lib_tokenstore",
+      "target": "lib_tokenstore_webset",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
@@ -19797,6 +20269,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "pages/EstimateEditor.tsx",
+      "source_location": "L107",
+      "weight": 1.0,
+      "source": "pages_estimateeditor",
+      "target": "pages_estimateeditor_isexwdelivery",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "pages/EstimateEditor.tsx",
       "source_location": "L101",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -19842,6 +20324,17 @@
       "confidence_score": 1.0,
       "source": "pages_estimateeditor",
       "target": "pages_estimateeditor_materialitem"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "pages/EstimateEditor.tsx",
+      "source_location": "L2302",
+      "weight": 1.0,
+      "source": "pages_estimateeditor_estimateeditor",
+      "target": "pages_estimateeditor_isexwdelivery",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",

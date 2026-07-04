@@ -121,13 +121,17 @@ export function JobHeaderFields({
     productTypeOptions?.find((o) => o.value === productType)?.label ?? productType;
 
   const dimCount = dimensionFields.length;
+  const rollLengthMissing =
+    showUnitMultiplier &&
+    !(Number.isFinite(orderQuantityUnitMultiplier) && (orderQuantityUnitMultiplier as number) > 0);
   const specGridStyle = {
     gridTemplateColumns: [
       showProductType ? 'minmax(5rem, 0.55fr)' : null,
       showSubtype ? 'minmax(12rem, 2.2fr)' : null,
       showOrderQty ? 'minmax(6.5rem, 0.75fr)' : null,
-      showOrderQty ? 'minmax(4.75rem, 0.5fr)' : null,
-      showUnitMultiplier ? 'minmax(6rem, 0.75fr)' : null,
+      // Wide enough for "Roll (custom length)" without clipping the closed select.
+      showOrderQty ? 'minmax(11.5rem, 1.15fr)' : null,
+      showUnitMultiplier ? 'minmax(6.5rem, 0.8fr)' : null,
       ...dimensionFields.map(() => 'minmax(5.75rem, 1fr)'),
     ]
       .filter(Boolean)
@@ -173,7 +177,7 @@ export function JobHeaderFields({
               <SpecField label="Product type" title="Product type">
                 {productTypeLocked ? (
                   <p
-                    className="input input-compact w-full bg-slate text-navy font-medium text-center truncate"
+                    className="input input-compact input-static w-full text-navy font-medium text-center truncate"
                     title={productTypeLabel}
                   >
                     {productTypeLabel}
@@ -225,11 +229,15 @@ export function JobHeaderFields({
                     className="input input-compact w-full text-center tabular-nums"
                   />
                 </SpecField>
-                <SpecField label="Unit">
+                <SpecField
+                  label="Unit"
+                  title={selectedUnitOption?.label ?? 'Unit'}
+                >
                   <select
                     value={orderQuantityUnit}
                     onChange={(e) => onOrderQuantityUnitChange(e.target.value)}
-                    className={`${fieldClass} text-center`}
+                    className={`${fieldClass} text-left`}
+                    title={selectedUnitOption?.label}
                   >
                     {unitOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -242,16 +250,33 @@ export function JobHeaderFields({
             )}
 
             {showUnitMultiplier && (
-              <SpecField label="Roll length (LM)" title="Length of one roll — used to convert this order to kg">
+              <SpecField
+                label="Roll length (LM) *"
+                title="Length of one roll in linear metres — required for Roll (custom length)"
+              >
                 <input
                   type="number"
                   min={0}
                   step="any"
-                  value={Number.isFinite(orderQuantityUnitMultiplier) ? orderQuantityUnitMultiplier : ''}
-                  onChange={(e) => onOrderQuantityUnitMultiplierChange!(Number(e.target.value) || 0)}
+                  required
+                  value={
+                    Number.isFinite(orderQuantityUnitMultiplier) && (orderQuantityUnitMultiplier as number) > 0
+                      ? orderQuantityUnitMultiplier
+                      : ''
+                  }
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === '') {
+                      onOrderQuantityUnitMultiplierChange!(0);
+                      return;
+                    }
+                    onOrderQuantityUnitMultiplierChange!(Number(raw) || 0);
+                  }}
                   onFocus={selectOnFocus}
                   placeholder="e.g. 500"
-                  className="input input-compact w-full text-center tabular-nums"
+                  className={`input input-compact w-full text-center tabular-nums ${
+                    rollLengthMissing ? 'bg-warning-soft border-warning/40' : ''
+                  }`}
                 />
               </SpecField>
             )}

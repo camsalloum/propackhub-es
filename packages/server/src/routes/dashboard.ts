@@ -4,6 +4,7 @@ import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth'
 import { eq, desc, and, isNull } from 'drizzle-orm';
 import { getEffectiveProfile, stripEstimateRow } from '../utils/visibility';
 import { usdToDisplay } from '../utils/currency';
+import { sendCaughtError } from '../utils/errors';
 
 type EstimateRow = typeof schema.estimates.$inferSelect;
 
@@ -135,8 +136,7 @@ export async function getDashboardSummaryRoute(
       quotationValidDays: validDays,
     });
   } catch (error: unknown) {
-    console.error('Dashboard summary error:', error);
-    return reply.status(500).send({ error: 'Failed to load dashboard summary' });
+    return sendCaughtError(reply, error, 'Failed to load dashboard summary', 'Dashboard summary error:');
   }
 }
 

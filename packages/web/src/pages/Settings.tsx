@@ -29,10 +29,10 @@ const Settings = () => {
   const [tenantName, setTenantName] = useState('');
   const [defaultMarkup, setDefaultMarkup] = useState<number>(15);
   const [operatingCostMethod, setOperatingCostMethod] = useState<'process_per_kg' | 'markup_over_rm' | 'fixed_per_group'>('markup_over_rm');
-  const [defaultSlabTemplate, setDefaultSlabTemplate] = useState('standard');
-  const [displayCurrency, setDisplayCurrency] = useState('AED');
+  const [displayCurrency, setDisplayCurrency] = useState('USD');
   const [useAutoFx, setUseAutoFx] = useState(true);
-  const [exchangeRateUsdToDisplay, setExchangeRateUsdToDisplay] = useState<number>(3.6725);
+  /** Neutral until settings load — never flash a regional FX default (HARDCODING_AUDIT FX1). */
+  const [exchangeRateUsdToDisplay, setExchangeRateUsdToDisplay] = useState<number>(1);
   const [fxLastUpdated, setFxLastUpdated] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
   const [brandPrimaryColor, setBrandPrimaryColor] = useState('#0F1F3D');
@@ -56,7 +56,7 @@ const Settings = () => {
       setSettingsError(null);
       const settings = await apiClient.getSettings();
       setTenantName(settings.name || '');
-      setDisplayCurrency(settings.displayCurrency || 'AED');
+      setDisplayCurrency(settings.displayCurrency || 'USD');
       setExchangeRateUsdToDisplay(Number(settings.exchangeRateUsdToDisplay) || 1);
       setUseAutoFx(Boolean(settings.useAutoFx));
       setFxLastUpdated(settings.exchangeRateUpdatedAt || null);
@@ -64,7 +64,7 @@ const Settings = () => {
       setBrandPrimaryColor(settings.primaryColor || '#0F1F3D');
       setTermsAndConditions(settings.termsAndConditions || '');
       setFooterText((settings.footerText as string) || (settings.footer as string) || '');
-      // BUG-7: load defaultMarkup + defaultSlabTemplate so Save doesn't overwrite with hardcoded defaults
+      // BUG-7: load defaultMarkup so Save doesn't overwrite with hardcoded default
       setDefaultMarkup(Number(settings.defaultMarkupPercent) || 15);
       setOperatingCostMethod(
         settings.operatingCostMethod === 'process_per_kg' ||
@@ -72,7 +72,6 @@ const Settings = () => {
           ? settings.operatingCostMethod
           : 'markup_over_rm'
       );
-      setDefaultSlabTemplate(settings.defaultSlabTemplate || 'standard');
     } catch (err) {
       setSettingsError(err instanceof Error ? err.message : 'Failed to load settings');
       console.error('Failed to load settings:', err);
@@ -135,7 +134,6 @@ const Settings = () => {
         footerText,
         defaultMarkupPercent: defaultMarkup,
         operatingCostMethod,
-        defaultSlabTemplate,
       });
       alert('Settings saved');
     } catch (err) {
@@ -228,7 +226,7 @@ const Settings = () => {
                   <p className="text-sm text-text-secondary mt-2">
                     How the operating cost is added to the price. Per-kg suits companies with defined process costs;
                     markup-over-material suits single users. Fixed CoRM uses the per-template value
-                    set in <strong>Platform Master → Templates</strong> (or the estimate's source template)
+                    set in <strong>Platform Master → CoRM</strong> (or the estimate's source template)
                     as the M&O figure. This is the only markup applied.
                   </p>
                 </div>
@@ -251,20 +249,11 @@ const Settings = () => {
                         return 'Percentage added over Total RM as Manufacturing & Operating.';
                       }
                       if (operatingCostMethod === 'fixed_per_group') {
-                        return 'Not used — the per-template CoRM (set in Platform Master → Templates) is used as M&O.';
+                        return 'Not used — the per-template CoRM (set in Platform Master → CoRM) is used as M&O.';
                       }
                       return 'Not used while operating cost is per-kg process cost.';
                     })()}
                   </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-brand mb-2">Default Slab Template</label>
-                  <select value={defaultSlabTemplate} onChange={(e) => setDefaultSlabTemplate(e.target.value)} className="input w-64">
-                    <option value="standard">Standard 4-tier (1T/2T/5T/10T)</option>
-                    <option value="small">Small quantities (500/1000/2000 kg)</option>
-                    <option value="large">Large quantities (5T/10T/20T/50T)</option>
-                  </select>
                 </div>
 
                 <div className="pt-6 border-t border-border">

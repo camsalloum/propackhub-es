@@ -1,38 +1,41 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-04 (closed open follow-ups — currency audit + CoRM data + Part B backfill + tsc clean)
-**Session focus:** Walked every open item from 2026-07-03; fixed remaining gaps.
+**Last updated:** 2026-07-04 (removed Costs & Terms tab)
+**Session focus:** Estimate editor is Structure + Price list; markup from Settings.
 
 ---
 
 ## Where we stopped (read this first next session)
 
-### **START HERE:** Smoke-test currency + Fixed CoRM, then optional column rename
+### **START HERE:** Commit housekeeping if not yet committed
 
-1. **Start:** `RUN-ES.bat`
-2. **Platform Master → Templates:** CoRM should show ~**1.52 / 2.00 AED** (restored from 0.41 / 0.54 USD-era values). Adjust if you want different numbers.
-3. **Estimate editor:** Tooling / Margin labels use **display currency**; Delivery/freight stays **USD**.
-4. **Settings:** Fixed CoRM option shows `{currency}/kg`.
+1. Working tree should show deleted `localhost.har`, `stitch.zip`, and `.gitignore` update — commit when ready.
+2. No history purge needed (HAR had no JWTs / empty cookies).
+3. Prior smoke: structured logs, CoRM blur+Save, Waste Bands Printed/Plain.
 
-### Open follow-ups closed this session (2026-07-04)
+### Audit 4.x status (2026-07-04)
 
 | Item | Status | What we did |
 |------|--------|-------------|
-| Re-enter CoRM values | ✅ Automated | `db:migrate-corm-display` — 0.41→1.517, 0.54→1.998 AED; mirrored to all tenant copies |
-| Currency audit (plates/tooling/margin/process) | ✅ Fixed | `displayToUsd` at engine boundary (server `estimate-engine-input.ts` + client `estimateCalc.ts`); freight stays USD; UI labels updated |
-| Column rename `corm_per_kg_usd` | ⏸ Deferred | Optional only — behavior correct; legacy name documented |
-| Part B Phase 5 backfill | ✅ Done | `db:backfill-processes` — structure_signature / fork flags (1 estimate already current) |
-| `tsc --noEmit` server/web | ✅ Clean | Fixed estimate-audit, proposal-pdf, solvent-common test, unused imports, audit entity type |
+| 4.1 FX `3.6725` + slab labels | ✅ Fixed | Neutral FX `1`; Default Slab Template UI removed (2026-07-04) |
+| 4.2 EstimateEditor 3.4k lines | ⏸ Deferred | Large refactor — split by concern when scheduling a dedicated session |
+| 4.3 Yahoo price scraper | ✅ Decision documented | Accept unofficial Yahoo + fallback resins (advisory market only) |
+| 4.4 Integration tests skip silently | ✅ Fixed | `test/require-database.ts` loud banner |
+| 4.5 Unstructured logging | ✅ Fixed | Routes use `request.log`; seeds/services use `log` (pino); `sendCaughtError` correlates via `reply.request.log`. CLI scripts + test banner keep `console` |
+| 4.6 CORS `credentials: true` | ✅ Fixed | `credentials: false` (Bearer auth, no cookies) |
+| 4.7 Dependency majors | ⏸ Deferred | No major upgrades this session (risk); puppeteer remains optionalDeps for local PDF script only |
 
-### Scripts added
+### Earlier closed (same day)
 
-- `npm run db:migrate-corm-display --workspace=packages/server` — one-shot CoRM USD→display restore (skip if values already ≥ 1)
-- `npm run db:backfill-processes --workspace=packages/server` — Part B signature backfill
+CoRM/currency, dashboard column, startup hang/port conflict, Part B backfill, tsc clean, security §3.1–3.5, TemplateBuilder CoRM vs margin.
 
 ### Still optional (not a bug)
 
-- Rename DB column `corm_per_kg_usd` → `corm_per_kg_display` when convenient.
-- Manual tweak of CoRM numbers if 1.52/2.00 AED are not the intended business values (migration used admin FX 3.7).
+- Rename DB column `corm_per_kg_usd` → `corm_per_kg_display`.
+- EstimateEditor split (4.2).
+- Major dep upgrades (4.7) when scheduled.
+- `any` cleanup, migration-script consolidation, web test coverage — opportunistic only.
+- `.bat` files and `archive/legacy-laravel` kept on purpose.
 
 ### Session 2026-07-03 — Completed fixes (summary)
 
@@ -83,7 +86,7 @@ Part B handoff: `docs/PROCESS_COSTING_AND_ESTIMATE_FLOW_HANDOFF.md`. Phases 0–
 | DB pool timeout raised (2s → 10s default via env) | ✅ |
 | DB keepalive + pool env tuning | ✅ |
 | Login transient DB reconnect + retry once | ✅ |
-| Startup waiter switched to `/health/ready` | ✅ |
+| Startup waiter switched to `/health/ready` | ✅ (probe fixed 2026-07-04: use `sql\`SELECT 1\``) |
 | Startup wait window increased (90s → 240s) | ✅ |
 | Server build after fix | ✅ Pass |
 
@@ -284,7 +287,7 @@ Purged 281 accumulated junk drafts via `npm run db:purge-estimates -- --all`.
 
 ### 8. Sticky top action bar + deduplicated controls
 
-Top bar (Back · Cancel · Save · Calculate · PDF) made `sticky top-0 z-30`. Bottom panel Save/Calculate duplicates removed (kept unique actions: Save to My Templates, Duplicate for re-quote).
+Top bar (Back · Save draft · Save · PDF · My Templates · Re-quote) is `sticky top-0 z-30` — sole action toolbar; no bottom duplicates.
 
 ### 9. Pouch/bag dimensions — header fields removed
 

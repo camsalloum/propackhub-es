@@ -4,7 +4,7 @@ import { z } from 'zod';
 import * as schema from '../db/schema';
 import { getDatabase } from '../db';
 import { extractTenantFromRequest } from '../utils/auth';
-import { errorBody, isFkViolation } from '../utils/errors';
+import { errorBody, isFkViolation, sendCaughtError } from '../utils/errors';
 import { parsePagination, paginate } from '../utils/pagination';
 
 // ---------------------------------------------------------------------------
@@ -57,8 +57,7 @@ async function getCustomersRoute(request: FastifyRequest<{ Querystring: { limit?
 
     return reply.send(paginate(customers, Number(total), limit, offset));
   } catch (error: unknown) {
-    console.error('Get customers error:', error);
-    return reply.status(500).send(errorBody('INTERNAL', 'Failed to fetch customers'));
+    return sendCaughtError(reply, error, 'Failed to fetch customers', 'Get customers error:');
   }
 }
 
@@ -93,8 +92,7 @@ async function autocompleteCustomersRoute(
 
     return reply.send(customers);
   } catch (error: unknown) {
-    console.error('Autocomplete customers error:', error);
-    return reply.status(500).send(errorBody('INTERNAL', 'Failed to search customers'));
+    return sendCaughtError(reply, error, 'Failed to search customers', 'Autocomplete customers error:');
   }
 }
 
@@ -126,8 +124,7 @@ async function createCustomerRoute(
     if (error instanceof z.ZodError) {
       return reply.status(400).send(errorBody('VALIDATION', 'Validation failed', error.errors));
     }
-    console.error('Create customer error:', error);
-    return reply.status(500).send(errorBody('INTERNAL', 'Failed to create customer'));
+    return sendCaughtError(reply, error, 'Failed to create customer', 'Create customer error:');
   }
 }
 
@@ -152,8 +149,7 @@ async function getCustomerRoute(
 
     return reply.send(customer);
   } catch (error: unknown) {
-    console.error('Get customer error:', error);
-    return reply.status(500).send(errorBody('INTERNAL', 'Failed to fetch customer'));
+    return sendCaughtError(reply, error, 'Failed to fetch customer', 'Get customer error:');
   }
 }
 
@@ -184,8 +180,7 @@ async function updateCustomerRoute(
     if (error instanceof z.ZodError) {
       return reply.status(400).send(errorBody('VALIDATION', 'Validation failed', error.errors));
     }
-    console.error('Update customer error:', error);
-    return reply.status(500).send(errorBody('INTERNAL', 'Failed to update customer'));
+    return sendCaughtError(reply, error, 'Failed to update customer', 'Update customer error:');
   }
 }
 
@@ -235,8 +230,7 @@ async function deleteCustomerRoute(
         errorBody('FK_IN_USE', 'Customer is referenced and cannot be deleted')
       );
     }
-    console.error('Delete customer error:', error);
-    return reply.status(500).send(errorBody('INTERNAL', 'Failed to delete customer'));
+    return sendCaughtError(reply, error, 'Failed to delete customer', 'Delete customer error:');
   }
 }
 
@@ -317,8 +311,7 @@ async function getCustomerEstimatesRoute(
 
     return reply.send(enriched);
   } catch (error: unknown) {
-    console.error('Get customer estimates error:', error);
-    return reply.status(500).send(errorBody('INTERNAL', 'Failed to fetch customer estimates'));
+    return sendCaughtError(reply, error, 'Failed to fetch customer estimates', 'Get customer estimates error:');
   }
 }
 

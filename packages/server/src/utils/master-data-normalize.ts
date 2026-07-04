@@ -1,14 +1,16 @@
 import type { MasterDataReference, ProductTypeRow, PrintingWebRow } from '../db/master-materials-io';
+import { log } from './logger';
 
-export type ProductTypeValue = 'roll' | 'sleeve' | 'pouch';
+export type ProductTypeValue = 'roll' | 'sleeve' | 'pouch' | 'bag';
 export type PrintingWebValue = 'wide_web' | 'narrow_web';
 
 const PRODUCT_TYPE_MAP: Record<string, ProductTypeValue> = {
   roll: 'roll',
   sleeve: 'sleeve',
-  'bag or pouch': 'pouch',
   pouch: 'pouch',
-  bag: 'pouch',
+  bag: 'bag',
+  /** Legacy combined label — prefer pouch; bags use explicit "Bag" / code bag. */
+  'bag or pouch': 'pouch',
 };
 
 const UNIT_MAP: Record<string, string> = {
@@ -34,7 +36,7 @@ export function normalizeProductTypeLabel(label: string): ProductTypeValue | nul
 
 export function normalizeProductTypeCode(codeOrLabel: string): ProductTypeValue | null {
   const key = codeOrLabel.trim().toLowerCase();
-  if (key === 'roll' || key === 'sleeve' || key === 'pouch') return key;
+  if (key === 'roll' || key === 'sleeve' || key === 'pouch' || key === 'bag') return key;
   return normalizeProductTypeLabel(codeOrLabel);
 }
 
@@ -89,7 +91,8 @@ export interface MasterDataReferenceResponse extends MasterDataReference {
 export const DEFAULT_PRODUCT_TYPE_ROWS: ProductTypeRow[] = [
   { label: 'Roll', code: 'roll' },
   { label: 'Sleeve', code: 'sleeve' },
-  { label: 'Bag', code: 'pouch' },
+  { label: 'Pouch', code: 'pouch' },
+  { label: 'Bag', code: 'bag' },
 ];
 
 export const DEFAULT_PRINTING_WEB_ROWS: PrintingWebRow[] = [
@@ -157,7 +160,7 @@ function printingWebOptionsFromRows(rows: PrintingWebRow[]): PrintingWebOption[]
     const value =
       normalizePrintingWebCode(row.code) ?? normalizePrintingWebCode(row.label);
     if (!value) {
-      console.warn(`[master-data] Unknown printing web "${row.label}" (code: ${row.code}) — skipped`);
+      log.warn({ label: row.label, code: row.code }, 'Unknown printing web — skipped');
       continue;
     }
     const ink = row.inkSystem || (value === 'wide_web' ? 'Ink SB' : 'Ink UV');

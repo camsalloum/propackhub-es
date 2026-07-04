@@ -11,10 +11,14 @@ import {
   stackNeedsSolventMix,
   resolveTemplateStoreClassification,
   tierToStructureType,
+  structureIsPrinted,
+  wasteBandsForPrintMode,
+  slabQuantitiesFromMoq,
+  plainCormFromPrinted,
 } from '@es/engine';
 import { buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
 import { generateRefNumber } from './estimates';
-import { getMasterDataVersion } from '../db/platform-master-data';
+import { getMasterDataVersion, getPlatformWasteBandsByPrintMode } from '../db/platform-master-data';
 
 type EstimateRow = typeof schema.estimates.$inferSelect;
 import { buildLayerInsertValues, toMaterialLineageSource } from '../utils/layer-lineage';
@@ -29,6 +33,8 @@ import {
   resolveLayerMaterialId,
   type TemplateLayerRef,
 } from '../utils/template-material-lookup';
+import { AppError, isAuthError, sendCaughtError } from '../utils/errors';
+import { log } from '../utils/logger';
 
 /** Seed missing standards, dedupe legacy rows, then assign stable keys. */
 async function prepareTemplatesForTenant(tenantId: string): Promise<void> {
@@ -40,7 +46,7 @@ async function prepareTemplatesForTenant(tenantId: string): Promise<void> {
     try {
       await fn();
     } catch (err) {
-      console.error(`[templates] ${label} failed for tenant ${tenantId}:`, err);
+      log.error({ err, tenantId, pass: label }, 'Template prepare pass failed');
     }
   };
 
@@ -97,9 +103,8 @@ const TemplateLayerSchema = z.object({
 
 const UpdateTemplateSchema = z.object({
   name: z.string().min(1).optional(),
-  // Engine costing type — always 'roll' | 'sleeve' | 'pouch'.
-  // 'bag' is a UI family that maps to 'pouch' for costing; TemplateBuilder sends the engine type.
-  productType: z.enum(['roll', 'sleeve', 'pouch']).optional(),
+  // Product type — roll | sleeve | pouch | bag (first-class).
+  productType: z.enum(['roll', 'sleeve', 'pouch', 'bag']).optional(),
   // UI product subtype (e.g. 'bag_punch_handle', 'pouch_stand_up'); stored alongside productType.
   productSubtype: z.string().max(64).nullable().optional(),
   materialClass: z.string().nullable().optional(),
@@ -186,9 +191,8 @@ export async function getTemplatesRoute(
     }
 
     return reply.send(templates);
-  } catch (error: any) {
-    console.error('Get templates error:', error);
-    return reply.status(500).send({ error: 'Failed to fetch templates' });
+  } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to fetch templates', 'Get templates error:');
   }
 }
 
@@ -228,9 +232,8 @@ export async function getTemplateByIdRoute(
     }
 
     return reply.send(template);
-  } catch (error: any) {
-    console.error('Get template error:', error);
-    return reply.status(500).send({ error: 'Failed to fetch template' });
+  } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to fetch template', 'Get template error:');
   }
 }
 
@@ -300,8 +303,7 @@ export async function instantiateByKeyRoute(
       reply
     );
   } catch (error: unknown) {
-    console.error('Instantiate by key error:', error);
-    return reply.status(500).send({ error: 'Failed to instantiate template' });
+    return sendCaughtError(reply, error, 'Failed to instantiate template', 'Instantiate by key error:');
   }
 }
 
@@ -483,7 +485,22 @@ export async function instantiateTemplateRoute(
           position: i,
         };
       });
-      const slabQtys = quantitiesForSlabTemplateKey(tenant.defaultSlabTemplate || 'standard');
+      const defaultLayersForPrint = (template.defaultLayers as TemplateLayerRef[]) || [];
+      const printMode = structureIsPrinted(
+        defaultLayersForPrint.map((l) => ({ layer_type: l.layer_type }))
+      )
+        ? 'printed'
+        : 'plain';
+      const wasteBands = wasteBandsForPrintMode(await getPlatformWasteBandsByPrintMode(), printMode);
+      const moqKg = template.moqKg != null ? Number(template.moqKg) : 0;
+      const slabQtys =
+        moqKg > 0
+          ? slabQuantitiesFromMoq(moqKg, wasteBands)
+          : quantitiesForSlabTemplateKey(tenant.defaultSlabTemplate || 'standard');
+      const cormPrinted = template.cormPerKgUsd ?? null;
+      const cormPlain =
+        template.cormPerKgPlain ??
+        (cormPrinted != null ? plainCormFromPrinted(Number(cormPrinted)).toFixed(4) : null);
 
       // Include processes in preview so the editor can hydrate them (Mfg & Operating calc).
       const previewProcesses = defaultProcesses.map((p) => {
@@ -519,10 +536,12 @@ export async function instantiateTemplateRoute(
           structureForked: false,
           processesCustomized: false,
           structureSignature: templateStructureSignature,
-          // Product-group margin (USD/kg) — estimates default their margin/kg from it.
+          // Margin default (display currency) — estimates inherit when pricing method is margin_per_kg.
           marginValuePerKgUsd: template.marginOverRmPerKgUsd ?? null,
-          // Per-template fixed CoRM (USD/kg) for fixed_per_group operating cost method
-          cormPerKgUsd: template.cormPerKgUsd ?? null,
+          // Fixed CoRM Printed/Plain (display currency) + MOQ.
+          cormPerKgUsd: cormPrinted,
+          cormPerKgPlain: cormPlain,
+          moqKg: template.moqKg ?? null,
         },
         layers: previewLayers,
         processes: previewProcesses,
@@ -550,6 +569,12 @@ export async function instantiateTemplateRoute(
       masterDataVersion,
       sourceTemplateKey,
       cormPerKgUsd: template.cormPerKgUsd,
+      cormPerKgPlain:
+        template.cormPerKgPlain ??
+        (template.cormPerKgUsd != null
+          ? plainCormFromPrinted(Number(template.cormPerKgUsd)).toFixed(4)
+          : null),
+      moqKg: template.moqKg,
       structureForked: false,
       processesCustomized: false,
       structureSignature: templateStructureSignature,
@@ -603,7 +628,20 @@ export async function instantiateTemplateRoute(
       });
     }
 
-    const slabQtys = quantitiesForSlabTemplateKey(tenant.defaultSlabTemplate || 'standard');
+    const printModeForSlabs = structureIsPrinted(
+      defaultLayersResolved.map((l) => ({ layer_type: l.layer_type }))
+    )
+      ? 'printed'
+      : 'plain';
+    const wasteBandsForSlabs = wasteBandsForPrintMode(
+      await getPlatformWasteBandsByPrintMode(),
+      printModeForSlabs
+    );
+    const moqForSlabs = template.moqKg != null ? Number(template.moqKg) : 0;
+    const slabQtys =
+      moqForSlabs > 0
+        ? slabQuantitiesFromMoq(moqForSlabs, wasteBandsForSlabs)
+        : quantitiesForSlabTemplateKey(tenant.defaultSlabTemplate || 'standard');
     for (let i = 0; i < slabQtys.length; i++) {
       await db.insert(schema.slabs).values({
         estimateId: estimate.id,
@@ -619,13 +657,15 @@ export async function instantiateTemplateRoute(
       jobName: estimate.jobName,
       productType: estimate.productType,
     });
-  } catch (error: any) {
-    console.error('Instantiate template error:', error?.stack || error);
-    // Surface the underlying cause so a 500 here is diagnosable from the client
-    // (network response) instead of being an opaque "Failed to instantiate".
+  } catch (error: unknown) {
+    if (isAuthError(error) || error instanceof AppError) {
+      return sendCaughtError(reply, error, 'Failed to instantiate template', 'Instantiate template error:');
+    }
+    // Surface the underlying cause so a 500 here is diagnosable from the client.
+    request.log.error({ err: error }, 'Instantiate template error');
     return reply.status(500).send({
       error: 'Failed to instantiate template',
-      detail: error?.message ?? String(error),
+      detail: error instanceof Error ? error.message : String(error),
     });
   }
 }
@@ -642,7 +682,7 @@ const CreateTemplateFromEstimateSchema = z.object({
 const CreateTemplateFromDefinitionSchema = z.object({
   source: z.literal('fromDefinition'),
   name: z.string().min(1),
-  productType: z.enum(['roll', 'sleeve', 'pouch']),
+  productType: z.enum(['roll', 'sleeve', 'pouch', 'bag']),
   productSubtype: z.string().max(64).nullable().optional(),
   materialClass: z.enum(['PE', 'Non PE']),
   structureTier: z.enum(['Mono', 'Duplex', 'Triplex', 'Quadriplex']),
@@ -721,8 +761,7 @@ export async function createTemplateRoute(
     if (error instanceof z.ZodError) {
       return reply.status(400).send({ error: 'Validation failed', details: error.errors });
     }
-    console.error('Create template error:', error);
-    return reply.status(500).send({ error: 'Failed to create template' });
+    return sendCaughtError(reply, error, 'Failed to create template', 'Create template error:');
   }
 }
 
@@ -1030,10 +1069,16 @@ export async function updateTemplateRoute(
       return reply.status(404).send({ error: 'Template not found' });
     }
 
-    if (existing.isStandard && !isTenantAdmin(user.role)) {
-      return reply.status(403).send({ error: 'Only admins can edit standard templates' });
+    // Platform standards must be edited via /api/v1/admin/platform-templates
+    // (writes catalog + live-syncs tenants). Tenant PATCH here was overwritten
+    // on the next list load by platform sync, so saves looked successful but reverted.
+    if (existing.isStandard) {
+      return reply.status(403).send({
+        error:
+          'Platform standards must be edited by a platform admin (catalog sync). Use Save as platform standard / platform edit.',
+      });
     }
-    if (!existing.isStandard && !canEditMyTemplate(user, existing)) {
+    if (!canEditMyTemplate(user, existing)) {
       return reply.status(403).send({ error: 'Not allowed to edit this template' });
     }
 
@@ -1084,8 +1129,7 @@ export async function updateTemplateRoute(
     if (error instanceof z.ZodError) {
       return reply.status(400).send({ error: 'Validation failed', details: error.errors });
     }
-    console.error('Update template error:', error);
-    return reply.status(500).send({ error: 'Failed to update template' });
+    return sendCaughtError(reply, error, 'Failed to update template', 'Update template error:');
   }
 }
 
@@ -1136,9 +1180,8 @@ export async function deleteTemplateRoute(
 
     await db.delete(schema.structureTemplates).where(eq(schema.structureTemplates.id, id));
     return reply.send({ ok: true, deleted: true });
-  } catch (error: any) {
-    console.error('Delete template error:', error);
-    return reply.status(500).send({ error: 'Failed to delete template' });
+  } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to delete template', 'Delete template error:');
   }
 }
 

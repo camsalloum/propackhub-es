@@ -350,3 +350,61 @@ ALTER TABLE structure_templates
 ALTER TABLE estimates
   ADD COLUMN IF NOT EXISTS corm_per_kg_usd DECIMAL(12, 4);
 
+-- CoRM Plain + MOQ + scale-with-waste (2026-07-04).
+ALTER TABLE platform_master_state
+  ADD COLUMN IF NOT EXISTS corm_scale_with_waste DECIMAL(6, 3) DEFAULT 1;
+ALTER TABLE platform_standard_templates
+  ADD COLUMN IF NOT EXISTS corm_per_kg_plain DECIMAL(12, 4);
+ALTER TABLE platform_standard_templates
+  ADD COLUMN IF NOT EXISTS moq_kg DECIMAL(12, 2);
+ALTER TABLE structure_templates
+  ADD COLUMN IF NOT EXISTS corm_per_kg_plain DECIMAL(12, 4);
+ALTER TABLE structure_templates
+  ADD COLUMN IF NOT EXISTS moq_kg DECIMAL(12, 2);
+ALTER TABLE estimates
+  ADD COLUMN IF NOT EXISTS corm_per_kg_plain DECIMAL(12, 4);
+ALTER TABLE estimates
+  ADD COLUMN IF NOT EXISTS moq_kg DECIMAL(12, 2);
+
+-- Commercial Items are Bags (not Pouches). Fix legacy bag→pouch collapse.
+UPDATE platform_standard_templates
+SET
+  product_type = 'bag',
+  default_processes = REPLACE(default_processes::text, '"pouch_making"', '"bag_making"')::jsonb,
+  updated_at = NOW()
+WHERE product_type = 'pouch'
+  AND (
+    name ILIKE 'Commercial Items%'
+    OR pebi_parent_pg ILIKE 'Commercial Items%'
+  );
+
+UPDATE structure_templates
+SET
+  product_type = 'bag',
+  default_processes = REPLACE(default_processes::text, '"pouch_making"', '"bag_making"')::jsonb,
+  updated_at = NOW()
+WHERE product_type = 'pouch'
+  AND is_standard = true
+  AND (
+    name ILIKE 'Commercial Items%'
+    OR pebi_parent_pg ILIKE 'Commercial Items%'
+  );
+
+-- ---------------------------------------------------------------------------
+-- Sessions (refresh-token rotation) — Phase 2.3
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  refresh_token_hash VARCHAR(128) NOT NULL UNIQUE,
+  device_label VARCHAR(255),
+  expires_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ,
+  last_used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS sessions_tenant_id_idx ON sessions(tenant_id);
+CREATE INDEX IF NOT EXISTS sessions_expires_at_idx ON sessions(expires_at);
+

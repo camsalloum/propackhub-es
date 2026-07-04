@@ -1,4 +1,4 @@
-export type ProductTypeValue = 'roll' | 'sleeve' | 'pouch';
+export type ProductTypeValue = 'roll' | 'sleeve' | 'pouch' | 'bag';
 export type PrintingWebValue = 'wide_web' | 'narrow_web';
 
 export interface ProductTypeOption {
@@ -63,8 +63,13 @@ export interface MasterDataReferenceState {
   costingDefaults?: {
     cleaningSolventKgPerJob?: number;
   };
-  /** Platform-wide waste bands (single source of truth for all estimates). */
-  wasteBands?: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+  /** Platform-wide waste bands by print mode (Printed vs Plain). */
+  wasteBandsByPrintMode?: {
+    printed: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+    plain: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+  };
+  /** CoRM tracks waste % by this factor (default 1). */
+  cormScaleWithWaste?: number;
 }
 
 export interface ProcessOption {
@@ -119,7 +124,7 @@ export const DEFAULT_PRODUCT_SUBTYPE_OPTIONS: ProductSubtypeOption[] = [
   { label: 'Wicket Bag', code: 'bag_wicket', parent: 'bag', group: 'Other' },
 ];
 
-import { DEFAULT_WASTE_BANDS } from '@es/engine';
+import { DEFAULT_WASTE_BANDS_BY_PRINT_MODE, DEFAULT_CORM_SCALE_WITH_WASTE } from '@es/engine';
 
 export const DEFAULT_MASTER_REFERENCE: MasterDataReferenceState = {
   productTypeOptions: [
@@ -156,7 +161,11 @@ export const DEFAULT_MASTER_REFERENCE: MasterDataReferenceState = {
   processOptions: DEFAULT_PROCESS_OPTIONS,
   processRows: [],
   costingDefaults: { cleaningSolventKgPerJob: 20 },
-  wasteBands: DEFAULT_WASTE_BANDS.map((b) => ({ ...b })),
+  wasteBandsByPrintMode: {
+    printed: DEFAULT_WASTE_BANDS_BY_PRINT_MODE.printed.map((b) => ({ ...b })),
+    plain: DEFAULT_WASTE_BANDS_BY_PRINT_MODE.plain.map((b) => ({ ...b })),
+  },
+  cormScaleWithWaste: DEFAULT_CORM_SCALE_WITH_WASTE,
 };
 
 export function defaultProductTypeValue(options: ProductTypeOption[] = DEFAULT_MASTER_REFERENCE.productTypeOptions): string {

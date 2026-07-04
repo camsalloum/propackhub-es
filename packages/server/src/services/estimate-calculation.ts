@@ -1,9 +1,20 @@
 import { eq, and } from 'drizzle-orm';
-import { calculateEstimate, derivePrintingWebClass, type CalculationResult } from '@es/engine';
+import {
+  calculateEstimate,
+  derivePrintingWebClass,
+  structureIsPrinted,
+  wasteBandsForPrintMode,
+  plainCormFromPrinted,
+  type CalculationResult,
+} from '@es/engine';
 import { schema } from '../db';
 import { buildEngineMaterialMap, type MaterialRow } from '../utils/material-map';
 import { snapshotsFromMaterial, toMaterialLineageSource } from '../utils/layer-lineage';
-import { getMasterDataVersion } from '../db/platform-master-data';
+import {
+  getMasterDataVersion,
+  getPlatformWasteBandsByPrintMode,
+  getPlatformCormScaleWithWaste,
+} from '../db/platform-master-data';
 import { resolveOrderUnitDef } from '../db/tenant-reference-data';
 import { buildEngineEstimateFromRows } from '../utils/estimate-engine-input';
 import { resolveEstimateProcesses } from '../utils/estimate-processes';
@@ -60,17 +71,30 @@ export async function calculateAndPersistEstimate(
     .from(schema.tenants)
     .where(eq(schema.tenants.id, tenantId));
 
-  // Fixed CoRM (display currency per kg) for the `fixed_per_group` method.
-  // Stored on estimate/template in display currency; converted to USD for the engine.
+  const materialTypeById = new Map(materials.map((m) => [m.id, m.type]));
+  const printMode = structureIsPrinted(
+    layers.map((l) => ({ type: materialTypeById.get(l.materialId) ?? null }))
+  )
+    ? 'printed'
+    : 'plain';
+  const [wasteBandsByMode, cormScaleWithWaste] = await Promise.all([
+    getPlatformWasteBandsByPrintMode(),
+    getPlatformCormScaleWithWaste(),
+  ]);
+  const wasteBands = wasteBandsForPrintMode(wasteBandsByMode, printMode);
+
+  // Fixed CoRM base (display currency/kg) for print mode; engine scales with waste %.
   let cormPerKgUsd: number | null = 0;
   if (tenantRow?.operatingCostMethod === 'fixed_per_group') {
     const fx = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;
-    let cormDisplayPerKg = 0;
-    if (estimate.cormPerKgUsd != null) {
-      cormDisplayPerKg = parseFloat(estimate.cormPerKgUsd);
-    } else if (estimate.sourceTemplateKey) {
+    let cormPrinted = estimate.cormPerKgUsd != null ? parseFloat(estimate.cormPerKgUsd) : NaN;
+    let cormPlain = estimate.cormPerKgPlain != null ? parseFloat(estimate.cormPerKgPlain) : NaN;
+    if ((!Number.isFinite(cormPrinted) || !Number.isFinite(cormPlain)) && estimate.sourceTemplateKey) {
       const [tpl] = await db
-        .select({ cormPerKgUsd: schema.structureTemplates.cormPerKgUsd })
+        .select({
+          cormPerKgUsd: schema.structureTemplates.cormPerKgUsd,
+          cormPerKgPlain: schema.structureTemplates.cormPerKgPlain,
+        })
         .from(schema.structureTemplates)
         .where(
           and(
@@ -79,8 +103,16 @@ export async function calculateAndPersistEstimate(
           )
         )
         .limit(1);
-      cormDisplayPerKg = tpl?.cormPerKgUsd != null ? parseFloat(tpl.cormPerKgUsd) : 0;
+      if (!Number.isFinite(cormPrinted) && tpl?.cormPerKgUsd != null) {
+        cormPrinted = parseFloat(tpl.cormPerKgUsd);
+      }
+      if (!Number.isFinite(cormPlain) && tpl?.cormPerKgPlain != null) {
+        cormPlain = parseFloat(tpl.cormPerKgPlain);
+      }
     }
+    if (!Number.isFinite(cormPrinted)) cormPrinted = 0;
+    if (!Number.isFinite(cormPlain)) cormPlain = plainCormFromPrinted(cormPrinted);
+    const cormDisplayPerKg = printMode === 'printed' ? cormPrinted : cormPlain;
     cormPerKgUsd = cormDisplayPerKgToEngineUsd(cormDisplayPerKg, fx);
   }
 
@@ -94,11 +126,13 @@ export async function calculateAndPersistEstimate(
     layerPriceOverrides,
     operatingCostMethod: tenantRow?.operatingCostMethod ?? 'markup_over_rm',
     cormPerKgUsd,
+    cormScaleWithWaste,
     orderQuantityUnitDef: await resolveOrderUnitDef(
       tenantId,
       estimate.orderQuantityUnit,
       (estimate.dimensions as { orderUnitMultiplier?: number } | null)?.orderUnitMultiplier
     ),
+    wasteBands,
   });
 
   const layerRefs = layers.map((l) => ({

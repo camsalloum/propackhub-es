@@ -34,7 +34,7 @@
     {
       "pebi_parent_pg": "Commercial Items Plain",
       "name": "Commercial Items Plain",
-      "product_type": "pouch",
+      "product_type": "bag",
       "material_class": "PE",
       "structure_type": "Mono",
       "substrate_origin": "PE",
@@ -46,13 +46,13 @@
       "default_processes": [
         { "process_key": "extrusion", "enabled": true },
         { "process_key": "slitting", "enabled": true },
-        { "process_key": "pouch_making", "enabled": true }
+        { "process_key": "bag_making", "enabled": true }
       ]
     },
     {
       "pebi_parent_pg": "Commercial Items Printed",
       "name": "Commercial Items Printed",
-      "product_type": "pouch",
+      "product_type": "bag",
       "material_class": "PE",
       "structure_type": "Mono",
       "substrate_origin": "PE",
@@ -67,7 +67,7 @@
         { "process_key": "extrusion", "enabled": true },
         { "process_key": "printing", "enabled": true },
         { "process_key": "slitting", "enabled": true },
-        { "process_key": "pouch_making", "enabled": true }
+        { "process_key": "bag_making", "enabled": true }
       ],
       "solvent_mix_enabled": true
     },

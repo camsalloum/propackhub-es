@@ -1,5 +1,6 @@
 import { getDatabase, schema } from './index';
 import { eq, and } from 'drizzle-orm';
+import { log } from '../utils/logger';
 import masterMaterialsFallback from './master-materials-seed.json';
 import type { MasterMaterial } from './master-materials-io';
 import { PACKAGING_FAMILY, materialSyncKey, costingKeyForMasterKey } from './master-materials-io';
@@ -178,10 +179,10 @@ export async function seedMaterialsForTenant(tenantId: string): Promise<number> 
 
     const inserted = await db.insert(schema.materials).values(materialsToInsert).returning();
 
-    console.log(`✓ Seeded ${inserted.length} materials for tenant ${tenantId}`);
+    log.info({ tenantId, count: inserted.length }, 'Seeded materials for tenant');
     return inserted.length;
   } catch (error) {
-    console.error('Failed to seed materials:', error);
+    log.error({ err: error, tenantId }, 'Failed to seed materials');
     throw error;
   }
 }

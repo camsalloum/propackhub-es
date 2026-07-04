@@ -4,6 +4,7 @@ import * as schema from './schema';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFileSync, existsSync } from 'node:fs';
+import { log } from '../utils/logger';
 
 let pool: Pool | null = null;
 let db: NodePgDatabase<typeof schema> | null = null;
@@ -75,7 +76,7 @@ export async function runMigrations(pgPool: Pool): Promise<void> {
   const migrationsDir = resolve(__dirname, '../../drizzle');
 
   if (!existsSync(migrationsDir)) {
-    console.warn('⚠  drizzle/ migrations folder not found — skipping migrations');
+    log.warn('drizzle/ migrations folder not found — skipping migrations');
     return;
   }
 
@@ -91,7 +92,7 @@ export async function runMigrations(pgPool: Pool): Promise<void> {
   // Load journal
   const journalPath = resolve(migrationsDir, 'meta/_journal.json');
   if (!existsSync(journalPath)) {
-    console.warn('⚠  drizzle/meta/_journal.json not found — skipping migrations');
+    log.warn('drizzle/meta/_journal.json not found — skipping migrations');
     return;
   }
   const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as {
@@ -108,18 +109,18 @@ export async function runMigrations(pgPool: Pool): Promise<void> {
 
     const sqlPath = resolve(migrationsDir, `${entry.tag}.sql`);
     if (!existsSync(sqlPath)) {
-      console.warn(`⚠  Migration file not found: ${sqlPath}`);
+      log.warn({ sqlPath }, 'Migration file not found');
       continue;
     }
 
     const sql = readFileSync(sqlPath, 'utf8');
-    console.log(`▶ Applying migration: ${entry.tag}`);
+    log.info({ tag: entry.tag }, 'Applying migration');
     await pgPool.query(sql);
     await pgPool.query(
       'INSERT INTO __drizzle_migrations (tag) VALUES ($1)',
       [entry.tag]
     );
-    console.log(`✓ Migration applied: ${entry.tag}`);
+    log.info({ tag: entry.tag }, 'Migration applied');
   }
 }
 
@@ -141,7 +142,7 @@ export async function initializeDatabase(): Promise<NodePgDatabase<typeof schema
   });
 
   pool.on('error', (error) => {
-    console.error('PostgreSQL pool error:', error);
+    log.error({ err: error }, 'PostgreSQL pool error');
   });
 
   db = drizzle(pool, { schema });
@@ -149,9 +150,9 @@ export async function initializeDatabase(): Promise<NodePgDatabase<typeof schema
   // Test connection
   try {
     await pool.query('SELECT 1');
-    console.log('✓ Database connected');
+    log.info('Database connected');
   } catch (error) {
-    console.error('✗ Failed to connect to database:', error);
+    log.error({ err: error }, 'Failed to connect to database');
     throw error;
   }
 
@@ -175,7 +176,7 @@ export async function resetDatabaseConnection(): Promise<NodePgDatabase<typeof s
     try {
       await pool.end();
     } catch (error) {
-      console.warn('Database pool close warning during reset:', error);
+      log.warn({ err: error }, 'Database pool close warning during reset');
     }
   }
 
@@ -190,7 +191,7 @@ export async function closeDatabase() {
     await pool.end();
     pool = null;
     db = null;
-    console.log('Database connection closed');
+    log.info('Database connection closed');
   }
 }
 

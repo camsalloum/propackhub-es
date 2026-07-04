@@ -13,8 +13,10 @@ import {
   syncPlatformMasterToAllTenants,
   getMasterDataVersion,
   listPlatformMasterMaterials,
-  getPlatformWasteBands,
+  getPlatformWasteBandsByPrintMode,
   replacePlatformWasteBands,
+  getPlatformCormScaleWithWaste,
+  setPlatformCormScaleWithWaste,
   ReferenceItemInUseError,
   type AuditActor,
 } from '../db/platform-master-data';
@@ -28,6 +30,7 @@ import { authenticateMasterDataReader } from '../utils/service-key-auth';
 import { checkRateLimit } from '../utils/rate-limit';
 import { enrichMasterDataReference } from '../utils/master-data-normalize';
 import type { MasterMaterial } from '../db/master-materials-io';
+import { sendCaughtError } from '../utils/errors';
 
 // The platform master catalog (materials + reference taxonomy) and service keys
 // are the app owner's global source of truth — the seed every tenant is
@@ -139,10 +142,9 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
           weightGramPerPiece: r.weightGramPerPiece != null ? Number(r.weightGramPerPiece) : null,
         }))
       );
-    } catch (error) {
-      console.error('List platform master materials error:', error);
-      return reply.status(500).send({ error: 'Failed to load platform master materials' });
-    }
+    } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to load platform master materials', 'List platform master materials error:');
+  }
   });
 
   fastify.post<{ Body: z.infer<typeof MaterialBodySchema> }>(
@@ -155,10 +157,9 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
         const created = await createPlatformMasterMaterial(body as MasterMaterial, auditActorFromRequest(request));
         const sync = await afterPlatformMutation();
         return reply.status(201).send({ material: created, sync });
-      } catch (error) {
-        console.error('Create platform master material error:', error);
-        return reply.status(500).send({ error: 'Failed to create material' });
-      }
+      } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to create material', 'Create platform master material error:');
+  }
     }
   );
 
@@ -177,10 +178,9 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
         if (!updated) return reply.status(404).send({ error: 'Material not found' });
         const sync = await afterPlatformMutation();
         return reply.send({ material: updated, sync });
-      } catch (error) {
-        console.error('Update platform master material error:', error);
-        return reply.status(500).send({ error: 'Failed to update material' });
-      }
+      } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to update material', 'Update platform master material error:');
+  }
     }
   );
 
@@ -194,10 +194,9 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
         if (!ok) return reply.status(404).send({ error: 'Material not found' });
         const sync = await afterPlatformMutation();
         return reply.send({ ok: true, sync });
-      } catch (error) {
-        console.error('Delete platform master material error:', error);
-        return reply.status(500).send({ error: 'Failed to delete material' });
-      }
+      } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to delete material', 'Delete platform master material error:');
+  }
     }
   );
 
@@ -214,10 +213,9 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
         );
         const sync = await afterPlatformMutation();
         return reply.send({ materials, count: materials.length, sync });
-      } catch (error) {
-        console.error('Bulk replace platform master materials error:', error);
-        return reply.status(500).send({ error: 'Failed to save materials' });
-      }
+      } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to save materials', 'Bulk replace platform master materials error:');
+  }
     }
   );
 
@@ -228,10 +226,9 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
       const ref = await buildMasterDataReferenceFromDb();
       const masterDataVersion = await getMasterDataVersion();
       return reply.send({ ...enrichMasterDataReference(ref), masterDataVersion });
-    } catch (error) {
-      console.error('Get platform master reference error:', error);
-      return reply.status(500).send({ error: 'Failed to load reference data' });
-    }
+    } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to load reference data', 'Get platform master reference error:');
+  }
   });
 
   fastify.put<{
@@ -264,8 +261,7 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
       if (error instanceof Error && error.message.includes('Duplicate reference codes')) {
         return reply.status(400).send({ error: error.message });
       }
-      console.error('Save platform reference category error:', error);
-      return reply.status(500).send({ error: 'Failed to save reference list' });
+      return sendCaughtError(reply, error, 'Failed to save reference list', 'Save platform reference category error:');
     }
   });
 
@@ -281,27 +277,34 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
           .parse(request.body.cleaningSolventKgPerJob);
         const result = await updateCostingDefaults(cleaningSolventKgPerJob, auditActorFromRequest(request));
         return reply.send(result);
-      } catch (error) {
-        console.error('Update costing defaults error:', error);
-        return reply.status(500).send({ error: 'Failed to update costing defaults' });
-      }
+      } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to update costing defaults', 'Update costing defaults error:');
+  }
     }
   );
 
-  // Platform-wide waste bands (single source of truth consumed by all estimates
-  // via order-quantity lookup). Read-only for non-admins; PUT replaces the set.
+  // Platform-wide waste bands: Printed + Plain tables. Estimates pick by structure
+  // (ink layer → Printed, else Plain). Read-only for non-admins; PUT replaces both.
   fastify.get('/api/v1/platform/master-data/waste-bands', async (request, reply) => {
     try {
       await request.jwtVerify();
-      const wasteBands = await getPlatformWasteBands();
-      return reply.send({ wasteBands });
-    } catch (error) {
-      console.error('Get platform waste bands error:', error);
-      return reply.status(500).send({ error: 'Failed to load waste bands' });
-    }
+      const [wasteBandsByPrintMode, cormScaleWithWaste] = await Promise.all([
+        getPlatformWasteBandsByPrintMode(),
+        getPlatformCormScaleWithWaste(),
+      ]);
+      return reply.send({ ...wasteBandsByPrintMode, cormScaleWithWaste });
+    } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to load waste bands', 'Get platform waste bands error:');
+  }
   });
 
-  fastify.put<{ Body: { wasteBands: Array<{ minKg: number; maxKg: number | null; wastePercent: number }> } }>(
+  fastify.put<{
+    Body: {
+      printed: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+      plain: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+      cormScaleWithWaste?: number;
+    };
+  }>(
     '/api/v1/platform/master-data/waste-bands',
     async (request, reply) => {
       try {
@@ -312,20 +315,30 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
           maxKg: z.union([z.coerce.number().nonnegative(), z.null()]),
           wastePercent: z.coerce.number().min(0).max(100),
         });
-        const wasteBands = z
-          .array(WasteBandSchema)
-          .min(1)
-          .parse(request.body.wasteBands);
-        const result = await replacePlatformWasteBands(wasteBands, auditActorFromRequest(request));
+        const body = z
+          .object({
+            printed: z.array(WasteBandSchema).min(1),
+            plain: z.array(WasteBandSchema).min(1),
+            cormScaleWithWaste: z.coerce.number().min(0).max(10).optional(),
+          })
+          .parse(request.body);
+        const actor = auditActorFromRequest(request);
+        const result = await replacePlatformWasteBands(
+          { printed: body.printed, plain: body.plain },
+          actor
+        );
+        const cormScaleWithWaste =
+          body.cormScaleWithWaste !== undefined
+            ? await setPlatformCormScaleWithWaste(body.cormScaleWithWaste, actor)
+            : await getPlatformCormScaleWithWaste();
         // Keep tenants in sync so their cached master reference refreshes.
         await syncPlatformMasterToAllTenants({ pruneOrphans: false });
-        return reply.send(result);
+        return reply.send({ ...result, cormScaleWithWaste });
       } catch (error) {
         if (error instanceof Error && (error.message.includes('open-ended') || error.message.includes('At least one'))) {
           return reply.status(400).send({ error: error.message });
         }
-        console.error('Update platform waste bands error:', error);
-        return reply.status(500).send({ error: 'Failed to update waste bands' });
+        return sendCaughtError(reply, error, 'Failed to update waste bands', 'Update platform waste bands error:');
       }
     }
   );
@@ -336,10 +349,9 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
       if (!requirePlatformAdmin(request, reply)) return;
       const sync = await syncPlatformMasterToAllTenants({ pruneOrphans: true });
       return reply.send(sync);
-    } catch (error) {
-      console.error('Manual tenant sync error:', error);
-      return reply.status(500).send({ error: 'Failed to sync tenants' });
-    }
+    } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to sync tenants', 'Manual tenant sync error:');
+  }
   });
 
   fastify.get<{ Querystring: { since_version?: string; include_snapshot?: string } }>(
@@ -385,10 +397,9 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
           };
         }
         return reply.send(payload);
-      } catch (error) {
-        console.error('Master data change feed error:', error);
-        return reply.status(500).send({ error: 'Failed to load master data changes' });
-      }
+      } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to load master data changes', 'Master data change feed error:');
+  }
     }
   );
 
@@ -398,10 +409,9 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
       if (!requirePlatformAdmin(request, reply)) return;
       const keys = await listPlatformServiceKeys();
       return reply.send(keys);
-    } catch (error) {
-      console.error('List service keys error:', error);
-      return reply.status(500).send({ error: 'Failed to list service keys' });
-    }
+    } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to list service keys', 'List service keys error:');
+  }
   });
 
   fastify.post<{ Body: { label: string; scopes?: string[]; expiresAt?: string | null } }>(
@@ -424,10 +434,9 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
           plainKey: created.plainKey,
           warning: 'Store plainKey now — it cannot be retrieved again.',
         });
-      } catch (error) {
-        console.error('Create service key error:', error);
-        return reply.status(500).send({ error: 'Failed to create service key' });
-      }
+      } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to create service key', 'Create service key error:');
+  }
     }
   );
 
@@ -440,10 +449,9 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
         const ok = await revokePlatformServiceKey(request.params.id);
         if (!ok) return reply.status(404).send({ error: 'Service key not found' });
         return reply.send({ ok: true });
-      } catch (error) {
-        console.error('Revoke service key error:', error);
-        return reply.status(500).send({ error: 'Failed to revoke service key' });
-      }
+      } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to revoke service key', 'Revoke service key error:');
+  }
     }
   );
 }

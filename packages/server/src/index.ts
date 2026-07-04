@@ -4,6 +4,7 @@ import { seedDefaultAdmin } from './db/seed-admin';
 import { ensurePlatformMasterSeeded, ensureProcessesSeeded, ensureSolventCatalogSeeded, ensureLaminationAdhesivesSeeded } from './db/platform-master-data';
 import { bootstrapPlatformStandardCatalog } from './db/seed-platform-templates';
 import { buildApp } from './app';
+import { log } from './utils/logger';
 
 const PORT = parseInt(process.env.PORT || '5001');
 const HOST = process.env.HOST || '0.0.0.0';
@@ -23,41 +24,58 @@ async function start() {
     } catch (err) {
       // Boot must not fail if the platform_standard_templates table doesn't
       // exist yet (e.g. dev environments that haven't run migrations).
-      console.warn('⚠  bootstrapPlatformStandardCatalog skipped:', (err as Error).message);
+      log.warn({ err }, 'bootstrapPlatformStandardCatalog skipped');
     }
     await fastify.listen({ port: PORT, host: HOST });
 
-    console.log(`
-╔════════════════════════════════════════════════════════╗
-║  ProPackHub Estimation Studio - API Server             ║
-╠════════════════════════════════════════════════════════╣
-║  ✓ Server listening on http://${HOST}:${PORT}
-║  ✓ Database connected
-║  ✓ API available at http://${HOST}:${PORT}/api/v1
-║  ✓ Health check: http://${HOST}:${PORT}/health
-╚════════════════════════════════════════════════════════╝
-    `);
+    log.info(
+      { host: HOST, port: PORT },
+      'ProPackHub Estimation Studio API listening'
+    );
   } catch (error) {
     fastify.log.error(error);
     process.exit(1);
   }
 }
 
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down...');
-  await closeDatabase();
-  await fastify.close();
+let shuttingDown = false;
+
+async function shutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  log.info({ signal }, 'shutting down');
+  try {
+    await fastify.close();
+  } catch (err) {
+    log.error({ err }, 'Error closing HTTP server');
+  }
+  try {
+    await closeDatabase();
+  } catch (err) {
+    log.error({ err }, 'Error closing database');
+  }
   process.exit(0);
+}
+
+process.on('SIGTERM', () => {
+  void shutdown('SIGTERM');
 });
 
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down...');
-  await closeDatabase();
-  await fastify.close();
-  process.exit(0);
+process.on('SIGINT', () => {
+  void shutdown('SIGINT');
+});
+
+process.on('uncaughtException', (err) => {
+  log.fatal({ err }, 'Uncaught exception — process will exit');
+  void shutdown('uncaughtException').finally(() => process.exit(1));
+});
+
+process.on('unhandledRejection', (reason) => {
+  log.fatal({ err: reason }, 'Unhandled promise rejection — process will exit');
+  void shutdown('unhandledRejection').finally(() => process.exit(1));
 });
 
 start().catch((error) => {
-  console.error('Failed to start server:', error);
+  log.error({ err: error }, 'Failed to start server');
   process.exit(1);
 });

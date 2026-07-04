@@ -157,11 +157,17 @@ export interface Estimate {
    */
   operatingCostMethod?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
   /**
-   * Fixed CoRM per kg as **USD** for engine math. Server/client convert from
-   * display-currency storage (`estimates.cormPerKgUsd` / template mirror) using
-   * the estimate's frozen `exchangeRateUsdToDisplay`.
+   * Base Fixed CoRM per kg as **USD** for engine math (Printed or Plain already
+   * selected by the caller). Scaled by band waste % × `cormScaleWithWaste`.
+   * Server/client convert from display-currency storage using the estimate's
+   * frozen `exchangeRateUsdToDisplay`.
    */
   cormPerKgUsd?: number | null;
+  /**
+   * How strongly CoRM tracks waste % (default 1 = waste 10% → CoRM +10%).
+   * Platform admin setting; 0 = flat base CoRM at every quantity.
+   */
+  cormScaleWithWaste?: number;
 
   // ── Pricing model (new) ──────────────────────────────────────────────────
   // When `pricingMethod` is set, the engine uses the quantity-band waste +

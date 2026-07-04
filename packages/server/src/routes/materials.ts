@@ -7,6 +7,7 @@ import { getEffectiveProfile, stripMaterialRow } from '../utils/visibility';
 import { ensureMaterialsForTenant } from '../db/seed-materials';
 import { roundUsd } from '../utils/usd';
 import { parsePagination, paginate } from '../utils/pagination';
+import { sendCaughtError } from '../utils/errors';
 
 function isMaterialAdmin(role: string): boolean {
   return role === 'tenant_admin' || role === 'platform_admin';
@@ -117,8 +118,7 @@ export async function getMaterialsRoute(
 
     return reply.send(paginate(visibleMaterials, Number(total), limit, offset));
   } catch (error: unknown) {
-    console.error('Get materials error:', error);
-    return reply.status(500).send({ error: 'Failed to fetch materials' });
+    return sendCaughtError(reply, error, 'Failed to fetch materials', 'Get materials error:');
   }
 }
 
@@ -164,12 +164,11 @@ export async function createMaterialRoute(
       .returning();
 
     return reply.status(201).send(material);
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return reply.status(400).send({ error: 'Validation failed', details: error.errors });
     }
-    console.error('Create material error:', error);
-    return reply.status(500).send({ error: 'Failed to create material' });
+    return sendCaughtError(reply, error, 'Failed to create material', 'Create material error:');
   }
 }
 
@@ -217,12 +216,11 @@ export async function updateMaterialRoute(
     }
 
     return reply.send(material);
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return reply.status(400).send({ error: 'Validation failed', details: error.errors });
     }
-    console.error('Update material error:', error);
-    return reply.status(500).send({ error: 'Failed to update material' });
+    return sendCaughtError(reply, error, 'Failed to update material', 'Update material error:');
   }
 }
 
@@ -281,8 +279,7 @@ export async function deleteMaterialRoute(
         },
       });
     }
-    console.error('Delete material error:', error);
-    return reply.status(500).send({ error: 'Failed to delete material' });
+    return sendCaughtError(reply, error, 'Failed to delete material', 'Delete material error:');
   }
 }
 
@@ -346,8 +343,12 @@ export async function registerMaterialRoutes(fastify: FastifyInstance) {
         });
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('Sync from platform error:', error);
-        return reply.status(500).send({ error: `Failed to sync from platform master: ${message}` });
+        return sendCaughtError(
+          reply,
+          error,
+          `Failed to sync from platform master: ${message}`,
+          'Sync from platform error:'
+        );
       }
     }
   );
@@ -369,8 +370,7 @@ export async function registerMaterialRoutes(fastify: FastifyInstance) {
       return reply.send({ pruned });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Prune orphans error:', error);
-      return reply.status(500).send({ error: `Failed to prune orphans: ${message}` });
+      return sendCaughtError(reply, error, `Failed to prune orphans: ${message}`, 'Prune orphans error:');
     }
   });
 
@@ -386,10 +386,9 @@ export async function registerMaterialRoutes(fastify: FastifyInstance) {
       const { refreshMaterialPrices } = await import('../services/price-scraper');
       const result = await refreshMaterialPrices(tenantId);
       return reply.send(result);
-    } catch (error: any) {
-      console.error('Refresh prices error:', error);
-      return reply.status(500).send({ error: 'Failed to refresh market prices' });
-    }
+    } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to refresh market prices', 'Refresh prices error:');
+  }
   });
 
   fastify.delete<{ Params: { id: string } }>(

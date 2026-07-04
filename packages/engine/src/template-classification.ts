@@ -4,7 +4,7 @@ import type { LayerType } from './types';
 
 export type MaterialClass = 'PE' | 'Non PE';
 export type StructureType = 'Mono' | 'Multilayer';
-export type ProductTypeCode = 'roll' | 'sleeve' | 'pouch';
+export type ProductTypeCode = 'roll' | 'sleeve' | 'pouch' | 'bag';
 
 export interface ClassifiableMaterial {
   type: string;

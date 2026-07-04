@@ -17,8 +17,7 @@ import { buildApp } from '../app';
 import { initializeDatabase, closeDatabase, getDatabase, schema } from '../db';
 import { eq } from 'drizzle-orm';
 import { bootstrapPlatformStandardCatalog } from '../db/seed-platform-templates';
-
-const hasDatabase = Boolean(process.env.DATABASE_URL);
+import { hasDatabase } from './require-database';
 
 describe.skipIf(!hasDatabase)('Admin Platform Templates — integration', () => {
   let app: FastifyInstance;

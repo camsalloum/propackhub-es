@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { fetchExchangeRate } from '../utils/fx-rates';
 import { filterSupportedCurrencies } from '../utils/supported-currencies';
 import { ensureSlabTemplatesForTenant } from '../db/seed-slab-templates';
+import { sendCaughtError } from '../utils/errors';
 
 // Get tenant settings
 async function getTenantSettingsRoute(
@@ -26,9 +27,8 @@ async function getTenantSettingsRoute(
     }
 
     return reply.send(tenant);
-  } catch (error: any) {
-    console.error('Get tenant settings error:', error);
-    return reply.status(500).send({ error: 'Failed to get settings' });
+  } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to get settings', 'Get tenant settings error:');
   }
 }
 
@@ -99,9 +99,8 @@ async function updateTenantSettingsRoute(
       .returning();
 
     return reply.send(updated);
-  } catch (error: any) {
-    console.error('Update tenant settings error:', error);
-    return reply.status(500).send({ error: 'Failed to update settings' });
+  } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to update settings', 'Update tenant settings error:');
   }
 }
 
@@ -142,9 +141,8 @@ async function refreshExchangeRateRoute(
       displayCurrency: tenant.displayCurrency,
       message: 'Exchange rate refreshed successfully',
     });
-  } catch (error: any) {
-    console.error('Refresh exchange rate error:', error);
-    return reply.status(500).send({ error: 'Failed to refresh exchange rate' });
+  } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to refresh exchange rate', 'Refresh exchange rate error:');
   }
 }
 
@@ -167,9 +165,8 @@ async function getSlabTemplatesRoute(request: FastifyRequest, reply: FastifyRepl
       .from(schema.slabTemplates)
       .where(eq(schema.slabTemplates.tenantId, tenantId));
     return reply.send(rows);
-  } catch (error: any) {
-    console.error('Get slab templates error:', error);
-    return reply.status(500).send({ error: 'Failed to get slab templates' });
+  } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to get slab templates', 'Get slab templates error:');
   }
 }
 

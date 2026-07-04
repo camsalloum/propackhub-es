@@ -1,17 +1,13 @@
 /**
- * Secure token storage abstraction (Phase 4 / M4).
- *
- * On web: localStorage (existing behaviour — no change).
- * On native (Capacitor iOS/Android): @capacitor/preferences (encrypted native storage).
- *
- * This indirection is critical before shipping a mobile build — a 30-min access token
- * in plain localStorage on a real device could be extracted from app data backups.
- * @capacitor/preferences uses the platform's secure keystore (Keychain / EncryptedSharedPreferences).
+ * Token storage:
+ * - Web access token: sessionStorage (tab-scoped; survives reload, not shared across tabs).
+ *   Not localStorage — reduces persistent XSS exfil window vs long-lived storage.
+ * - Web refresh token: localStorage (needed to restore the tab after access expiry).
+ * - Native: both in @capacitor/preferences (Keychain / EncryptedSharedPreferences).
  */
 
 import { Capacitor } from '@capacitor/core';
 
-// Lazy-import Preferences so the web bundle never loads the native plugin
 async function getPreferences() {
   const { Preferences } = await import('@capacitor/preferences');
   return Preferences;
@@ -24,35 +20,71 @@ const KEYS = {
 
 const isNative = Capacitor.isNativePlatform();
 
+function webGet(key: string, store: Storage): string | null {
+  try {
+    return store.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function webSet(key: string, value: string, store: Storage): void {
+  try {
+    store.setItem(key, value);
+  } catch {
+    /* private mode */
+  }
+}
+
+function webRemove(key: string, store: Storage): void {
+  try {
+    store.removeItem(key);
+  } catch {
+    /* private mode */
+  }
+}
+
 export const tokenStore = {
   async getAccessToken(): Promise<string | null> {
-    if (!isNative) return localStorage.getItem(KEYS.ACCESS_TOKEN);
+    if (!isNative) {
+      // Migrate: drop any legacy localStorage access token.
+      webRemove(KEYS.ACCESS_TOKEN, localStorage);
+      return webGet(KEYS.ACCESS_TOKEN, sessionStorage);
+    }
     const Pref = await getPreferences();
     return (await Pref.get({ key: KEYS.ACCESS_TOKEN })).value;
   },
 
   async setAccessToken(token: string): Promise<void> {
-    if (!isNative) { localStorage.setItem(KEYS.ACCESS_TOKEN, token); return; }
+    if (!isNative) {
+      webRemove(KEYS.ACCESS_TOKEN, localStorage);
+      webSet(KEYS.ACCESS_TOKEN, token, sessionStorage);
+      return;
+    }
     const Pref = await getPreferences();
     await Pref.set({ key: KEYS.ACCESS_TOKEN, value: token });
   },
 
   async getRefreshToken(): Promise<string | null> {
-    if (!isNative) return localStorage.getItem(KEYS.REFRESH_TOKEN);
+    if (!isNative) return webGet(KEYS.REFRESH_TOKEN, localStorage);
     const Pref = await getPreferences();
     return (await Pref.get({ key: KEYS.REFRESH_TOKEN })).value;
   },
 
   async setRefreshToken(token: string): Promise<void> {
-    if (!isNative) { localStorage.setItem(KEYS.REFRESH_TOKEN, token); return; }
+    if (!isNative) {
+      webSet(KEYS.REFRESH_TOKEN, token, localStorage);
+      return;
+    }
     const Pref = await getPreferences();
     await Pref.set({ key: KEYS.REFRESH_TOKEN, value: token });
   },
 
   async clear(): Promise<void> {
     if (!isNative) {
-      localStorage.removeItem(KEYS.ACCESS_TOKEN);
-      localStorage.removeItem(KEYS.REFRESH_TOKEN);
+      webRemove(KEYS.ACCESS_TOKEN, localStorage);
+      webRemove(KEYS.ACCESS_TOKEN, sessionStorage);
+      webRemove(KEYS.REFRESH_TOKEN, localStorage);
       return;
     }
     const Pref = await getPreferences();

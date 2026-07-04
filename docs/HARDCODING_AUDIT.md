@@ -37,7 +37,7 @@
 | P1 | `EstimateEditor.tsx` | ~1142 | Kind dropdown options (Pouch/Bag) | `<option value="pouch">` / `<option value="bag">` | ✅ Fixed | Now filtered from `masterReference.productTypeOptions` |
 | P2 | `masterDataReference.ts` | ~106 | Default product type options | `['roll','sleeve','pouch','bag']` | ⚪ Keep | Fallback constants for before Master Data loads |
 | P3 | `productCatalog.ts` | ~57 | `PRODUCT_FAMILY_LABELS` map | `{roll:'Roll', sleeve:'Sleeve', pouch:'Pouch', bag:'Bag'}` | 🟡 Discuss | Used for UI labels. Could come from `productTypeOptions[].label` |
-| P4 | `productCatalog.ts` | ~62 | `engineTypeForFamily()` mapping | `bag → pouch`, `sleeve → sleeve`, etc. | ⚪ Keep | Engine costing type mapping — must stay in code |
+| P4 | `productCatalog.ts` | ~62 | `engineTypeForFamily()` mapping | identity for roll/sleeve/pouch/bag | ⚪ Keep | Four first-class product types (2026-07-04) |
 
 ---
 
@@ -78,7 +78,7 @@
 | SL1 | `EstimateEditor.tsx` | ~327 | Blank-canvas initial slabs | `[1000, 2000, 5000]` | 🟡 Discuss | Dead-code path (templates always go through server instantiate). But still shown if blank canvas is ever used |
 | SL2 | `EstimateEditor.tsx` | ~758 | `displaySlabs` render fallback | `[1000, 2000, 5000]` | 🟡 Discuss | Safety fallback when `slabsState` is empty — should never be hit in normal flow |
 | SL3 | `EstimateEditor.tsx` | ~1283 | "Add Slab Row" default quantity | `quantityKg: 1000` | 🟡 Discuss | When admin adds a slab manually, default qty is 1000 kg. Could be configurable |
-| SL4 | `Settings.tsx` | ~229 | Slab template options | `standard / small` prose labels | 🔴 Change | The dropdown is hardcoded prose. Should load from `apiClient.getSlabTemplates()` which already exists |
+| SL4 | `Settings.tsx` | — | Slab template options | from API | ✅ Fixed 2026-07-04 | Loads `apiClient.getSlabTemplates()`; labels built from name + quantities |
 
 ---
 
@@ -113,7 +113,7 @@
 
 | # | File | Line | What | Current value | Status | Notes |
 |---|------|------|------|---------------|--------|-------|
-| FX1 | `Settings.tsx` | ~29 | Default FX rate initial state | `3.6725` (AED/USD) | 🔴 Change | Hardcoded AED rate. Initial state should be `1` (neutral) or loaded from settings immediately |
+| FX1 | `Settings.tsx` | — | Default FX rate initial state | `1` (neutral) | ✅ Fixed 2026-07-04 | Overwritten by `getSettings()`; no regional flash |
 | FX2 | `server/.env.example` | — | `FX_API_URL` template | Points to USD pair | ⚪ Keep | Server config, not user-facing |
 
 ---
@@ -154,7 +154,7 @@
 | **Total** | **6** | **2** | **12** | **14** |
 
 **Priority items to discuss next:**
-- SL4: Settings slab template dropdown should load from `apiClient.getSlabTemplates()` — API exists, UI isn't using it
-- FX1: Default exchange rate `3.6725` should be `1` (neutral) in initial state
 - L1/L2: Layer type labels — could unify with `rmTypeOptions` from Master Data
 - P3: Product family labels — could come from `productTypeOptions[].label` directly
+
+**Closed 2026-07-04:** SL4 (slab templates from API), FX1 (neutral FX initial state `1`).

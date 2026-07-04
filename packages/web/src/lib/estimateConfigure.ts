@@ -143,10 +143,7 @@ export function productTypeForSave(
   if ((PERSISTABLE_PRODUCT_TYPES as readonly string[]).includes(candidate)) {
     return candidate as PersistableProductType;
   }
-  if (candidate === 'bag') return 'bag';
-  const engine = engineTypeForFamily(candidate as ProductFamily);
-  if (engine === 'roll' || engine === 'sleeve') return engine;
-  return 'pouch';
+  return engineTypeForFamily(candidate as ProductFamily);
 }
 
 export function dimensionsForSave(
@@ -172,6 +169,8 @@ export function validateConfiguredEstimate(input: {
   productType: string;
   dimensions: Record<string, unknown>;
   processes?: Array<{ enabled?: boolean }> | null;
+  /** When true, order unit is Roll (custom length) — length (LM) is required. */
+  requiresRollLength?: boolean;
 }): string | null {
   if (!hasConfiguredProcesses(input.processes)) {
     return 'Select at least one manufacturing process in Structure.';
@@ -179,6 +178,13 @@ export function validateConfiguredEstimate(input: {
   if (input.layers.length === 0) return 'Add at least one layer.';
   if (input.layers.some((l) => !l.micron || l.micron <= 0)) {
     return 'Set thickness (µ) for every layer in Structure.';
+  }
+
+  if (input.requiresRollLength) {
+    const rollLm = Number(input.dimensions.orderUnitMultiplier || 0);
+    if (!(rollLm > 0)) {
+      return 'Set roll length (LM) — required when unit is Roll (custom length).';
+    }
   }
 
   if (input.productType === 'roll' || input.productType === 'sleeve') {

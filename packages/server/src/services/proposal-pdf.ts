@@ -7,7 +7,13 @@ import { usdToDisplay, slabsUsdToDisplay } from '../utils/currency';
 import { getEffectiveProfile } from '../utils/visibility';
 import type { VisibilityProfile } from '@es/engine';
 import { renderBrandedPdfKitProposal } from '../utils/pdf-proposal-kit';
+import { structureIsPrinted, wasteBandsForPrintMode, plainCormFromPrinted } from '@es/engine';
+import {
+  getPlatformWasteBandsByPrintMode,
+  getPlatformCormScaleWithWaste,
+} from '../db/platform-master-data';
 import { calculateEstimateFromRows } from '../utils/estimate-engine-input';
+import { cormDisplayPerKgToEngineUsd } from '../utils/currency';
 
 type Db = ReturnType<typeof import('../db').getDatabase>;
 
@@ -90,6 +96,30 @@ export async function buildProposalPdfBuffer(
     .where(eq(schema.slabs.estimateId, estimateId))
     .orderBy(asc(schema.slabs.sortOrder), asc(schema.slabs.quantityKg));
 
+  const materialTypeById = new Map(materials.map((m) => [m.id, m.type]));
+  const printMode = structureIsPrinted(
+    layers.map((l) => ({ type: materialTypeById.get(l.materialId) ?? null }))
+  )
+    ? 'printed'
+    : 'plain';
+  const [wasteBandsByMode, cormScaleWithWaste, tenantRow] = await Promise.all([
+    getPlatformWasteBandsByPrintMode(),
+    getPlatformCormScaleWithWaste(),
+    db
+      .select({ operatingCostMethod: schema.tenants.operatingCostMethod })
+      .from(schema.tenants)
+      .where(eq(schema.tenants.id, tenantId))
+      .then((rows) => rows[0]),
+  ]);
+  const wasteBands = wasteBandsForPrintMode(wasteBandsByMode, printMode);
+  const fx = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;
+  const cormPrinted = estimate.cormPerKgUsd != null ? parseFloat(estimate.cormPerKgUsd) : 0;
+  const cormPlain =
+    estimate.cormPerKgPlain != null
+      ? parseFloat(estimate.cormPerKgPlain)
+      : plainCormFromPrinted(cormPrinted);
+  const cormDisplay = printMode === 'printed' ? cormPrinted : cormPlain;
+
   const result = calculateEstimateFromRows({
     estimate,
     tenantId,
@@ -97,6 +127,10 @@ export async function buildProposalPdfBuffer(
     materials,
     processes,
     slabs,
+    wasteBands,
+    cormScaleWithWaste,
+    operatingCostMethod: tenantRow?.operatingCostMethod ?? 'markup_over_rm',
+    cormPerKgUsd: cormDisplayPerKgToEngineUsd(cormDisplay, fx),
   });
 
   const fxRate = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;

@@ -5,6 +5,7 @@ import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth'
 import { and, eq } from 'drizzle-orm';
 import { getEffectiveProfile, DEFAULT_SALES_REP_PROFILE, DEFAULT_ADMIN_PROFILE } from '../utils/visibility';
 import type { VisibilityProfile } from '@es/engine';
+import { sendCaughtError } from '../utils/errors';
 
 const VisibilityProfileSchema = z.record(z.boolean()) as unknown as z.ZodType<VisibilityProfile>;
 
@@ -39,9 +40,8 @@ async function getTenantUsersRoute(
         visibilityProfile: getEffectiveProfile(user.role, user.visibilityProfile),
       })),
     });
-  } catch (error: any) {
-    console.error('Get users error:', error);
-    return reply.status(500).send({ error: 'Failed to fetch users' });
+  } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to fetch users', 'Get users error:');
   }
 }
 
@@ -85,12 +85,11 @@ async function updateUserVisibilityRoute(
       ...updated,
       visibilityProfile: getEffectiveProfile(updated.role, updated.visibilityProfile),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return reply.status(400).send({ error: 'Validation failed', details: error.errors });
     }
-    console.error('Update user visibility error:', error);
-    return reply.status(500).send({ error: 'Failed to update user visibility' });
+    return sendCaughtError(reply, error, 'Failed to update user visibility', 'Update user visibility error:');
   }
 }
 

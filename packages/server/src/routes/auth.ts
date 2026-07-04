@@ -6,7 +6,12 @@ import {
   resetDatabaseConnection,
   schema,
 } from '../db';
-import { hashPassword, verifyPassword, TokenPayload } from '../utils/auth';
+import {
+  hashPassword,
+  verifyPassword,
+  TokenPayload,
+  LOGIN_TIMING_DUMMY_HASH,
+} from '../utils/auth';
 import { eq } from 'drizzle-orm';
 import { seedMaterialsForTenant } from '../db/seed-materials';
 import { seedTemplatesForTenant } from '../db/seed-templates';
@@ -14,6 +19,8 @@ import { ensureCategoriesForTenant } from '../db/seed-categories';
 import { ensureSlabTemplatesForTenant } from '../db/seed-slab-templates';
 import { fetchExchangeRate } from '../utils/fx-rates';
 import { getEffectiveProfile } from '../utils/visibility';
+import { isUniqueViolation, sendCaughtError } from '../utils/errors';
+import { createSession, findActiveSession, touchSession, revokeSession } from '../utils/sessions';
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -40,15 +47,20 @@ export async function registerRoute(
 
     const db = getDatabase();
 
-    // Check if user already exists
+    // Hash first so collision and success paths share similar work (anti-enumeration).
+    const passwordHash = await hashPassword(password);
+
     const existingUser = await db
-      .select()
+      .select({ id: schema.users.id })
       .from(schema.users)
       .where(eq(schema.users.email, email))
       .limit(1);
 
     if (existingUser.length > 0) {
-      return reply.status(409).send({ error: 'User already exists' });
+      // Generic message — do not confirm whether the email is registered.
+      return reply.status(400).send({
+        error: 'Unable to complete registration with the provided details.',
+      });
     }
 
     // Fetch current exchange rate for display currency
@@ -56,7 +68,7 @@ export async function registerRoute(
     try {
       exchangeRate = await fetchExchangeRate(displayCurrency);
     } catch (error) {
-      console.error('Failed to fetch FX rate, using 1.0:', error);
+      request.log.error({ err: error }, 'Failed to fetch FX rate, using 1.0');
       // Continue with default rate
     }
 
@@ -78,9 +90,6 @@ export async function registerRoute(
       return reply.status(500).send({ error: 'Failed to create tenant' });
     }
 
-    // Hash password
-    const passwordHash = await hashPassword(password);
-
     // Create user with tenant_admin role (first user)
     const [user] = await db
       .insert(schema.users)
@@ -101,7 +110,7 @@ export async function registerRoute(
     try {
       await seedMaterialsForTenant(tenant.id);
     } catch (seedError) {
-      console.error('Failed to seed materials, but tenant/user created:', seedError);
+      request.log.error({ err: seedError, tenantId: tenant.id }, 'Failed to seed materials, but tenant/user created');
       // Continue - user can add materials manually
     }
 
@@ -109,26 +118,27 @@ export async function registerRoute(
     try {
       await seedTemplatesForTenant(tenant.id);
     } catch (seedError) {
-      console.error('Failed to seed templates, but tenant/user/materials created:', seedError);
+      request.log.error({ err: seedError, tenantId: tenant.id }, 'Failed to seed templates, but tenant/user/materials created');
     }
 
     try {
       await ensureCategoriesForTenant(tenant.id);
       await ensureSlabTemplatesForTenant(tenant.id);
     } catch (seedError) {
-      console.error('Failed to seed categories/slab templates:', seedError);
+      request.log.error({ err: seedError, tenantId: tenant.id }, 'Failed to seed categories/slab templates');
     }
 
-    // Generate JWT token
     const token = fastify.jwt.sign({
       userId: user.id,
       tenantId: user.tenantId,
       email: user.email,
       role: user.role,
     });
+    const refreshToken = await createSession({ userId: user.id, tenantId: user.tenantId });
 
     return reply.status(201).send({
       token,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -140,12 +150,17 @@ export async function registerRoute(
         name: tenant.name,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return reply.status(400).send({ error: 'Validation failed', details: error.errors });
     }
-    console.error('Register error:', error);
-    return reply.status(500).send({ error: 'Registration failed' });
+    // Race on unique email — same generic message as the pre-check path.
+    if (isUniqueViolation(error)) {
+      return reply.status(400).send({
+        error: 'Unable to complete registration with the provided details.',
+      });
+    }
+    return sendCaughtError(reply, error, 'Registration failed', 'Register error:');
   }
 }
 
@@ -167,6 +182,8 @@ export async function loginRoute(
         .limit(1);
 
       if (!user) {
+        // Equalize timing with the password-check path (anti-enumeration).
+        await verifyPassword(password, LOGIN_TIMING_DUMMY_HASH);
         return { user: null, tenant: null };
       }
 
@@ -209,16 +226,17 @@ export async function loginRoute(
       return reply.status(500).send({ error: 'Tenant not found for user' });
     }
 
-    // Generate JWT token
     const token = fastify.jwt.sign({
       userId: user.id,
       tenantId: user.tenantId,
       email: user.email,
       role: user.role,
     });
+    const refreshToken = await createSession({ userId: user.id, tenantId: user.tenantId });
 
     return reply.send({
       token,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -232,12 +250,80 @@ export async function loginRoute(
         operatingCostMethod: tenant.operatingCostMethod,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return reply.status(400).send({ error: 'Validation failed', details: error.errors });
     }
-    console.error('Login error:', error);
-    return reply.status(500).send({ error: 'Login failed' });
+    return sendCaughtError(reply, error, 'Login failed', 'Login error:');
+  }
+}
+
+const RefreshSchema = z.object({
+  refreshToken: z.string().min(1),
+});
+
+const LogoutSchema = z.object({
+  refreshToken: z.string().min(1).optional(),
+});
+
+export async function refreshRoute(
+  fastify: FastifyInstance,
+  request: FastifyRequest<{ Body: z.infer<typeof RefreshSchema> }>,
+  reply: FastifyReply
+) {
+  try {
+    const { refreshToken } = RefreshSchema.parse(request.body);
+    const session = await findActiveSession(refreshToken);
+    if (!session) {
+      return reply.status(401).send({ error: 'Invalid or expired session' });
+    }
+
+    const db = getDatabase();
+    const [user] = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.id, session.userId))
+      .limit(1);
+
+    if (!user) {
+      await revokeSession(refreshToken);
+      return reply.status(401).send({ error: 'Invalid or expired session' });
+    }
+
+    const token = fastify.jwt.sign({
+      userId: user.id,
+      tenantId: user.tenantId,
+      email: user.email,
+      role: user.role,
+    });
+    await touchSession(session);
+
+    // Same refresh token (no rotation) — safe under concurrent refresh callers.
+    return reply.send({ token, refreshToken });
+  } catch (error: unknown) {
+    if (error instanceof z.ZodError) {
+      return reply.status(400).send({ error: 'Validation failed', details: error.errors });
+    }
+    return sendCaughtError(reply, error, 'Token refresh failed', 'Refresh error:');
+  }
+}
+
+export async function logoutRoute(
+  _fastify: FastifyInstance,
+  request: FastifyRequest<{ Body: z.infer<typeof LogoutSchema> }>,
+  reply: FastifyReply
+) {
+  try {
+    const body = LogoutSchema.parse(request.body ?? {});
+    if (body.refreshToken) {
+      await revokeSession(body.refreshToken);
+    }
+    return reply.status(204).send();
+  } catch (error: unknown) {
+    if (error instanceof z.ZodError) {
+      return reply.status(400).send({ error: 'Validation failed', details: error.errors });
+    }
+    return sendCaughtError(reply, error, 'Logout failed', 'Logout error:');
   }
 }
 
@@ -281,7 +367,7 @@ export async function meRoute(
       },
     });
   } catch (error) {
-    console.error('Me route error:', error);
+    request.log.error({ err: error }, 'Me route error');
     return reply.status(401).send({ error: 'Unauthorized' });
   }
 }
@@ -295,6 +381,16 @@ export async function registerAuthRoutes(fastify: FastifyInstance) {
   fastify.post<{ Body: z.infer<typeof LoginSchema> }>(
     '/api/v1/auth/login',
     async (request, reply) => loginRoute(fastify, request, reply)
+  );
+
+  fastify.post<{ Body: z.infer<typeof RefreshSchema> }>(
+    '/api/v1/auth/refresh',
+    async (request, reply) => refreshRoute(fastify, request, reply)
+  );
+
+  fastify.post<{ Body: z.infer<typeof LogoutSchema> }>(
+    '/api/v1/auth/logout',
+    async (request, reply) => logoutRoute(fastify, request, reply)
   );
 
   fastify.get('/api/v1/auth/me', async (request, reply) => meRoute(fastify, request, reply));

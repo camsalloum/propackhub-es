@@ -55,8 +55,10 @@ export interface ClientCalcInput {
   orderQuantityKg?: number;
   /** Manufacturing & Operating method (tenant setting): process_per_kg | markup_over_rm | fixed_per_group. */
   operatingCostMethod?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
-  /** Per-template CoRM (display currency per kg) — only used when operatingCostMethod === 'fixed_per_group'. */
+  /** Base CoRM for print mode (display currency per kg) — fixed_per_group only. */
   cormPerKgUsd?: number | null;
+  /** CoRM tracks waste % by this factor (default 1). */
+  cormScaleWithWaste?: number;
   // Pricing model v2 — when pricingMethod is set, the engine uses waste bands +
   // lump-sum tooling/delivery + margin instead of the legacy additive model.
   pricingMethod?: 'markup' | 'margin_per_kg';
@@ -136,6 +138,7 @@ export function runClientCalculation(input: ClientCalcInput) {
     deliveryPerKg: toUsd(input.deliveryPerKg),
     operatingCostMethod: input.operatingCostMethod ?? undefined,
     cormPerKgUsd: input.cormPerKgUsd != null ? toUsd(input.cormPerKgUsd) : undefined,
+    cormScaleWithWaste: input.cormScaleWithWaste,
     processes: (input.processes || []).map((p, i) => ({
       id: p.id || `proc-${i}`,
       name: p.name,

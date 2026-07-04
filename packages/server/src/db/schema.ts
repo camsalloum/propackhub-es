@@ -104,11 +104,17 @@ export const platformMasterState = pgTable('platform_master_state', {
   id: smallint('id').primaryKey().default(1),
   masterDataVersion: integer('master_data_version').notNull().default(1),
   /**
-   * Platform-wide waste bands (jsonb array of {minKg,maxKg,wastePercent}).
-   * Single source of truth consumed by every estimate via order-quantity lookup;
-   * admin curates them in Master Data → Waste Bands. Bumped with master_data_version.
+   * Platform-wide waste bands by print mode:
+   * `{ printed: WasteBand[], plain: WasteBand[] }` (legacy: bare array = Printed).
+   * Estimates pick Printed vs Plain from structure (ink layer present or not).
+   * Admin curates in Master Data → Waste Bands. Bumped with master_data_version.
    */
   wasteBands: jsonb('waste_bands'),
+  /**
+   * How strongly Fixed CoRM tracks band waste % (default 1 = waste 10% → CoRM +10%).
+   * 0 = flat base CoRM at every quantity. Admin-editable on Waste Bands tab.
+   */
+  cormScaleWithWaste: decimal('corm_scale_with_waste', { precision: 6, scale: 3 }).default('1'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
@@ -398,11 +404,14 @@ export const estimates = pgTable('estimates', {
   /** Structure template key when created from template (MES Phase B / D) */
   sourceTemplateKey: varchar('source_template_key', { length: 128 }),
   /**
-   * Fixed CoRM per kg in the **estimate display currency** (legacy column name
-   * `corm_per_kg_usd`). Snapshotted from the source template at instantiate/save.
-   * Converted to USD at engine boundary using `exchangeRateUsdToDisplay`.
+   * Fixed CoRM Printed (display currency/kg; legacy column `corm_per_kg_usd`).
+   * Snapshotted from the source template. Engine uses Printed or Plain by structure.
    */
   cormPerKgUsd: decimal('corm_per_kg_usd', { precision: 12, scale: 4 }),
+  /** Fixed CoRM Plain (display currency/kg). Default 50% of Printed when unset. */
+  cormPerKgPlain: decimal('corm_per_kg_plain', { precision: 12, scale: 4 }),
+  /** Minimum order quantity (kg) from source template; slab ladder starts here. */
+  moqKg: decimal('moq_kg', { precision: 12, scale: 2 }),
   /** True when the estimate layer stack diverges from the source template stack. */
   structureForked: boolean('structure_forked').notNull().default(false),
   /** True after the user manually edits derived process toggles/quantities. */
@@ -560,19 +569,23 @@ export const structureTemplates = pgTable('structure_templates', {
   externalSource: varchar('external_source', { length: 64 }),
   name: varchar('name', { length: 255 }).notNull(), // e.g. "Commercial Items Plain"
   pebiParentPg: varchar('pebi_parent_pg', { length: 255 }).notNull(), // PEBI parent product group name
-  productType: productTypeEnum('product_type').notNull(), // roll, sleeve, pouch
+  productType: productTypeEnum('product_type').notNull(), // roll | sleeve | pouch | bag
   /** UI product kind + subtype (e.g. 'pouch_stand_up', 'bag_wicket'). */
   productSubtype: varchar('product_subtype', { length: 64 }),
   materialClass: varchar('material_class', { length: 50 }), // PE, Non PE
   structureType: varchar('structure_type', { length: 50 }), // Mono, Multilayer
   substrateOrigin: varchar('substrate_origin', { length: 50 }), // PE or null
-  /** Product-group margin over raw material, USD/kg. Admin sets it; estimates default from it. */
+  /** Default margin per kg in display currency (tenant templates; pricing method margin_per_kg). */
   marginOverRmPerKgUsd: decimal('margin_over_rm_per_kg_usd', { precision: 12, scale: 4 }),
   /**
-   * Per-template fixed M&O add-on (CoRM) in **tenant display currency per kg**
-   * (legacy column `corm_per_kg_usd`). Mirrored from platform standards.
+   * Per-template Fixed CoRM Printed (display currency/kg; legacy `corm_per_kg_usd`).
+   * Mirrored from platform standards.
    */
   cormPerKgUsd: decimal('corm_per_kg_usd', { precision: 12, scale: 4 }),
+  /** Fixed CoRM Plain (display currency/kg). Default 50% of Printed when unset. */
+  cormPerKgPlain: decimal('corm_per_kg_plain', { precision: 12, scale: 4 }),
+  /** Minimum order quantity (kg). Slab / price-list ladder starts at this qty. */
+  moqKg: decimal('moq_kg', { precision: 12, scale: 2 }),
   displayOrder: integer('display_order').notNull().default(0),
   // Flag to indicate standard (built‑in) templates vs. tenant‑created (B2)
   isStandard: boolean('is_standard').notNull().default(true),
@@ -632,10 +645,14 @@ export const platformStandardTemplates = pgTable('platform_standard_templates', 
   substrateOptions: jsonb('substrate_options'),
   isActive: boolean('is_active').notNull().default(true),
   /**
-   * Per-template fixed M&O add-on (CoRM) in **display currency per kg**
-   * (legacy column `corm_per_kg_usd`). Synced to tenant `structure_templates`.
+   * Per-template Fixed CoRM Printed (display currency/kg; legacy `corm_per_kg_usd`).
+   * Synced to tenant `structure_templates`.
    */
   cormPerKgUsd: decimal('corm_per_kg_usd', { precision: 12, scale: 4 }),
+  /** Fixed CoRM Plain (display currency/kg). Default 50% of Printed when unset. */
+  cormPerKgPlain: decimal('corm_per_kg_plain', { precision: 12, scale: 4 }),
+  /** Minimum order quantity (kg). Slab / price-list ladder starts at this qty. */
+  moqKg: decimal('moq_kg', { precision: 12, scale: 2 }),
   /** Audit: original platform_admin who created the row (uuid, FK not enforced) */
   createdByUserId: uuid('created_by_user_id'),
   /** Audit: most recent platform_admin who edited the row (uuid, FK not enforced) */

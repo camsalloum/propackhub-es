@@ -3,6 +3,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { eq, asc, sql, or, and } from 'drizzle-orm';
 import { getDatabase, schema } from './index';
+import { log } from '../utils/logger';
 import type { MasterMaterial, MasterDataReference } from './master-materials-io';
 import {
   costingKeyForMasterKey,
@@ -13,7 +14,13 @@ import {
   type UnitBasis,
 } from './master-materials-io';
 import { roundUsd } from '../utils/usd';
-import { DEFAULT_WASTE_BANDS, type WasteBand } from '@es/engine';
+import {
+  DEFAULT_WASTE_BANDS_BY_PRINT_MODE,
+  DEFAULT_CORM_SCALE_WITH_WASTE,
+  plainBandsFromPrinted,
+  type WasteBand,
+  type WasteBandsByPrintMode,
+} from '@es/engine';
 import { syncMaterialsForTenant } from './seed-materials';
 import { relinkTemplatesForTenant } from './seed-templates';
 import { syncCustomRmTypeCategories } from './seed-categories';
@@ -601,7 +608,8 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
     costingDefaults: {
       cleaningSolventKgPerJob: cleaningFromMeta,
     },
-    wasteBands: await getPlatformWasteBands(),
+    wasteBandsByPrintMode: await getPlatformWasteBandsByPrintMode(),
+    cormScaleWithWaste: await getPlatformCormScaleWithWaste(),
   };
 }
 
@@ -797,7 +805,7 @@ export async function ensurePlatformMasterSeeded(): Promise<{ materials: number;
         .values(masterMaterialInputToDbValues({ ...m, sortOrder: i }));
       materialsSeeded++;
     }
-    console.log(`✓ Seeded ${materialsSeeded} platform master materials from JSON`);
+    log.info({ count: materialsSeeded }, 'Seeded platform master materials from JSON');
   }
 
   const [refCount] = await db
@@ -867,7 +875,7 @@ export async function ensurePlatformMasterSeeded(): Promise<{ materials: number;
       await replacePlatformReferenceCategory(batch.category, batch.items);
       referenceSeeded += batch.items.length;
     }
-    console.log(`✓ Seeded ${referenceSeeded} platform reference items from JSON`);
+    log.info({ count: referenceSeeded }, 'Seeded platform reference items from JSON');
   }
 
   await ensurePlatformMasterState();
@@ -903,7 +911,7 @@ export async function ensureProcessesSeeded(): Promise<number> {
       },
     }))
   );
-  console.log(`✓ Seeded ${DEFAULT_PROCESS_ROWS.length} default process definitions`);
+  log.info({ count: DEFAULT_PROCESS_ROWS.length }, 'Seeded default process definitions');
   return DEFAULT_PROCESS_ROWS.length;
 }
 
@@ -965,11 +973,11 @@ export async function ensureSolventCatalogSeeded(): Promise<{ materials: number;
     for (const t of tenants) {
       await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
     }
-    console.log(`✓ Seeded ${materialsAdded} solvent materials and synced tenants`);
+    log.info({ count: materialsAdded }, 'Seeded solvent materials and synced tenants');
   }
 
   if (rmTypeAdded) {
-    console.log('✓ Added Solvent RM type to platform reference');
+    log.info('Added Solvent RM type to platform reference');
   }
 
   return { materials: materialsAdded, rmType: rmTypeAdded };
@@ -1038,7 +1046,7 @@ export async function ensureLaminationAdhesivesSeeded(): Promise<{ upserted: num
     for (const t of tenants) {
       await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
     }
-    console.log(`✓ Lamination adhesives: ${inserted} inserted, ${retired} retired, tenants synced`);
+    log.info({ inserted, retired }, 'Lamination adhesives updated and tenants synced');
   }
 
   return { upserted: inserted + retired + (monoChanged ? 1 : 0), retired };
@@ -1095,45 +1103,8 @@ export async function updateCostingDefaults(
   return { cleaningSolventKgPerJob };
 }
 
-/** Read platform-wide waste bands (singleton column). Falls back to DEFAULT_WASTE_BANDS when unset. */
-export async function getPlatformWasteBands(): Promise<WasteBand[]> {
-  await ensurePlatformMasterState();
-  const db = getDatabase();
-  const [row] = await db
-    .select({ wasteBands: schema.platformMasterState.wasteBands })
-    .from(schema.platformMasterState)
-    .where(eq(schema.platformMasterState.id, PLATFORM_STATE_ID))
-    .limit(1);
-  const bands = row?.wasteBands;
-  if (!Array.isArray(bands) || bands.length === 0) {
-    return DEFAULT_WASTE_BANDS.map((b) => ({ ...b }));
-  }
+function normalizeBandList(bands: WasteBand[]): WasteBand[] {
   return bands
-    .filter(
-      (b): b is WasteBand =>
-        !!b &&
-        typeof (b as WasteBand).minKg === 'number' &&
-        typeof (b as WasteBand).wastePercent === 'number'
-    )
-    .map((b) => ({
-      minKg: Number(b.minKg) || 0,
-      maxKg: b.maxKg == null ? null : Number(b.maxKg),
-      wastePercent: Number(b.wastePercent) || 0,
-    }))
-    .sort((a, b) => {
-      if (a.maxKg === null) return 1;
-      if (b.maxKg === null) return -1;
-      return a.maxKg - b.maxKg;
-    });
-}
-
-/** Persist platform-wide waste bands (Master Data → Waste Bands tab). Bumps master_data_version + audit log. */
-export async function replacePlatformWasteBands(
-  bands: WasteBand[],
-  actor?: AuditActor
-): Promise<{ wasteBands: WasteBand[] }> {
-  // Validate + normalize: non-negative numbers, open-ended band at most one, sorted ascending.
-  const normalized: WasteBand[] = bands
     .filter((b) => b && Number.isFinite(b.minKg) && Number.isFinite(b.wastePercent))
     .map((b) => ({
       minKg: Math.max(0, Number(b.minKg) || 0),
@@ -1145,14 +1116,87 @@ export async function replacePlatformWasteBands(
       if (b.maxKg === null) return -1;
       return a.maxKg - b.maxKg;
     });
+}
 
-  const openEnded = normalized.filter((b) => b.maxKg === null);
-  if (openEnded.length > 1) {
-    throw new Error('Only one open-ended (max = ∞) waste band is allowed');;
+function parseBandList(raw: unknown): WasteBand[] {
+  if (!Array.isArray(raw) || raw.length === 0) return [];
+  return normalizeBandList(
+    raw.filter(
+      (b): b is WasteBand =>
+        !!b &&
+        typeof (b as WasteBand).minKg === 'number' &&
+        typeof (b as WasteBand).wastePercent === 'number'
+    )
+  );
+}
+
+function assertValidBandList(bands: WasteBand[], label: string): void {
+  if (bands.length === 0) {
+    throw new Error(`At least one ${label} waste band is required`);
   }
-  if (normalized.length === 0) {
-    throw new Error('At least one waste band is required');
+  if (bands.filter((b) => b.maxKg === null).length > 1) {
+    throw new Error(`Only one open-ended (max = ∞) ${label} waste band is allowed`);
   }
+}
+
+/**
+ * Parse stored jsonb: either legacy `WasteBand[]` (treated as Printed, Plain = 50%)
+ * or `{ printed, plain }`.
+ */
+export function parseWasteBandsByPrintMode(raw: unknown): WasteBandsByPrintMode {
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    const obj = raw as { printed?: unknown; plain?: unknown };
+    const printed = parseBandList(obj.printed);
+    const plain = parseBandList(obj.plain);
+    if (printed.length > 0 || plain.length > 0) {
+      const printedFinal =
+        printed.length > 0
+          ? printed
+          : DEFAULT_WASTE_BANDS_BY_PRINT_MODE.printed.map((b) => ({ ...b }));
+      const plainFinal =
+        plain.length > 0 ? plain : plainBandsFromPrinted(printedFinal);
+      return { printed: printedFinal, plain: plainFinal };
+    }
+  }
+  const legacy = parseBandList(raw);
+  if (legacy.length > 0) {
+    return { printed: legacy, plain: plainBandsFromPrinted(legacy) };
+  }
+  return {
+    printed: DEFAULT_WASTE_BANDS_BY_PRINT_MODE.printed.map((b) => ({ ...b })),
+    plain: DEFAULT_WASTE_BANDS_BY_PRINT_MODE.plain.map((b) => ({ ...b })),
+  };
+}
+
+/** Read platform-wide Printed/Plain waste bands. Legacy array → Printed + Plain@50%. */
+export async function getPlatformWasteBandsByPrintMode(): Promise<WasteBandsByPrintMode> {
+  await ensurePlatformMasterState();
+  const db = getDatabase();
+  const [row] = await db
+    .select({ wasteBands: schema.platformMasterState.wasteBands })
+    .from(schema.platformMasterState)
+    .where(eq(schema.platformMasterState.id, PLATFORM_STATE_ID))
+    .limit(1);
+  return parseWasteBandsByPrintMode(row?.wasteBands);
+}
+
+/** @deprecated Prefer getPlatformWasteBandsByPrintMode — returns Printed bands only. */
+export async function getPlatformWasteBands(): Promise<WasteBand[]> {
+  const byMode = await getPlatformWasteBandsByPrintMode();
+  return byMode.printed.map((b) => ({ ...b }));
+}
+
+/** Persist Printed + Plain waste bands (Master Data → Waste Bands). */
+export async function replacePlatformWasteBands(
+  byMode: WasteBandsByPrintMode,
+  actor?: AuditActor
+): Promise<WasteBandsByPrintMode> {
+  const printed = normalizeBandList(byMode.printed ?? []);
+  const plain = normalizeBandList(byMode.plain ?? []);
+  assertValidBandList(printed, 'Printed');
+  assertValidBandList(plain, 'Plain');
+
+  const normalized: WasteBandsByPrintMode = { printed, plain };
 
   await ensurePlatformMasterState();
   const db = getDatabase();
@@ -1184,5 +1228,55 @@ export async function replacePlatformWasteBands(
     actor
   );
 
-  return { wasteBands: normalized };
+  return normalized;
+}
+
+/** Platform factor: CoRM tracks waste % (default 1). */
+export async function getPlatformCormScaleWithWaste(): Promise<number> {
+  await ensurePlatformMasterState();
+  const db = getDatabase();
+  const [row] = await db
+    .select({ cormScaleWithWaste: schema.platformMasterState.cormScaleWithWaste })
+    .from(schema.platformMasterState)
+    .where(eq(schema.platformMasterState.id, PLATFORM_STATE_ID))
+    .limit(1);
+  const n = row?.cormScaleWithWaste != null ? Number(row.cormScaleWithWaste) : DEFAULT_CORM_SCALE_WITH_WASTE;
+  return Number.isFinite(n) && n >= 0 ? n : DEFAULT_CORM_SCALE_WITH_WASTE;
+}
+
+export async function setPlatformCormScaleWithWaste(
+  scale: number,
+  actor?: AuditActor
+): Promise<number> {
+  const normalized = Math.max(0, Number.isFinite(scale) ? scale : DEFAULT_CORM_SCALE_WITH_WASTE);
+  await ensurePlatformMasterState();
+  const db = getDatabase();
+  const [beforeRow] = await db
+    .select({ cormScaleWithWaste: schema.platformMasterState.cormScaleWithWaste })
+    .from(schema.platformMasterState)
+    .where(eq(schema.platformMasterState.id, PLATFORM_STATE_ID))
+    .limit(1);
+  const before = beforeRow?.cormScaleWithWaste ?? null;
+
+  await db
+    .update(schema.platformMasterState)
+    .set({ cormScaleWithWaste: String(normalized), updatedAt: new Date() })
+    .where(eq(schema.platformMasterState.id, PLATFORM_STATE_ID));
+
+  const version = await incrementMasterDataVersion();
+  await appendMasterAuditEntries(
+    version,
+    [
+      {
+        entityType: 'platform_master_state',
+        entityKey: 'platform_master_state:corm_scale_with_waste',
+        action: 'update',
+        beforeJson: before != null ? { cormScaleWithWaste: Number(before) } : null,
+        afterJson: { cormScaleWithWaste: normalized },
+      },
+    ],
+    actor
+  );
+
+  return normalized;
 }

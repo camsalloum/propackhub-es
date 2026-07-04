@@ -983,14 +983,17 @@
     border-color: rgb(255 255 255 / 0.20);
   }
 
-  /* ---- Inputs ---- */
+  /* ---- Inputs ----
+   * Editable controls use a soft accent fill + tinted border so defaults
+   * (e.g. order qty 1000) read as adjustable, not static labels.
+   */
   .input,
   .input-compact,
   .input-field {
     @apply rounded-lg px-3.5 py-2.5 min-h-[44px] text-sm w-full focus:outline-none;
-    background-color: rgb(var(--color-surface-raised));
+    background-color: rgb(var(--color-accent-soft) / 0.65);
     color: rgb(var(--color-text-primary));
-    border: 1px solid rgb(var(--color-border));
+    border: 1px solid rgb(var(--color-accent) / 0.32);
     transition:
       border-color var(--motion-micro) var(--ease-micro),
       box-shadow   var(--motion-micro) var(--ease-micro),
@@ -1001,19 +1004,43 @@
   .input-field::placeholder { color: rgb(var(--color-text-secondary)); }
   .input:hover,
   .input-compact:hover,
-  .input-field:hover { border-color: rgb(var(--color-border-strong)); }
+  .input-field:hover {
+    border-color: rgb(var(--color-accent) / 0.5);
+    background-color: rgb(var(--color-accent-soft) / 0.85);
+  }
   .input:focus,
   .input-compact:focus,
   .input-field:focus {
     border-color: rgb(var(--color-focus-ring));
+    background-color: rgb(var(--color-surface-raised));
     box-shadow: 0 0 0 4px rgb(var(--color-focus-ring) / 0.15);
   }
   .input[disabled],
   .input-compact[disabled],
-  .input-field[disabled] {
+  .input-field[disabled],
+  .input[readonly],
+  .input-compact[readonly],
+  .input-field[readonly] {
     opacity: 0.65;
     background-color: rgb(var(--neutral-2));
+    border-color: rgb(var(--color-border));
     cursor: not-allowed;
+  }
+  /* Display-only chrome that reuses input sizing (not editable). */
+  :is(p, div).input,
+  :is(p, div).input-compact,
+  :is(p, div).input-field,
+  .input-static {
+    background-color: rgb(var(--color-surface-sunken));
+    border-color: rgb(var(--color-border));
+    cursor: default;
+  }
+  :is(p, div).input:hover,
+  :is(p, div).input-compact:hover,
+  :is(p, div).input-field:hover,
+  .input-static:hover {
+    border-color: rgb(var(--color-border));
+    background-color: rgb(var(--color-surface-sunken));
   }
   .input-compact { @apply min-h-[36px] py-1.5 px-3 text-sm; }
 
@@ -1043,18 +1070,128 @@
   }
   .cell-input {
     @apply rounded-md px-2 py-1 min-h-[34px] text-sm min-w-0 focus:outline-none;
-    background-color: rgb(var(--color-surface-raised));
+    background-color: rgb(var(--color-accent-soft) / 0.65);
     color: rgb(var(--color-text-primary));
-    border: 1px solid rgb(var(--color-border));
+    border: 1px solid rgb(var(--color-accent) / 0.32);
     transition:
       border-color var(--motion-micro) var(--ease-micro),
-      box-shadow var(--motion-micro) var(--ease-micro);
+      box-shadow var(--motion-micro) var(--ease-micro),
+      background-color var(--motion-micro) var(--ease-micro);
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    display: block;
+  }
+  .cell-input:hover:not(:disabled) {
+    border-color: rgb(var(--color-accent) / 0.5);
+    background-color: rgb(var(--color-accent-soft) / 0.85);
   }
   .cell-input:focus {
     border-color: rgb(var(--color-focus-ring));
+    background-color: rgb(var(--color-surface-raised));
     box-shadow: 0 0 0 3px rgb(var(--color-focus-ring) / 0.18);
   }
+  .cell-input:disabled {
+    opacity: 0.65;
+    background-color: rgb(var(--neutral-2));
+    border-color: rgb(var(--color-border));
+    cursor: not-allowed;
+  }
   .cell-num { @apply text-right; font-variant-numeric: tabular-nums; }
+
+  /*
+   * Structure grid: header + every data row use identical grid-template-columns
+   * (set via --structure-cols). No column-gap — only cell padding — so empty
+   * header/cell boxes line up with no content.
+   */
+  .structure-grid {
+    width: 100%;
+    min-width: 48rem;
+  }
+  .structure-grid__row {
+    display: grid;
+    grid-template-columns: var(--structure-cols);
+    width: 100%;
+    align-items: stretch;
+    box-sizing: border-box;
+    border-bottom: 1px solid rgb(var(--color-border));
+  }
+  .structure-grid__row:last-child {
+    border-bottom: none;
+  }
+  .structure-grid__cell {
+    min-width: 0;
+    padding: 0.5rem 0.375rem;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+  }
+  .structure-grid__cell--head {
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.25;
+    color: rgb(var(--color-mist));
+    white-space: nowrap;
+  }
+  .structure-grid__cell > .cell-input,
+  .structure-grid__cell > select.cell-input,
+  .structure-grid__cell > button.cell-input {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+  .structure-grid__field {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    width: 100%;
+    min-width: 0;
+    min-height: 34px;
+    padding: 0 0.375rem;
+    border-radius: 0.375rem;
+    box-sizing: border-box;
+    background-color: rgb(var(--color-accent-soft) / 0.65);
+    border: 1px solid rgb(var(--color-accent) / 0.32);
+    transition:
+      border-color var(--motion-micro) var(--ease-micro),
+      box-shadow var(--motion-micro) var(--ease-micro),
+      background-color var(--motion-micro) var(--ease-micro);
+  }
+  .structure-grid__field:hover {
+    border-color: rgb(var(--color-accent) / 0.5);
+    background-color: rgb(var(--color-accent-soft) / 0.85);
+  }
+  .structure-grid__field:focus-within {
+    border-color: rgb(var(--color-focus-ring));
+    background-color: rgb(var(--color-surface-raised));
+    box-shadow: 0 0 0 3px rgb(var(--color-focus-ring) / 0.18);
+  }
+  .structure-grid__field input {
+    flex: 1 1 auto;
+    min-width: 2.75rem;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    outline: none;
+    padding: 0.25rem 0;
+    font-size: 0.875rem;
+    font-family: ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: rgb(var(--color-text-primary));
+    /* Spinners steal width from "x.xx" in a compact cell */
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .structure-grid__field input::-webkit-outer-spin-button,
+  .structure-grid__field input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .structure-grid__field > span {
+    flex: 0 0 auto;
+  }
 
   /* ---- Badges ---- */
   .badge {
@@ -1429,25 +1566,26 @@
       inset -4px -4px 10px rgb(255 255 255 / 0.85);
   }
 
-  /* Sunken neumorphic inputs — carved into the surface. */
-  [data-theme="industrial"] :is(.input, .input-compact, .input-field) {
-    border: none;
+  /* Sunken neumorphic inputs — carved into the surface, accent tint for editable. */
+  [data-theme="industrial"] :is(.input, .input-compact, .input-field):is(input, select, textarea) {
+    border: 1px solid rgb(var(--color-accent) / 0.28);
     border-radius: var(--radius-lg);
-    background-color: rgb(var(--color-surface-sunken));
+    background-color: rgb(var(--color-accent-soft) / 0.55);
     background-image: none;
     box-shadow:
-      inset 4px 4px 8px rgb(15 23 42 / 0.11),
-      inset -4px -4px 8px rgb(255 255 255 / 0.92);
+      inset 3px 3px 6px rgb(15 23 42 / 0.08),
+      inset -3px -3px 6px rgb(255 255 255 / 0.85);
   }
-  [data-theme="industrial"] :is(.input, .input-compact, .input-field):hover {
-    border: none;
+  [data-theme="industrial"] :is(.input, .input-compact, .input-field):is(input, select, textarea):hover {
+    border-color: rgb(var(--color-accent) / 0.45);
+    background-color: rgb(var(--color-accent-soft) / 0.75);
   }
-  [data-theme="industrial"] :is(.input, .input-compact, .input-field):focus {
-    border: none;
+  [data-theme="industrial"] :is(.input, .input-compact, .input-field):is(input, select, textarea):focus {
+    border-color: rgb(var(--color-focus-ring));
     background-color: rgb(var(--color-surface-raised));
     box-shadow:
-      inset 4px 4px 8px rgb(15 23 42 / 0.11),
-      inset -4px -4px 8px rgb(255 255 255 / 0.92),
+      inset 3px 3px 6px rgb(15 23 42 / 0.08),
+      inset -3px -3px 6px rgb(255 255 255 / 0.85),
       0 0 0 3px rgb(var(--color-focus-ring) / 0.30);
   }
 

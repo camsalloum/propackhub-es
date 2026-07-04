@@ -103,7 +103,7 @@ estimate.markupPercent = price * fxRate; // never — keep engine inputs USD
 
 ```ts
 {
-  productType: 'roll' | 'sleeve' | 'pouch'; // engine costing type
+  productType: 'roll' | 'sleeve' | 'pouch' | 'bag'; // first-class product types
   // roll/sleeve:
   reelWidthMm: number; cutoffMm: number; numberOfUps: number;
   extraPrintingTrimMm: number; piecesPerCut: number;

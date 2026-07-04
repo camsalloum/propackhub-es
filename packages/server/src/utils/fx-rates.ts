@@ -3,6 +3,8 @@
  * Fetches USD to display currency rates from external API
  */
 
+import { log } from './logger';
+
 const FX_API_URL = process.env.FX_API_URL || 'https://api.exchangerate-api.com/v4/latest/USD';
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -58,20 +60,20 @@ export async function fetchExchangeRate(targetCurrency: string): Promise<number>
       fetchedAt: Date.now(),
     });
 
-    console.log(`✓ Fetched FX rate: 1 USD = ${rate} ${targetCurrency}`);
+    log.info({ rate, targetCurrency }, 'Fetched FX rate');
     return rate;
     
   } catch (error) {
-    console.error(`Failed to fetch FX rate for ${targetCurrency}:`, error);
+    log.error({ err: error, targetCurrency }, 'Failed to fetch FX rate');
     
     // Return cached rate if available (even if expired)
     if (cached) {
-      console.warn(`Using stale cached rate for ${targetCurrency}`);
+      log.warn({ targetCurrency, rate: cached.rate }, 'Using stale cached FX rate');
       return cached.rate;
     }
     
     // Fallback to 1.0 (treat as USD)
-    console.warn(`Fallback to 1.0 for ${targetCurrency}`);
+    log.warn({ targetCurrency }, 'FX fallback to 1.0');
     return 1.0;
   }
 }

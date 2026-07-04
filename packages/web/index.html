@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!--
+      Baseline CSP for the SPA. script-src allows 'unsafe-inline' for the pre-paint
+      theme bootstrap below; tighten further when that moves to an external file.
+      connect-src covers Vite HMR (ws) and the local API in dev.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https:; base-uri 'self'; form-action 'self'; object-src 'none';"
+    />
     <script>
       // Pre-paint resolver: applies theme + density + reduced-motion BEFORE the
       // first contentful paint so the painted UI matches the persisted prefs.

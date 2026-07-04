@@ -9,6 +9,7 @@ import { and, desc, eq, like, or } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema';
 import { StateTransition, buildStateSnapshot } from './state-validation';
+import { log as appLog } from './logger';
 
 type Db = NodePgDatabase<typeof schema>;
 
@@ -51,7 +52,7 @@ export async function logEstimateStateTransition(db: Db, log: EstimateAuditLog) 
 
     return inserted;
   } catch (error) {
-    console.warn('Failed to log estimate state transition:', error);
+    appLog.warn({ err: error, estimateId: log.estimateId }, 'Failed to log estimate state transition');
     return null;
   }
 }

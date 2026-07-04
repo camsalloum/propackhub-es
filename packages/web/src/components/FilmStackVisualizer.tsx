@@ -15,23 +15,10 @@ type Props = {
 };
 
 const STACK_STYLES = `
+  /* Color movement is ink-only (print layer). Films / adhesives stay static. */
   @keyframes film-stack-ink-flow {
     0% { background-position: 0% 50%; }
     100% { background-position: 300% 50%; }
-  }
-  @keyframes film-stack-sheen {
-    0%, 100% { transform: translateX(-120%); opacity: 0; }
-    45% { opacity: 0.55; }
-    55% { opacity: 0.35; }
-    100% { transform: translateX(120%); }
-  }
-  @keyframes film-stack-adhesive-pulse {
-    0%, 100% { filter: brightness(1); }
-    50% { filter: brightness(1.08); }
-  }
-  @keyframes film-stack-row-in {
-    from { opacity: 0; transform: translateX(-6px); }
-    to { opacity: 1; transform: translateX(0); }
   }
   @keyframes film-stack-ink-sparkle {
     0%, 100% { opacity: 0.25; }
@@ -90,96 +77,31 @@ const STACK_STYLES = `
     background: linear-gradient(180deg, #64748B 0%, #334155 50%, #0F172A 100%);
   }
 
+  /* Films / adhesives: flat solid fills only (no gradients). */
   .film-stack-metallized {
-    background: linear-gradient(
-      180deg,
-      #E2E8F0 0%,
-      #94A3B8 35%,
-      #64748B 55%,
-      #CBD5E1 75%,
-      #F1F5F9 100%
-    );
-    animation: film-stack-adhesive-pulse 4s ease-in-out infinite;
-  }
-  .film-stack-metallized::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      105deg,
-      transparent 25%,
-      rgba(255, 255, 255, 0.75) 46%,
-      rgba(255, 255, 255, 0.2) 54%,
-      transparent 70%
-    );
-    animation: film-stack-sheen 3.5s ease-in-out infinite;
-    pointer-events: none;
+    background: #94A3B8;
   }
 
   .film-stack-paper {
-    background: linear-gradient(180deg, #FAF6EE 0%, #E8DFD0 45%, #C9B896 100%);
-  }
-  .film-stack-paper::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 3px,
-      rgba(0, 0, 0, 0.03) 3px,
-      rgba(0, 0, 0, 0.03) 4px
-    );
-    pointer-events: none;
+    background: #E8DFD0;
   }
 
   .film-stack-natural {
-    background: linear-gradient(180deg, #F5F0E8 0%, #E8DFD0 50%, #C9BAA0 100%);
+    background: #E8DFD0;
   }
 
   .film-stack-adhesive {
-    background: linear-gradient(135deg, #fde68a 0%, #d97706 45%, #92400e 100%);
-    animation: film-stack-adhesive-pulse 3.5s ease-in-out infinite;
-  }
-  .film-stack-adhesive::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, rgba(255,255,255,0.35) 0%, transparent 50%);
-    pointer-events: none;
+    background: #D97706;
   }
 
   .film-stack-film {
     position: relative;
     overflow: hidden;
   }
-  .film-stack-film::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      105deg,
-      transparent 35%,
-      rgba(255,255,255,0.5) 48%,
-      rgba(255,255,255,0.15) 52%,
-      transparent 65%
-    );
-    animation: film-stack-sheen 5s ease-in-out infinite;
-    pointer-events: none;
-  }
-
-  .film-stack-row {
-    animation: film-stack-row-in 0.4s ease-out both;
-  }
 
   @media (prefers-reduced-motion: reduce) {
     .film-stack-ink,
-    .film-stack-adhesive,
-    .film-stack-metallized,
-    .film-stack-metallized::after,
-    .film-stack-film::after,
-    .film-stack-ink::after,
-    .film-stack-row {
+    .film-stack-ink::after {
       animation: none !important;
     }
   }
@@ -213,12 +135,13 @@ function inkVariant(name: string): 'white' | 'black' | 'rainbow' {
 
 function substrateBg(family?: string | null): string {
   const f = (family || '').toUpperCase();
-  if (f.includes('PET')) return 'linear-gradient(180deg, #C5D4E3 0%, #9FB4C8 55%, #7A96AD 100%)';
-  if (f.includes('BOPP') || f.includes('OPP')) return 'linear-gradient(180deg, #FAFCFE 0%, #E8EFF6 55%, #D2DDE8 100%)';
-  if (f.includes('AL') || f.includes('MET') || f.includes('FOIL')) return 'linear-gradient(180deg, #E8EAED 0%, #B8BFC8 55%, #8A939E 100%)';
-  if (f.includes('NY') || f.includes('PA')) return 'linear-gradient(180deg, #E0DDD6 0%, #C4BFB6 55%, #A8A39A 100%)';
-  if (f.includes('EVOH')) return 'linear-gradient(180deg, #F5F0E8 0%, #E0D5C4 55%, #C9BAA5 100%)';
-  return 'linear-gradient(180deg, #F8FAFC 0%, #E8EDF4 55%, #D1DAE6 100%)';
+  if (f.includes('PET')) return '#9FB4C8';
+  if (f.includes('BOPP') || f.includes('OPP')) return '#E8EFF6';
+  if (f.includes('AL') || f.includes('MET') || f.includes('FOIL')) return '#B8BFC8';
+  if (f.includes('NY') || f.includes('PA')) return '#C4BFB6';
+  if (f.includes('EVOH')) return '#E0D5C4';
+  if (f.includes('PE')) return '#D1DAE6';
+  return '#E8EDF4';
 }
 
 type LayerAppearance = { className: string; style?: CSSProperties };
@@ -246,7 +169,7 @@ function layerAppearance(layer: FilmLayer, inkIndex: number): LayerAppearance {
   if (isWhiteName(name)) {
     return {
       className: 'film-stack-film',
-      style: { background: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 55%, #E2E8F0 100%)' },
+      style: { background: '#F8FAFC' },
     };
   }
   if (isNaturalName(name)) {
@@ -321,19 +244,23 @@ export default function FilmStackVisualizer({ layers, className }: Props) {
 
   const layerCount = layers.length;
 
-  const { shares, pctLabels, totalMicron } = useMemo(() => {
-    const gsmTotal = layers.reduce((s, l) => s + (Number(l.gsm) || 0), 0);
+  const { thicknessShares, thicknessPctLabels, gsmPctLabels, totalMicron, totalGsm } = useMemo(() => {
     const th = layers.map(layerThickness);
     const micronTotal = Math.max(1, th.reduce((a, b) => a + b, 0));
-    const s = layers.map((l, i) => {
-      const gsm = Number(l.gsm || 0);
-      if (gsmTotal > 0 && gsm > 0) return gsm / gsmTotal;
-      return th[i] / micronTotal;
-    });
+    const gsmVals = layers.map((l) => Number(l.gsm) || 0);
+    const gsmTotal = gsmVals.reduce((a, b) => a + b, 0);
+    const thicknessShares = th.map((t) => t / micronTotal);
+    // Fall back to thickness share when GSM is missing so both columns stay defined.
+    const gsmShares =
+      gsmTotal > 0
+        ? gsmVals.map((g) => (g > 0 ? g / gsmTotal : 0))
+        : thicknessShares;
     return {
-      shares: s,
-      pctLabels: formatPercentLabels(s),
+      thicknessShares,
+      thicknessPctLabels: formatPercentLabels(thicknessShares),
+      gsmPctLabels: formatPercentLabels(gsmShares),
       totalMicron: micronTotal,
+      totalGsm: gsmTotal,
     };
   }, [layers]);
 
@@ -356,7 +283,10 @@ export default function FilmStackVisualizer({ layers, className }: Props) {
       <div className={`flex h-full w-full min-h-0 flex-col bg-surface-raised ${className ?? ''}`}>
         <div className="shrink-0 px-3 pt-2 pb-1 flex justify-between text-[10px] text-text-secondary">
           <span>Edge · thickness</span>
-          <span>{layerCount} layers · {totalMicron.toFixed(1)} µ</span>
+          <span>
+            {layerCount} layers · {totalMicron.toFixed(1)} µ
+            {totalGsm > 0 ? ` · ${totalGsm.toFixed(1)} gsm` : ''}
+          </span>
         </div>
 
         <div className="flex flex-1 min-h-0 px-2 pb-2 gap-2">
@@ -369,62 +299,71 @@ export default function FilmStackVisualizer({ layers, className }: Props) {
             </span>
           </div>
 
-          <div className="flex flex-col flex-1 min-h-0 min-w-0 border border-border/60 rounded-md overflow-y-auto shadow-sm">
-            {layers.map((layer, i) => {
-              const micron = Number(layer.micron || 0);
-              const gsm = Number(layer.gsm || 0);
-              const inkIdx = inkIndexById.get(layer.id) ?? 0;
-              const pctStr = pctLabels[i];
-              const appearance = layerAppearance(layer, inkIdx);
+          <div className="flex flex-col flex-1 min-h-0 min-w-0 border border-border/60 rounded-md overflow-hidden shadow-sm">
+            <div className="shrink-0 flex items-center border-b border-border/50 bg-surface-raised">
+              <div className="w-16 sm:w-[4.5rem] shrink-0 border-r border-border/40" aria-hidden />
+              <div className="flex-1 min-w-0 flex items-center justify-between gap-2 px-2 py-1">
+                <span className="text-[10px] text-text-secondary" />
+                <span className="shrink-0 flex items-center gap-0 font-mono text-[10px] font-medium text-text-secondary tabular-nums">
+                  <span className="w-11 text-right">µ</span>
+                  <span className="w-11 text-right">GSM</span>
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
+              {layers.map((layer, i) => {
+                const micron = Number(layer.micron || 0);
+                const gsm = Number(layer.gsm || 0);
+                const inkIdx = inkIndexById.get(layer.id) ?? 0;
+                const appearance = layerAppearance(layer, inkIdx);
+                const pctClass = `w-11 text-right font-mono font-bold tabular-nums leading-tight ${
+                  dense ? 'text-[10px]' : 'text-xs'
+                }`;
 
-              return (
-                <div
-                  key={String(layer.id)}
-                  className="film-stack-row flex items-stretch border-b border-border/50 last:border-b-0 transition-[flex-grow] duration-500 ease-out"
-                  style={{
-                    // Grow proportionally to share, but never shrink below the
-                    // label's natural height (flex-shrink:0 + basis:auto) so thin
-                    // layers (e.g. 3% ink) can't collapse and overlap the next row.
-                    // The container scrolls (overflow-y-auto) if the stack is taller
-                    // than the panel. This keeps the cross-section accurate for thick
-                    // layers while guaranteeing legible, non-overlapping labels at any
-                    // zoom or screen size.
-                    flexGrow: shares[i],
-                    flexShrink: 0,
-                    flexBasis: 'auto',
-                    animationDelay: `${i * 0.05}s`,
-                  }}
-                  title={layerLabel(layer, i)}
-                >
+                return (
                   <div
-                    className={`w-16 sm:w-[4.5rem] shrink-0 border-r border-border/40 relative overflow-hidden ${appearance.className}`}
-                    style={appearance.style}
-                    aria-hidden
-                  />
+                    key={String(layer.id)}
+                    className="film-stack-row flex items-stretch border-b border-border/50 last:border-b-0 transition-[flex-grow] duration-500 ease-out"
+                    style={{
+                      // Grow by thickness share (edge view). Never shrink below label height.
+                      flexGrow: thicknessShares[i],
+                      flexShrink: 0,
+                      flexBasis: 'auto',
+                      animationDelay: `${i * 0.05}s`,
+                    }}
+                    title={layerLabel(layer, i)}
+                  >
+                    <div
+                      className={`w-16 sm:w-[4.5rem] shrink-0 border-r border-border/40 relative overflow-hidden ${appearance.className}`}
+                      style={appearance.style}
+                      aria-hidden
+                    />
 
-                  <div className="flex-1 min-w-0 flex items-center justify-between gap-2 px-2 py-1 bg-surface-raised">
-                    <p className={`leading-tight text-brand min-w-0 ${dense ? 'text-[10px]' : 'text-xs'}`}>
-                      <span className="text-text-secondary font-medium">{i + 1}.</span>{' '}
-                      <span className={inkLabelClass(layer)}>
-                        {layerLabel(layer, i)}
+                    <div className="flex-1 min-w-0 flex items-center justify-between gap-2 px-2 py-1 bg-surface-raised">
+                      <p className={`leading-tight text-brand min-w-0 ${dense ? 'text-[10px]' : 'text-xs'}`}>
+                        <span className="text-text-secondary font-medium">{i + 1}.</span>{' '}
+                        <span className={inkLabelClass(layer)}>
+                          {layerLabel(layer, i)}
+                        </span>
+                        <span className="text-text-secondary font-normal">
+                          {' '}· {typeLabel(layer.type)}
+                          {micron > 0 ? ` · ${micron}µ` : ''}
+                          {gsm > 0 ? ` · ${gsm.toFixed(1)} gsm` : ''}
+                        </span>
+                      </p>
+                      <span className="shrink-0 flex items-center gap-0">
+                        <span className={`${pctClass} ${inkPctClass(layer)}`}>
+                          {thicknessPctLabels[i]}
+                        </span>
+                        <span className={`${pctClass} text-text-secondary`}>
+                          {gsmPctLabels[i]}
+                        </span>
                       </span>
-                      <span className="text-text-secondary font-normal">
-                        {' '}· {typeLabel(layer.type)}
-                        {micron > 0 ? ` · ${micron}µ` : ''}
-                        {gsm > 0 ? ` · ${gsm.toFixed(1)} gsm` : ''}
-                      </span>
-                    </p>
-                    <span
-                      className={`shrink-0 font-mono font-bold tabular-nums leading-tight ${
-                        dense ? 'text-[10px]' : 'text-xs'
-                      } ${inkPctClass(layer)}`}
-                    >
-                      {pctStr}
-                    </span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

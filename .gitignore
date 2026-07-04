@@ -34,6 +34,10 @@ packages/server/db.sqlite
 packages/server/database.sqlite
 packages/server/init-db.js
 
+# Accidental captures / design dumps (never commit)
+*.har
+stitch.zip
+
 # Database files (allow committed patches; ignore local dumps)
 *.local.sql
 *.dump.sql

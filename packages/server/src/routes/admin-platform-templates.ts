@@ -2,8 +2,9 @@
  * Admin routes for the platform-wide standard template catalog.
  *
  * Authorization: every route in this file requires `user.role === 'platform_admin'`.
- * Writes to `platform_standard_templates` propagate to every tenant lazily on the
- * tenant's next templates-list read (no eager fan-out — see design doc).
+ * Writes to `platform_standard_templates` always live-sync to every tenant's
+ * `structure_templates` copy in the same request. Sync failure fails the request
+ * (platform row may already be written — client must retry).
  */
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
@@ -44,7 +45,7 @@ const PlatformLayerSchema = z.object({
 const CreatePlatformTemplateSchema = z.object({
   name: z.string().min(1).max(255),
   pebiParentPg: z.string().min(1).max(255).optional(),
-  productType: z.enum(['roll', 'sleeve', 'pouch']),
+  productType: z.enum(['roll', 'sleeve', 'pouch', 'bag']),
   productSubtype: z.string().max(64).nullable().optional(),
   materialClass: z.enum(['PE', 'Non PE']),
   structureTier: z.enum(['Mono', 'Duplex', 'Triplex', 'Quadriplex']),
@@ -62,12 +63,24 @@ const CreatePlatformTemplateSchema = z.object({
   defaultDimensions: z.record(z.any()).optional(),
   displayOrder: z.number().int().optional(),
   cloneFromTemplateId: z.string().uuid().optional(),
+  /** Fixed CoRM Printed per kg in display currency (legacy field name). */
+  cormPerKgUsd: z
+    .union([z.string().regex(/^\d+(\.\d{1,4})?$/), z.number().nonnegative()])
+    .optional(),
+  /** Fixed CoRM Plain per kg (default 50% of Printed when omitted). */
+  cormPerKgPlain: z
+    .union([z.string().regex(/^\d+(\.\d{1,4})?$/), z.number().nonnegative()])
+    .optional(),
+  /** Minimum order quantity (kg). */
+  moqKg: z
+    .union([z.string().regex(/^\d+(\.\d{1,2})?$/), z.number().nonnegative(), z.null()])
+    .optional(),
 });
 
 const UpdatePlatformTemplateSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   pebiParentPg: z.string().min(1).max(255).optional(),
-  productType: z.enum(['roll', 'sleeve', 'pouch']).optional(),
+  productType: z.enum(['roll', 'sleeve', 'pouch', 'bag']).optional(),
   productSubtype: z.string().max(64).nullable().optional(),
   materialClass: z.enum(['PE', 'Non PE']).optional(),
   structureTier: z.enum(['Mono', 'Duplex', 'Triplex', 'Quadriplex']).optional(),
@@ -86,14 +99,24 @@ const UpdatePlatformTemplateSchema = z.object({
   displayOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
   /**
-   * Per-template fixed Manufacturing & Operating add-on (CoRM), USD/kg.
-   * Used as the M&O figure for the `fixed_per_group` operating-cost method.
-   * String (decimal) so it round-trips cleanly through the API.
+   * Per-template Fixed CoRM Printed, display currency/kg.
+   * Scaled by band waste % when operating-cost method is `fixed_per_group`.
    */
   cormPerKgUsd: z
     .union([z.string().regex(/^\d+(\.\d{1,4})?$/), z.number().nonnegative()])
     .optional(),
+  cormPerKgPlain: z
+    .union([z.string().regex(/^\d+(\.\d{1,4})?$/), z.number().nonnegative()])
+    .optional(),
+  moqKg: z
+    .union([z.string().regex(/^\d+(\.\d{1,2})?$/), z.number().nonnegative(), z.null()])
+    .optional(),
 });
+
+function decimalField(v: string | number | null | undefined, places: number): string | null {
+  if (v == null || v === '') return null;
+  return typeof v === 'number' ? v.toFixed(places) : v;
+}
 
 // ─── Guard ─────────────────────────────────────────────────────────────────
 
@@ -158,8 +181,10 @@ function refKeyForMaterial(m: {
   platformMasterKey?: string | null;
   name?: string | null;
 }): string | null {
-  if (m.costingKey) return m.costingKey;
+  // Prefer platformMasterKey — it is unique per catalog row. costingKey is a
+  // shared alias (e.g. adhesive-sb) and would collapse distinct grades on save.
   if (m.platformMasterKey) return m.platformMasterKey;
+  if (m.costingKey) return m.costingKey;
   if (m.name) return m.name.toLowerCase().replace(/\s+/g, '-');
   return null;
 }
@@ -228,7 +253,7 @@ async function normalizeLayersToRefKeys(
 async function validateDefinition(
   user: TokenPayload,
   args: {
-    productType: 'roll' | 'sleeve' | 'pouch';
+    productType: 'roll' | 'sleeve' | 'pouch' | 'bag';
     materialClass: 'PE' | 'Non PE';
     structureTier: 'Mono' | 'Duplex' | 'Triplex' | 'Quadriplex';
     printMode: 'Plain' | 'Printed';
@@ -293,7 +318,7 @@ function buildPlatformRow(args: {
   templateKey: string;
   name: string;
   pebiParentPg: string;
-  productType: 'roll' | 'sleeve' | 'pouch';
+  productType: 'roll' | 'sleeve' | 'pouch' | 'bag';
   productSubtype: string | null;
   materialClass: string | null;
   structureType: string | null;
@@ -304,6 +329,9 @@ function buildPlatformRow(args: {
   defaultPrintingWebClass: 'wide_web' | 'narrow_web';
   solventMixEnabled: boolean;
   isActive?: boolean;
+  cormPerKgUsd?: string | null;
+  cormPerKgPlain?: string | null;
+  moqKg?: string | null;
 }) {
   return {
     templateKey: args.templateKey,
@@ -323,6 +351,9 @@ function buildPlatformRow(args: {
     inkSystemOptions: ['SB'] as string[],
     substrateOptions: null as string[] | null,
     isActive: args.isActive ?? true,
+    cormPerKgUsd: args.cormPerKgUsd ?? null,
+    cormPerKgPlain: args.cormPerKgPlain ?? null,
+    moqKg: args.moqKg ?? null,
     createdByUserId: args.user.userId,
     updatedByUserId: args.user.userId,
   };
@@ -491,6 +522,12 @@ export async function createPlatformTemplateRoute(
     });
   }
 
+  const cormPerKgUsd = decimalField(body.cormPerKgUsd, 4);
+  const cormPerKgPlain =
+    decimalField(body.cormPerKgPlain, 4) ??
+    (cormPerKgUsd != null ? (Number(cormPerKgUsd) * 0.5).toFixed(4) : null);
+  const moqKg = decimalField(body.moqKg, 2);
+
   const row = buildPlatformRow({
     user,
     templateKey,
@@ -506,6 +543,9 @@ export async function createPlatformTemplateRoute(
     defaultProcesses,
     defaultPrintingWebClass: printingWebClass as 'wide_web' | 'narrow_web',
     solventMixEnabled: needsSolvent,
+    cormPerKgUsd,
+    cormPerKgPlain,
+    moqKg,
   });
 
   const [inserted] = await db
@@ -513,7 +553,22 @@ export async function createPlatformTemplateRoute(
     .values(row)
     .returning();
 
-  return reply.status(201).send(inserted);
+  try {
+    const sync = await syncSinglePlatformStandardToAllTenants(templateKey);
+    return reply.status(201).send({ ...inserted, ...sync });
+  } catch (err) {
+    reply.request.log.error(
+      { err, templateKey },
+      'Failed to live-sync new platform standard to tenants'
+    );
+    return reply.status(500).send({
+      error: 'Platform template created but failed to sync to tenants — retry save',
+      detail: err instanceof Error ? err.message : String(err),
+      platformSaved: true,
+      templateKey,
+      template: inserted,
+    });
+  }
 }
 
 /** PATCH /api/v1/admin/platform-templates/:id */
@@ -611,10 +666,19 @@ async function applyPlatformUpdate(
   if (body.displayOrder !== undefined) updates.displayOrder = body.displayOrder;
   if (body.isActive !== undefined) updates.isActive = body.isActive;
   if (body.cormPerKgUsd !== undefined) {
-    // Normalize numeric → string (decimal) so the pg `decimal(12,4)` column
-    // gets a string and we don't lose precision.
-    updates.cormPerKgUsd =
-      typeof body.cormPerKgUsd === 'number' ? body.cormPerKgUsd.toFixed(4) : body.cormPerKgUsd;
+    updates.cormPerKgUsd = decimalField(body.cormPerKgUsd, 4);
+  }
+  if (body.cormPerKgPlain !== undefined) {
+    updates.cormPerKgPlain = decimalField(body.cormPerKgPlain, 4);
+  } else if (body.cormPerKgUsd !== undefined && updates.cormPerKgUsd != null) {
+    // When Printed is set without Plain, keep Plain at 50% of Printed if Plain was empty.
+    const existingPlain = existing.cormPerKgPlain;
+    if (existingPlain == null) {
+      updates.cormPerKgPlain = (Number(updates.cormPerKgUsd) * 0.5).toFixed(4);
+    }
+  }
+  if (body.moqKg !== undefined) {
+    updates.moqKg = decimalField(body.moqKg, 2);
   }
 
   // Layer / process / dimension updates require validation + normalization.
@@ -654,26 +718,23 @@ async function applyPlatformUpdate(
     .where(eq(schema.platformStandardTemplates.id, existing.id))
     .returning();
 
-  // Live-sync the change to all tenant `structure_templates` copies of this
-  // templateKey so the platform edit is visible everywhere immediately. Errors
-  // here are logged but do not fail the PATCH (the next manual sync run will
-  // catch any tenant that didn't make it through).
-  let syncedTenants = 0;
-  let deactivatedTenants = 0;
-  let inserted = 0;
+  // Live-sync must succeed — otherwise the editor (tenant copy) shows stale data.
   try {
     const result = await syncSinglePlatformStandardToAllTenants(existing.templateKey);
-    syncedTenants = result.syncedTenants;
-    deactivatedTenants = result.deactivatedTenants;
-    inserted = result.inserted;
+    return reply.send({ ...updated, ...result });
   } catch (err) {
-    console.error(
-      `Failed to live-sync platform standard "${existing.templateKey}" to tenants after PATCH:`,
-      err
+    reply.request.log.error(
+      { err, templateKey: existing.templateKey },
+      'Failed to live-sync platform standard to tenants after PATCH'
     );
+    return reply.status(500).send({
+      error: 'Platform template saved but failed to sync to tenants — retry save',
+      detail: err instanceof Error ? err.message : String(err),
+      platformSaved: true,
+      templateKey: existing.templateKey,
+      template: updated,
+    });
   }
-
-  return reply.send({ ...updated, syncedTenants, deactivatedTenants, inserted });
 }
 
 /** DELETE /api/v1/admin/platform-templates/:id (soft delete) */
@@ -738,25 +799,28 @@ async function applyPlatformDelete(
     .set({ isActive: false, updatedAt: new Date(), updatedByUserId: user.userId })
     .where(eq(schema.platformStandardTemplates.id, existing.id));
 
-  // Live-sync the deactivation to all tenant `structure_templates` copies so
-  // the platform row being retired immediately drops out of every tenant's
-  // active catalog (the structureTemplates row's id is preserved so existing
-  // estimates that reference it keep working — the template is just hidden
-  // from the tenant's "active" list).
-  let deactivatedTenants = 0;
-  let syncedTenants = 0;
+  // Live-sync deactivation to every tenant catalog (row id preserved for estimates).
   try {
     const result = await syncSinglePlatformStandardToAllTenants(existing.templateKey);
-    deactivatedTenants = result.deactivatedTenants;
-    syncedTenants = result.syncedTenants;
+    return reply.send({
+      ok: true,
+      deactivated: true,
+      deactivatedTenants: result.deactivatedTenants,
+      syncedTenants: result.syncedTenants,
+      inserted: result.inserted,
+    });
   } catch (err) {
-    console.error(
-      `Failed to live-sync platform standard "${existing.templateKey}" to tenants after DELETE:`,
-      err
+    reply.request.log.error(
+      { err, templateKey: existing.templateKey },
+      'Failed to live-sync platform standard to tenants after DELETE'
     );
+    return reply.status(500).send({
+      error: 'Platform template deactivated but failed to sync to tenants — retry',
+      detail: err instanceof Error ? err.message : String(err),
+      platformSaved: true,
+      templateKey: existing.templateKey,
+    });
   }
-
-  return reply.send({ ok: true, deactivated: true, deactivatedTenants, syncedTenants });
 }
 
 // ─── Registration ───────────────────────────────────────────────────────────

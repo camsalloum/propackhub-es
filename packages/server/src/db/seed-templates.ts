@@ -1,6 +1,7 @@
 import { getDatabase, schema } from './index';
 import templateSeed from './structure-templates-seed.json';
 import { eq, and, asc } from 'drizzle-orm';
+import { log } from '../utils/logger';
 import {
   buildTemplateMaterialLookup,
   buildValidMaterialIdSet,
@@ -24,7 +25,7 @@ interface TemplateLayerSeed {
 interface TemplateSeedEntry {
   pebi_parent_pg: string;
   name: string;
-  product_type: 'roll' | 'sleeve' | 'pouch';
+  product_type: 'roll' | 'sleeve' | 'pouch' | 'bag';
   material_class: string | null;
   structure_type: string;
   substrate_origin: string | null;
@@ -36,8 +37,10 @@ interface TemplateSeedEntry {
   solvent_mix_enabled?: boolean;
   ink_system_options?: string[];
   substrate_options?: string[];
-  /** Per-template CoRM (USD/kg); only present in the platform DB rows, not the seed JSON. */
+  /** Per-template CoRM Printed (display currency/kg); platform DB only. */
   corm_per_kg_usd?: string | null;
+  corm_per_kg_plain?: string | null;
+  moq_kg?: string | null;
 }
 
 /**
@@ -48,7 +51,7 @@ interface PlatformStandardSource {
   templateKey: string;
   name: string;
   pebiParentPg: string;
-  productType: 'roll' | 'sleeve' | 'pouch';
+  productType: 'roll' | 'sleeve' | 'pouch' | 'bag';
   productSubtype?: string | null;
   materialClass: string | null;
   structureType: string | null;
@@ -61,8 +64,10 @@ interface PlatformStandardSource {
   solventMixEnabled: boolean;
   inkSystemOptions: string[] | null;
   substrateOptions: string[] | null;
-  /** Per-template CoRM (USD/kg) — null for seed-JSON-only sources. */
+  /** Per-template CoRM Printed (display currency/kg) — null for seed-JSON-only sources. */
   cormPerKgUsd: string | null;
+  cormPerKgPlain: string | null;
+  moqKg: string | null;
   isActive: boolean;
   updatedAt: Date | null;
 }
@@ -92,6 +97,8 @@ function seedEntryToSource(t: TemplateSeedEntry): PlatformStandardSource {
     inkSystemOptions: t.ink_system_options || ['SB'],
     substrateOptions: t.substrate_options || null,
     cormPerKgUsd: t.corm_per_kg_usd ?? null,
+    cormPerKgPlain: t.corm_per_kg_plain ?? null,
+    moqKg: t.moq_kg ?? null,
     isActive: true,
     updatedAt: null,
   };
@@ -127,7 +134,7 @@ async function loadPlatformStandardSources(): Promise<PlatformStandardSource[]> 
           templateKey: r.templateKey,
           name: r.name,
           pebiParentPg: r.pebiParentPg,
-          productType: r.productType as 'roll' | 'sleeve' | 'pouch',
+          productType: r.productType as 'roll' | 'sleeve' | 'pouch' | 'bag',
           productSubtype: r.productSubtype ?? null,
           materialClass: r.materialClass,
           structureType: r.structureType,
@@ -145,6 +152,8 @@ async function loadPlatformStandardSources(): Promise<PlatformStandardSource[]> 
           inkSystemOptions: (r.inkSystemOptions as string[] | null) || null,
           substrateOptions: (r.substrateOptions as string[] | null) || null,
           cormPerKgUsd: r.cormPerKgUsd ?? null,
+          cormPerKgPlain: r.cormPerKgPlain ?? null,
+          moqKg: r.moqKg ?? null,
           isActive: r.isActive ?? true,
           updatedAt: r.updatedAt ?? null,
         })
@@ -152,16 +161,16 @@ async function loadPlatformStandardSources(): Promise<PlatformStandardSource[]> 
     }
   } catch (err) {
     // Table may not exist yet on first-time boot of a fresh dev DB.
-    console.warn(
-      '⚠  platform_standard_templates not readable, falling back to seed JSON:',
-      (err as Error).message
+    log.warn(
+      { err: (err as Error).message },
+      'platform_standard_templates not readable, falling back to seed JSON'
     );
   }
 
   try {
     return (templateSeed as { templates: TemplateSeedEntry[] }).templates.map(seedEntryToSource);
   } catch (err) {
-    console.error('⚠  Seed JSON fallback failed:', err);
+    log.error({ err }, 'Seed JSON fallback failed');
     return [];
   }
 }
@@ -190,9 +199,80 @@ function sourceToTenantInsertRow(
     inkSystemOptions: source.inkSystemOptions ?? ['SB'],
     substrateOptions: source.substrateOptions,
     cormPerKgUsd: source.cormPerKgUsd,
+    cormPerKgPlain: source.cormPerKgPlain,
+    moqKg: source.moqKg,
     isStandard: true,
     isActive: source.isActive,
   };
+}
+
+/** Fields mirrored from platform → tenant copy (id preserved). */
+function tenantMirrorUpdateFields(
+  source: PlatformStandardSource,
+  resolvedLayers: ReturnType<typeof resolveTemplateLayers>
+) {
+  return {
+    name: source.name,
+    pebiParentPg: source.pebiParentPg,
+    productType: source.productType,
+    productSubtype: source.productSubtype ?? null,
+    materialClass: source.materialClass,
+    structureType: source.structureType,
+    substrateOrigin: source.substrateOrigin,
+    displayOrder: source.displayOrder,
+    defaultDimensions: source.defaultDimensions,
+    defaultLayers: resolvedLayers,
+    defaultProcesses: source.defaultProcesses,
+    defaultPrintingWebClass: source.defaultPrintingWebClass,
+    solventMixEnabled: source.solventMixEnabled,
+    inkSystemOptions: source.inkSystemOptions ?? ['SB'],
+    substrateOptions: source.substrateOptions,
+    cormPerKgUsd: source.cormPerKgUsd,
+    cormPerKgPlain: source.cormPerKgPlain,
+    moqKg: source.moqKg,
+    isActive: source.isActive,
+    updatedAt: new Date(),
+  };
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as { code?: string; message?: string; cause?: { code?: string } };
+  return (
+    e.code === '23505' ||
+    e.cause?.code === '23505' ||
+    (typeof e.message === 'string' && e.message.includes('duplicate key value'))
+  );
+}
+
+/**
+ * Insert a tenant copy, or update if a concurrent sync already inserted it
+ * (structure_templates_tenant_key_uq). Returns 'inserted' | 'updated'.
+ */
+async function insertOrUpdateTenantStandard(
+  tenantId: string,
+  source: PlatformStandardSource,
+  resolvedLayers: ReturnType<typeof resolveTemplateLayers>
+): Promise<'inserted' | 'updated'> {
+  const db = getDatabase();
+  try {
+    await db
+      .insert(schema.structureTemplates)
+      .values(sourceToTenantInsertRow(tenantId, source, resolvedLayers));
+    return 'inserted';
+  } catch (err) {
+    if (!isUniqueViolation(err)) throw err;
+    await db
+      .update(schema.structureTemplates)
+      .set(tenantMirrorUpdateFields(source, resolvedLayers))
+      .where(
+        and(
+          eq(schema.structureTemplates.tenantId, tenantId),
+          eq(schema.structureTemplates.templateKey, source.templateKey)
+        )
+      );
+    return 'updated';
+  }
 }
 
 /**
@@ -209,7 +289,7 @@ export async function seedTemplatesForTenant(tenantId: string): Promise<number> 
     const sources = await loadPlatformStandardSources();
 
     if (sources.length === 0) {
-      console.log(`⚠  No platform standards available to seed for tenant ${tenantId}`);
+      log.warn({ tenantId }, 'No platform standards available to seed for tenant');
       return 0;
     }
 
@@ -227,10 +307,10 @@ export async function seedTemplatesForTenant(tenantId: string): Promise<number> 
       .values(rowsToInsert)
       .returning();
 
-    console.log(`✓ Seeded ${inserted.length} structure templates for tenant ${tenantId}`);
+    log.info({ tenantId, count: inserted.length }, 'Seeded structure templates for tenant');
     return inserted.length;
   } catch (error) {
-    console.error('Failed to seed structure templates:', error);
+    log.error({ err: error, tenantId }, 'Failed to seed structure templates');
     throw error;
   }
 }
@@ -281,9 +361,7 @@ export async function syncPlatformStandardsToTenant(tenantId: string): Promise<n
 
     if (!existing) {
       if (!source.isActive) continue; // never insert an inactive standard
-      await db
-        .insert(schema.structureTemplates)
-        .values(sourceToTenantInsertRow(tenantId, source, resolvedLayers));
+      await insertOrUpdateTenantStandard(tenantId, source, resolvedLayers);
       touched++;
       continue;
     }
@@ -298,39 +376,13 @@ export async function syncPlatformStandardsToTenant(tenantId: string): Promise<n
       continue;
     }
 
-    // Upstream reactivation or content drift: refresh tenant copy in place.
-    const upstreamNewer =
-      source.updatedAt && existing.updatedAt
-        ? source.updatedAt.getTime() > existing.updatedAt.getTime()
-        : false;
-    const reactivate = source.isActive && !existing.isActive;
-
-    if (upstreamNewer || reactivate) {
-      await db
-        .update(schema.structureTemplates)
-        .set({
-          name: source.name,
-          pebiParentPg: source.pebiParentPg,
-          productType: source.productType,
-          productSubtype: source.productSubtype ?? null,
-          materialClass: source.materialClass,
-          structureType: source.structureType,
-          substrateOrigin: source.substrateOrigin,
-          displayOrder: source.displayOrder,
-          defaultDimensions: source.defaultDimensions,
-          defaultLayers: resolvedLayers,
-          defaultProcesses: source.defaultProcesses,
-          defaultPrintingWebClass: source.defaultPrintingWebClass,
-          solventMixEnabled: source.solventMixEnabled,
-          inkSystemOptions: source.inkSystemOptions ?? ['SB'],
-          substrateOptions: source.substrateOptions,
-          cormPerKgUsd: source.cormPerKgUsd,
-          isActive: source.isActive,
-          updatedAt: new Date(),
-        })
-        .where(eq(schema.structureTemplates.id, existing.id));
-      touched++;
-    }
+    // Platform catalog is source of truth for standards — always mirror.
+    // Never gate on updatedAt/contentDrift (those skipped or fought live edits).
+    await db
+      .update(schema.structureTemplates)
+      .set(tenantMirrorUpdateFields(source, resolvedLayers))
+      .where(eq(schema.structureTemplates.id, existing.id));
+    touched++;
   }
 
   // Orphans: tenant copies whose key no longer exists upstream → deactivate.
@@ -346,7 +398,7 @@ export async function syncPlatformStandardsToTenant(tenantId: string): Promise<n
   }
 
   if (touched > 0) {
-    console.log(`✓ Synced ${touched} platform standards into tenant ${tenantId}`);
+    log.info({ tenantId, touched }, 'Synced platform standards into tenant');
   }
   return touched;
 }
@@ -373,18 +425,15 @@ export async function syncSinglePlatformStandardToAllTenants(
   const sources = await loadPlatformStandardSources();
   const source = sources.find((s) => s.templateKey === templateKey);
   if (!source) {
-    // Platform row was removed entirely (hard delete) — the only path that
-    // hits this is an old code path; the DELETE route is soft, so source should
-    // still be found. Defensive guard: report no work.
-    return { syncedTenants: 0, deactivatedTenants: 0, inserted: 0 };
+    throw new Error(
+      `Platform standard "${templateKey}" not found after write — cannot live-sync tenants`
+    );
   }
 
-  // All tenants (we may need to insert a copy for tenants that have none yet).
   const allTenantIds = (await db.select({ id: schema.tenants.id }).from(schema.tenants)).map(
     (t: { id: string }) => t.id
   );
 
-  // Load all existing copies of this templateKey (one per tenant in practice).
   const tenantCopies = await db
     .select()
     .from(schema.structureTemplates)
@@ -401,87 +450,74 @@ export async function syncSinglePlatformStandardToAllTenants(
   let syncedTenants = 0;
   let deactivatedTenants = 0;
   let inserted = 0;
+  const failures: Array<{ tenantId: string; message: string }> = [];
 
   for (const tenantId of allTenantIds) {
-    const existing = existingByTenant.get(tenantId);
+    try {
+      const existing = existingByTenant.get(tenantId);
 
-    // Per-tenant material lookup (needed to resolve the defaultLayers into
-    // tenant-local material references — different tenants may have different
-    // material IDs in their master catalog).
-    const materials = await loadTenantMaterials(tenantId);
-    const materialLookup = buildTemplateMaterialLookup(materials);
-    const validIds = buildValidMaterialIdSet(materials);
-    const resolvedLayers = resolveTemplateLayers(
-      source.defaultLayers.map((layer) => ({ ...layer })),
-      materialLookup,
-      validIds
-    );
+      const materials = await loadTenantMaterials(tenantId);
+      const materialLookup = buildTemplateMaterialLookup(materials);
+      const validIds = buildValidMaterialIdSet(materials);
+      const resolvedLayers = resolveTemplateLayers(
+        source.defaultLayers.map((layer) => ({ ...layer })),
+        materialLookup,
+        validIds
+      );
 
-    if (!existing) {
-      // No tenant copy yet — insert one if the source is active (mirroring the
-      // catalog behavior of `syncPlatformStandardsToTenant`).
-      if (!source.isActive) continue;
-      await db
-        .insert(schema.structureTemplates)
-        .values(sourceToTenantInsertRow(tenantId, source, resolvedLayers));
-      inserted++;
-      continue;
-    }
+      if (!existing) {
+        if (!source.isActive) continue;
+        const outcome = await insertOrUpdateTenantStandard(
+          tenantId,
+          source,
+          resolvedLayers
+        );
+        if (outcome === 'inserted') inserted++;
+        else syncedTenants++;
+        continue;
+      }
 
-    if (!source.isActive && existing.isActive) {
-      await db
-        .update(schema.structureTemplates)
-        .set({ isActive: false, updatedAt: new Date() })
-        .where(eq(schema.structureTemplates.id, existing.id));
-      deactivatedTenants++;
-      continue;
-    }
+      if (!source.isActive && existing.isActive) {
+        await db
+          .update(schema.structureTemplates)
+          .set({ isActive: false, updatedAt: new Date() })
+          .where(eq(schema.structureTemplates.id, existing.id));
+        deactivatedTenants++;
+        continue;
+      }
 
-    // Upstream reactivation OR content drift: refresh tenant copy in place.
-    // We just updated the platform row, so `upstreamNewer` is always true in
-    // practice — but we keep the check to stay symmetric with the bulk sync
-    // and to support the reactivate-only case.
-    const upstreamNewer =
-      source.updatedAt && existing.updatedAt
-        ? source.updatedAt.getTime() > existing.updatedAt.getTime()
-        : true;
-    const reactivate = source.isActive && !existing.isActive;
-
-    if (upstreamNewer || reactivate) {
+      // Always mirror platform → tenant (no updatedAt gate).
       await db
         .update(schema.structureTemplates)
-        .set({
-          name: source.name,
-          pebiParentPg: source.pebiParentPg,
-          productType: source.productType,
-          productSubtype: source.productSubtype ?? null,
-          materialClass: source.materialClass,
-          structureType: source.structureType,
-          substrateOrigin: source.substrateOrigin,
-          displayOrder: source.displayOrder,
-          defaultDimensions: source.defaultDimensions,
-          defaultLayers: resolvedLayers,
-          defaultProcesses: source.defaultProcesses,
-          defaultPrintingWebClass: source.defaultPrintingWebClass,
-          solventMixEnabled: source.solventMixEnabled,
-          inkSystemOptions: source.inkSystemOptions ?? ['SB'],
-          substrateOptions: source.substrateOptions,
-          cormPerKgUsd: source.cormPerKgUsd,
-          isActive: source.isActive,
-          updatedAt: new Date(),
-        })
+        .set(tenantMirrorUpdateFields(source, resolvedLayers))
         .where(eq(schema.structureTemplates.id, existing.id));
       syncedTenants++;
+    } catch (err) {
+      failures.push({
+        tenantId,
+        message: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
-  if (syncedTenants + deactivatedTenants + inserted > 0) {
-    console.log(
-      `✓ Synced platform standard "${templateKey}" to tenants — ` +
-        `${syncedTenants} updated, ${deactivatedTenants} deactivated, ${inserted} inserted ` +
-        `(${(syncedTenants + deactivatedTenants + inserted)}/${allTenantIds.length} tenants)`
+  if (failures.length > 0) {
+    throw new Error(
+      `Live-sync failed for ${failures.length}/${allTenantIds.length} tenant(s) ` +
+        `(templateKey=${templateKey}): ` +
+        failures.map((f) => `${f.tenantId}: ${f.message}`).join('; ')
     );
   }
+
+  log.info(
+    {
+      templateKey,
+      syncedTenants,
+      deactivatedTenants,
+      inserted,
+      tenantCount: allTenantIds.length,
+    },
+    'Synced platform standard to tenants'
+  );
 
   return { syncedTenants, deactivatedTenants, inserted };
 }
@@ -632,7 +668,7 @@ export async function relinkTemplatesForTenant(tenantId: string): Promise<number
   }
 
   if (updated > 0) {
-    console.log(`✓ Relinked materials on ${updated} templates for tenant ${tenantId}`);
+    log.info({ tenantId, updated }, 'Relinked materials on templates for tenant');
   }
   return updated;
 }

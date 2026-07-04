@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Save, Download, ArrowLeft, Layers, Calculator, DollarSign, Loader2, X, Check, Plus, Minus, GripVertical, AlertCircle, RefreshCw } from 'lucide-react';
+import { Save, Download, ArrowLeft, Layers, Calculator, Loader2, Check, Plus, Minus, GripVertical, AlertCircle, RefreshCw, Copy, BookmarkPlus } from 'lucide-react';
 import LayerCard from '../components/LayerCard';
 import BottomSheet from '../components/BottomSheet';
 import FilmStackVisualizer from '../components/FilmStackVisualizer';
@@ -24,7 +24,7 @@ import {
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { runClientCalculation } from '../lib/estimateCalc';
-import { usdToDisplay, usdToDisplayPrecise, displayToUsd } from '../lib/currency';
+import { usdToDisplay, usdToDisplayPrecise } from '../lib/currency';
 import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
 import {
   buildProcessCostCatalogFromReference,
@@ -40,8 +40,9 @@ import { setWorkingEstimateForTemplate } from '../lib/estimateSession';
 import { selectOnFocus } from '../lib/inputs';
 import { estimateStatusLabel, MES_OUTCOME_ENABLED } from '../lib/estimateStatus';
 import { groupMaterialsForPicker, type CategoryNode } from '../lib/materialTaxonomy';
-import { stackNeedsSolventMix, stackHasSbInk, defaultInkPrintingProcess, inkSolventRatioForProcess, materialAllowedForTemplateLayer, DEFAULT_CLEANING_SOLVENT_KG_PER_JOB, DEFAULT_WASTE_BANDS, type LaminationRecipe, type InkPrintingProcess, type PouchAccessorySelection, type WasteBand } from '@es/engine';
+import { stackNeedsSolventMix, stackHasSbInk, defaultInkPrintingProcess, inkSolventRatioForProcess, materialAllowedForTemplateLayer, DEFAULT_CLEANING_SOLVENT_KG_PER_JOB, DEFAULT_WASTE_BANDS_BY_PRINT_MODE, DEFAULT_CORM_SCALE_WITH_WASTE, structureIsPrinted, wasteBandsForPrintMode, plainCormFromPrinted, type LaminationRecipe, type InkPrintingProcess, type PouchAccessorySelection, type WasteBand } from '@es/engine';
 import LaminationFormulaModal from '../components/LaminationFormulaModal';
+import PriceListPanel, { type PriceListUnit } from '../components/PriceListPanel';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
 import {
   DEFAULT_MASTER_REFERENCE,
@@ -102,6 +103,10 @@ const LEGACY_UNIT_BASIS: Record<string, string> = {
   kgs: 'kg', kg: 'kg', kpcs: 'pieces', sqm: 'sqm', lm: 'lm', roll_500_lm: 'lm',
 };
 
+/** EXW = buyer collects — no freight; charge is always 0 and locked. */
+const isExwDelivery = (term: string | null | undefined) =>
+  String(term ?? '').trim().toUpperCase() === 'EXW';
+
 const LAYER_TYPE_LABELS: Record<string, string> = {
   substrate: 'Substrate',
   ink: 'Ink & Coating',
@@ -137,7 +142,11 @@ const EstimateEditor = () => {
   const [orderQuantity, setOrderQuantity] = useState<number>(1000);
   const [orderQuantityUnit, setOrderQuantityUnit] = useState(() => defaultUnitValue());
   const [processesState, setProcessesState] = useState<any[]>([]);
-  const { reference: masterReference, version: masterDataVersion } = useMasterDataReference();
+  const {
+    reference: masterReference,
+    version: masterDataVersion,
+    reload: reloadMasterData,
+  } = useMasterDataReference();
   const processCostCatalog = useMemo(
     () => buildProcessCostCatalogFromReference(masterReference),
     [masterReference.processRows, masterReference.processOptions]
@@ -178,7 +187,7 @@ const EstimateEditor = () => {
   }, [processCostCatalog, normalizeLoadedProcesses, processesState]);
 
   // UI state
-  const [activeSection, setActiveSection] = useState<'structure' | 'dimensions' | 'slabs' | 'markup'>('structure');
+  const [activeSection, setActiveSection] = useState<'structure' | 'dimensions' | 'slabs'>('structure');
   const [productType, setProductType] = useState<string>('roll');
 
   // Layer table column visibility — reserved for future optional columns
@@ -195,14 +204,27 @@ const EstimateEditor = () => {
   // Pricing model v2 (USD base). pricingMethod is assigned per user by the admin.
   const [pricingMethod, setPricingMethod] = useState<'markup' | 'margin_per_kg'>('markup');
   const [marginValuePerKgUsd, setMarginValuePerKgUsd] = useState(0);
+  /** Base CoRM Printed (display currency/kg; legacy state name). */
   const [cormPerKgUsd, setCormPerKgUsd] = useState(0);
+  const [cormPerKgPlain, setCormPerKgPlain] = useState(0);
+  const [moqKg, setMoqKg] = useState<number | null>(null);
   const [toolingChargeUsd, setToolingChargeUsd] = useState(0);
   const [deliveryTerm, setDeliveryTerm] = useState('EXW');
   const [deliveryChargeUsd, setDeliveryChargeUsd] = useState(0);
-  // Waste bands are now platform-wide (Master Data → Waste Bands). The estimate
-  // consumes them read-only via the master reference; the % is looked up from the
-  // order quantity and added to material cost.
-  const wasteBands: WasteBand[] = masterReference.wasteBands ?? DEFAULT_WASTE_BANDS;
+  // Waste bands + CoRM base: Printed vs Plain from structure (ink → Printed).
+  const wastePrintMode = structureIsPrinted(layers) ? 'printed' : 'plain';
+  const wasteBands: WasteBand[] = wasteBandsForPrintMode(
+    masterReference.wasteBandsByPrintMode ?? DEFAULT_WASTE_BANDS_BY_PRINT_MODE,
+    wastePrintMode
+  );
+  const cormScaleWithWaste =
+    masterReference.cormScaleWithWaste ?? DEFAULT_CORM_SCALE_WITH_WASTE;
+  const baseCormDisplay =
+    wastePrintMode === 'printed'
+      ? cormPerKgUsd
+      : cormPerKgPlain > 0
+        ? cormPerKgPlain
+        : plainCormFromPrinted(cormPerKgUsd);
   const [solventMaterialId, setSolventMaterialId] = useState<string | null>(null);
   const [solventCostOverrideUsd, setSolventCostOverrideUsd] = useState<number | null>(null);
   const [cleaningSolventKgPerJob, setCleaningSolventKgPerJob] = useState(defaultCleaningKg);
@@ -465,6 +487,12 @@ const EstimateEditor = () => {
     }
   }, [availableUnitOptions, orderQuantityUnit]);
 
+  const requiresRollLength = useMemo(
+    () =>
+      availableUnitOptions.find((o) => o.value === orderQuantityUnit)?.variableMultiplier === true,
+    [availableUnitOptions, orderQuantityUnit]
+  );
+
   const estimationDimensionFields = dimensionFieldsForEstimation(productFamily, productSubtype);
   const bagConfiguratorType = configuratorTypeForBagSubtype(productSubtype);
   const bagConfiguratorActive = productFamily === 'bag' && bagConfiguratorType != null;
@@ -645,6 +673,25 @@ const EstimateEditor = () => {
     loadBaseData();
   }, [masterDataVersion, loadBaseData]);
 
+  // Master data (incl. waste bands) is session-cached — not a live socket.
+  // Re-fetch when opening Price list, and when the window is focused again
+  // (e.g. after editing Platform Master Data in another tab).
+  useEffect(() => {
+    if (activeSection === 'slabs') reloadMasterData();
+  }, [activeSection, reloadMasterData]);
+
+  useEffect(() => {
+    const onFocus = () => {
+      if (document.visibilityState === 'visible') reloadMasterData();
+    };
+    document.addEventListener('visibilitychange', onFocus);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', onFocus);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [reloadMasterData]);
+
   // Map template ID → layers using library-driven resolution (type/family, not hardcoded names).
   // Task 5.2: replaced hardcoded name-matching with find-by-type fallbacks.
   // Templates are now instantiated server-side (StandardTemplates → instantiate endpoint);
@@ -725,7 +772,18 @@ const EstimateEditor = () => {
     // Pricing method from the user; margin/kg default from the template (product group).
     setPricingMethod(user?.pricingMethod ?? 'markup');
     setMarginValuePerKgUsd(parseFloat((pe as { marginValuePerKgUsd?: string }).marginValuePerKgUsd ?? '') || 0);
-    setCormPerKgUsd(parseFloat((pe as { cormPerKgUsd?: string }).cormPerKgUsd ?? '') || 0);
+    {
+      const printed = parseFloat((pe as { cormPerKgUsd?: string }).cormPerKgUsd ?? '') || 0;
+      setCormPerKgUsd(printed);
+      const plainRaw = (pe as { cormPerKgPlain?: string }).cormPerKgPlain;
+      setCormPerKgPlain(
+        plainRaw != null && plainRaw !== ''
+          ? parseFloat(plainRaw) || 0
+          : plainCormFromPrinted(printed)
+      );
+      const moqRaw = (pe as { moqKg?: string }).moqKg;
+      setMoqKg(moqRaw != null && moqRaw !== '' ? parseFloat(moqRaw) || null : null);
+    }
     setToolingChargeUsd(0);
     setDeliveryTerm('EXW');
     setDeliveryChargeUsd(0);
@@ -818,12 +876,27 @@ const EstimateEditor = () => {
           (user?.pricingMethod ?? 'markup')
       );
       setMarginValuePerKgUsd(parseFloat(data.marginValuePerKgUsd) || 0);
-      setCormPerKgUsd(parseFloat(data.cormPerKgUsd) || 0);
+      {
+        const printed = parseFloat(data.cormPerKgUsd) || 0;
+        setCormPerKgUsd(printed);
+        setCormPerKgPlain(
+          data.cormPerKgPlain != null && data.cormPerKgPlain !== ''
+            ? parseFloat(data.cormPerKgPlain) || 0
+            : plainCormFromPrinted(printed)
+        );
+        setMoqKg(
+          data.moqKg != null && data.moqKg !== '' ? parseFloat(data.moqKg) || null : null
+        );
+      }
       setToolingChargeUsd(parseFloat(data.toolingChargeUsd) || 0);
-      setDeliveryTerm(typeof data.deliveryTerm === 'string' && data.deliveryTerm ? data.deliveryTerm : 'EXW');
-      setDeliveryChargeUsd(parseFloat(data.deliveryChargeUsd) || 0);
-      // Waste bands are platform-wide now — no per-estimate seed. The platform
-      // reference (masterReference.wasteBands) is the single source of truth.
+      {
+        const term =
+          typeof data.deliveryTerm === 'string' && data.deliveryTerm ? data.deliveryTerm : 'EXW';
+        setDeliveryTerm(term);
+        // EXW never carries freight — force 0 even if a legacy row had a charge.
+        setDeliveryChargeUsd(isExwDelivery(term) ? 0 : parseFloat(data.deliveryChargeUsd) || 0);
+      }
+      // Waste bands are platform-wide (Printed/Plain) — no per-estimate seed.
       if (data.solventMaterialId) {
         setSolventMaterialId(data.solventMaterialId);
       } else {
@@ -999,10 +1072,12 @@ const EstimateEditor = () => {
       pricingMethod,
       marginValuePerKgUsd,
       cormPerKgUsd,
+      cormPerKgPlain,
+      moqKg: moqKg ?? undefined,
       toolingChargeUsd,
       toolingBilledToCustomer: toolingChargeUsd > 0,
       deliveryTerm: deliveryTerm || undefined,
-      deliveryChargeUsd,
+      deliveryChargeUsd: isExwDelivery(deliveryTerm) ? 0 : deliveryChargeUsd,
       solventMaterialId: needsSolventMix ? solventMaterialId ?? undefined : undefined,
       solventCostPerKgUsd: needsSolventMix ? resolvedSolventCostPerKgUsd : undefined,
       laminationRecipeOverrides:
@@ -1038,7 +1113,7 @@ const EstimateEditor = () => {
       }));
     }
     return payload;
-  }, [jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, productType, productTypeOptions, productSubtype, needsSolventMix, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, toolingChargeUsd, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
+  }, [jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, productType, productTypeOptions, productSubtype, needsSolventMix, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, cormPerKgPlain, moqKg, toolingChargeUsd, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   /** Link estimate to a customer row — create customer record if user typed a new name. */
   const ensureCustomerForSave = async (): Promise<string | undefined> => {
@@ -1113,11 +1188,12 @@ const EstimateEditor = () => {
         pricingMethod,
         marginValuePerKgUsd,
         operatingCostMethod: tenant?.operatingCostMethod ?? undefined,
-        cormPerKgUsd,
+        cormPerKgUsd: baseCormDisplay,
+        cormScaleWithWaste,
         toolingChargeUsd,
         toolingBilledToCustomer: toolingChargeUsd > 0,
         deliveryTerm,
-        deliveryChargeUsd,
+        deliveryChargeUsd: isExwDelivery(deliveryTerm) ? 0 : deliveryChargeUsd,
         wasteBands,
       });
     } catch {
@@ -1129,8 +1205,8 @@ const EstimateEditor = () => {
     estimate?.displayCurrency, estimate?.exchangeRateUsdToDisplay,
     solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob,
     hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, layers.length, accessories,
-    orderQuantity, orderQuantityUnit, masterReference,
-    pricingMethod, marginValuePerKgUsd, cormPerKgUsd, toolingChargeUsd, deliveryTerm, deliveryChargeUsd,
+    orderQuantity, orderQuantityUnit, masterReference, wasteBands,
+    pricingMethod, marginValuePerKgUsd, baseCormDisplay, cormScaleWithWaste, toolingChargeUsd, deliveryTerm, deliveryChargeUsd,
     tenant?.operatingCostMethod, processesState,
   ]);
 
@@ -1286,6 +1362,7 @@ const EstimateEditor = () => {
       productType,
       dimensions: dimensions as Record<string, unknown>,
       processes: processesState,
+      requiresRollLength,
     });
     if (err) {
       alert(err);
@@ -1293,21 +1370,21 @@ const EstimateEditor = () => {
       return false;
     }
     return true;
-  }, [layers, productType, dimensions, processesState]);
+  }, [layers, productType, dimensions, processesState, requiresRollLength]);
 
   const goToSection = useCallback(
-    (section: 'structure' | 'dimensions' | 'slabs' | 'markup') => {
+    (section: 'structure' | 'dimensions' | 'slabs') => {
       if (section !== 'structure' && !ensureStructureReady()) return;
-      
-      // Validate: slabs and markup require at least one process enabled
-      if ((section === 'slabs' || section === 'markup')) {
+
+      // Price list requires at least one process enabled
+      if (section === 'slabs') {
         const enabledCount = processesState.filter((p) => p.enabled !== false).length;
         if (enabledCount === 0) {
           alert('Select at least one process before proceeding to pricing.');
           return;
         }
       }
-      
+
       setActiveSection(section);
     },
     [ensureStructureReady, processesState]
@@ -1366,6 +1443,7 @@ const EstimateEditor = () => {
         productType,
         dimensions: dimensions as Record<string, unknown>,
         processes: processesState,
+        requiresRollLength,
       });
       if (validationError) {
         alert(validationError);
@@ -1446,8 +1524,8 @@ const EstimateEditor = () => {
   };
 
   /**
-   * Back / Cancel: leave the editor WITHOUT persisting anything. The user has
-   * explicit "Save draft" and "Save" buttons for persistence; Cancel always
+   * Back: leave the editor WITHOUT persisting anything. The user has
+   * explicit "Save draft" and "Save" buttons for persistence; Back always
    * discards unsaved changes and never creates a draft row.
    */
   const handleCancel = () => {
@@ -1617,7 +1695,40 @@ const EstimateEditor = () => {
   const showInkControlsCol = structureLocked;
   const showLayerActionsCol = !structureLocked;
   const showLayerControlsCol = showLayerActionsCol || showInkControlsCol;
-  const structureColCount = 6 + (showStructureCosts ? 2 : 0) + (showLayerControlsCol ? 1 : 0);
+  const displayCurrencyLabel = estimate?.displayCurrency || 'USD';
+  /** Single source of truth for structure columns — header and every body row map this. */
+  const structureColumns: Array<{ key: string; track: string; label: ReactNode }> = [
+    { key: 'idx', track: '2rem', label: '#' },
+    // Wide enough for "Substrate" badge at text-xs + px-1.5 (was 4.75rem → "Substr…")
+    { key: 'type', track: '6.5rem', label: 'Type' },
+    // Family names are short (PET, PE); grade truncates in-cell and expands in the menu.
+    { key: 'family', track: 'minmax(0,0.85fr)', label: 'Family' },
+    { key: 'grade', track: 'minmax(0,1fr)', label: 'Grade' },
+    {
+      // Fits "xx.xx" + unit (µ / gsm) inside the field chrome; was 5.5rem (clipped).
+      key: 'value',
+      track: '7.75rem',
+      label: (
+        <span className="inline-flex items-baseline gap-1">
+          <span>Value</span>
+          <span className="font-normal opacity-80">µ/gsm</span>
+        </span>
+      ),
+    },
+    // Fits "126.40" / "16.80" in mono tabular-nums; was 4rem (clipped).
+    { key: 'gsm', track: '5.75rem', label: 'GSM' },
+    ...(showStructureCosts
+      ? [
+          { key: 'perKg', track: '5.25rem', label: `${displayCurrencyLabel}/kg` },
+          { key: 'perM2', track: '5.25rem', label: `${displayCurrencyLabel}/m²` },
+        ]
+      : []),
+    ...(showLayerControlsCol ? [{ key: 'actions', track: '2rem', label: '' as ReactNode }] : []),
+  ];
+  const structureGridCols = structureColumns.map((c) => c.track).join(' ');
+  const structureGridStyle = {
+    ['--structure-cols' as string]: structureGridCols,
+  } as CSSProperties;
   const substrateLayerCount = layers.filter((l) => l.materialType === 'substrate').length;
   const adhesiveLayerCount = layers.filter((l) => l.materialType === 'adhesive').length;
   const maxSubstrates = 4;
@@ -1763,7 +1874,55 @@ const EstimateEditor = () => {
   })();
 
   const fxRate = parseFloat(estimate?.exchangeRateUsdToDisplay) || 1;
-  const displaySalePrice = estimate?.salePriceDisplay ?? usdToDisplay(Number(estimate?.salePricePerKg) || 0, fxRate);
+  const salePricePerKgUsd =
+    Number(clientCalcResult?.estimate?.salePricePerKg ?? estimate?.salePricePerKg) || 0;
+  const displaySalePrice =
+    salePricePerKgUsd > 0
+      ? usdToDisplay(salePricePerKgUsd, fxRate)
+      : Number(estimate?.salePriceDisplay) || 0;
+  /** Selling price in every applicable unit (display currency). */
+  const sellingPricesByUnit = (() => {
+    const cur = estimate?.displayCurrency || 'USD';
+    const fmt = (usd: number, decimals: number) =>
+      usdToDisplayPrecise(usd, fxRate).toLocaleString(undefined, {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      });
+    const gsmLocal = clientCalcResult?.estimate?.totalGsm ?? totalGsm ?? 0;
+    const widthM = (dimensions?.reelWidthMm ?? 0) / 1000;
+    const rollLengthLm = Number(dimensions?.orderUnitMultiplier) || 0;
+    const piecesPerKg = orderQtyMetrics.piecesPerKg;
+    const lmPerKg = orderQtyMetrics.lmPerKgReel;
+    const saleM2Usd = gsmLocal > 0 ? salePricePerKgUsd * (gsmLocal / 1000) : 0;
+    const saleLmUsd =
+      lmPerKg != null && lmPerKg > 0
+        ? salePricePerKgUsd / lmPerKg
+        : widthM > 0 && saleM2Usd > 0
+          ? saleM2Usd * widthM
+          : 0;
+    const line = (usd: number, decimals: number, unit: string, title?: string) => ({
+      text: `${cur} ${fmt(usd, decimals)} /${unit}`,
+      title,
+    });
+    const rows: Array<{ text: string; title?: string }> = [
+      line(salePricePerKgUsd, 2, 'kg'),
+    ];
+    if (gsmLocal > 0) {
+      rows.push(line(saleM2Usd, 4, 'm²'));
+    }
+    if (allowedUnitBases.has('lm') && saleLmUsd > 0) {
+      rows.push(line(saleLmUsd, 4, 'LM'));
+    }
+    if (requiresRollLength && rollLengthLm > 0 && saleLmUsd > 0) {
+      rows.push(line(saleLmUsd * rollLengthLm, 2, 'roll', `${rollLengthLm} LM per roll`));
+    }
+    if (allowedUnitBases.has('pieces') && piecesPerKg != null && piecesPerKg > 0) {
+      const salePcUsd = salePricePerKgUsd / piecesPerKg;
+      rows.push(line(salePcUsd, 4, 'pc'));
+      rows.push(line(salePcUsd * 1000, 2, 'Kpcs'));
+    }
+    return rows;
+  })();
   const solventConfigBar = canConfigureSolvent && (hasSbInk || needsSolventMix) ? (
     <div
       id="solvent-costing"
@@ -1803,7 +1962,7 @@ const EstimateEditor = () => {
               step="0.1"
               aria-label="Ink makeup solvent ratio"
               title={inkMakeupRatioTooltip}
-              className="input py-1 px-1.5 w-14 text-xs font-mono text-center bg-surface-raised"
+              className="input py-1 px-1.5 w-14 text-xs font-mono text-center"
               value={effectiveInkSolventRatio}
               onChange={(e) => {
                 const v = parseFloat(e.target.value);
@@ -1818,7 +1977,7 @@ const EstimateEditor = () => {
       {needsSolventMix && (
         <>
           <select
-            className="input py-1 px-2 text-xs w-28 sm:w-36 shrink-0 bg-surface-raised"
+            className="input py-1 px-2 text-xs w-28 sm:w-36 shrink-0"
             aria-label="Solvent"
             value={solventMaterialId ?? ''}
             onChange={(e) => {
@@ -1840,7 +1999,7 @@ const EstimateEditor = () => {
               min="0"
               step="0.01"
               aria-label="Solvent per kg"
-              className="input py-1 px-2 w-16 text-xs font-mono bg-surface-raised"
+              className="input py-1 px-2 w-16 text-xs font-mono"
               value={usdToDisplay(resolvedSolventCostPerKgUsd, fxRate).toFixed(2)}
               onChange={(e) => {
                 const displayVal = parseFloat(e.target.value) || 0;
@@ -1856,7 +2015,7 @@ const EstimateEditor = () => {
               min="0"
               step="1"
               aria-label="Cleaning kg per job"
-              className="input py-1 px-2 w-14 text-xs font-mono bg-surface-raised"
+              className="input py-1 px-2 w-14 text-xs font-mono"
               value={cleaningSolventKgPerJob}
               onChange={(e) => setCleaningSolventKgPerJob(Number(e.target.value) || 0)}
               onFocus={selectOnFocus}
@@ -1948,14 +2107,14 @@ const EstimateEditor = () => {
           </div>
         </div>
 
-        {/* Right: actions */}
-        <div className="flex flex-wrap gap-2 shrink-0">
+        {/* Right: actions — single toolbar (no bottom duplicates) */}
+        <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
           {estimate?.structureForked && estimate?.sourceTemplateKey && (
             <button
               type="button"
               onClick={handleSnapBack}
               disabled={saving}
-              className="btn-secondary inline-flex items-center space-x-1 text-xs"
+              className="btn-secondary inline-flex items-center gap-1.5 text-xs"
               title="Revert layers & processes to template defaults"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
@@ -1964,33 +2123,53 @@ const EstimateEditor = () => {
           )}
           <button
             type="button"
-            onClick={handleCancel}
-            className="btn-secondary inline-flex items-center space-x-2"
-            title="Cancel — discards unsaved changes without saving a draft"
-          >
-            <X className="w-4 h-4" />
-            <span>Cancel</span>
-          </button>
-          <button
             onClick={handleSaveDraft}
             disabled={saving}
-            className="btn-secondary inline-flex items-center space-x-2"
+            className="btn-secondary inline-flex items-center gap-1.5"
             title="Save your in-progress work — you can come back to finish it later"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>{saving ? 'Saving...' : 'Save draft'}</span>
+            <span className="hidden sm:inline">{saving ? 'Saving…' : 'Save draft'}</span>
           </button>
           <button
+            type="button"
             onClick={handleSaveFinal}
             disabled={saving}
-            className="btn-primary inline-flex items-center space-x-2"
+            className="btn-primary inline-flex items-center gap-1.5"
             title="Save the completed estimate — validates dimensions, layers, and structure"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-            <span>{saving ? 'Saving...' : 'Save'}</span>
+            <span>{saving ? 'Saving…' : 'Save'}</span>
           </button>
-          <button onClick={downloadProposalPdf} className="btn-secondary inline-flex items-center space-x-2" title="Download PDF to share by email, WhatsApp, etc.">
-            <Download className="w-4 h-4" /><span>PDF</span>
+          <button
+            type="button"
+            onClick={downloadProposalPdf}
+            disabled={!estimate?.id}
+            className="btn-secondary inline-flex items-center gap-1.5"
+            title="Download proposal PDF"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">PDF</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveAsTemplate}
+            disabled={!estimate?.id}
+            className="btn-secondary inline-flex items-center gap-1.5"
+            title="Save structure to My Templates"
+          >
+            <BookmarkPlus className="w-4 h-4" />
+            <span className="hidden md:inline">My Templates</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleRequote}
+            disabled={!estimate?.id}
+            className="btn-secondary inline-flex items-center gap-1.5"
+            title="Duplicate for re-quote"
+          >
+            <Copy className="w-4 h-4" />
+            <span className="hidden md:inline">Re-quote</span>
           </button>
         </div>
       </div>
@@ -2104,7 +2283,11 @@ const EstimateEditor = () => {
               <label className="block text-xs font-medium text-navy mb-1">Delivery term</label>
               <select
                 value={deliveryTerm}
-                onChange={(e) => setDeliveryTerm(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setDeliveryTerm(next);
+                  if (isExwDelivery(next)) setDeliveryChargeUsd(0);
+                }}
                 className="input input-compact w-full"
               >
                 {['EXW', 'FOB', 'CIF', 'CFR', 'DAP', 'DDP', 'Other'].map((t) => (
@@ -2116,12 +2299,18 @@ const EstimateEditor = () => {
               <label className="block text-xs font-medium text-navy mb-1">Delivery / freight charge (USD)</label>
               <input
                 type="number"
-                value={deliveryChargeUsd}
+                value={isExwDelivery(deliveryTerm) ? 0 : deliveryChargeUsd}
                 step="0.01"
                 min="0"
+                disabled={isExwDelivery(deliveryTerm)}
                 onChange={(e) => setDeliveryChargeUsd(Number(e.target.value))}
                 onFocus={selectOnFocus}
                 className="input input-compact w-full"
+                title={
+                  isExwDelivery(deliveryTerm)
+                    ? 'EXW has no freight — change delivery term to enter a charge'
+                    : undefined
+                }
               />
             </div>
           </div>
@@ -2136,11 +2325,8 @@ const EstimateEditor = () => {
               <Layers className="w-4 h-4" /><span>Structure</span>
             </button>
             <button onClick={() => goToSection('slabs')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors duration-micro ease-micro ${activeSection === 'slabs' ? 'bg-accent-soft text-accent-text font-medium' : 'hover:bg-surface-base text-text-primary'}`}>
-              <Calculator className="w-4 h-4" /><span>Quantity Slabs</span>
+              <Calculator className="w-4 h-4" /><span>Price list</span>
             </button>
-            {can('markupPercent') && <button onClick={() => goToSection('markup')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors duration-micro ease-micro ${activeSection === 'markup' ? 'bg-accent-soft text-accent-text font-medium' : 'hover:bg-surface-base text-text-primary'}`}>
-              <DollarSign className="w-4 h-4" /><span>Costs &amp; Terms</span>
-            </button>}
           </div>
 
           {/* Structure section */}
@@ -2283,51 +2469,24 @@ const EstimateEditor = () => {
                   )}
                 </div>
 
-                {/* Desktop structure table — single unified table */}
-                <div ref={structureTableRef} className="hidden md:block overflow-x-auto min-w-0 p-4">
-                  <table className="w-full table-fixed text-sm">
-                    <colgroup>
-                      <col style={{ width: '4%' }} />
-                      <col style={{ width: showStructureCosts ? '10%' : '11%' }} />
-                      <col style={{ width: showStructureCosts ? '14%' : '14%' }} />
-                      <col style={{ width: showStructureCosts ? '25%' : '26%' }} />
-                      <col style={{ width: '10%' }} />
-                      <col style={{ width: '7%' }} />
-                      {showStructureCosts && <col style={{ width: '10%' }} />}
-                      {showStructureCosts && <col style={{ width: '10%' }} />}
-                      {showLayerControlsCol && (
-                        <col style={{ width: showInkControlsCol ? '4%' : '10%' }} />
-                      )}
-                    </colgroup>
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-center align-middle py-2.5 px-1 text-xs font-medium text-mist">#</th>
-                        <th className="text-center align-middle py-2.5 px-1 text-xs font-medium text-mist">Type</th>
-                        <th className="text-left align-middle py-2.5 px-2 text-xs font-medium text-mist">Family</th>
-                        <th className="text-left align-middle py-2.5 px-2 text-xs font-medium text-mist">Grade</th>
-                        <th className="text-center align-middle py-2.5 px-1 text-xs font-medium text-mist">
-                          Value <span className="font-normal text-mist/80">µ/gsm</span>
-                        </th>
-                        <th className="text-right align-middle py-2.5 px-2 text-xs font-medium text-mist">GSM</th>
-                        {showStructureCosts && (
-                          <>
-                            <th className="text-right align-middle py-2.5 px-2 text-[10px] font-medium text-mist leading-tight">
-                              {estimate?.displayCurrency || 'USD'}/kg
-                            </th>
-                            <th className="text-right align-middle py-2.5 px-2 text-[10px] font-medium text-mist leading-tight">
-                              {estimate?.displayCurrency || 'USD'}/m²
-                            </th>
-                          </>
-                        )}
-                        {showLayerControlsCol && (
-                          <th className="text-center align-middle py-2.5 px-0.5 text-xs font-medium text-mist" aria-label="Row actions" />
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody>
+                {/* Desktop structure grid — one column definition for header + every row */}
+                <div ref={structureTableRef} className="hidden md:block overflow-x-auto min-w-0 p-4 pr-6">
+                  <div className="structure-grid text-sm" style={structureGridStyle} role="table">
+                    <div className="structure-grid__row" role="row">
+                      {structureColumns.map((col) => (
+                        <div
+                          key={col.key}
+                          className="structure-grid__cell structure-grid__cell--head"
+                          role="columnheader"
+                        >
+                          {col.label}
+                        </div>
+                      ))}
+                    </div>
                       {layers.map((layer, idx) => (
-                        <tr
+                        <div
                           key={layer.id}
+                          role="row"
                           onDragEnter={() => {
                             if (dragFromIndex !== null && canEditLayerStructure(layers[dragFromIndex])) {
                               setDragHoverIndex(idx);
@@ -2345,7 +2504,7 @@ const EstimateEditor = () => {
                             setDragFromIndex(null);
                             setDragHoverIndex(null);
                           }}
-                          className={`border-b border-border last:border-0 hover:bg-slate/50 transition-colors ${
+                          className={`structure-grid__row hover:bg-slate/50 transition-colors ${
                             dragFromIndex === idx ? 'opacity-50' : ''
                           } ${
                             dragHoverIndex === idx && dragFromIndex !== null && dragFromIndex !== idx
@@ -2353,8 +2512,8 @@ const EstimateEditor = () => {
                               : ''
                           }`}
                         >
-                          <td className="py-2.5 px-2 text-xs text-mist text-center">
-                            <div className="flex items-center justify-center gap-1">
+                          <div className="structure-grid__cell text-xs text-mist" role="cell">
+                            <div className="flex items-center gap-0.5 min-w-0 w-full">
                               {canEditLayerStructure(layer) && (
                                 <span
                                   draggable
@@ -2369,25 +2528,25 @@ const EstimateEditor = () => {
                                     setDragFromIndex(null);
                                     setDragHoverIndex(null);
                                   }}
-                                  className="inline-flex items-center justify-center rounded p-0.5 text-mist hover:text-brand hover:bg-brand/10 cursor-grab active:cursor-grabbing touch-none transition-colors"
+                                  className="inline-flex shrink-0 items-center justify-center rounded p-0.5 text-mist hover:text-brand hover:bg-brand/10 cursor-grab active:cursor-grabbing touch-none transition-colors"
                                   aria-label="Drag to reorder layer"
                                   title="Drag to reorder"
                                 >
-                                  <GripVertical className="w-4 h-4" />
+                                  <GripVertical className="w-3.5 h-3.5" />
                                 </span>
                               )}
-                              <span>{idx + 1}</span>
+                              <span className="tabular-nums">{idx + 1}</span>
                             </div>
-                          </td>
-                          <td className="py-2 px-1 min-w-0 align-middle text-center overflow-hidden">
+                          </div>
+                          <div className="structure-grid__cell" role="cell">
                             <span
-                              className={`inline-block max-w-full truncate text-xs px-1.5 py-0.5 rounded-md ${layer.materialType === 'substrate' ? 'bg-brand/10 text-brand' : layer.materialType === 'ink' ? 'bg-accent/10 text-accent-text' : 'bg-success/10 text-success'}`}
+                              className={`inline-block text-xs px-1.5 py-0.5 rounded-md whitespace-nowrap ${layer.materialType === 'substrate' ? 'bg-brand/10 text-brand' : layer.materialType === 'ink' ? 'bg-accent/10 text-accent-text' : 'bg-success/10 text-success'}`}
                               title={LAYER_TYPE_LABELS[layer.materialType] || layer.materialType}
                             >
                               {LAYER_TYPE_TABLE_LABELS[layer.materialType] || layer.materialType}
                             </span>
-                          </td>
-                          <td className="py-2 px-2 min-w-0 text-left align-middle overflow-hidden">
+                          </div>
+                          <div className="structure-grid__cell overflow-hidden" role="cell">
                             {/* Family dropdown — filtered by template classification (PE → PE only, Non PE → no PE) */}
                             {(() => {
                               const currentMat = materials.find(m => m.id === layer.materialId);
@@ -2467,9 +2626,10 @@ const EstimateEditor = () => {
                                 </select>
                               );
                             })()}
-                          </td>
-                          <td className="py-2 px-2 min-w-0 text-left align-middle overflow-hidden">
-                            {/* Grade dropdown — filtered by family + classification; title shows hoover on hover */}                            {(() => {
+                          </div>
+                          <div className="structure-grid__cell overflow-hidden" role="cell">
+                            {/* Grade dropdown — filtered by family + classification; title shows hoover on hover */}
+                            {(() => {
                               const currentMat = materials.find(m => m.id === layer.materialId);
                               const currentFamily = currentMat?.substrateFamily ?? null;
 
@@ -2517,11 +2677,9 @@ const EstimateEditor = () => {
                                 />
                               );
                             })()}
-                            {/* Admin key — hidden from UI, kept for debugging only via DevTools */}
-                          </td>
+                          </div>
 
-                          {/* µ / GSM — input with unit label; substrate=µ, ink/adhesive=gsm; yellow when 0 */}
-                          <td className="py-2 px-1 text-center min-w-0 align-middle">
+                          <div className="structure-grid__cell" role="cell">
                             {(() => {
                               const mat = materials.find(m => m.id === layer.materialId);
                               const solidPct = mat?.solidPercent ?? 100;
@@ -2532,7 +2690,9 @@ const EstimateEditor = () => {
                                 ? `Density: ${density.toFixed(3)} g/cm³`
                                 : `Solid content: ${solidPct}%`;
                               return (
-                                <div className="inline-flex items-center justify-center gap-1">
+                                <div
+                                  className={`structure-grid__field w-full ${layer.micron === 0 ? 'border-warning/30 bg-warning/10' : ''}`}
+                                >
                                   <input
                                     type="number"
                                     value={parseFloat(layer.micron.toFixed(1))}
@@ -2542,29 +2702,25 @@ const EstimateEditor = () => {
                                       const micron = Number(e.target.value);
                                       setLayers((prev) => prev.map((l) => l.id === layer.id ? {
                                         ...l, micron,
-                                        // Substrate: gsm = micron × density
-                                        // Ink/Adhesive: user enters dry gsm directly → gsm = micron
                                         gsm: isSubstrate ? micron * density : micron,
                                       } : l));
                                     }}
-                                    className={`cell-input w-14 font-mono text-sm text-center px-1 ${layer.micron === 0 ? 'bg-warning/10 border-warning/30' : ''}`}
                                     inputMode="decimal"
                                     onFocus={selectOnFocus}
                                   />
-                                  <span className="text-xs text-mist w-7 shrink-0 text-left">{unitLabel}</span>
+                                  <span className="text-xs text-mist shrink-0">{unitLabel}</span>
                                 </div>
                               );
                             })()}
-                          </td>
+                          </div>
 
-                          {/* Total GSM per row = layer.gsm (substrate: µ×density; ink: solid%×µ/100) */}
-                          <td className="py-2 px-2 font-mono text-xs text-right font-semibold text-navy tabular-nums align-middle">
+                          <div className="structure-grid__cell font-mono text-xs font-semibold text-navy tabular-nums" role="cell">
                             {layer.gsm > 0 ? layer.gsm.toFixed(2) : <span className="text-mist">0.00</span>}
-                          </td>
+                          </div>
 
                           {showStructureCosts && (
                             <>
-                              <td className="py-2 px-2 text-right align-middle">
+                              <div className="structure-grid__cell" role="cell">
                                 <input
                                   type="number"
                                   min="0"
@@ -2577,29 +2733,29 @@ const EstimateEditor = () => {
                                       l.id === layer.id ? { ...l, costPerKgUsd: usd } : l
                                     ));
                                   }}
-                                  className="cell-input w-full max-w-[5.5rem] ml-auto font-mono text-[11px] text-right px-1"
+                                  className="cell-input font-mono text-[11px] text-right"
                                   inputMode="decimal"
                                   aria-label={`Cost per kg for ${layer.materialName}`}
                                   onFocus={selectOnFocus}
                                 />
-                              </td>
-                              <td className="py-2 px-2 font-mono text-[11px] text-right tabular-nums text-navy align-middle">
+                              </div>
+                              <div className="structure-grid__cell font-mono text-[11px] tabular-nums text-navy" role="cell">
                                 {(() => {
                                   const calcLayer = clientCalcResult?.estimate.layers[idx];
                                   const c = calcLayer?.costPerM2;
                                   if (c == null || c <= 0) return <span className="text-mist">—</span>;
                                   return usdToDisplayPrecise(c, fxRate).toFixed(4);
                                 })()}
-                              </td>
+                              </div>
                             </>
                           )}
 
                           {showLayerControlsCol && (
-                          <td className={`align-middle ${showInkControlsCol ? 'py-1 px-0' : 'py-2 px-1'}`}>
+                          <div className="structure-grid__cell" role="cell">
                             {showInkControlsCol
                               ? renderInkControlsCell(idx, layer)
                               : canEditLayerStructure(layer) && (
-                              <div className="flex items-center justify-center gap-0.5">
+                              <div className="flex items-center gap-0.5">
                                 <button
                                   type="button"
                                   onClick={() => setLayers((prev) => prev.filter((l) => l.id !== layer.id))}
@@ -2619,26 +2775,30 @@ const EstimateEditor = () => {
                                 )}
                               </div>
                             )}
-                          </td>
+                          </div>
                           )}
-                        </tr>
+                        </div>
                       ))}
                       {needsSolventMix && (
                         <>
                           {solventConfigBar && (
-                            <tr className="border-b border-warning/30 bg-warning/10">
-                              <td colSpan={structureColCount} className="py-2 px-2">
+                            <div className="structure-grid__row bg-warning/10" role="row">
+                              <div
+                                className="structure-grid__cell py-2"
+                                style={{ gridColumn: '1 / -1' }}
+                                role="cell"
+                              >
                                 {solventConfigBar}
-                              </td>
-                            </tr>
+                              </div>
+                            </div>
                           )}
-                          <tr className="border-b border-border bg-warning/10">
-                            <td className="py-2 px-1" />
-                            <td className="py-2 px-1">
+                          <div className="structure-grid__row bg-warning/10" role="row">
+                            <div className="structure-grid__cell" role="cell" />
+                            <div className="structure-grid__cell" role="cell">
                               <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-warning/20 text-warning">Solvent</span>
-                            </td>
-                            <td className="py-2 px-1 text-center text-mist text-xs">—</td>
-                            <td className="py-2 px-1">
+                            </div>
+                            <div className="structure-grid__cell text-mist text-xs" role="cell">—</div>
+                            <div className="structure-grid__cell" role="cell">
                               <button
                                 type="button"
                                 className="inline-flex items-center gap-1 text-xs font-medium text-navy hover:text-gold"
@@ -2652,82 +2812,83 @@ const EstimateEditor = () => {
                                 )}
                                 Solvents
                               </button>
-                            </td>
-                            <td className="py-2 px-1 text-center text-mist text-[10px]">—</td>
-                            <td className="py-2 px-2 text-right text-mist">—</td>
+                            </div>
+                            <div className="structure-grid__cell text-mist text-[10px]" role="cell">—</div>
+                            <div className="structure-grid__cell text-mist" role="cell">—</div>
                             {showStructureCosts && (
                               <>
-                                <td className="py-2 px-2 font-mono text-[11px] text-right font-semibold text-navy tabular-nums">
+                                <div className="structure-grid__cell font-mono text-[11px] font-semibold text-navy tabular-nums" role="cell">
                                   {usdToDisplayPrecise(solventTotalPerKgUsd, fxRate).toFixed(4)}
-                                </td>
-                                <td className="py-2 px-2 font-mono text-[11px] text-right font-semibold text-navy tabular-nums">
+                                </div>
+                                <div className="structure-grid__cell font-mono text-[11px] font-semibold text-navy tabular-nums" role="cell">
                                   {usdToDisplayPrecise(solventTotalPerM2Usd, fxRate).toFixed(4)}
-                                </td>
+                                </div>
                               </>
                             )}
-                            {showLayerControlsCol && <td className="py-2 px-1" />}
-                          </tr>
+                            {showLayerControlsCol && <div className="structure-grid__cell" role="cell" />}
+                          </div>
                           {solventDetailsExpanded &&
                             solventCostLines.map((line) => (
-                              <tr key={line.key} className="border-b border-border bg-slate/30">
-                                <td className="py-1.5 px-1" />
-                                <td className="py-1.5 px-1" />
-                                <td className="py-1.5 px-1" />
-                                <td className="py-1.5 px-1 pl-4 text-[11px] text-mist truncate">{line.label}</td>
-                                <td className="py-1.5 px-1 text-center text-mist text-[10px]">—</td>
-                                <td className="py-1.5 px-2 text-right text-mist">—</td>
+                              <div key={line.key} className="structure-grid__row bg-slate/30" role="row">
+                                <div className="structure-grid__cell" role="cell" />
+                                <div className="structure-grid__cell" role="cell" />
+                                <div className="structure-grid__cell" role="cell" />
+                                <div className="structure-grid__cell pl-4 text-[11px] text-mist truncate" role="cell">{line.label}</div>
+                                <div className="structure-grid__cell text-mist text-[10px]" role="cell">—</div>
+                                <div className="structure-grid__cell text-mist" role="cell">—</div>
                                 {showStructureCosts && (
                                   <>
-                                    <td className="py-1.5 px-2 font-mono text-[11px] text-right tabular-nums">
+                                    <div className="structure-grid__cell font-mono text-[11px] tabular-nums" role="cell">
                                       {usdToDisplayPrecise(line.perKgUsd, fxRate).toFixed(4)}
-                                    </td>
-                                    <td className="py-1.5 px-2 font-mono text-[11px] text-right tabular-nums">
+                                    </div>
+                                    <div className="structure-grid__cell font-mono text-[11px] tabular-nums" role="cell">
                                       {usdToDisplayPrecise(line.perM2Usd, fxRate).toFixed(4)}
-                                    </td>
+                                    </div>
                                   </>
                                 )}
-                                {showLayerControlsCol && <td className="py-1.5 px-1" />}
-                              </tr>
+                                {showLayerControlsCol && <div className="structure-grid__cell" role="cell" />}
+                              </div>
                             ))}
                         </>
                       )}
-                    </tbody>
-                    <tfoot>
-                      <tr className="border-t-2 border-border bg-slate/40">
-                        <td colSpan={4} className="py-3 px-2 text-xs font-bold text-navy text-right">
-                          Total
-                        </td>
-                        <td
-                          className="py-3 px-1 text-center"
-                          title="Total structure (µ) — substrate µ + ink/adhesive dry gsm ÷ density."
-                        >
-                          <span className="font-mono text-xs font-bold text-navy tabular-nums">
-                            {totalConstructionMicron != null && totalConstructionMicron > 0
-                              ? `${totalConstructionMicron.toFixed(2)} µ`
+                    <div className="structure-grid__row border-t-2 border-border bg-slate/40" role="row">
+                      <div className="structure-grid__cell py-3" role="cell" />
+                      <div className="structure-grid__cell py-3" role="cell" />
+                      <div className="structure-grid__cell py-3" role="cell" />
+                      <div className="structure-grid__cell py-3 text-xs font-bold text-navy" role="cell">
+                        Total
+                      </div>
+                      <div
+                        className="structure-grid__cell py-3"
+                        title="Total structure (µ) — substrate µ + ink/adhesive dry gsm ÷ density."
+                        role="cell"
+                      >
+                        <span className="font-mono text-xs font-bold text-navy tabular-nums">
+                          {totalConstructionMicron != null && totalConstructionMicron > 0
+                            ? `${totalConstructionMicron.toFixed(2)} µ`
+                            : '—'}
+                        </span>
+                      </div>
+                      <div className="structure-grid__cell py-3 font-mono text-xs font-bold text-navy tabular-nums" role="cell">
+                        {totalGsm.toFixed(2)}
+                      </div>
+                      {showStructureCosts && (
+                        <>
+                          <div className="structure-grid__cell py-3 font-mono text-[11px] font-bold text-navy tabular-nums" role="cell">
+                            {rmTotals
+                              ? usdToDisplayPrecise(rmTotals.rmPerKg, fxRate).toFixed(4)
                               : '—'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-2 font-mono text-xs text-right font-bold text-navy tabular-nums">
-                          {totalGsm.toFixed(2)}
-                        </td>
-                        {showStructureCosts && (
-                          <>
-                            <td className="py-3 px-2 font-mono text-[11px] text-right font-bold text-navy tabular-nums">
-                              {rmTotals
-                                ? usdToDisplayPrecise(rmTotals.rmPerKg, fxRate).toFixed(4)
-                                : '—'}
-                            </td>
-                            <td className="py-3 px-2 font-mono text-[11px] text-right font-bold text-navy tabular-nums">
-                              {rmTotals
-                                ? usdToDisplayPrecise(rmTotals.rmPerM2, fxRate).toFixed(4)
-                                : '—'}
-                            </td>
-                          </>
-                        )}
-                        {showLayerControlsCol && <td className="py-3 px-1" />}
-                      </tr>
-                    </tfoot>
-                  </table>
+                          </div>
+                          <div className="structure-grid__cell py-3 font-mono text-[11px] font-bold text-navy tabular-nums" role="cell">
+                            {rmTotals
+                              ? usdToDisplayPrecise(rmTotals.rmPerM2, fxRate).toFixed(4)
+                              : '—'}
+                          </div>
+                        </>
+                      )}
+                      {showLayerControlsCol && <div className="structure-grid__cell py-3" role="cell" />}
+                    </div>
+                  </div>
                 </div> {/* end hidden md:block */}
                   </div> {/* end table column — self-sized, no stretch gap */}
 
@@ -2772,20 +2933,20 @@ const EstimateEditor = () => {
               </div>
               )}
 
-              <EstimateProcessesPanel
-                processes={processesState}
-                processOptions={masterReference.processOptions}
-                layerCount={layers.length}
-                hint={
-                  structureLocked
-                    ? 'Pre-filled from your template — steps and quantities match what you configured when the template was saved.'
-                    : 'Define which manufacturing steps apply to this job before quantity slabs and pricing.'
-                }
-                onChange={(rows) => setProcessesState(normalizeLoadedProcesses(rows))}
-                isCustomized={estimate?.processesCustomized ?? true}
-                structureForked={estimate?.structureForked ?? false}
-                onCustomize={handleCustomizeProcesses}
-              />
+              {/* Template quotes: processes come from the template — no panel.
+                  Scratch builds: user must pick steps here before slabs/pricing. */}
+              {!structureLocked && (
+                <EstimateProcessesPanel
+                  processes={processesState}
+                  processOptions={masterReference.processOptions}
+                  layerCount={layers.length}
+                  hint="Define which manufacturing steps apply to this job before quantity slabs and pricing."
+                  onChange={(rows) => setProcessesState(normalizeLoadedProcesses(rows))}
+                  isCustomized={estimate?.processesCustomized ?? true}
+                  structureForked={estimate?.structureForked ?? false}
+                  onCustomize={handleCustomizeProcesses}
+                />
+              )}
 
               {clientCalcResult && (
                 <div className="card space-y-5">
@@ -2854,217 +3015,111 @@ const EstimateEditor = () => {
             </div>
           )}
 
-          {/* Slabs (sales rep sees price/kg only, no edit/remove) */}
+          {/* Price list — unit / slabs / currency, selling price in selected unit only */}
           {activeSection === 'slabs' && (
-            <div className="card space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-lg font-display font-semibold text-navy">Quantity slabs &amp; waste</h3>
-                <span className="text-xs text-mist">
-                  Margin:{' '}
-                  {pricingMethod === 'margin_per_kg'
-                    ? `${estimate?.displayCurrency || 'USD'} ${marginValuePerKgUsd.toFixed(2)}/kg`
-                    : `${markupPercent}% on cost`}
-                </span>
+            clientCalcResult ? (
+              (() => {
+                const ce = clientCalcResult.estimate;
+                const gsmLocal = ce.totalGsm ?? totalGsm ?? 0;
+                const piecesPerKg = orderQtyMetrics.piecesPerKg;
+                const lmPerKg = orderQtyMetrics.lmPerKgReel;
+                const rollLengthLm = Number(dimensions?.orderUnitMultiplier) || 0;
+                const widthM = (dimensions?.reelWidthMm ?? 0) / 1000;
+                const canLm =
+                  allowedUnitBases.has('lm') &&
+                  ((lmPerKg != null && lmPerKg > 0) || (gsmLocal > 0 && widthM > 0));
+                const canPieces =
+                  allowedUnitBases.has('pieces') && piecesPerKg != null && piecesPerKg > 0;
+                const priceListUnits: PriceListUnit[] = ['kg'];
+                if (gsmLocal > 0 && allowedUnitBases.has('sqm')) priceListUnits.push('m2');
+                if (canLm) priceListUnits.push('lm');
+                if (canLm && requiresRollLength && rollLengthLm > 0) priceListUnits.push('roll');
+                if (canPieces) {
+                  priceListUnits.push('pc');
+                  priceListUnits.push('kpcs');
+                }
+                return (
+                  <PriceListPanel
+                    wasteBands={wasteBands}
+                    materialPerKgUsd={ce.materialCostPerKg ?? 0}
+                    logisticsPerKgUsd={ce.logisticsCostPerKg ?? 0}
+                    developmentPerKgUsd={ce.developmentCostPerKg ?? 0}
+                    accessoryPerKgUsd={ce.accessoryCostPerKg ?? 0}
+                    pricingMethod={pricingMethod}
+                    markupPercent={markupPercent}
+                    marginValuePerKgDisplay={marginValuePerKgUsd}
+                    estimateFxRate={fxRate}
+                    estimateDisplayCurrency={estimate?.displayCurrency || 'USD'}
+                    totalGsm={gsmLocal}
+                    piecesPerKg={piecesPerKg}
+                    lmPerKgReel={lmPerKg}
+                    reelWidthMm={dimensions?.reelWidthMm ?? 0}
+                    rollLengthLm={rollLengthLm}
+                    availableUnits={priceListUnits}
+                    operatingCostMethod={tenant?.operatingCostMethod}
+                    baseCormDisplay={baseCormDisplay}
+                    cormScaleWithWaste={cormScaleWithWaste}
+                    moqKg={moqKg}
+                  />
+                );
+              })()
+            ) : (
+              <div className="card">
+                <p className="text-sm text-mist">Add layers with materials to see the price list.</p>
               </div>
-              {clientCalcResult ? (
-                <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border">
-                          <th className="text-left py-2.5 px-3 text-xs font-medium text-mist">Quantity (kg)</th>
-                          <th className="text-right py-2.5 px-3 text-xs font-medium text-mist">Waste %</th>
-                          <th className="text-right py-2.5 px-3 text-xs font-medium text-mist">Price/kg ({estimate?.displayCurrency || 'USD'})</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(() => {
-                          const ce = clientCalcResult.estimate;
-                          const material = ce.materialCostPerKg ?? 0;
-                          const logistics = ce.logisticsCostPerKg ?? 0;
-                          const development = ce.developmentCostPerKg ?? 0;
-                          const accessory = ce.accessoryCostPerKg ?? 0;
-                          const orderKg = orderQtyMetrics.kg;
-                          const activeIdx =
-                            orderKg != null
-                              ? wasteBands.findIndex(
-                                  (b) => b.maxKg == null || orderKg <= b.maxKg
-                                )
-                              : -1;
-                          return wasteBands.map((band, i) => {
-                            const wasteAdj = material * (1 + band.wastePercent / 100);
-                            const costBase = wasteAdj + logistics + development + accessory;
-                            const marginUsd =
-                              pricingMethod === 'margin_per_kg'
-                                ? displayToUsd(marginValuePerKgUsd, fxRate)
-                                : costBase * (markupPercent / 100);
-                            const priceUsd = costBase + marginUsd;
-                            const range =
-                              band.maxKg == null
-                                ? `${band.minKg.toLocaleString()}+`
-                                : `${band.minKg.toLocaleString()} – ${band.maxKg.toLocaleString()}`;
-                            const active = i === activeIdx;
-                            return (
-                              <tr
-                                key={band.minKg}
-                                className={`border-b border-border last:border-0 ${active ? 'bg-accent-soft/60' : 'hover:bg-slate/50'}`}
-                              >
-                                <td className="py-2.5 px-3 font-mono">
-                                  {range}
-                                  {active && <span className="ml-2 text-[10px] text-accent-text font-medium">this order</span>}
-                                </td>
-                                <td className="py-2.5 px-3 text-right">
-                                  <span className="font-mono">{band.wastePercent}%</span>
-                                </td>
-                                <td className="py-2.5 px-3 text-right font-mono font-semibold text-navy tabular-nums">
-                                  {usdToDisplayPrecise(priceUsd, fxRate).toFixed(4)}
-                                </td>
-                              </tr>
-                            );
-                          });
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
-                  <p className="text-xs text-mist">
-                    Waste % is platform-wide (Master Data → Waste Bands) and looked up from the
-                    order quantity; it is added to the material cost. Logistics &amp; tooling are
-                    amortized over the entered order quantity (flat across bands); only waste
-                    changes per band.
-                  </p>
-                </>
-              ) : (
-                <p className="text-sm text-mist">Add layers with materials to see slab pricing.</p>
-              )}
-            </div>
+            )
           )}
 
-          {/* Markup (admin only) */}
-          {can('markupPercent') && activeSection === 'markup' && (
-            <div className="card space-y-6">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-lg font-display font-semibold text-navy">Costs &amp; Terms</h3>
-                <label className="flex items-center gap-2 text-xs text-mist">
-                  Pricing method
-                  <select
-                    value={pricingMethod}
-                    onChange={(e) => setPricingMethod(e.target.value as 'markup' | 'margin_per_kg')}
-                    className="input input-compact text-xs w-auto"
-                  >
-                    <option value="markup">Markup %</option>
-                    <option value="margin_per_kg">Margin per kg</option>
-                  </select>
-                </label>
-              </div>
-
-              {/* Margin / markup + effective margin */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {pricingMethod === 'margin_per_kg' ? (
-                  <div>
-                    <label className="block text-sm font-medium text-navy mb-2">
-                      Margin ({estimate?.displayCurrency || 'USD'}/kg)
-                    </label>
-                    <input
-                      type="number"
-                      value={marginValuePerKgUsd}
-                      step="0.01"
-                      min="0"
-                      onChange={(e) => setMarginValuePerKgUsd(Number(e.target.value))}
-                      onFocus={selectOnFocus}
-                      className="input w-full"
-                    />
-                    <p className="text-xs text-mist mt-1">
-                      Added over material + logistics + tooling (display currency). Defaults from the template&apos;s product group.
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-sm font-medium text-navy mb-2">Markup % (over total cost)</label>
-                    <input
-                      type="number"
-                      value={markupPercent}
-                      step="0.1"
-                      min="0"
-                      onChange={(e) => setMarkupPercent(Number(e.target.value))}
-                      onFocus={selectOnFocus}
-                      className="input w-full"
-                    />
-                    <p className="text-xs text-mist mt-1">Applied to material + logistics + tooling.</p>
-                  </div>
-                )}
-                <div>
-                  <label className="block text-sm font-medium text-navy mb-2">Effective margin % (on sale price)</label>
-                  <p className="input w-full bg-slate font-mono">
-                    {(() => {
-                      const cc = clientCalcResult?.estimate;
-                      const sale = cc?.salePricePerKg ?? 0;
-                      const m = cc?.marginPerKg ?? 0;
-                      return sale > 0 ? ((m / sale) * 100).toFixed(1) : '0.0';
-                    })()}%
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Pricing & actions — full width below editor. Selling Price card is
-            the headline visual surface: gradient accent, NumberTicker on the
-            value, and explicit eyebrow framing. */}
+        {/* Pricing panels — Selling price + Cost breakdown hidden on Price list. */}
+        {(activeSection !== 'slabs' || MES_OUTCOME_ENABLED || proposals.length > 0) && (
         <div className="mt-8 pt-8 border-t border-border">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {activeSection !== 'slabs' && (
+          <div
+            className={`grid grid-cols-1 gap-6 items-stretch ${
+              can('costBreakdown') ? 'lg:grid-cols-2' : ''
+            }`}
+          >
             <div
-              className="card border-accent/30"
+              className="card border-accent/30 h-full min-w-0 flex flex-col"
               style={{
                 background:
                   'linear-gradient(135deg, rgb(var(--color-accent-soft)) 0%, rgb(var(--color-surface-raised)) 70%)',
                 boxShadow: 'var(--elevation-2)',
               }}
             >
-              <p className="eyebrow">Headline price</p>
-              <h3 className="font-display font-semibold text-brand mt-1 mb-3">Selling price</h3>
-              <div
-                className="font-display font-bold text-accent-text tabular tracking-tight"
-                style={{ fontSize: 'var(--text-3xl)', lineHeight: 'var(--leading-tight)' }}
-              >
-                <NumberTicker
-                  value={displaySalePrice}
-                  durationMs={700}
-                  decimals={2}
-                  prefix={`${estimate?.displayCurrency || 'USD'} `}
-                  suffix=" /kg"
-                />
+              <h3 className="font-display font-semibold text-brand shrink-0">Selling price</h3>
+              <div className="mt-3 flex-1 min-h-0 flex flex-col justify-between items-start font-display font-bold text-lg text-accent-text tabular tracking-tight text-left leading-snug">
+                {sellingPricesByUnit.map((row) => (
+                  <p key={row.text} title={row.title}>
+                    {row.text}
+                  </p>
+                ))}
               </div>
-              {can('costBreakdown') && (
-                <div className="text-sm text-text-secondary mt-2">
-                  {saving ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Saving to server…
-                    </span>
-                  ) : (
-                    'Live preview — save to persist'
-                  )}
-                </div>
-              )}
             </div>
 
             {can('costBreakdown') && (
-              <div className="card lg:col-span-1">
+              <div className="card h-full min-w-0">
                 <h3 className="font-display font-semibold text-brand mb-4">Cost breakdown</h3>
                 {(() => {
                   const ce = clientCalcResult?.estimate;
                   const cur = estimate?.displayCurrency || 'USD';
                   const gsmLocal = ce?.totalGsm ?? totalGsm ?? 0;
                   const widthM = (dimensions?.reelWidthMm ?? 0) / 1000;
+                  const rollLengthLm = Number(dimensions?.orderUnitMultiplier) || 0;
                   const showM2 = gsmLocal > 0;
                   const showLm = allowedUnitBases.has('lm') && widthM > 0;
+                  // Per-roll column only when Roll (custom length) is selected and length is set.
+                  const showRoll = requiresRollLength && rollLengthLm > 0 && showLm;
                   const m2ToKg = (v: number) => (gsmLocal > 0 ? (v / gsmLocal) * 1000 : 0);
                   const kgToM2 = (v: number) => (showM2 ? v * (gsmLocal / 1000) : 0);
                   const m2ToLm = (v: number) => (showLm ? v * widthM : 0);
+                  const m2ToRoll = (v: number) => (showRoll ? m2ToLm(v) * rollLengthLm : 0);
                   const fmtKg = (v: number) => usdToDisplayPrecise(v, fxRate).toFixed(2);
                   const fmtM2 = (v: number) => usdToDisplayPrecise(v, fxRate).toFixed(4);
                   const fmtLm = (v: number) => usdToDisplayPrecise(v, fxRate).toFixed(4);
+                  const fmtRoll = (v: number) => usdToDisplayPrecise(v, fxRate).toFixed(2);
 
                   // Per-family raw-material split (per m²) from the current layer stack.
                   let subM2 = 0, inkAdhM2 = 0, pkgM2 = 0;
@@ -3128,6 +3183,14 @@ const EstimateEditor = () => {
                             <th className="text-right py-2 px-3 text-xs font-medium text-mist whitespace-nowrap">{cur} / kg</th>
                             {showM2 && <th className="text-right py-2 px-3 text-xs font-medium text-mist whitespace-nowrap">{cur} / m²</th>}
                             {showLm && <th className="text-right py-2 px-3 text-xs font-medium text-mist whitespace-nowrap">{cur} / LM</th>}
+                            {showRoll && (
+                              <th
+                                className="text-right py-2 px-3 text-xs font-medium text-mist whitespace-nowrap"
+                                title={`Per roll of ${rollLengthLm} LM`}
+                              >
+                                {cur} / roll
+                              </th>
+                            )}
                           </tr>
                         </thead>
                         <tbody>
@@ -3154,6 +3217,11 @@ const EstimateEditor = () => {
                                     {fmtLm(m2ToLm(r.m2Val ?? 0))}
                                   </td>
                                 )}
+                                {showRoll && (
+                                  <td className={`py-2 px-3 text-right font-mono tabular whitespace-nowrap ${r.strong ? 'font-semibold text-text-primary' : ''}`}>
+                                    {fmtRoll(m2ToRoll(r.m2Val ?? kgToM2(r.kgVal)))}
+                                  </td>
+                                )}
                               </tr>
                             ))}
                         </tbody>
@@ -3164,93 +3232,62 @@ const EstimateEditor = () => {
               </div>
             )}
 
-            <div className="card space-y-2">
-              <button onClick={handleSaveAsTemplate} className="btn-secondary w-full">
-                Save structure to My Templates
-              </button>
-              <button onClick={handleRequote} className="text-sm text-mist hover:text-ink w-full text-center py-2">Duplicate for re-quote</button>
-            </div>
           </div>
+          )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <div className="card">
-              <SectionTitle
-                as="h4"
-                className="font-display font-semibold text-navy mb-3"
-                hint="Save and Calculate, then download the PDF. Share it by email, WhatsApp, or any channel you use — the app does not send on your behalf."
-              >
-                Send to customer
-              </SectionTitle>
-              <button onClick={downloadProposalPdf} className="btn-primary w-full">
-                Download proposal PDF
-              </button>
-
-              <SectionTitle
-                as="h4"
-                className="font-display font-semibold text-navy mt-5 mb-2"
-                hint={
-                  MES_OUTCOME_ENABLED
-                    ? 'Track if the customer accepted or declined — only if you use this for reporting.'
-                    : 'Won / Lost tracking moves to the MES integration. For now, use the Notes field in Job details to capture sales context.'
-                }
-              >
-                Outcome (optional)
-              </SectionTitle>
-              {MES_OUTCOME_ENABLED ? (
-                <>
+          {(MES_OUTCOME_ENABLED || proposals.length > 0) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              {MES_OUTCOME_ENABLED && (
+                <div className="card">
+                  <SectionTitle
+                    as="h4"
+                    className="font-display font-semibold text-navy mb-3"
+                    hint="Track if the customer accepted or declined — only if you use this for reporting."
+                  >
+                    Outcome
+                  </SectionTitle>
                   <div className="flex space-x-2">
-                    <button onClick={() => changeStatus('won')} className="btn-success flex-1">Mark Won</button>
-                    <button onClick={() => changeStatus('lost')} className="btn-danger flex-1">Mark Lost</button>
+                    <button type="button" onClick={() => changeStatus('won')} className="btn-success flex-1">Mark Won</button>
+                    <button type="button" onClick={() => changeStatus('lost')} className="btn-danger flex-1">Mark Lost</button>
                   </div>
                   <div className="mt-3 text-sm text-mist">
                     Current: <strong>{estimateStatusLabel(estimate?.status)}</strong>
                   </div>
-                </>
-              ) : null}
-            </div>
-
-            {proposals.length > 0 && (
-              <div className="card">
-                <h4 className="font-display font-semibold text-navy mb-3">Proposal history</h4>
-                <div className="space-y-2">
-                  {proposals.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between gap-2 text-sm border-b border-border pb-2 last:border-0">
-                      <div>
-                        <div>{p.sentAt ? new Date(p.sentAt).toLocaleString() : 'Sent'}</div>
-                        {p.validUntil && (
-                          <div className="text-xs text-mist">Valid until {new Date(p.validUntil).toLocaleDateString()}</div>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        className="text-gold font-medium hover:underline shrink-0"
-                        onClick={() => downloadStoredProposal(p.id)}
-                      >
-                        PDF
-                      </button>
-                    </div>
-                  ))}
                 </div>
-              </div>
-            )}
+              )}
 
-            <div className="card">
-              <h4 className="font-display font-semibold text-navy mb-3">Activity</h4>
-              <div className="space-y-2" style={{ maxHeight: 220, overflow: 'auto' }}>
-                {(estimate?.activityLogs || []).length === 0 && <div className="text-sm text-mist">No activity yet.</div>}
-                {(estimate?.activityLogs || []).map((a: any) => (
-                  <div key={a.id} className="p-2 bg-slate rounded">
-                    <div className="text-sm font-medium">{a.action}</div>
-                    <div className="text-xs text-mist">{new Date(a.createdAt).toLocaleString()}</div>
+              {proposals.length > 0 && (
+                <div className="card">
+                  <h4 className="font-display font-semibold text-navy mb-3">Proposal history</h4>
+                  <div className="space-y-2">
+                    {proposals.map((p) => (
+                      <div key={p.id} className="flex items-center justify-between gap-2 text-sm border-b border-border pb-2 last:border-0">
+                        <div>
+                          <div>{p.sentAt ? new Date(p.sentAt).toLocaleString() : 'Sent'}</div>
+                          {p.validUntil && (
+                            <div className="text-xs text-mist">Valid until {new Date(p.validUntil).toLocaleDateString()}</div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className="text-gold font-medium hover:underline shrink-0"
+                          onClick={() => downloadStoredProposal(p.id)}
+                        >
+                          PDF
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
-          </div>
+          )}
         </div>
+        )}
       </div>
 
-      {/* Mobile sticky price bar — token-themed surface with NumberTicker on the headline price */}
+      {/* Mobile sticky price bar — hidden on Price list (same as desktop panels). */}
+      {activeSection !== 'slabs' && (
       <div className="fixed bottom-0 left-0 right-0 md:hidden bg-surface-raised border-t border-border px-4 py-3 z-50 shadow-lg safe-area-pb">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div>
@@ -3270,6 +3307,7 @@ const EstimateEditor = () => {
           </button>
         </div>
       </div>
+      )}
 
       <BottomSheet
         open={layerSheetOpen && !!editingLayer}

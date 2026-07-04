@@ -28,6 +28,7 @@ import {
 import type { ProductTypeCode } from '@es/engine';
 import { getTemplateClassification, structureTierLabel } from '../lib/templateCatalog';
 import { apiClient } from '../lib/api';
+import { useAuth } from '../hooks/useAuth';
 import { engineTypeForFamily, subtypesForFamily } from '../lib/productCatalog';
 import type { ProductSubtypeOption, ProcessOption } from '../lib/masterDataReference';
 
@@ -54,12 +55,14 @@ interface TemplateForEdit {
   name: string;
   /** Canonical cross-table key (preserved on tenant copies). */
   templateKey?: string | null;
-  productType: 'roll' | 'sleeve' | 'pouch';
+  productType: 'roll' | 'sleeve' | 'pouch' | 'bag';
   productSubtype?: string | null;
   materialClass?: string | null;
   structureType?: string | null;
-  /** Product-group margin over raw material, USD/kg (admin-defined). */
+  /** Default margin per kg in display currency (tenant templates; pricing method margin_per_kg). */
   marginOverRmPerKgUsd?: string | number | null;
+  /** Fixed CoRM (display currency/kg) — platform catalog only; set in Platform Master → Templates, not here. */
+  cormPerKgUsd?: string | number | null;
   defaultLayers?: Array<{
     layer_order?: number;
     layer_type: 'substrate' | 'ink' | 'adhesive';
@@ -279,6 +282,9 @@ export function TemplateBuilder({
   onSaved,
   onClose,
 }: TemplateBuilderProps) {
+  const { tenant } = useAuth();
+  const displayCurrency = tenant?.displayCurrency || 'USD';
+
   // ── Initial state from template (edit) or defaults (create) ─────────────
   const existingDims = template?.defaultDimensions as Record<string, unknown> | null | undefined;
   const storedPrintMode = (existingDims?.printMode as PrintMode | undefined) ?? null;
@@ -299,12 +305,10 @@ export function TemplateBuilder({
       ? template.materialClass
       : 'Non PE';
 
-  // productFamily is the UI-level code (roll/sleeve/pouch/bag).
-  // For existing templates, productType is 'roll'|'sleeve'|'pouch' (engine type).
-  // We need to recover the family: if there's a subtype starting with 'bag_', family is 'bag'.
+  // productFamily is the product type code (roll/sleeve/pouch/bag) — same as DB productType.
   const initFamily = (() => {
     if (!template) return 'roll';
-    if (template.productSubtype?.startsWith('bag_')) return 'bag';
+    if (template.productType === 'bag' || template.productSubtype?.startsWith('bag_')) return 'bag';
     return template.productType ?? 'roll';
   })();
 
@@ -329,10 +333,14 @@ export function TemplateBuilder({
   const [saveAsPlatformStandard, setSaveAsPlatformStandard] = useState<boolean>(
     () => defaultSaveAsPlatformStandard || editingPlatformStandard
   );
+  // Platform catalog owns Fixed CoRM (Platform Master → Templates only).
+  // Tenant My Templates own margin-over-RM. Structure editor never edits CoRM.
+  const editingPlatformCatalog =
+    editingPlatformStandard || (saveAsPlatformStandard && isPlatformAdmin);
   const titleId = useId();
 
-  // Derive the engine costing type (roll/sleeve/pouch) from the UI family
-  const engineProductType = engineTypeForFamily(productFamily) as 'roll' | 'sleeve' | 'pouch';
+  // Persisted product type (roll/sleeve/pouch/bag) — identity for the four kinds.
+  const engineProductType = engineTypeForFamily(productFamily);
 
   // Subtypes available for the current family (empty for roll/sleeve)
   const availableSubtypes = (() => {
@@ -644,6 +652,7 @@ export function TemplateBuilder({
       if (mode === 'create') {
         if (saveAsPlatformStandard && isPlatformAdmin) {
           savedAsPlatformStandard = true;
+          // CoRM is set later in Platform Master → Templates (not in this editor).
           saved = await apiClient.createPlatformTemplate({
             name: name.trim(),
             productType: engineProductType,
@@ -671,18 +680,18 @@ export function TemplateBuilder({
         // If the source row is a platform standard AND the caller is a platform_admin,
         // route to the admin PATCH by templateKey so the change reaches the platform
         // row (the local tenant copy's `id` is not what the platform table indexes).
-        if (editingPlatformStandard && isPlatformAdmin && template) {
-          const key = template.templateKey;
+        if (editingPlatformStandard) {
+          if (!isPlatformAdmin) {
+            throw new Error('Only a platform admin can edit platform standards');
+          }
+          const key = template?.templateKey;
           if (!key) {
             throw new Error(
               'This template has no canonical key; cannot edit as a platform standard. Re-sync templates and try again.'
             );
           }
           savedAsPlatformStandard = true;
-          // The admin PATCH returns the full platform row plus live-sync
-          // telemetry ({ syncedTenants, deactivatedTenants, inserted }). The
-          // row part is shape-compatible with TemplateForEdit; the telemetry
-          // is ignored. Cast through `unknown` to drop the extra fields.
+          // Omit cormPerKgUsd — CoRM is owned by Platform Master → Templates.
           saved = (await apiClient.updatePlatformTemplateByKey(key, {
             name: name.trim(),
             productType: engineProductType,
@@ -795,43 +804,34 @@ export function TemplateBuilder({
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-brand mb-1">
-                Margin over raw material (USD/kg)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                className="input w-full max-w-xs text-sm"
-                value={marginOverRmPerKgUsd}
-                onChange={(e) => setMarginOverRmPerKgUsd(Number(e.target.value) || 0)}
-                placeholder="e.g. 0.50"
-              />
-              <p className="text-xs text-mist mt-1">
-                Default margin for this product group. Estimates created from this template
-                inherit it (used when the user's pricing method is margin per kg).
-              </p>
-            </div>
+            {!editingPlatformCatalog && (
+              <div>
+                <label className="block text-xs font-medium text-brand mb-1">
+                  Margin over raw material ({displayCurrency}/kg)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="input w-full max-w-xs text-sm"
+                  value={marginOverRmPerKgUsd}
+                  onChange={(e) => setMarginOverRmPerKgUsd(Number(e.target.value) || 0)}
+                  placeholder="e.g. 0.50"
+                />
+              </div>
+            )}
 
-            {/* Platform admin: save as platform standard */}
-            {isPlatformAdmin && (
+            {isPlatformAdmin && !editingPlatformStandard && (
               <div data-testid="platform-standard-toggle">
-                {editingPlatformStandard ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">
-                    ★ Editing platform standard
-                  </span>
-                ) : (
-                  <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-text-primary">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-border accent-brand"
-                      checked={saveAsPlatformStandard}
-                      onChange={(e) => setSaveAsPlatformStandard(e.target.checked)}
-                    />
-                    Save as platform standard
-                  </label>
-                )}
+                <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-text-primary">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-border accent-brand"
+                    checked={saveAsPlatformStandard}
+                    onChange={(e) => setSaveAsPlatformStandard(e.target.checked)}
+                  />
+                  Save as platform standard
+                </label>
               </div>
             )}
 

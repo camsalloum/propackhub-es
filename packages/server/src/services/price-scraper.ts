@@ -1,9 +1,19 @@
+/**
+ * Market price refresh for resin families.
+ *
+ * DECISION (audit 4.3, 2026-07-04): Accept unofficial Yahoo Finance chart/quote
+ * endpoints (`query1.finance.yahoo.com`) with a two-URL fallback and
+ * `FALLBACK_RESIN_USD_PER_KG` when both fail. No SLA — suitable for advisory
+ * "market" column only, not for locked quote costing (user prices stay on
+ * platform master / library). Revisit if a paid commodity feed is budgeted.
+ */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import axios from 'axios';
 import { and, eq } from 'drizzle-orm';
 import { getDatabase, schema } from '../db';
+import { log } from '../utils/logger';
 
 type MaterialRow = typeof schema.materials.$inferSelect;
 
@@ -71,9 +81,9 @@ async function getYahooFuturesUsdPerKg(symbol: string): Promise<number | null> {
         return quotePrice * LB_TO_KG;
       }
     } catch (err: unknown) {
-      console.warn(
-        `Yahoo fetch failed for ${symbol}:`,
-        err instanceof Error ? err.message : err
+      log.warn(
+        { symbol, err: err instanceof Error ? err.message : err },
+        'Yahoo fetch failed'
       );
     }
   }

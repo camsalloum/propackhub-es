@@ -1,7 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { calculateEstimate } from './calculator';
 import { Estimate, Material } from './types';
-import { wastePercentForQuantity, DEFAULT_WASTE_BANDS, type WasteBand } from './waste-bands';
+import {
+  wastePercentForQuantity,
+  DEFAULT_WASTE_BANDS,
+  DEFAULT_WASTE_BANDS_PLAIN,
+  plainBandsFromPrinted,
+  structureIsPrinted,
+  wasteBandsForPrintMode,
+  effectiveCormPerKg,
+  plainCormFromPrinted,
+  slabQuantitiesFromMoq,
+  type WasteBand,
+} from './waste-bands';
 
 /**
  * Tests for the new quantity-band waste + lump-sum tooling/delivery + margin
@@ -64,6 +75,29 @@ describe('wastePercentForQuantity', () => {
     ];
     expect(wastePercentForQuantity(50, custom)).toBe(10);
     expect(wastePercentForQuantity(500, custom)).toBe(2);
+  });
+});
+
+describe('Printed vs Plain waste bands', () => {
+  it('defaults Plain to 50% of Printed', () => {
+    expect(DEFAULT_WASTE_BANDS_PLAIN[0].wastePercent).toBe(15);
+    expect(DEFAULT_WASTE_BANDS_PLAIN[4].wastePercent).toBe(3.5);
+    expect(plainBandsFromPrinted(DEFAULT_WASTE_BANDS)).toEqual(DEFAULT_WASTE_BANDS_PLAIN);
+  });
+
+  it('detects Printed from ink layer presence', () => {
+    expect(structureIsPrinted([{ materialType: 'substrate' }])).toBe(false);
+    expect(structureIsPrinted([{ materialType: 'substrate' }, { materialType: 'ink' }])).toBe(true);
+    expect(structureIsPrinted([{ type: 'ink' }])).toBe(true);
+  });
+
+  it('selects the correct table for print mode', () => {
+    const byMode = {
+      printed: [{ minKg: 0, maxKg: null, wastePercent: 10 }],
+      plain: [{ minKg: 0, maxKg: null, wastePercent: 4 }],
+    };
+    expect(wasteBandsForPrintMode(byMode, 'printed')[0].wastePercent).toBe(10);
+    expect(wasteBandsForPrintMode(byMode, 'plain')[0].wastePercent).toBe(4);
   });
 });
 
@@ -138,9 +172,9 @@ describe('final price breakup — per-kg process cost (M&O = Σ process/kg)', ()
 });
 
 describe('final price breakup — fixed CoRM per template (M&O = cormPerKgUsd)', () => {
-  it('uses the per-template cormPerKgUsd as M&O regardless of markup%/processes', () => {
-    // Total RM 2.14 + M&O (corm 0.75) + PrePress 0.5 + Transport 0.2 = 3.59
-    // Note: markupPercent / processes are ignored for this method.
+  it('scales base CoRM 1:1 with band waste % (default)', () => {
+    // order 1000kg → waste 7% → effective CoRM = 0.75 × 1.07 = 0.8025
+    // Total RM 2.14 + M&O 0.8025 + PrePress 0.5 + Transport 0.2 = 3.6425
     const result = calculateEstimate(
       baseEstimate({
         operatingCostMethod: 'fixed_per_group',
@@ -156,9 +190,25 @@ describe('final price breakup — fixed CoRM per template (M&O = cormPerKgUsd)',
       materials
     );
     const e = result.estimate;
-    expect(e.operationCostPerKg).toBeCloseTo(0.75, 6);
-    expect(e.salePricePerKg).toBeCloseTo(3.59, 6);
+    expect(e.operationCostPerKg).toBeCloseTo(0.8025, 6);
+    expect(e.salePricePerKg).toBeCloseTo(3.6425, 6);
     expect(e.operatingCostMethodResolved).toBe('fixed_per_group');
+  });
+
+  it('scaleFactor 0 keeps CoRM flat (no waste amplification)', () => {
+    const result = calculateEstimate(
+      baseEstimate({
+        operatingCostMethod: 'fixed_per_group',
+        cormPerKgUsd: 0.75,
+        cormScaleWithWaste: 0,
+        toolingChargeUsd: 500,
+        toolingBilledToCustomer: true,
+        deliveryChargeUsd: 200,
+      }),
+      materials
+    );
+    expect(result.estimate.operationCostPerKg).toBeCloseTo(0.75, 6);
+    expect(result.estimate.salePricePerKg).toBeCloseTo(3.59, 6);
   });
 
   it('clamps a negative CoRM to zero (engine guard)', () => {
@@ -186,6 +236,27 @@ describe('final price breakup — fixed CoRM per template (M&O = cormPerKgUsd)',
     expect(result.costBreakdown.cormPercent).toBeGreaterThan(0);
     expect(result.costBreakdown.markupPercent).toBe(0);
     expect(result.costBreakdown.processPercent).toBe(0);
+  });
+});
+
+describe('CoRM helpers', () => {
+  it('effectiveCormPerKg matches waste 1:1 by default', () => {
+    expect(effectiveCormPerKg(4.5, 10)).toBeCloseTo(4.95, 6);
+    expect(effectiveCormPerKg(4.5, 10, 0)).toBeCloseTo(4.5, 6);
+  });
+
+  it('plainCormFromPrinted is 50%', () => {
+    expect(plainCormFromPrinted(4.5)).toBeCloseTo(2.25, 6);
+  });
+
+  it('slabQuantitiesFromMoq starts at MOQ then band caps', () => {
+    const bands: WasteBand[] = [
+      { minKg: 0, maxKg: 80, wastePercent: 30 },
+      { minKg: 81, maxKg: 150, wastePercent: 22 },
+      { minKg: 151, maxKg: 300, wastePercent: 15 },
+      { minKg: 301, maxKg: null, wastePercent: 5 },
+    ];
+    expect(slabQuantitiesFromMoq(100, bands, 5)).toEqual([100, 150, 300]);
   });
 });
 

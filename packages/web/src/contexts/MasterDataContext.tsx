@@ -34,7 +34,8 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      setLoading(true);
+      // Initial load shows a spinner; later invalidate()/focus refreshes stay silent.
+      if (version === 0) setLoading(true);
       try {
         const ref = await apiClient.getMasterDataReference();
         if (cancelled) return;
@@ -66,13 +67,28 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
           costingDefaults:
             (ref as { costingDefaults?: MasterDataReferenceState['costingDefaults'] }).costingDefaults ??
             DEFAULT_MASTER_REFERENCE.costingDefaults,
-          wasteBands:
-            ((ref as { wasteBands?: MasterDataReferenceState['wasteBands'] }).wasteBands ?? []).length > 0
-              ? (ref as { wasteBands?: MasterDataReferenceState['wasteBands'] }).wasteBands!
-              : DEFAULT_MASTER_REFERENCE.wasteBands,
+          wasteBandsByPrintMode: (() => {
+            const byMode = (ref as { wasteBandsByPrintMode?: MasterDataReferenceState['wasteBandsByPrintMode'] })
+              .wasteBandsByPrintMode;
+            if (byMode?.printed?.length || byMode?.plain?.length) {
+              return {
+                printed: byMode.printed?.length
+                  ? byMode.printed
+                  : DEFAULT_MASTER_REFERENCE.wasteBandsByPrintMode!.printed,
+                plain: byMode.plain?.length
+                  ? byMode.plain
+                  : DEFAULT_MASTER_REFERENCE.wasteBandsByPrintMode!.plain,
+              };
+            }
+            return DEFAULT_MASTER_REFERENCE.wasteBandsByPrintMode;
+          })(),
+          cormScaleWithWaste:
+            typeof (ref as { cormScaleWithWaste?: number }).cormScaleWithWaste === 'number'
+              ? (ref as { cormScaleWithWaste: number }).cormScaleWithWaste
+              : DEFAULT_MASTER_REFERENCE.cormScaleWithWaste,
         });
       } catch {
-        if (!cancelled) setReference(DEFAULT_MASTER_REFERENCE);
+        if (!cancelled && version === 0) setReference(DEFAULT_MASTER_REFERENCE);
       } finally {
         if (!cancelled) setLoading(false);
       }

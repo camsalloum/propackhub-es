@@ -99,8 +99,13 @@ export interface MasterDataReference {
   costingDefaults?: {
     cleaningSolventKgPerJob?: number;
   };
-  /** Platform-wide waste bands (single source of truth for all estimates). */
-  wasteBands?: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+  /** Platform-wide waste bands by print mode (Printed vs Plain). */
+  wasteBandsByPrintMode?: {
+    printed: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+    plain: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+  };
+  /** CoRM tracks waste % by this factor (default 1). */
+  cormScaleWithWaste?: number;
 }
 
 export const PACKAGING_FAMILY = 'Packaging';

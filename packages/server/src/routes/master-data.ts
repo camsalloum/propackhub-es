@@ -11,6 +11,7 @@ import {
   listTenantOwnReference,
   TENANT_EXTENSIBLE_CATEGORIES,
 } from '../db/tenant-reference-data';
+import { sendCaughtError } from '../utils/errors';
 
 const ReferenceItemSchema = z.object({
   label: z.string().min(1),
@@ -42,11 +43,7 @@ export function registerMasterDataRoutes(fastify: FastifyInstance) {
       const ref = await buildMasterDataReferenceForTenant(tenantId);
       return reply.send(enrichMasterDataReference(ref));
     } catch (error: unknown) {
-      if ((error as { statusCode?: number })?.statusCode === 401) {
-        return reply.status(401).send({ error: 'Unauthorized' });
-      }
-      console.error('Get master data reference error:', error);
-      return reply.status(500).send({ error: 'Failed to load master data reference' });
+      return sendCaughtError(reply, error, 'Failed to load master data reference', 'Get master data reference error:');
     }
   });
 
@@ -58,11 +55,7 @@ export function registerMasterDataRoutes(fastify: FastifyInstance) {
       const own = await listTenantOwnReference(tenantId);
       return reply.send({ categories: own, editable: [...TENANT_EXTENSIBLE_CATEGORIES] });
     } catch (error: unknown) {
-      if ((error as { statusCode?: number })?.statusCode === 401) {
-        return reply.status(401).send({ error: 'Unauthorized' });
-      }
-      console.error('Get tenant custom reference error:', error);
-      return reply.status(500).send({ error: 'Failed to load custom reference' });
+      return sendCaughtError(reply, error, 'Failed to load custom reference', 'Get tenant custom reference error:');
     }
   });
 
@@ -95,12 +88,11 @@ export function registerMasterDataRoutes(fastify: FastifyInstance) {
         const ref = await buildMasterDataReferenceForTenant(tenantId);
         return reply.send({ items: saved, reference: enrichMasterDataReference(ref) });
       } catch (error: unknown) {
-        if (error instanceof z.ZodError) {
-          return reply.status(400).send({ error: 'Validation failed', details: error.errors });
-        }
-        console.error('Save tenant reference category error:', error);
-        return reply.status(500).send({ error: 'Failed to save reference list' });
-      }
+    if (error instanceof z.ZodError) {
+      return reply.status(400).send({ error: 'Validation failed', details: error.errors });
+    }
+    return sendCaughtError(reply, error, 'Failed to save reference list', 'Save tenant reference category error:');
+  }
     }
   );
 }

@@ -4,6 +4,8 @@ import {
   BAG_SUBTYPE_TO_CONFIGURATOR,
   type Estimate as EngineEstimate,
   type CalculationResult,
+  type WasteBand,
+  DEFAULT_CORM_SCALE_WITH_WASTE,
 } from '@es/engine';
 import type { materials, estimates, layers } from '../db/schema';
 import { buildEngineMaterialMap } from './material-map';
@@ -44,8 +46,25 @@ export function buildEngineEstimateFromRows(opts: {
   cormPerKgUsd?: number | null;
   /** Resolved {basis, multiplier} for the estimate's order-quantity unit (custom/tenant units). */
   orderQuantityUnitDef?: import('@es/engine').UnitDef;
+  /** Platform waste bands for this estimate's print mode (Printed vs Plain). */
+  wasteBands?: WasteBand[];
+  /** CoRM tracks waste % by this factor (default 1). */
+  cormScaleWithWaste?: number;
 }): { estimateForEngine: EngineEstimate; materialMap: Map<string, import('@es/engine').Material> } {
-  const { estimate, tenantId, layers, materials, processes, slabs, layerPriceOverrides, operatingCostMethod, cormPerKgUsd, orderQuantityUnitDef } = opts;
+  const {
+    estimate,
+    tenantId,
+    layers,
+    materials,
+    processes,
+    slabs,
+    layerPriceOverrides,
+    operatingCostMethod,
+    cormPerKgUsd,
+    orderQuantityUnitDef,
+    wasteBands,
+    cormScaleWithWaste,
+  } = opts;
   const materialMap = buildEngineMaterialMap(materials);
   const patchedMaterialMap = new Map(materialMap);
   // Engine math is USD. RM + freight lump sums are already USD; all other charges
@@ -108,7 +127,11 @@ export function buildEngineEstimateFromRows(opts: {
     // Freight lump sum stays USD (Decision #22).
     deliveryChargeUsd:
       estimate.deliveryChargeUsd != null ? parseFloat(estimate.deliveryChargeUsd) : undefined,
-    wasteBands: (estimate.wasteBands as import('@es/engine').WasteBand[] | null) ?? undefined,
+    wasteBands:
+      wasteBands ??
+      (estimate.wasteBands as WasteBand[] | null) ??
+      undefined,
+    cormScaleWithWaste: cormScaleWithWaste ?? DEFAULT_CORM_SCALE_WITH_WASTE,
     processes: processes.map((p) => ({
       id: p.id,
       name: p.name,

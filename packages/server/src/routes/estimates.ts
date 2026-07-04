@@ -31,6 +31,7 @@ import {
 import {
   logEstimateStateTransition,
 } from '../utils/estimate-audit';
+import { AppError, isAuthError, sendCaughtError } from '../utils/errors';
 
 type EstimateRow = typeof schema.estimates.$inferSelect;
 type LayerRow = typeof schema.layers.$inferSelect;
@@ -184,6 +185,8 @@ const EstimateCreateSchema = z.object({
   pricingMethod: z.enum(['markup', 'margin_per_kg']).optional(),
   marginValuePerKgUsd: z.coerce.number().nonnegative().optional(),
   cormPerKgUsd: z.coerce.number().nonnegative().optional(),
+  cormPerKgPlain: z.coerce.number().nonnegative().optional(),
+  moqKg: z.coerce.number().nonnegative().optional(),
   toolingChargeUsd: z.coerce.number().nonnegative().optional(),
   toolingBilledToCustomer: z.boolean().optional(),
   deliveryTerm: z.string().max(32).optional(),
@@ -305,12 +308,7 @@ export async function getEstimatesRoute(
 
     return reply.send(paginate(visibleEstimates, Number(total), limit, offset));
   } catch (error: unknown) {
-    const e = error as { statusCode?: number; code?: string; message?: string };
-    if (e.statusCode === 401 || e.code === 'FST_JWT_NO_AUTHORIZATION_IN_HEADER') {
-      throw error;
-    }
-    console.error('Get estimates error:', error);
-    return reply.status(500).send({ error: 'Failed to fetch estimates' });
+    return sendCaughtError(reply, error, 'Failed to fetch estimates', 'Get estimates error:');
   }
 }
 
@@ -401,6 +399,8 @@ export async function createEstimateRoute(
         pricingMethod: data.pricingMethod ?? undefined,
         marginValuePerKgUsd: data.marginValuePerKgUsd != null ? String(data.marginValuePerKgUsd) : undefined,
         cormPerKgUsd: data.cormPerKgUsd != null ? String(data.cormPerKgUsd) : undefined,
+        cormPerKgPlain: data.cormPerKgPlain != null ? String(data.cormPerKgPlain) : undefined,
+        moqKg: data.moqKg != null ? String(data.moqKg) : undefined,
         toolingChargeUsd: data.toolingChargeUsd != null ? String(data.toolingChargeUsd) : undefined,
         toolingBilledToCustomer: data.toolingBilledToCustomer ?? false,
         deliveryTerm: data.deliveryTerm ?? undefined,
@@ -464,12 +464,11 @@ export async function createEstimateRoute(
       ...estimate,
       refNumber: estimate.refNumber,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return reply.status(400).send({ error: 'Validation failed', details: error.errors });
     }
-    console.error('Create estimate error:', error);
-    return reply.status(500).send({ error: 'Failed to create estimate' });
+    return sendCaughtError(reply, error, 'Failed to create estimate', 'Create estimate error:');
   }
 }
 
@@ -500,8 +499,7 @@ export async function calculateEstimateRoute(
         materialIds: error.materialIds,
       });
     }
-    console.error('Calculate estimate error:', error);
-    return reply.status(500).send({ error: 'Failed to calculate estimate' });
+    return sendCaughtError(reply, error, 'Failed to calculate estimate', 'Calculate estimate error:');
   }
 }
 
@@ -521,8 +519,7 @@ export async function generateProposalPdfRoute(
     reply.header('Content-Type', 'application/pdf');
     return reply.send(pdfBuffer);
   } catch (error: unknown) {
-    console.error('Generate proposal PDF error:', error);
-    return reply.status(500).send({ error: 'Failed to generate proposal PDF' });
+    return sendCaughtError(reply, error, 'Failed to generate proposal PDF', 'Generate proposal PDF error:');
   }
 }
 
@@ -615,9 +612,8 @@ async function getEstimateRoute(
       activityLogs: logs || [],
       lastCalculatedAt: estimate.lastCalculatedAt,
     });
-  } catch (error: any) {
-    console.error('Get estimate error:', error);
-    return reply.status(500).send({ error: 'Failed to get estimate' });
+  } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to get estimate', 'Get estimate error:');
   }
 }
 
@@ -719,10 +715,10 @@ async function updateEstimateRoute(
               .set({ pdfPath })
               .where(eq(schema.proposals.id, proposal.id));
           } catch (pdfErr) {
-            console.warn('Failed to persist proposal PDF:', pdfErr);
+            request.log.warn({ err: pdfErr, estimateId: id }, 'Failed to persist proposal PDF');
           }
         } catch (propErr) {
-          console.warn('Failed to create proposal record:', propErr);
+          request.log.warn({ err: propErr, estimateId: id }, 'Failed to create proposal record');
         }
       }
     }
@@ -767,6 +763,12 @@ async function updateEstimateRoute(
     }
     if (data.cormPerKgUsd !== undefined) {
       updates.cormPerKgUsd = String(data.cormPerKgUsd);
+    }
+    if (data.cormPerKgPlain !== undefined) {
+      updates.cormPerKgPlain = String(data.cormPerKgPlain);
+    }
+    if (data.moqKg !== undefined) {
+      updates.moqKg = String(data.moqKg);
     }
     if (data.toolingChargeUsd !== undefined) {
       updates.toolingChargeUsd = String(data.toolingChargeUsd);
@@ -923,7 +925,7 @@ async function updateEstimateRoute(
           changes: { status: updates.status, note: data.note || null },
         });
       } catch (logErr) {
-        console.warn('Failed to write activity log:', logErr);
+        request.log.warn({ err: logErr, estimateId: id }, 'Failed to write activity log');
       }
     }
 
@@ -999,14 +1001,17 @@ async function updateEstimateRoute(
 
     reply.header('Cache-Control', 'no-store');
     return reply.send(responseRow ?? updated);
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return reply.status(400).send({ error: 'Validation failed', details: error.errors });
     }
-    console.error('Update estimate error:', error?.stack || error);
+    if (isAuthError(error) || error instanceof AppError) {
+      return sendCaughtError(reply, error, 'Failed to update estimate', 'Update estimate error:');
+    }
+    request.log.error({ err: error }, 'Update estimate error');
     return reply.status(500).send({
       error: 'Failed to update estimate',
-      detail: error?.message ?? String(error),
+      detail: error instanceof Error ? error.message : String(error),
     });
   }
 }
@@ -1041,9 +1046,8 @@ async function deleteEstimateRoute(
     }
 
     return reply.status(204).send();
-  } catch (error: any) {
-    console.error('Delete estimate error:', error);
-    return reply.status(500).send({ error: 'Failed to delete estimate' });
+  } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to delete estimate', 'Delete estimate error:');
   }
 }
 
@@ -1131,6 +1135,8 @@ async function requoteEstimateRoute(
         pricingMethod: source.pricingMethod,
         marginValuePerKgUsd: source.marginValuePerKgUsd,
         cormPerKgUsd: source.cormPerKgUsd,
+        cormPerKgPlain: source.cormPerKgPlain,
+        moqKg: source.moqKg,
         toolingChargeUsd: source.toolingChargeUsd,
         toolingBilledToCustomer: source.toolingBilledToCustomer,
         deliveryTerm: source.deliveryTerm,
@@ -1228,7 +1234,7 @@ async function requoteEstimateRoute(
     try {
       calcResult = await calculateAndPersistEstimate(db, newEstimate.id, tenantId);
     } catch (calcErr) {
-      console.warn('Requote auto-calculate failed:', calcErr);
+      request.log.warn({ err: calcErr }, 'Requote auto-calculate failed');
     }
 
     const [refreshed] = await db
@@ -1248,9 +1254,8 @@ async function requoteEstimateRoute(
         }
         : undefined,
     });
-  } catch (error: any) {
-    console.error('Requote estimate error:', error);
-    return reply.status(500).send({ error: 'Failed to requote estimate' });
+  } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to requote estimate', 'Requote estimate error:');
   }
 }
 
@@ -1338,6 +1343,8 @@ async function duplicateEstimateRoute(
         pricingMethod: source.pricingMethod,
         marginValuePerKgUsd: source.marginValuePerKgUsd,
         cormPerKgUsd: source.cormPerKgUsd,
+        cormPerKgPlain: source.cormPerKgPlain,
+        moqKg: source.moqKg,
         toolingChargeUsd: source.toolingChargeUsd,
         toolingBilledToCustomer: source.toolingBilledToCustomer,
         deliveryTerm: source.deliveryTerm,
@@ -1392,9 +1399,8 @@ async function duplicateEstimateRoute(
     }
 
     return reply.status(201).send(newEstimate);
-  } catch (error: any) {
-    console.error('Duplicate estimate error:', error);
-    return reply.status(500).send({ error: 'Failed to duplicate estimate' });
+  } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to duplicate estimate', 'Duplicate estimate error:');
   }
 }
 
@@ -1463,9 +1469,8 @@ export async function registerEstimateRoutes(fastify: FastifyInstance) {
 
         return reply.send(rows);
       } catch (error: unknown) {
-        console.error('List proposals error:', error);
-        return reply.status(500).send({ error: 'Failed to list proposals' });
-      }
+    return sendCaughtError(reply, error, 'Failed to list proposals', 'List proposals error:');
+  }
     }
   );
 
@@ -1502,9 +1507,8 @@ export async function registerEstimateRoutes(fastify: FastifyInstance) {
         reply.header('Content-Type', 'application/pdf');
         return reply.send(buffer);
       } catch (error: unknown) {
-        console.error('Get proposal PDF error:', error);
-        return reply.status(500).send({ error: 'Failed to get proposal PDF' });
-      }
+    return sendCaughtError(reply, error, 'Failed to get proposal PDF', 'Get proposal PDF error:');
+  }
     }
   );
 }

@@ -48,36 +48,37 @@ export function useAuth() {
     };
 
     const checkAuth = async () => {
-      // Phase 4: hydrate tokens from secure storage (no-op on web, reads Keychain on native)
+      // Hydrate: web has refresh in localStorage only; native has both in Preferences.
       await apiClient.init();
       const token = apiClient.getToken();
-      if (token) {
-        try {
-          const response = await apiClient.getMe();
-          setState({
-            isLoading: false,
-            isAuthenticated: true,
-            user: response.user,
-            tenant: response.tenant,
-            error: null,
-          });
-        } catch (error: unknown) {
-          const status = (error as { status?: number }).status;
-          if (status === 401 && apiClient.getRefreshToken()) {
-            try {
-              await apiClient.refreshToken();
-              const me = await apiClient.getMe();
-              setState({ isLoading: false, isAuthenticated: true, user: me.user, tenant: me.tenant, error: null });
-              return;
-            } catch {
-              // Refresh failed — clear all auth state
-            }
-          }
-          await apiClient.clearToken();
-          setState({ isLoading: false, isAuthenticated: false, user: null, tenant: null, error: null });
+      const refresh = apiClient.getRefreshToken();
+
+      const establishSession = async () => {
+        const response = await apiClient.getMe();
+        setState({
+          isLoading: false,
+          isAuthenticated: true,
+          user: response.user,
+          tenant: response.tenant,
+          error: null,
+        });
+      };
+
+      try {
+        if (token) {
+          await establishSession();
+          return;
         }
-      } else {
+        // No access token (new tab / expired sessionStorage) — restore via refresh.
+        if (refresh) {
+          await apiClient.ensureRefreshed();
+          await establishSession();
+          return;
+        }
         setState((prev) => ({ ...prev, isLoading: false }));
+      } catch {
+        await apiClient.clearToken();
+        setState({ isLoading: false, isAuthenticated: false, user: null, tenant: null, error: null });
       }
     };
 

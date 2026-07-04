@@ -11,24 +11,20 @@
  *     Each branch falls back to the legacy face-area model when no subtype is set,
  *     so pre-split estimates keep their original prices. The legacy comment that
  *     "Bag and Pouch reduce to the engine's pouch costing path" no longer applies.
- *   - `engineTypeForFamily('bag')` still returns `'pouch'` and is used only for
- *     template-classification labels and UI groupings (sleeve vs film vs laminate);
- *     it does NOT route the cost calculation, which reads `dimensions.productType`
- *     directly. Kept for backward compatibility with template flows.
- *   - Subtypes are intended to be Master-Data-managed (reference category `product_subtype`);
+ *   - Four product types are first-class everywhere: `roll | sleeve | pouch | bag`.
+ *     `engineTypeForFamily` is identity for those codes (no bag→pouch collapse).
+ *   - Subtypes are Master-Data-managed (reference category `product_subtype`);
  *     this file is the built-in default catalog + the field-schema source of truth.
  *
  * See docs/POUCH_COSTING_RESEARCH.md and docs/BAG_COSTING_RESEARCH.md.
  */
 
-import type { ProductTypeValue } from './masterDataReference';
-
-/** Engine costing product type (roll/sleeve/pouch). Local alias avoids an import cycle. */
-type EngineProductType = ProductTypeValue;
+/** Canonical product type stored in DB / engine / templates. */
+export type ProductTypeCode = 'roll' | 'sleeve' | 'pouch' | 'bag';
 
 /**
  * Top-level product kind code shown to the user (UI/data level). Driven by Master Data —
- * e.g. 'roll' | 'sleeve' | 'pouch' | 'bag' or any admin-added code. NOT the engine type.
+ * e.g. 'roll' | 'sleeve' | 'pouch' | 'bag' or any admin-added code.
  */
 export type ProductFamily = string;
 
@@ -57,17 +53,16 @@ export interface ProductSubtype {
 }
 
 /**
- * UI-family → engine costing alias.
- * - Roll/Sleeve map to themselves.
- * - **Bag and Pouch each have their OWN engine path now** (`case 'bag'` and
- *   `case 'pouch'` in calculator.ts) — this function is kept only for template
- *   classification labels and other UI groupings; it does NOT route costing.
- *   Costing routing is driven by `dimensions.productType` set via
- *   `productTypeForSave()` in estimateConfigure.ts, which preserves 'bag' as 'bag'.
+ * UI-family / Master-Data code → persisted product type.
+ * Roll, Sleeve, Pouch, Bag are each first-class (no bag→pouch collapse).
+ * Unknown custom codes fall back to `pouch` only as a last resort.
  */
-export function engineTypeForFamily(family: ProductFamily): EngineProductType {
-  if (family === 'roll') return 'roll';
-  if (family === 'sleeve') return 'sleeve';
+export function engineTypeForFamily(family: ProductFamily): ProductTypeCode {
+  const key = (family || '').trim().toLowerCase();
+  if (key === 'roll') return 'roll';
+  if (key === 'sleeve') return 'sleeve';
+  if (key === 'bag') return 'bag';
+  if (key === 'pouch') return 'pouch';
   return 'pouch';
 }
 

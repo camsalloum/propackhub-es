@@ -82,7 +82,7 @@ printing_web_width_mm = (reel_width_mm × number_of_ups) + extra_printing_trim_m
 | Pieces/kg, LM order → kg | Reel width |
 | Linear m/kg (press), print run meters | Printing web width |
 
-Product types: `roll` | `sleeve` | `pouch`. Roll-after-slitting block V1 for roll/sleeve.
+Product types: `roll` | `sleeve` | `pouch` | `bag` (first-class; no bag→pouch collapse). Roll-after-slitting block V1 for roll/sleeve.
 
 ### Currency (Decision #22 — clarified 2026-07-03, enforced 2026-07-04)
 
@@ -899,3 +899,119 @@ This forced repeated restarts before login could succeed.
 **Bug:** Settings → Manufacturing & Operating cost always reverted to "Per-kg process cost" after logout/restart.
 **Cause:** `schema-patches.sql` had `UPDATE tenants SET operating_cost_method = 'process_per_kg' WHERE type = 'company'` — not idempotent; `db:patch` on every RUN-ES/startup overwrote admin choices. Default admin tenant is `type = 'company'`.
 **Fix:** Removed that mass UPDATE. Registration still sets method for new tenants.
+
+### 2026-07-04 — Local-dev security hardening (required only)
+
+While still local/dev, fixed the cheap/high-value items (deferred: localStorage tokens, login enumeration):
+
+1. **Auth → 401 not 500** — `sendCaughtError` / `isAuthError` in `utils/errors.ts`; route catch blocks use it; extractors throw `AppError(AUTH_REQUIRED)`.
+2. **Security headers** — `@fastify/helmet` in `app.ts` (CSP off for JSON API).
+3. **Process crash handlers** — `uncaughtException` / `unhandledRejection` + shared SIGTERM/SIGINT shutdown in `index.ts`.
+
+### 2026-07-04 — Security audit §3.1–3.5 closed
+
+| Item | Status |
+|------|--------|
+| 3.1 Auth→500 | Done earlier (`sendCaughtError`) |
+| 3.2 Tokens in localStorage | Access token **memory-only on web**; refresh in localStorage; server `/auth/refresh` + `/auth/logout` + `sessions` table; SPA CSP meta in `index.html` |
+| 3.3 Login/register enumeration | Dummy bcrypt on missing user; register hashes first + generic 400 (no "User already exists") |
+| 3.4 Helmet + crash handlers | Done earlier |
+| 3.5 bcrypt cost | 10 → **12** |
+
+**Note:** Existing browser sessions only had `auth_token` in localStorage — users must **log in once** after this change to receive a refresh token.
+
+### 2026-07-04 — Fixed CoRM not in structure editor
+
+Platform standard TemplateBuilder no longer edits Fixed CoRM. Flow: editor = structure (layers/processes); **Platform Master → Templates** = Fixed CoRM (M&O). Structure PATCH omits `cormPerKgUsd` so it never overwrites platform CoRM.
+
+### 2026-07-04 — Platform template structure save looked OK but layers reverted
+
+**Cause:** PATCH wrote `platform_standard_templates`, then live-sync to tenant `structure_templates` gated on `source.updatedAt > existing.updatedAt`. Equal/string timestamps skipped the tenant write. Editor loads the **tenant** copy → old layers.
+**Fix:** `syncSinglePlatformStandardToAllTenants` always overwrites tenant copy; bulk sync always mirrors platform (no timestamp/drift gate). Sync failures **fail the request**. Create live-syncs. Per-tenant errors reported.
+**Also:** Tenant PATCH of `isStandard` templates is **403** (was saved then wiped on list reload). Only `platform_admin` edits standards. Material refs prefer `platformMasterKey` over shared `costingKey` so grades don’t collapse on save.
+
+### 2026-07-04 — Edge panel: % thickness and % gsm
+
+`FilmStackVisualizer` has **µ** and **GSM** column headers; cells show share as `%` only (thickness vs weight). Edge bar height uses thickness share.
+
+### 2026-07-04 — Activity panel hidden in UI
+
+Estimate editor no longer shows the Activity card. `activityLogs` still persist and return from the API for audit/MES use.
+
+### 2026-07-04 — EXW locks delivery / freight charge
+
+When **Delivery term = EXW**, **Delivery / freight charge (USD)** is forced to **0** and the input is disabled (templates and estimates default EXW). Changing the term to FOB/CIF/etc. unlocks the field. Save payload and live calc always send `deliveryChargeUsd: 0` while EXW.
+
+### 2026-07-04 — Price list tab (unit / slabs / currency)
+
+Estimate editor **Price list** tab (`PriceListPanel`): empty until user selects **unit**, **currency**, and **slabs**. Table columns: Slab, Unit, Currency, Price (no waste %). Copy (TSV/HTML clipboard) and Excel (CSV) export. Selling price + cost breakdown panels (and mobile price bar) hidden on this tab. Pricing still USD/kg under the hood, then converted.
+
+**Waste bands are not a live socket** — they come from the session-cached master-data reference. Saving Platform Master Data calls `invalidate()`, but an estimate already open (or another tab) could keep stale bands. Fix: re-fetch master data when opening Price list and on window focus/visibility.
+
+Price list export is styled **`.xlsx`** (ExcelJS): live theme colors (header mist on sunken, mono body, bold navy price), borders, alignment, frozen header; price cells use the same smart decimal count as the UI. Slab column is quantity only; roll adds **Meters**.
+
+### 2026-07-04 — Costs & Terms tab removed
+
+Estimate editor tabs are Structure + Price list only. Markup % / margin / pricing method are no longer editable on the estimate; they come from Settings (default markup, M&O method) and user pricing method / template margin snapshot on load.
+
+### 2026-07-04 — Bag is first-class (no bag→pouch)
+
+Product types are `roll | sleeve | pouch | bag` end-to-end. `engineTypeForFamily('bag')` returns `'bag'`. Platform/tenant template APIs accept `bag`. Commercial Items seed + live DB rows corrected to `product_type = bag` and `bag_making` process (migration 0013 / schema-patches). CoRM tab shows labels (Bag/Pouch/…).
+
+### 2026-07-04 — CoRM scales with waste (option A) + MOQ
+
+**Templates tab (CoRM):** columns CoRM Printed, CoRM Plain (default 50% of Printed), MOQ (kg).  
+**Waste Bands tab:** `cormScaleWithWaste` (default **1** = waste 10% → CoRM +10%; 0 = flat).  
+**Engine:** `effectiveCorm = baseCorm × (1 + wastePct/100 × scale)` for `fixed_per_group`; print mode from ink layers.  
+**Instantiate:** slabs seed from MOQ + waste-band breakpoints; price list hides bands below MOQ.  
+**Schema:** `corm_per_kg_plain`, `moq_kg` on platform/tenant templates + estimates; `corm_scale_with_waste` on `platform_master_state` (migration 0012 + schema-patches).
+
+### 2026-07-04 — Waste bands Printed vs Plain
+
+Platform Master Data → Waste Bands has two tables: **Printed** and **Plain**. Estimates pick automatically: any ink layer in the structure → Printed, otherwise Plain. Default Plain % = 50% of Printed (same kg bands); admin can edit either table independently. Storage: `platform_master_state.waste_bands` = `{ printed, plain }` (legacy bare array treated as Printed, Plain derived at 50% on read).
+
+### 2026-07-04 — Default Slab Template removed from Settings
+
+Settings → General no longer shows Default Slab Template. Slab quantities and prices are set on the estimate **Price list** tab. Template instantiate still seeds initial qty tiers from `tenants.defaultSlabTemplate` (server default `standard`: 1000/2000/5000 kg) — not user-configurable in UI.
+
+### 2026-07-04 — Selling price lists all units
+
+Headline **Selling price** card shows display-currency prices for every applicable unit: `/ kg` (primary), `/ m²` (when GSM known), `/ LM` (reel width), `/ roll` (custom roll length), `/ pc` + `/ Kpcs` (when piece yield known). Removed “Live preview — save to persist”.
+
+### 2026-07-04 — Editable field highlight (global)
+
+All editable controls (`.input`, `.input-compact`, `.input-field`, `.cell-input`, `.structure-grid__field`) use soft accent fill + violet-tinted border so defaults like order qty **1000** are obviously adjustable. Hover deepens tint; focus clears to raised surface + focus ring. Disabled/readonly and display-only (`.input-static`, `p.input`) stay muted sunken. Missing-required warning utilities still override.
+
+### 2026-07-04 — Roll (custom length) unit
+
+Unit column widened (`minmax(11.5rem, 1.15fr)`) so “Roll (custom length)” is not clipped. Selecting that unit shows **Roll length (LM) \*** (warning style when empty). `validateConfiguredEstimate({ requiresRollLength })` blocks Save and leaving Structure until length > 0. Cost breakdown adds **`{currency} / roll`** when length is set: per-roll = per-LM × `dimensions.orderUnitMultiplier`.
+
+### 2026-07-04 — Estimate action toolbar
+
+Single sticky top bar: **Back** | **Save draft** · **Save** · **PDF** · **My Templates** · **Re-quote** (plus Snap back when forked). Bottom “Save structure to My Templates / Duplicate for re-quote” card and “Download proposal PDF” under Costs removed (were duplicates). Cancel removed (same as Back). Outcome (Won/Lost) only when `MES_OUTCOME_ENABLED`.
+
+### 2026-07-04 — Processes panel: template vs scratch
+
+**Rule:** Template quotes (`sourceTemplateKey` / `structureLocked`) do **not** show `EstimateProcessesPanel` — processes are defined on the template and applied under the hood. Scratch builds show the panel and the user edits steps/quantities before slabs/pricing.
+
+### 2026-07-04 — Structure table column widths
+
+Grade was `minmax(0,1.75fr)` and stole space from numeric columns. Value µ/gsm was `5.5rem` (number + unit + spinner chrome clipped digits); GSM was `4rem` (clipped `16.80` / `126.40`). Tracks: Grade `1fr`, Family `0.85fr`, Value `7.75rem`, GSM `5.75rem`. Value field hides number spinners and uses tabular-nums.
+
+### 2026-07-04 — Auth 401 on save (refresh race)
+
+**Cause:** Refresh token **rotation** on every `/auth/refresh` + concurrent callers (Strict Mode / parallel 401s) revoked the token the other caller still held. Access token was memory-only so reload always hit refresh.
+**Fix:** No rotation (touch session only); access token in **sessionStorage**; boot uses `ensureRefreshed()` single-flight. User must **log in once** if they only have a stale `refresh_token`.
+
+### 2026-07-04 — Platform template CoRM save 500 (live-sync race)
+
+**Cause:** Platform Master → Templates CoRM blur auto-save and the Save button both PATCHed the same platform row. Concurrent `syncSinglePlatformStandardToAllTenants` runs both tried to INSERT missing tenant copies → `structure_templates_tenant_key_uq` on ~17 tenants → 500. Platform row was already saved (first request 200).
+**Fix:** Insert path uses insert-or-update on unique violation; MasterData awaits in-flight blur saves and skips claimed CoRM values so Save does not double-fire.
+
+### 2026-07-04 — Structured logging (audit 4.5)
+
+Server app code no longer uses `console.*` for runtime logs. Routes use `request.log` (Fastify reqId). Non-request code uses `utils/logger.ts` (`log`, pino, `LOG_LEVEL`, `service: es-api`). `sendCaughtError` logs via `reply.request.log`. Intentional exceptions: CLI scripts under `src/scripts/`, integration-test skip banner. Default admin seed no longer prints the password. Web `console.*` left as browser-only.
+
+### 2026-07-04 — Repo housekeeping (HAR / zip)
+
+Deleted tracked `localhost.har` (~9MB network capture) and `stitch.zip`. Scan found no JWT Bearer tokens; cookies empty. Added `*.har` and `stitch.zip` to `.gitignore`. No history rewrite. Left alone: `.bat` launchers, `archive/legacy-laravel`, migration-script sprawl, `any` cleanup, web test coverage (opportunistic backlog).

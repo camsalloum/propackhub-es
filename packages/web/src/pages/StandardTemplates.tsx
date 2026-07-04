@@ -33,7 +33,7 @@ interface StructureTemplate {
   name: string;
   templateKey?: string | null;
   pebiParentPg?: string;
-  productType: 'roll' | 'sleeve' | 'pouch';
+  productType: 'roll' | 'sleeve' | 'pouch' | 'bag';
   productSubtype?: string | null;
   materialClass?: string;
   structureType?: string;
@@ -172,8 +172,10 @@ const StandardTemplates = () => {
   // returns 0 under reduced motion so cards enter in their final state (R19.6).
   const { getDelay } = useStagger();
 
-  const canEditStandardTemplate = isAdmin;
-  const canDeleteStandardTemplate = isAdmin;
+  // Standards live in the platform catalog — only platform_admin may edit/delete
+  // (tenant_admin PATCH was overwritten by platform sync on reload).
+  const canEditStandardTemplate = isPlatformAdmin;
+  const canDeleteStandardTemplate = isPlatformAdmin;
 
   const canManageMyTemplate = (template: StructureTemplate) => {
     if (template.isStandard) return false;
@@ -659,7 +661,7 @@ const StandardTemplates = () => {
               </p>
               <p>
                 To add a structure here: open an estimate →{' '}
-                <strong className="text-text-primary">Save structure to My Templates</strong>, or use{' '}
+                <strong className="text-text-primary">My Templates</strong> in the top bar, or use{' '}
                 <strong className="text-text-primary">New template</strong> above.
               </p>
             </div>

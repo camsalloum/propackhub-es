@@ -13,6 +13,7 @@
 import { getDatabase, schema } from './index';
 import templateSeed from './structure-templates-seed.json';
 import { eq } from 'drizzle-orm';
+import { log } from '../utils/logger';
 import { deriveStandardTemplateKey } from '../utils/template-key';
 
 interface SeedLayer {
@@ -26,7 +27,7 @@ interface SeedLayer {
 interface SeedEntry {
   pebi_parent_pg: string;
   name: string;
-  product_type: 'roll' | 'sleeve' | 'pouch';
+  product_type: 'roll' | 'sleeve' | 'pouch' | 'bag';
   material_class: string | null;
   structure_type: string;
   substrate_origin: string | null;
@@ -94,7 +95,7 @@ export async function bootstrapPlatformStandardCatalog(): Promise<number> {
   }
 
   if (inserted > 0) {
-    console.log(`✓ Bootstrapped ${inserted} platform standard templates from seed JSON`);
+    log.info({ inserted }, 'Bootstrapped platform standard templates from seed JSON');
   }
   return inserted;
 }

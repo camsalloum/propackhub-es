@@ -1,6 +1,7 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import cors from '@fastify/cors';
+import fastifyHelmet from '@fastify/helmet';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
@@ -19,7 +20,8 @@ import { registerPlatformRoutes } from './routes/platform';
 import { registerCategoryRoutes } from './routes/categories';
 import { registerMasterDataRoutes } from './routes/master-data';
 import { registerPlatformMasterDataRoutes } from './routes/platform-master-data';
-import { AppError, errorBody, isFkViolation } from './utils/errors';
+import { sql } from 'drizzle-orm';
+import { AppError, errorBody, isAuthError, isFkViolation } from './utils/errors';
 import { getDatabase } from './db';
 
 export type BuildAppOptions = {
@@ -71,7 +73,15 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
         cb(new Error(`CORS: origin ${origin} not allowed`), false);
       }
     },
-    credentials: true,
+    // Bearer tokens in Authorization (not cookies) — credentials not required.
+    credentials: false,
+  });
+
+  // Baseline browser security headers (CSP left off — API returns JSON, not HTML pages).
+  await fastify.register(fastifyHelmet, {
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   });
 
   await fastify.register(fastifyJwt, {
@@ -124,9 +134,9 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   fastify.get('/health/ready', async (_req, reply) => {
     try {
       const db = getDatabase();
-      await db.execute('SELECT 1' as unknown as Parameters<typeof db.execute>[0]);
+      await db.execute(sql`SELECT 1`);
       return reply.send({ status: 'ready', timestamp: new Date().toISOString() });
-    } catch (err) {
+    } catch {
       return reply.status(503).send({ status: 'not_ready', error: 'DB unreachable' });
     }
   });
@@ -171,13 +181,17 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       );
     }
 
-    // JWT errors
-    const jwtCodes = ['FST_JWT_NO_AUTHORIZATION_IN_HEADER', 'FST_JWT_AUTHORIZATION_TOKEN_EXPIRED', 'FST_JWT_AUTHORIZATION_TOKEN_INVALID'];
-    if (error.statusCode === 401 || jwtCodes.includes((error as { code?: string }).code ?? '')) {
-      const isExpired = (error as { code?: string }).code === 'FST_JWT_AUTHORIZATION_TOKEN_EXPIRED'
-        || error.message?.includes('expired');
+    // JWT / auth errors (also covers AppError AUTH_* if not caught above)
+    if (isAuthError(error)) {
+      const isExpired =
+        (error as { code?: string }).code === 'FST_JWT_AUTHORIZATION_TOKEN_EXPIRED' ||
+        (error as { code?: string }).code === 'FAST_JWT_EXPIRED' ||
+        error.message?.toLowerCase().includes('expired');
       return reply.status(401).send(
-        errorBody(isExpired ? 'AUTH_EXPIRED' : 'AUTH_REQUIRED', error.message || 'Unauthorized')
+        errorBody(
+          isExpired ? 'AUTH_EXPIRED' : 'AUTH_REQUIRED',
+          isExpired ? 'Token expired' : 'Authentication required'
+        )
       );
     }
 

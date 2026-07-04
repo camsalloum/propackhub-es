@@ -12,7 +12,12 @@ import { calculateBagFlatSheetAreaM2 } from './bag-flat-sheet';
 import { calculatePouchFlatSheetAreaM2 } from './pouch-flat-sheet';
 import { calculatePouchAccessories } from './pouch-accessories';
 import { convertOrderQuantityToKg } from './unit-conversion';
-import { wastePercentForQuantity, type WasteBand } from './waste-bands';
+import {
+  wastePercentForQuantity,
+  effectiveCormPerKg,
+  DEFAULT_CORM_SCALE_WITH_WASTE,
+  type WasteBand,
+} from './waste-bands';
 
 /**
  * Main calculation engine - mirrors Laravel costing formulas
@@ -120,6 +125,7 @@ export function calculateEstimate(
     markupPercent: estimate.markupPercent,
     mfgProcessPerKg: mfg.operationCostPerKg,
     cormPerKgUsd: estimate.cormPerKgUsd ?? 0,
+    cormScaleWithWaste: estimate.cormScaleWithWaste ?? DEFAULT_CORM_SCALE_WITH_WASTE,
   };
 
   const priced = priceWithNewModel({ ...charges, wasteQtyKg: trueOrderQuantityKg });
@@ -129,8 +135,8 @@ export function calculateEstimate(
     operatingCostMethod === 'markup_over_rm' ? mfgOperatingPerKg : 0;
   const totalCost = salePricePerKg;
 
-  // Slab ladder: only the waste band varies per slab quantity; M&O per-kg,
-  // prepress and transport stay flat (amortized over the entered order qty).
+  // Slab ladder: waste % (and Fixed CoRM scaled with waste) vary per slab qty;
+  // prepress and transport stay amortized over the entered order qty.
   const slabsWithTotals: CalculationResult['slabs'] = estimate.slabs.map(slab => {
     const p = priceWithNewModel({ ...charges, wasteQtyKg: slab.quantityKg });
     return { ...slab, pricePerKg: p.salePricePerKg, total: slab.quantityKg * p.salePricePerKg };
@@ -465,8 +471,10 @@ function priceWithNewModel(params: {
   operatingCostMethod: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
   markupPercent: number;
   mfgProcessPerKg: number;
-  /** Fixed CoRM (USD/kg) used when operatingCostMethod === 'fixed_per_group'. */
+  /** Base Fixed CoRM (USD/kg) for print mode; scaled by waste when fixed_per_group. */
   cormPerKgUsd: number;
+  /** Multiplier on waste % applied to CoRM (default 1 = waste 10% → CoRM +10%). */
+  cormScaleWithWaste: number;
 }): {
   wastePct: number;
   wasteAdjustedMaterialPerKg: number;
@@ -489,12 +497,12 @@ function priceWithNewModel(params: {
   // Manufacturing & Operating — the ONLY markup mechanism.
   // process_per_kg  → Σ(enabled process cost/kg)
   // markup_over_rm  → Total RM × markupPercent%
-  // fixed_per_group → cormPerKgUsd (admin-tunable per template)
+  // fixed_per_group → base CoRM × (1 + waste% × scale)  (scale default 1)
   const mfgOperatingPerKg =
     params.operatingCostMethod === 'process_per_kg'
       ? params.mfgProcessPerKg
       : params.operatingCostMethod === 'fixed_per_group'
-        ? Math.max(0, params.cormPerKgUsd)
+        ? effectiveCormPerKg(params.cormPerKgUsd, wastePct, params.cormScaleWithWaste)
         : wasteAdjustedMaterialPerKg * (params.markupPercent / 100);
 
   const salePricePerKg =

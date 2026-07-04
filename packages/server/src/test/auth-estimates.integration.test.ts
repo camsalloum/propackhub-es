@@ -3,8 +3,7 @@ import { sql } from 'drizzle-orm';
 import { buildApp } from '../app';
 import type { FastifyInstance } from 'fastify';
 import { initializeDatabase, closeDatabase, getDatabase } from '../db';
-
-const hasDatabase = Boolean(process.env.DATABASE_URL);
+import { hasDatabase } from './require-database';
 
 describe.skipIf(!hasDatabase)('API integration — auth + estimates', () => {
   let app: FastifyInstance;

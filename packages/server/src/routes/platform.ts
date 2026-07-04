@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { extractUserFromRequest, isPlatformAdmin } from '../utils/auth';
 import { getMasterMaterialsList } from '../db/seed-materials';
+import { sendCaughtError } from '../utils/errors';
 
 // The platform master catalog is the app owner's global source of truth.
 function requirePlatformAdmin(request: FastifyRequest, reply: FastifyReply): boolean {
@@ -18,10 +19,9 @@ export async function registerPlatformRoutes(fastify: FastifyInstance) {
       await request.jwtVerify();
       if (!requirePlatformAdmin(request, reply)) return;
       return reply.send(await getMasterMaterialsList());
-    } catch (error) {
-      console.error('Get master materials error:', error);
-      return reply.status(500).send({ error: 'Failed to load master library' });
-    }
+    } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to load master library', 'Get master materials error:');
+  }
   });
 
   /** @deprecated Use /api/v1/platform/master-data/materials */

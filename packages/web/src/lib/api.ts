@@ -97,8 +97,13 @@ export type MasterDataReferencePayload = {
     costPerKgUsd?: number;
   }>;
   costingDefaults?: { cleaningSolventKgPerJob?: number };
-  /** Platform-wide waste bands (single source of truth for all estimates). */
-  wasteBands?: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+  /** Platform-wide waste bands by print mode (Printed vs Plain). */
+  wasteBandsByPrintMode?: {
+    printed: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+    plain: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+  };
+  /** CoRM tracks waste % by this factor (default 1). */
+  cormScaleWithWaste?: number;
   productTypeOptions: Array<{ label: string; value: string }>;
   printingWebClassOptions: Array<{
     label: string;
@@ -178,11 +183,8 @@ export class ApiClient {
   }
 
   getToken() {
-    // Returns in-memory cache (hydrated via init() or setToken())
-    // Falls back to localStorage synchronously on web for backward compat
-    if (!this.token && !Capacitor.isNativePlatform()) {
-      this.token = localStorage.getItem('auth_token');
-    }
+    // In-memory only on web (never hydrate access token from localStorage).
+    // Native: init() loads from Capacitor Preferences into this.token.
     return this.token;
   }
 
@@ -337,11 +339,10 @@ export class ApiClient {
   }
 
   /**
-   * Single-flight refresh: concurrent callers share one in-flight refresh so we
-   * never fire multiple /auth/refresh calls (which would rotate the refresh
-   * token underneath each other and fail).
+   * Single-flight refresh: concurrent callers share one in-flight call.
+   * Use this (not refreshToken) from boot / 401 retry paths.
    */
-  private async ensureRefreshed(): Promise<void> {
+  async ensureRefreshed(): Promise<void> {
     if (!this.refreshPromise) {
       this.refreshPromise = this.refreshToken()
         .then(() => undefined)
@@ -407,18 +408,23 @@ export class ApiClient {
   }
 
   getPlatformWasteBands() {
-    return this.request<{ wasteBands: Array<{ minKg: number; maxKg: number | null; wastePercent: number }> }>(
-      'GET',
-      '/api/v1/platform/master-data/waste-bands'
-    );
+    return this.request<{
+      printed: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+      plain: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+      cormScaleWithWaste: number;
+    }>('GET', '/api/v1/platform/master-data/waste-bands');
   }
 
-  updatePlatformWasteBands(wasteBands: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>) {
-    return this.request<{ wasteBands: Array<{ minKg: number; maxKg: number | null; wastePercent: number }> }>(
-      'PUT',
-      '/api/v1/platform/master-data/waste-bands',
-      { wasteBands }
-    );
+  updatePlatformWasteBands(body: {
+    printed: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+    plain: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+    cormScaleWithWaste?: number;
+  }) {
+    return this.request<{
+      printed: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+      plain: Array<{ minKg: number; maxKg: number | null; wastePercent: number }>;
+      cormScaleWithWaste: number;
+    }>('PUT', '/api/v1/platform/master-data/waste-bands', body);
   }
 
   getPlatformMasterDataMaterials() {
@@ -670,7 +676,7 @@ export class ApiClient {
 
   createTemplateFromDefinition(data: {
     name: string;
-    productType: 'roll' | 'sleeve' | 'pouch';
+    productType: 'roll' | 'sleeve' | 'pouch' | 'bag';
     productSubtype?: string | null;
     materialClass: 'PE' | 'Non PE';
     structureTier: 'Mono' | 'Duplex' | 'Triplex' | 'Quadriplex';
@@ -861,7 +867,7 @@ export class ApiClient {
   createPlatformTemplate(data: {
     name: string;
     pebiParentPg?: string;
-    productType: 'roll' | 'sleeve' | 'pouch';
+    productType: 'roll' | 'sleeve' | 'pouch' | 'bag';
     productSubtype?: string | null;
     materialClass: 'PE' | 'Non PE';
     structureTier: 'Mono' | 'Duplex' | 'Triplex' | 'Quadriplex';
@@ -877,6 +883,8 @@ export class ApiClient {
     defaultDimensions?: Record<string, unknown>;
     displayOrder?: number;
     cloneFromTemplateId?: string;
+    /** Fixed CoRM per kg in display currency. */
+    cormPerKgUsd?: number | string | null;
   }) {
     return this.request<any>('POST', '/api/v1/admin/platform-templates', data);
   }

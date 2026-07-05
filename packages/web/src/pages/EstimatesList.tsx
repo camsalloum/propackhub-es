@@ -7,6 +7,7 @@ import EmptyState from '../components/EmptyState';
 import { SectionTitle } from '../components/SectionTitle';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { apiClient } from '../lib/api';
+import { meaningfulRequotePriceChanges } from '../lib/requote';
 import {
   ClassFilterPanel,
   EMPTY_CLASS_FILTER,
@@ -44,6 +45,7 @@ const EstimatesList = () => {
   const [requotingId, setRequotingId] = useState<string | null>(null);
   /** Estimate pending delete confirmation (null when dialog closed). */
   const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null);
+  const [deleteAnchor, setDeleteAnchor] = useState<DOMRect | null>(null);
   const [deleting, setDeleting] = useState(false);
   /**
    * One-shot flash notice surfaced by the editor's Back button when the user
@@ -133,7 +135,7 @@ const EstimatesList = () => {
           : `/estimate/${res.id}`;
         navigate(path, {
           state: {
-            priceChanges: res.price_changes || [],
+            priceChanges: meaningfulRequotePriceChanges(res.price_changes || []),
             warnings: res.warnings || [],
           },
         });
@@ -152,6 +154,7 @@ const EstimatesList = () => {
       await apiClient.deleteEstimate(pendingDelete.id);
       setEstimates((prev) => prev.filter((e) => e.id !== pendingDelete.id));
       setPendingDelete(null);
+      setDeleteAnchor(null);
     } catch {
       alert('Failed to delete estimate. Please try again.');
     } finally {
@@ -355,7 +358,10 @@ const EstimatesList = () => {
                     type="button"
                     className="btn-secondary text-sm py-2 px-3 inline-flex items-center justify-center text-danger"
                     aria-label={`Delete estimate ${e.refNumber}`}
-                    onClick={() => setPendingDelete({ id: e.id, label: `${e.refNumber} — ${e.jobName || 'Untitled'}` })}
+                    onClick={(ev) => {
+                      setDeleteAnchor(ev.currentTarget.getBoundingClientRect());
+                      setPendingDelete({ id: e.id, label: `${e.refNumber} — ${e.jobName || 'Untitled'}` });
+                    }}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -422,7 +428,10 @@ const EstimatesList = () => {
                             type="button"
                             className="text-sm text-mist hover:text-danger inline-flex items-center gap-1"
                             aria-label={`Delete estimate ${e.refNumber}`}
-                            onClick={() => setPendingDelete({ id: e.id, label: `${e.refNumber} — ${e.jobName || 'Untitled'}` })}
+                            onClick={(ev) => {
+                              setDeleteAnchor(ev.currentTarget.getBoundingClientRect());
+                              setPendingDelete({ id: e.id, label: `${e.refNumber} — ${e.jobName || 'Untitled'}` });
+                            }}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                             Delete
@@ -440,6 +449,7 @@ const EstimatesList = () => {
 
       <ConfirmDialog
         open={pendingDelete !== null}
+        anchorRect={deleteAnchor}
         title="Delete estimate?"
         message={
           <>
@@ -452,7 +462,10 @@ const EstimatesList = () => {
         destructive
         busy={deleting}
         onConfirm={handleConfirmDelete}
-        onCancel={() => setPendingDelete(null)}
+        onCancel={() => {
+          setPendingDelete(null);
+          setDeleteAnchor(null);
+        }}
       />
     </div>
   );

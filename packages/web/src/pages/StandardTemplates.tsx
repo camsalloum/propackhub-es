@@ -165,6 +165,7 @@ const StandardTemplates = () => {
     searchParams.get('tab') === 'mine' ? 'mine' : 'standard';
   const customerFromUrl = searchParams.get('customer')?.trim() || '';
   const quoteFromUrl = searchParams.get('quote')?.trim() || '';
+  const priceCheckFromUrl = searchParams.get('priceCheck') === '1';
   const variantNameFromUrl = searchParams.get('variantName')?.trim() || '';
   const variantDescriptionFromUrl = searchParams.get('variantDescription')?.trim() || '';
   const { reference: masterRef } = useMasterDataReference();
@@ -355,13 +356,14 @@ const StandardTemplates = () => {
     setInstantiateError(null);
     try {
       const preview = await apiClient.previewTemplate(template.id, {
-        customerId: customerFromUrl || undefined,
+        customerId: priceCheckFromUrl ? undefined : customerFromUrl || undefined,
         jobName: variantNameFromUrl || template.name,
         quoteId: quoteFromUrl || undefined,
       });
       const qs = new URLSearchParams();
-      if (customerFromUrl) qs.set('customer', customerFromUrl);
+      if (customerFromUrl && !priceCheckFromUrl) qs.set('customer', customerFromUrl);
       if (quoteFromUrl) qs.set('quote', quoteFromUrl);
+      if (priceCheckFromUrl) qs.set('priceCheck', '1');
       if (variantNameFromUrl) qs.set('variantName', variantNameFromUrl);
       if (variantDescriptionFromUrl) qs.set('variantDescription', variantDescriptionFromUrl);
       const estimatePath = qs.toString() ? `/estimate/new?${qs}` : '/estimate/new';

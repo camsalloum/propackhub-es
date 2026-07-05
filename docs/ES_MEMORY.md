@@ -172,6 +172,37 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 
 ## Session log
 
+### 2026-07-05 — Full day (bugs, price checks, explorer)
+
+**End state:** DB empty for testing (29 estimates purged, 3 quotes soft-deleted). Price checks folder ready for clean multi-structure flow.
+
+**Bugs fixed**
+- **POST /estimates 400** on first save: omit `orderQuantityKg` when ≤0; filter zero slabs; strip bad UUIDs/enums; client validates product group + variant name; price-check URL param → `skuLabel`; API shows Zod `details`.
+- **PATCH /estimates 500** on save with stale library IDs: `validateEstimateSaveRefs` → **409** with message; client pre-check; FK violations mapped to 409; save error shows server `detail`.
+- **Re-quote showed RFQ panel on price checks:** `requoteEstimateRoute` + `duplicateEstimateRoute` now load parent quote via `loadQuoteForEstimate` + `inheritedQuoteFieldsFromParent` — `isPriceCheck`, RFQ, terms carry forward.
+- **Re-quote banner at 0%:** `meaningfulRequotePriceChanges` — hide when no real RM move.
+- **Proposal PDF 500** (earlier): shared `calculateEstimateFromDatabase` path.
+- **Duplicate estimate 500** (earlier): legacy-aware process clone.
+- **EstimateEditor save loop** (earlier): memoized wasteBands, guarded sync effects.
+
+**Price check product**
+- **Model:** one `quote` (`is_price_check`) = one session; multiple `estimates` = structures. **Add structure** = same quote; **New price check** / **New check** (re-quote) = new quote.
+- **Explorer (shipped):** default group **Price check** — card title `date · PKG ref`, product group in meta, structures nested. **Month** view = month → nested price checks → structures. **Add structure** on card. No RFQ/PDF on price checks.
+- **RFQ:** optional on **commercial** quotes only; `QuoteSummaryPanel` shows RFQ input only when quote already has a number; new commercial quotes can set RFQ at creation.
+- **Workspace:** product group only in editor; no customer, brand, dev, delivery, Mark sent, PDF.
+
+**UI polish (same day)**
+- Price list Structure column → **grade** (not family) in `buildStructureSummary`.
+- Micron display: `formatMicronDisplay` truncate 2 dp (structure table + layer build-up).
+- Delete confirm **anchored** beside trash (`ConfirmDialog.anchorRect`) — CustomerExplorer + EstimatesList.
+- Slab modes Predefined/Custom; custom slab qty prefs per user; Below MOQ hint.
+- Tooling scenario New/Existing/Modification; solvent labels (Ink Dilution, Lamination Dilution).
+- Layer build-up: Contrib. columns, centered headers, solid hover-only.
+
+**Key files:** `CustomerExplorer.tsx`, `ConfirmDialog.tsx`, `quote-helpers.ts`, `estimates.ts`, `estimateConfigure.ts`, `requote.ts`, `QuoteSummaryPanel.tsx`, `EstimateEditor.tsx`, `QuoteWorkspace.tsx`.
+
+**Next session:** user tests fresh price checks; Phase 5 optional (RFQ entity, whole-quote re-quote, search).
+
 ### 2026-07-04 — Phase 3 commercial review + editor UX
 
 - Engine: slab `pricePerKg` amortizes tooling/delivery over **slab qty** (headline sale still order qty)
@@ -181,11 +212,14 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 - Structure table: Material/Area double-row headers; solid chip when `solidPercent < 100`
 - Next: Phase 4 multi-SKU PDF + Excel + sent lock
 
-### 2026-07-05 — Customer-first new quote + repeat order
+### 2026-07-05 — Customer-first new quote + repeat order + price checks
 
 - **New quote:** customer required (tenant-scoped search + inline create); variant name → `quotes.name`; variant description → `quotes.notes`; URL params `variantName` / `variantDescription` prefill first estimate (`skuLabel`, `notes`, `jobName`)
-- **Price check:** `quotes.is_price_check`; one-click creates `{ isPriceCheck: true, customerId: null }`; folder **Price checks** at `/estimates/customers/price-check` (separate from `(No customer)`)
-- **Repeat order:** Estimates → pick customer → explorer `?repeatOrder=1` → select variant → dialog → `POST /estimates/:id/requote` with `{ quoteName, skuLabel, variantDescription }`
+- **Price check:** `quotes.is_price_check`; **New price check** creates `{ isPriceCheck: true, customerId: null }`; folder **Price checks** at `/estimates/customers/price-check`
+- **Explorer (2026-07-05 pm):** default **Price check** grouping; card = `date · PKG ref`; structures nested; Month = nested hierarchy; **Add structure** on card; **New check** = re-quote (inherits `isPriceCheck`)
+- **RFQ:** optional string on commercial `quotes.rfq_number` (migration 0016); not used on price checks; summary panel shows field only when set
+- **Re-quote:** `POST /estimates/:id/requote` inherits parent quote commercial flags; fresh RM prices; new quote row
+- **Repeat order:** Estimates → pick customer → explorer `?repeatOrder=1` → select variant → dialog → requote body
 - Migration `0015_quotes_price_check_flag.sql`
 
 ### 2026-07-04 — Phase 2 customer folders + explorer
@@ -1022,7 +1056,9 @@ Headline **Selling price** card shows display-currency prices for every applicab
 
 **Phase 4:** `GET /api/v1/quotes/:id/proposal.pdf` — structured multi-SKU PDF (cover, summary, terms, separate development charges, per-estimate price lists, signature). Visibility re-applied for material cost, markup, plates/dev fields, slabs. Combined price list **Excel** export (dev charges sheet when separate). **Sent lock:** `status=sent` or `sent_at` set → child estimates read-only (PATCH/calculate/delete/duplicate blocked); **Unlock** clears `sent_at` and sets draft/saved; **Re-quote** still creates a new quote. Status sync: all estimates non-draft → quote `saved` (never auto-sent). Quote status/sent_at/valid_until → `activity_logs` (`entityType: quote`).
 
-**Phases:** 1–4 done. Phase 5 optional (whole-quote re-quote, RFQ, search, versioning UI).
+**Phases:** 1–4 done. Phase 5 optional (whole-quote re-quote, RFQ **entity**, search, versioning UI).
+
+**Price checks (2026-07-05):** Explorer default = group by **Price check** (`date · PKG ref`, structures nested). **Add structure** on same quote to compare variants. **New check** = re-quote (new quote, fresh RM, stays `is_price_check`). No RFQ/PDF/Mark sent. DB was wiped end of session for clean testing.
 
 ### 2026-07-04 — Editable field highlight (global)
 

@@ -111,7 +111,11 @@ const EstimatesFolders = () => {
     setCreating(true);
     try {
       const quote = await apiClient.createQuote({
-        name: 'Price check',
+        name: `Price check · ${new Date().toLocaleDateString(undefined, {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })}`,
         customerId: null,
         isPriceCheck: true,
       });

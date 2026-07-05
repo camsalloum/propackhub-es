@@ -25,6 +25,7 @@ import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { runClientCalculation } from '../lib/estimateCalc';
 import { usdToDisplay, usdToDisplayPrecise } from '../lib/currency';
+import { formatMicronDisplay } from '../lib/formatMicron';
 import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
 import {
   buildProcessCostCatalogFromReference,
@@ -34,14 +35,17 @@ import {
   normalizeProcessesForSave,
   productTypeForSave,
   resolveProcessPerKgUsd,
+  sanitizeEstimateSavePayload,
   validateConfiguredEstimate,
+  validateSaveMaterialRefs,
 } from '../lib/estimateConfigure';
 import { setWorkingEstimateForTemplate } from '../lib/estimateSession';
 import { selectOnFocus } from '../lib/inputs';
 import { normalizeToolingScenario, toolingDevelopmentTotal } from '../lib/tooling';
 import { estimateStatusLabel, MES_OUTCOME_ENABLED } from '../lib/estimateStatus';
+import { meaningfulRequotePriceChanges } from '../lib/requote';
 import { groupMaterialsForPicker, type CategoryNode } from '../lib/materialTaxonomy';
-import { stackNeedsSolventMix, stackHasSbInk, defaultInkPrintingProcess, inkSolventRatioForProcess, materialAllowedForTemplateLayer, DEFAULT_CLEANING_SOLVENT_KG_PER_JOB, DEFAULT_WASTE_BANDS_BY_PRINT_MODE, DEFAULT_CORM_SCALE_WITH_WASTE, structureIsPrinted, wasteBandsForPrintMode, plainCormFromPrinted, type LaminationRecipe, type InkPrintingProcess, type PouchAccessorySelection, type WasteBand } from '@es/engine';
+import { stackNeedsSolventMix, stackHasSbInk, defaultInkPrintingProcess, inkSolventRatioForProcess, materialAllowedForTemplateLayer, DEFAULT_CLEANING_SOLVENT_KG_PER_JOB, DEFAULT_WASTE_BANDS_BY_PRINT_MODE, DEFAULT_CORM_SCALE_WITH_WASTE, structureIsPrinted, wasteBandsForPrintMode, plainCormFromPrinted, layerPhysicalThicknessMicron, type LaminationRecipe, type InkPrintingProcess, type PouchAccessorySelection, type WasteBand } from '@es/engine';
 import LaminationFormulaModal from '../components/LaminationFormulaModal';
 import PriceListPanel, { type PriceListUnit } from '../components/PriceListPanel';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
@@ -130,6 +134,14 @@ type EstimateEditorProps = {
   hideEstimateRef?: boolean;
   /** Parent quote is sent — structure/price edits blocked (re-quote or unlock). */
   readOnly?: boolean;
+  /** Internal price check — product group only, no customer / SKU / RFQ fields. */
+  priceCheckMode?: boolean;
+  /** Quote workspace owns price list — hide the in-editor Price list tab. */
+  hidePriceListTab?: boolean;
+  /** Quote has multiple estimates — show variant label (price check). */
+  multiOnQuote?: boolean;
+  /** After save, refresh quote workspace (variant labels). */
+  onSaved?: () => void;
 };
 
 const EstimateEditor = ({
@@ -138,7 +150,12 @@ const EstimateEditor = ({
   backTo,
   hideEstimateRef = false,
   readOnly = false,
+  priceCheckMode: priceCheckModeProp = false,
+  hidePriceListTab: hidePriceListTabProp,
+  multiOnQuote = false,
+  onSaved,
 }: EstimateEditorProps = {}) => {
+  const hidePriceListTab = hidePriceListTabProp ?? embedded;
   const { id: routeId } = useParams<{ id: string }>();
   const id = estimateIdOverride ?? routeId;
   const { user, tenant } = useAuth();
@@ -146,9 +163,13 @@ const EstimateEditor = ({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const quoteIdFromUrl = searchParams.get('quote')?.trim() || '';
+  const priceCheckFromUrl = searchParams.get('priceCheck') === '1';
+  const isPriceCheck = priceCheckModeProp || priceCheckFromUrl;
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  /** Blocks duplicate POST /estimates while the first create is in flight. */
+  const createInFlightRef = useRef(false);
 
   // Core state
   const [estimate, setEstimate] = useState<any>(null);
@@ -191,20 +212,20 @@ const EstimateEditor = ({
   );
 
   useEffect(() => {
-    if (!processesState?.length || processCostCatalog.length === 0) return;
-
-    const recalculated = normalizeLoadedProcesses(processesState);
-    const isDifferent = recalculated.some((p, index) => {
-      const prev = processesState[index];
-      return (
-        p.costPerKgUsd !== prev?.costPerKgUsd ||
-        (p.processKey ?? null) !== (prev?.processKey ?? null)
-      );
+    if (!processCostCatalog.length) return;
+    setProcessesState((prev) => {
+      if (!prev?.length) return prev;
+      const recalculated = normalizeLoadedProcesses(prev);
+      const isDifferent = recalculated.some((p, index) => {
+        const prior = prev[index];
+        return (
+          p.costPerKgUsd !== prior?.costPerKgUsd ||
+          (p.processKey ?? null) !== (prior?.processKey ?? null)
+        );
+      });
+      return isDifferent ? recalculated : prev;
     });
-    if (isDifferent) {
-      setProcessesState(recalculated);
-    }
-  }, [processCostCatalog, normalizeLoadedProcesses, processesState]);
+  }, [processCostCatalog, normalizeLoadedProcesses]);
 
   // UI state
   const [activeSection, setActiveSection] = useState<'structure' | 'dimensions' | 'slabs'>('structure');
@@ -243,9 +264,13 @@ const EstimateEditor = ({
   const [deliveryChargeUsd, setDeliveryChargeUsd] = useState(0);
   // Waste bands + CoRM base: Printed vs Plain from structure (ink → Printed).
   const wastePrintMode = structureIsPrinted(layers) ? 'printed' : 'plain';
-  const wasteBands: WasteBand[] = wasteBandsForPrintMode(
-    masterReference.wasteBandsByPrintMode ?? DEFAULT_WASTE_BANDS_BY_PRINT_MODE,
-    wastePrintMode
+  const wasteBands: WasteBand[] = useMemo(
+    () =>
+      wasteBandsForPrintMode(
+        masterReference.wasteBandsByPrintMode ?? DEFAULT_WASTE_BANDS_BY_PRINT_MODE,
+        wastePrintMode
+      ),
+    [masterReference.wasteBandsByPrintMode, wastePrintMode]
   );
   const cormScaleWithWaste =
     masterReference.cormScaleWithWaste ?? DEFAULT_CORM_SCALE_WITH_WASTE;
@@ -288,9 +313,11 @@ const EstimateEditor = ({
   } | null;
   const returnTo =
     backTo ||
-    (locationState?.returnTo === '/templates'
-      ? '/templates'
-      : '/estimates');
+    (isPriceCheck
+      ? '/estimates/customers/price-check'
+      : locationState?.returnTo === '/templates'
+        ? '/templates'
+        : '/estimates');
 
   const editingLayer = layers.find((l) => l.id === editingLayerId) ?? null;
 
@@ -380,7 +407,7 @@ const EstimateEditor = ({
   const effectiveInkSolventRatio = inkSolventRatioOverride ?? processDefaultInkRatio;
 
   const inkMakeupRatioTooltip =
-    'Makeup solvent = dilution needed before printing. Dividing by 1.5 means every 1.5 gsm of ink needs 1 gsm of solvent. Dividing by 1.0 means 1 gsm of ink needs 1 gsm of solvent, more dilution.';
+    'Ink dilution = solvent needed before printing. Dividing by 1.5 means every 1.5 gsm of ink needs 1 gsm of solvent. Dividing by 1.0 means 1 gsm of ink needs 1 gsm of solvent, more dilution.';
 
   /** Estimators / admins — not sales-only profiles. */
   const canConfigureSolvent = can('solventMixCost') || can('markupPercent');
@@ -645,20 +672,28 @@ const EstimateEditor = ({
           );
           const paramVariantName = searchParams.get('variantName')?.trim() || '';
           const paramVariantDescription = searchParams.get('variantDescription')?.trim() || '';
+          const fromTemplatePriceCheck = searchParams.get('priceCheck') === '1';
           if (paramVariantName) {
-            setJobName(paramVariantName);
-            setSkuLabel(paramVariantName);
+            if (fromTemplatePriceCheck) setSkuLabel(paramVariantName);
+            else {
+              setJobName(paramVariantName);
+              setSkuLabel(paramVariantName);
+            }
           }
           if (paramVariantDescription) setNotes(paramVariantDescription);
           const statePriceChanges = (location.state as { priceChanges?: unknown[] } | null)?.priceChanges;
-          if (statePriceChanges) setPriceChanges(statePriceChanges as never[]);
+          if (statePriceChanges) setPriceChanges(meaningfulRequotePriceChanges(statePriceChanges as never[]));
           setLoading(false);
         } else {
           const templateId = searchParams.get('template') ? Number(searchParams.get('template')) : null;
-          const paramCustomer = searchParams.get('customer') || '';
+          const scratchPriceCheck = searchParams.get('priceCheck') === '1';
+          const paramCustomer = scratchPriceCheck ? '' : searchParams.get('customer') || '';
           const paramVariantName = searchParams.get('variantName')?.trim() || '';
           const paramVariantDescription = searchParams.get('variantDescription')?.trim() || '';
-          const paramJobName = paramVariantName || searchParams.get('jobName') || 'New estimate';
+          const paramJobName =
+            paramVariantName ||
+            searchParams.get('jobName') ||
+            (scratchPriceCheck ? '' : 'New estimate');
           const paramProductType = normalizeProductType(
             searchParams.get('productType') || searchParams.get('type'),
             productTypeOptions
@@ -668,7 +703,7 @@ const EstimateEditor = ({
           const defaultLayers = getTemplateLayers(templateId, mats || []);
           setJobName(paramJobName);
           setCustomerId(paramCustomer);
-          if (paramVariantName) setSkuLabel(paramVariantName);
+          if (paramVariantName && !scratchPriceCheck) setSkuLabel(paramVariantName);
           if (paramVariantDescription) setNotes(paramVariantDescription);
           setProductType(paramProductType);
           if (paramOrderQty && !Number.isNaN(Number(paramOrderQty))) {
@@ -686,7 +721,7 @@ const EstimateEditor = ({
           setNeedsConfiguration(true);
           setActiveSection('structure');
           const statePriceChanges = (location.state as any)?.priceChanges;
-          if (statePriceChanges) setPriceChanges(statePriceChanges);
+          if (statePriceChanges) setPriceChanges(meaningfulRequotePriceChanges(statePriceChanges));
           setLoading(false);
         }
       } catch (err) {
@@ -699,9 +734,10 @@ const EstimateEditor = ({
   }, [id]);
 
   useEffect(() => {
+    if (isPriceCheck) return;
     const fromUrl = searchParams.get('customer')?.trim();
     if (fromUrl && !customerId) setCustomerId(fromUrl);
-  }, [searchParams, customerId]);
+  }, [searchParams, customerId, isPriceCheck]);
 
   // Standalone /estimate/:id → quote workspace when the estimate belongs to a quote.
   useEffect(() => {
@@ -732,6 +768,10 @@ const EstimateEditor = ({
   useEffect(() => {
     if (activeSection === 'slabs') reloadMasterData();
   }, [activeSection, reloadMasterData]);
+
+  useEffect(() => {
+    if (hidePriceListTab && activeSection === 'slabs') setActiveSection('structure');
+  }, [hidePriceListTab, activeSection]);
 
   useEffect(() => {
     const onFocus = () => {
@@ -1092,7 +1132,7 @@ const EstimateEditor = ({
       // ran in the no-id branch; read it here so requote banner shows correctly)
       const navPriceChanges = (location.state as { priceChanges?: unknown[] } | null)?.priceChanges;
       if (navPriceChanges?.length) {
-        setPriceChanges(navPriceChanges);
+        setPriceChanges(meaningfulRequotePriceChanges(navPriceChanges as never[]));
         setRequoteWarnings((location.state as { warnings?: string[] } | null)?.warnings ?? []);
       }
     } catch (error) {
@@ -1133,10 +1173,10 @@ const EstimateEditor = ({
   };
 
   const buildSavePayload = useCallback((customerIdOverride?: string) => {
-    const linkedCustomer = customerIdOverride ?? customerId;
+    const linkedCustomer = isPriceCheck ? undefined : customerIdOverride ?? customerId;
     const payload: Record<string, unknown> = {
       jobName,
-      customerId: linkedCustomer || undefined,
+      ...(isPriceCheck ? {} : { customerId: linkedCustomer || undefined }),
       // notes is always sent so clearing the field round-trips correctly
       notes: notes.trim() ? notes.trim() : '',
       productType: productTypeForSave(estimate?.productType, productType, productTypeOptions),
@@ -1153,31 +1193,37 @@ const EstimateEditor = ({
       cormPerKgUsd,
       cormPerKgPlain,
       moqKg: moqKg ?? undefined,
-      skuLabel: skuLabel.trim() || undefined,
-      brand: brand.trim() || undefined,
-      specsCode: specsCode.trim() || undefined,
-      printColorCount: printColorCount ?? undefined,
-      costPerColor: costPerColor ?? undefined,
-      toolingBillingMode:
-        printColorCount != null && costPerColor != null
-          ? toolingBillingMode ?? 'separate'
-          : undefined,
-      toolingScenario:
-        printColorCount != null && costPerColor != null ? toolingScenario : undefined,
-      billableColorCount:
-        printColorCount != null && costPerColor != null && toolingScenario === 'modification'
-          ? billableColorCount ?? undefined
-          : toolingScenario === 'existing'
-            ? 0
-            : undefined,
-      toolingChargeUsd:
-        printColorCount != null && costPerColor != null ? undefined : toolingChargeUsd,
-      toolingBilledToCustomer:
-        printColorCount != null && costPerColor != null
-          ? (toolingBillingMode ?? 'separate') === 'amortized'
-          : toolingChargeUsd > 0,
-      deliveryTerm: deliveryTerm || undefined,
-      deliveryChargeUsd: isExwDelivery(deliveryTerm) ? 0 : deliveryChargeUsd,
+      ...(isPriceCheck
+        ? multiOnQuote && skuLabel.trim()
+          ? { skuLabel: skuLabel.trim() }
+          : {}
+        : {
+            skuLabel: skuLabel.trim() || undefined,
+            brand: brand.trim() || undefined,
+            specsCode: specsCode.trim() || undefined,
+            printColorCount: printColorCount ?? undefined,
+            costPerColor: costPerColor ?? undefined,
+            toolingBillingMode:
+              printColorCount != null && costPerColor != null
+                ? toolingBillingMode ?? 'separate'
+                : undefined,
+            toolingScenario:
+              printColorCount != null && costPerColor != null ? toolingScenario : undefined,
+            billableColorCount:
+              printColorCount != null && costPerColor != null && toolingScenario === 'modification'
+                ? billableColorCount ?? undefined
+                : toolingScenario === 'existing'
+                  ? 0
+                  : undefined,
+            toolingChargeUsd:
+              printColorCount != null && costPerColor != null ? undefined : toolingChargeUsd,
+            toolingBilledToCustomer:
+              printColorCount != null && costPerColor != null
+                ? (toolingBillingMode ?? 'separate') === 'amortized'
+                : toolingChargeUsd > 0,
+            deliveryTerm: deliveryTerm || undefined,
+            deliveryChargeUsd: isExwDelivery(deliveryTerm) ? 0 : deliveryChargeUsd,
+          }),
       solventMaterialId: needsSolventMix ? solventMaterialId ?? undefined : undefined,
       solventCostPerKgUsd: needsSolventMix ? resolvedSolventCostPerKgUsd : undefined,
       laminationRecipeOverrides:
@@ -1187,7 +1233,9 @@ const EstimateEditor = ({
       // Persist the ratio only when the user explicitly bypassed it. When it's
       // process-derived we omit it so reopening keeps the Flexo/Roto toggle live.
       solventRatio: hasSbInk && inkSolventRatioOverride != null ? inkSolventRatioOverride : undefined,
-      orderQuantityKg: orderQuantity,
+      ...(Number.isFinite(orderQuantity) && orderQuantity > 0
+        ? { orderQuantityKg: orderQuantity }
+        : {}),
       orderQuantityUnit,
       // Preserve the template link so the structure stays locked after the first
       // save (substrate stack fixed; ink/coating still editable). Without this the
@@ -1208,16 +1256,20 @@ const EstimateEditor = ({
       payload.processes = normalizeProcessesForSave(processesState);
     }
     if (slabsState.length > 0) {
-      payload.slabs = slabsState.map((s) => ({
-        quantityKg: Number(s.quantityKg),
-        pricePerKg: Number(s.pricePerKgUsd ?? s.pricePerKg) || 0,
-      }));
+      const slabs = slabsState
+        .map((s) => ({
+          quantityKg: Number(s.quantityKg),
+          pricePerKg: Number(s.pricePerKgUsd ?? s.pricePerKg) || 0,
+        }))
+        .filter((s) => Number.isFinite(s.quantityKg) && s.quantityKg > 0);
+      if (slabs.length > 0) payload.slabs = slabs;
     }
-    return payload;
-  }, [jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, estimate?.quoteId, quoteIdFromUrl, productType, productTypeOptions, productSubtype, needsSolventMix, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, cormPerKgPlain, moqKg, toolingChargeUsd, skuLabel, brand, specsCode, printColorCount, costPerColor, toolingBillingMode, toolingScenario, billableColorCount, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
+    return sanitizeEstimateSavePayload(payload);
+  }, [isPriceCheck, multiOnQuote, jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, estimate?.quoteId, quoteIdFromUrl, productType, productTypeOptions, productSubtype, needsSolventMix, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, cormPerKgPlain, moqKg, toolingChargeUsd, skuLabel, brand, specsCode, printColorCount, costPerColor, toolingBillingMode, toolingScenario, billableColorCount, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   /** Link estimate to a customer row — create customer record if user typed a new name. */
   const ensureCustomerForSave = async (): Promise<string | undefined> => {
+    if (isPriceCheck) return undefined;
     if (customerId?.trim()) return customerId;
     const name = customerDraftName.trim();
     if (!name) return undefined;
@@ -1338,12 +1390,12 @@ const EstimateEditor = ({
     const inkM2 = e.inkMakeupSolventCostPerM2 ?? 0;
     if (inkKg > 0 || inkM2 > 0) {
       const proc = e.inkPrintingProcessResolved === 'rotogravure' ? 'roto' : 'flexo';
-      lines.push({ key: 'ink-makeup', label: `Ink makeup (${proc})`, perKgUsd: inkKg, perM2Usd: inkM2 });
+      lines.push({ key: 'ink-makeup', label: `Ink Dilution (${proc})`, perKgUsd: inkKg, perM2Usd: inkM2 });
     }
     const lamKg = e.laminationSolventCostPerKg ?? 0;
     const lamM2 = e.laminationSolventCostPerM2 ?? 0;
     if (lamKg > 0 || lamM2 > 0) {
-      lines.push({ key: 'lamination', label: 'Lamination EA', perKgUsd: lamKg, perM2Usd: lamM2 });
+      lines.push({ key: 'lamination', label: 'Lamination Dilution', perKgUsd: lamKg, perM2Usd: lamM2 });
     }
     const cleanKg = e.cleaningSolventCostPerKg ?? 0;
     const cleanM2 = e.cleaningSolventCostPerM2 ?? 0;
@@ -1422,11 +1474,34 @@ const EstimateEditor = ({
       layers.map((l, i) => {
         const mat = materials.find((m) => m.id === l.materialId);
         const calcLayer = clientCalcResult?.estimate.layers[i];
+        const density = mat ? parseFloat(String(mat.density)) || 0 : 0;
+        const physicalMicron =
+          mat != null
+            ? layerPhysicalThicknessMicron(
+                {
+                  id: l.id,
+                  materialId: l.materialId,
+                  micron: l.micron,
+                  gsm: l.gsm,
+                  position: l.position,
+                },
+                {
+                  id: mat.id,
+                  name: mat.name,
+                  type: mat.type as 'substrate' | 'ink' | 'adhesive',
+                  density,
+                  solidPercent: parseFloat(String(mat.solidPercent)) || 0,
+                  costPerKgUsd: parseFloat(String(mat.costPerKgUsd)) || 0,
+                  wastePercent: mat.wastePercent ?? 0,
+                }
+              )
+            : undefined;
         return {
           id: l.id,
           type: l.materialType,
           material: l.materialName,
           micron: l.micron,
+          physicalMicron,
           gsm: l.gsm,
           family: mat?.substrateFamily ?? null,
           costPerKg: can('materialCostPerKg')
@@ -1444,40 +1519,72 @@ const EstimateEditor = ({
   useEffect(() => {
     if (!clientCalcResult) return;
     const fx = parseFloat(estimate?.exchangeRateUsdToDisplay) || 1;
-    const saleUsd = clientCalcResult.estimate.salePricePerKg || 0;
+    const calcEstimate = clientCalcResult.estimate;
+    const saleUsd = calcEstimate.salePricePerKg || 0;
     const saleDisplay = usdToDisplay(saleUsd, fx);
-    setEstimate((prev: any) => ({
-      ...prev,
-      salePricePerKg: saleUsd,
-      salePriceDisplay: saleDisplay,
-      materialCostPerKg: clientCalcResult.estimate.materialCostPerKg,
-      totalGsm: clientCalcResult.estimate.totalGsm,
-      totalMicron: clientCalcResult.estimate.totalMicron,
-      substrateGaugeMicron: clientCalcResult.estimate.substrateGaugeMicron,
-      filmDensity: clientCalcResult.estimate.filmDensity,
-    }));
-    setLayers((prev) =>
-      prev.map((l, i) => {
-        const calcLayer = clientCalcResult.estimate.layers[i];
-        return calcLayer?.gsm != null ? { ...l, gsm: calcLayer.gsm } : l;
-      })
-    );
-    setSlabsState((prev) =>
-      prev.map((s, i) => {
+
+    setEstimate((prev: any) => {
+      if (
+        prev?.salePricePerKg === saleUsd &&
+        prev?.salePriceDisplay === saleDisplay &&
+        prev?.materialCostPerKg === calcEstimate.materialCostPerKg &&
+        prev?.totalGsm === calcEstimate.totalGsm &&
+        prev?.totalMicron === calcEstimate.totalMicron &&
+        prev?.substrateGaugeMicron === calcEstimate.substrateGaugeMicron &&
+        prev?.filmDensity === calcEstimate.filmDensity
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        salePricePerKg: saleUsd,
+        salePriceDisplay: saleDisplay,
+        materialCostPerKg: calcEstimate.materialCostPerKg,
+        totalGsm: calcEstimate.totalGsm,
+        totalMicron: calcEstimate.totalMicron,
+        substrateGaugeMicron: calcEstimate.substrateGaugeMicron,
+        filmDensity: calcEstimate.filmDensity,
+      };
+    });
+
+    setLayers((prev) => {
+      let changed = false;
+      const next = prev.map((l, i) => {
+        const calcLayer = calcEstimate.layers[i];
+        if (calcLayer?.gsm != null && calcLayer.gsm !== l.gsm) {
+          changed = true;
+          return { ...l, gsm: calcLayer.gsm };
+        }
+        return l;
+      });
+      return changed ? next : prev;
+    });
+
+    setSlabsState((prev) => {
+      let changed = false;
+      const next = prev.map((s, i) => {
         const calcSlab = clientCalcResult.slabs[i];
-        // Engine always returns USD — keep USD canonical, compute display separately
         const usd = calcSlab
           ? calcSlab.pricePerKg
-          : clientCalcResult.estimate.salePricePerKg || 0;
+          : calcEstimate.salePricePerKg || 0;
         const priceDisplay = usdToDisplay(usd, fx);
+        if (
+          s.pricePerKgUsd === usd &&
+          s.pricePerKg === priceDisplay &&
+          s.total === s.quantityKg * priceDisplay
+        ) {
+          return s;
+        }
+        changed = true;
         return {
           ...s,
           pricePerKgUsd: usd,
           pricePerKg: priceDisplay,
           total: s.quantityKg * priceDisplay,
         };
-      })
-    );
+      });
+      return changed ? next : prev;
+    });
   }, [clientCalcResult, estimate?.exchangeRateUsdToDisplay]);
 
   useEffect(() => {
@@ -1567,6 +1674,18 @@ const EstimateEditor = ({
    * Returns true when a save actually reached the server.
    */
   type SaveMode = 'draft' | 'final' | 'silent';
+
+  const syncPriceCheckQuoteName = async (quoteId: string | undefined) => {
+    if (!isPriceCheck || !quoteId) return;
+    const productGroup = jobName?.trim();
+    if (!productGroup || productGroup === 'New estimate') return;
+    try {
+      await apiClient.updateQuote(quoteId, { name: productGroup });
+    } catch {
+      /* best effort */
+    }
+  };
+
   const persistEstimate = async (mode: SaveMode = 'draft'): Promise<boolean> => {
     if (readOnly) {
       if (mode !== 'silent') alert('This quote is sent and locked. Unlock or re-quote to edit.');
@@ -1579,6 +1698,26 @@ const EstimateEditor = ({
     }
     if (layers.some((l) => !l.materialId)) {
       if (mode !== 'silent') alert('Select a material for every layer before saving.');
+      return false;
+    }
+    const materialRefError = validateSaveMaterialRefs({
+      layers,
+      materialIds: materials.map((m) => m.id),
+      needsSolventMix,
+      solventMaterialId,
+    });
+    if (materialRefError) {
+      if (mode !== 'silent') alert(materialRefError);
+      return false;
+    }
+    if (!jobName.trim()) {
+      if (mode !== 'silent') {
+        alert(isPriceCheck ? 'Enter a product group before saving.' : 'Enter a job name before saving.');
+      }
+      return false;
+    }
+    if (isPriceCheck && multiOnQuote && !skuLabel.trim() && mode === 'final') {
+      alert('Enter a variant name before saving.');
       return false;
     }
     if (mode === 'final') {
@@ -1608,7 +1747,9 @@ const EstimateEditor = ({
       // row already had — we don't downgrade a 'sent' estimate to 'draft' just
       // because the user recalculated.
       if (mode === 'draft') payload.status = 'draft';
-      else if (mode === 'final') payload.status = 'sent';
+      else if (mode === 'final' && (!estimate?.status || estimate.status === 'draft')) {
+        payload.status = 'sent';
+      }
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         const draftKey = `offlineDraft:${estimate?.id || 'new'}`;
         localStorage.setItem(draftKey, JSON.stringify({ payload, savedAt: Date.now() }));
@@ -1637,35 +1778,51 @@ const EstimateEditor = ({
           console.warn('Recalculate on save skipped:', calcErr);
         }
         await fetchEstimate(estimate.id, { silent: true });
+        await syncPriceCheckQuoteName(estimate.quoteId || quoteIdFromUrl || undefined);
         if (mode === 'draft') setSaveNotice('Draft saved.');
         else if (mode === 'final') setSaveNotice('Saved.');
+        onSaved?.();
         return true;
       }
-      const saved = await apiClient.createEstimate(payload);
-      const templateKey = saved?.sourceTemplateKey?.trim();
-      if (templateKey && saved?.id) {
-        setWorkingEstimateForTemplate(templateKey, saved.id);
-      }
-      // Recalculate the freshly created estimate so its persisted price snapshot
-      // is in sync before we navigate to it. Best-effort (see note above).
-      if (saved?.id) {
-        try {
-          await apiClient.calculateEstimate(saved.id);
-        } catch (calcErr) {
-          console.warn('Recalculate on save skipped:', calcErr);
+      if (createInFlightRef.current) return false;
+      createInFlightRef.current = true;
+      try {
+        const saved = await apiClient.createEstimate(payload);
+        const templateKey = saved?.sourceTemplateKey?.trim();
+        if (templateKey && saved?.id) {
+          setWorkingEstimateForTemplate(templateKey, saved.id);
         }
-      }
-      {
-        const qid = saved.quoteId || quoteIdFromUrl;
-        if (qid) {
-          navigate(`/quotes/${qid}/estimates/${saved.id}`, { replace: true });
-        } else {
-          navigate(`/estimate/${saved.id}`, { replace: true });
+        setEstimate((prev: any) => ({
+          ...prev,
+          id: saved.id,
+          quoteId: saved.quoteId ?? prev?.quoteId ?? quoteIdFromUrl ?? undefined,
+          refNumber: saved.refNumber ?? prev?.refNumber,
+        }));
+        // Recalculate the freshly created estimate so its persisted price snapshot
+        // is in sync before we navigate to it. Best-effort (see note above).
+        if (saved?.id) {
+          try {
+            await apiClient.calculateEstimate(saved.id);
+          } catch (calcErr) {
+            console.warn('Recalculate on save skipped:', calcErr);
+          }
         }
+        {
+          const qid = saved.quoteId || quoteIdFromUrl;
+          await syncPriceCheckQuoteName(qid || undefined);
+          if (qid) {
+            navigate(`/quotes/${qid}/estimates/${saved.id}`, { replace: true });
+          } else {
+            navigate(`/estimate/${saved.id}`, { replace: true });
+          }
+        }
+        if (mode === 'draft') setSaveNotice('Draft saved.');
+        else if (mode === 'final') setSaveNotice('Saved.');
+        onSaved?.();
+        return true;
+      } finally {
+        createInFlightRef.current = false;
       }
-      if (mode === 'draft') setSaveNotice('Draft saved.');
-      else if (mode === 'final') setSaveNotice('Saved.');
-      return true;
     } catch (err: any) {
       console.error('Save failed:', err);
       // Silent saves (Calculate) shouldn't blast the user with a modal — log +
@@ -1694,13 +1851,14 @@ const EstimateEditor = ({
     try {
       const res = await apiClient.requoteEstimate(estimate.id);
       if (res?.id) {
-        setPriceChanges(res.price_changes || []);
+        const changes = meaningfulRequotePriceChanges(res.price_changes || []);
+        setPriceChanges(changes);
         setRequoteWarnings(res.warnings || []);
         const dest = res.quoteId
           ? `/quotes/${res.quoteId}/estimates/${res.id}`
           : `/estimate/${res.id}`;
         navigate(dest, {
-          state: { priceChanges: res.price_changes || [], warnings: res.warnings || [] },
+          state: { priceChanges: changes, warnings: res.warnings || [] },
         });
       }
     } catch (err) { alert('Failed to create re-quote'); }
@@ -2146,7 +2304,7 @@ const EstimateEditor = ({
               type="number"
               min="0.01"
               step="0.1"
-              aria-label="Ink makeup solvent ratio"
+              aria-label="Ink dilution solvent ratio"
               title={inkMakeupRatioTooltip}
               className="input py-1 px-1.5 w-14 text-xs font-mono text-center"
               value={effectiveInkSolventRatio}
@@ -2292,8 +2450,13 @@ const EstimateEditor = ({
               )}
             </p>
             <h1 className="font-display font-semibold text-brand leading-tight truncate text-lg sm:text-xl">
-              {jobName}
+              {isPriceCheck && multiOnQuote && skuLabel.trim()
+                ? skuLabel.trim()
+                : jobName}
             </h1>
+            {isPriceCheck && multiOnQuote && jobName.trim() && (
+              <p className="text-xs text-mist truncate">{jobName.trim()}</p>
+            )}
           </div>
         </div>
 
@@ -2380,11 +2543,20 @@ const EstimateEditor = ({
         <SectionTitle
           as="h3"
           className="text-sm font-semibold text-brand mb-3"
-          hint={`Estimate ${estimate?.refNumber || 'draft'} — pick an existing customer, click + Add customer for a new one. Use Save draft to keep working later, or Save when the estimate is complete. It appears under Estimates and on that customer's page.`}
+          hint={
+            isPriceCheck && !multiOnQuote
+              ? `Price check ${estimate?.refNumber || 'draft'} — name the product group. Save draft to keep working, or Save when pricing is ready.`
+              : !isPriceCheck
+                ? `Estimate ${estimate?.refNumber || 'draft'} — pick an existing customer, click + Add customer for a new one. Use Save draft to keep working later, or Save when the estimate is complete. It appears under Estimates and on that customer's page.`
+                : undefined
+          }
         >
-          Job details
+          {isPriceCheck ? 'Product group' : 'Job details'}
         </SectionTitle>
         <JobHeaderFields
+          hideCustomer={isPriceCheck}
+          jobNameLabel={isPriceCheck ? 'Product group' : 'Job name'}
+          jobNamePlaceholder={isPriceCheck ? 'e.g. Triplex laminate — snack' : undefined}
           customerId={customerId}
           onCustomerChange={(id) => {
             setCustomerId(id);
@@ -2462,14 +2634,15 @@ const EstimateEditor = ({
               />
             ) : undefined
           }
-          showSkuFields
+          showSkuFields={!isPriceCheck}
+          showVariantField={isPriceCheck && multiOnQuote}
           skuLabel={skuLabel}
           onSkuLabelChange={setSkuLabel}
           brand={brand}
           onBrandChange={setBrand}
           specsCode={specsCode}
           onSpecsCodeChange={setSpecsCode}
-          showDevCostFields={can('platesPerKg')}
+          showDevCostFields={!isPriceCheck && can('platesPerKg')}
           printColorCount={printColorCount}
           onPrintColorCountChange={setPrintColorCount}
           costPerColor={costPerColor}
@@ -2488,7 +2661,7 @@ const EstimateEditor = ({
           colorsDriveTooling={colorsDriveTooling}
           toolingChargeUsd={toolingChargeUsd}
           onToolingChargeUsdChange={setToolingChargeUsd}
-          showDeliveryFields={can('markupPercent')}
+          showDeliveryFields={!isPriceCheck && can('markupPercent')}
           deliveryTerm={deliveryTerm}
           onDeliveryTermChange={setDeliveryTerm}
           deliveryChargeUsd={deliveryChargeUsd}
@@ -2499,18 +2672,19 @@ const EstimateEditor = ({
 
       <div className="min-w-0 max-w-full overflow-x-hidden">
         <div>
-          {/* Navigation tabs */}
-          <div className="flex space-x-2 mb-6 overflow-x-auto">
-            <button onClick={() => goToSection('structure')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors duration-micro ease-micro ${activeSection === 'structure' ? 'bg-accent-soft text-accent-text font-medium' : 'hover:bg-surface-base text-text-primary'}`}>
-              <Layers className="w-4 h-4" /><span>Structure</span>
-            </button>
-            <button onClick={() => goToSection('slabs')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors duration-micro ease-micro ${activeSection === 'slabs' ? 'bg-accent-soft text-accent-text font-medium' : 'hover:bg-surface-base text-text-primary'}`}>
-              <Calculator className="w-4 h-4" /><span>Price list</span>
-            </button>
-          </div>
+          {!hidePriceListTab && (
+            <div className="flex space-x-2 mb-6 overflow-x-auto">
+              <button onClick={() => goToSection('structure')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors duration-micro ease-micro ${activeSection === 'structure' ? 'bg-accent-soft text-accent-text font-medium' : 'hover:bg-surface-base text-text-primary'}`}>
+                <Layers className="w-4 h-4" /><span>Structure</span>
+              </button>
+              <button onClick={() => goToSection('slabs')} className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors duration-micro ease-micro ${activeSection === 'slabs' ? 'bg-accent-soft text-accent-text font-medium' : 'hover:bg-surface-base text-text-primary'}`}>
+                <Calculator className="w-4 h-4" /><span>Price list</span>
+              </button>
+            </div>
+          )}
 
           {/* Structure section */}
-          {activeSection === 'structure' && (
+          {(activeSection === 'structure' || hidePriceListTab) && (
             <div className="space-y-6">
               <div className="card p-0 overflow-hidden shadow-md">
                 <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] border-b border-border bg-surface-raised">
@@ -2559,6 +2733,7 @@ const EstimateEditor = ({
                     <div className="py-2">
                       <FilmStackVisualizer
                         layers={visualizerLayers}
+                        totalMicron={totalConstructionMicron}
                         displayCurrency={displayCurrencyLabel}
                         showContrib={showStructureCosts}
                       />
@@ -3066,7 +3241,7 @@ const EstimateEditor = ({
                       >
                         <span className="font-mono text-xs font-bold text-navy tabular-nums">
                           {totalConstructionMicron != null && totalConstructionMicron > 0
-                            ? `${totalConstructionMicron.toFixed(2)} µ`
+                            ? `${formatMicronDisplay(totalConstructionMicron)} µ`
                             : '—'}
                         </span>
                       </div>
@@ -3103,6 +3278,7 @@ const EstimateEditor = ({
                   >
                     <FilmStackVisualizer
                       layers={visualizerLayers}
+                      totalMicron={totalConstructionMicron}
                       className="h-full w-full"
                       displayCurrency={displayCurrencyLabel}
                       showContrib={showStructureCosts}
@@ -3169,7 +3345,7 @@ const EstimateEditor = ({
                       {statTile('Length Yield', fmtQty(orderQtyMetrics.lmPerKgReel, 4), 'LM/kg', 'Finished reel running metres per kilogram (m²/kg ÷ reel width)')}
                       {statTile('Piece Yield', fmtQty(orderQtyMetrics.piecesPerKg, 4), 'pcs/kg', 'Finished pieces per kilogram (needs reel width, cut-off, pieces/cut)')}
                       {statTile('Piece Weight', fmtQty(orderQtyMetrics.gramsPerPiece, 4), 'g', 'Grams of film per finished piece')}
-                      {can('filmDensity') && statTile('Total Thickness', fmtQty(totalConstructionMicron, 2), 'µ', 'Total film thickness (substrate µ + ink/adhesive dry gsm ÷ density)')}
+                      {can('filmDensity') && statTile('Total Thickness', formatMicronDisplay(totalConstructionMicron), 'µ', 'Total film thickness (substrate µ + ink/adhesive dry gsm ÷ density)')}
                       {statTile('Total GSM', fmtQty(totalGsm, 2), 'gsm')}
                       {can('filmDensity') && statTile('Average Density', structureDensity, 'g/cm³', 'GSM ÷ thickness µ')}
                     </div>
@@ -3219,7 +3395,7 @@ const EstimateEditor = ({
           )}
 
           {/* Price list — unit / slabs / currency, selling price in selected unit only */}
-          {activeSection === 'slabs' && (
+          {!hidePriceListTab && activeSection === 'slabs' && (
             clientCalcResult ? (
               (() => {
                 const ce = clientCalcResult.estimate;
@@ -3459,7 +3635,7 @@ const EstimateEditor = ({
                 </div>
               )}
 
-              {proposals.length > 0 && (
+              {proposals.length > 0 && !isPriceCheck && (
                 <div className="card">
                   <h4 className="font-display font-semibold text-navy mb-3">Proposal history</h4>
                   <div className="space-y-2">

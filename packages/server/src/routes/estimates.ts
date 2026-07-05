@@ -17,7 +17,9 @@ import { parsePagination, paginate } from '../utils/pagination';
 import {
   computeEstimateStructureSignature,
   computeTemplateStructureSignature,
+  detectProcessInsertMode,
   findEstimateTemplate,
+  insertProcessCompat,
   loadEstimateStructureLayers,
   resolveEstimateProcesses,
 } from '../utils/estimate-processes';
@@ -30,16 +32,19 @@ import {
 import {
   logEstimateStateTransition,
 } from '../utils/estimate-audit';
-import { AppError, isAuthError, sendCaughtError } from '../utils/errors';
+import { AppError, isAuthError, isFkViolation, sendCaughtError } from '../utils/errors';
 import { generateRefNumber } from '../utils/ref-numbers';
 import { cloneEstimate } from '../services/clone-estimate';
 import {
   createQuote,
   deriveToolingFromColors,
+  inheritedQuoteFieldsFromParent,
   isQuoteLocked,
+  loadQuoteForEstimate,
   mapEstimateStatusToQuoteStatus,
   nextEstimateSortOrder,
   syncQuoteStatusFromEstimates,
+  validateEstimateSaveRefs,
 } from '../services/quote-helpers';
 import { logQuoteStatusTransition } from '../utils/quote-audit';
 
@@ -70,7 +75,6 @@ async function quoteLockError(
   return null;
 }
 type LayerRow = typeof schema.layers.$inferSelect;
-type ProcessInsertMode = 'modern' | 'legacy';
 
 function signatureLayerType(
   materialType: string | null | undefined
@@ -78,84 +82,6 @@ function signatureLayerType(
   if (materialType === 'ink') return 'ink';
   if (materialType === 'adhesive') return 'adhesive';
   return 'substrate';
-}
-
-async function insertProcessCompat(
-  dbLike: any,
-  mode: ProcessInsertMode,
-  values: {
-    estimateId: string;
-    name: string;
-    processKey?: string | null;
-    processQuantity?: number;
-    costPerHour: string;
-    costPerKgUsd?: string;
-    speedBasis: string;
-    speedValue: string;
-    setupHours: string;
-    enabled: boolean;
-    runHours?: string | null;
-    totalCost?: string | null;
-  }
-): Promise<void> {
-  if (mode === 'modern') {
-    await dbLike.insert(schema.processes).values({
-      estimateId: values.estimateId,
-      name: values.name,
-      processKey: values.processKey ?? null,
-      processQuantity: values.processQuantity ?? 1,
-      costPerHour: values.costPerHour,
-      costPerKgUsd: values.costPerKgUsd ?? '0',
-      speedBasis: values.speedBasis,
-      speedValue: values.speedValue,
-      setupHours: values.setupHours,
-      enabled: values.enabled,
-      runHours: values.runHours ?? null,
-      totalCost: values.totalCost ?? null,
-    });
-    return;
-  }
-
-  // Legacy schema fallback: older `processes` table without process_key/process_quantity/cost_per_kg_usd.
-  await dbLike.execute(sql`
-    INSERT INTO processes (
-      estimate_id,
-      name,
-      cost_per_hour,
-      speed_basis,
-      speed_value,
-      setup_hours,
-      enabled,
-      run_hours,
-      total_cost
-    ) VALUES (
-      ${values.estimateId},
-      ${values.name},
-      ${values.costPerHour},
-      ${values.speedBasis},
-      ${values.speedValue},
-      ${values.setupHours},
-      ${values.enabled},
-      ${values.runHours ?? null},
-      ${values.totalCost ?? null}
-    )
-  `);
-}
-
-async function detectProcessInsertMode(dbLike: any): Promise<ProcessInsertMode> {
-  const result = await dbLike.execute(sql`
-    SELECT column_name
-    FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'processes'
-  `);
-  const rows = Array.isArray((result as any)?.rows) ? (result as any).rows : (result as any[]);
-  const columns = new Set<string>(rows.map((r: any) => String(r.column_name)));
-  const hasModernColumns =
-    columns.has('process_key') &&
-    columns.has('process_quantity') &&
-    columns.has('cost_per_kg_usd');
-  return hasModernColumns ? 'modern' : 'legacy';
 }
 
 async function getUserVisibilityProfile(db: any, userId: string): Promise<VisibilityProfile> {
@@ -334,6 +260,14 @@ export async function createEstimateRoute(
     const data = EstimateCreateSchema.parse(request.body);
 
     const db = getDatabase();
+
+    const refErr = await validateEstimateSaveRefs(db, tenantId, {
+      layers: data.layers,
+      solventMaterialId: data.solventMaterialId,
+    });
+    if (refErr) {
+      return reply.status(409).send({ error: refErr });
+    }
 
     // Get tenant for currency
     const [tenant] = await db
@@ -775,6 +709,14 @@ async function updateEstimateRoute(
     const lockErr = await quoteLockError(db, tenantId, existing.quoteId);
     if (lockErr) return reply.status(409).send(lockErr);
 
+    const refErr = await validateEstimateSaveRefs(db, tenantId, {
+      layers: data.layers,
+      solventMaterialId: data.solventMaterialId,
+    });
+    if (refErr) {
+      return reply.status(409).send({ error: refErr });
+    }
+
     // PHASE 5 VALIDATION: State transition rules
     // Rule 1: Cannot customize processes unless structure is already forked
     if (data.processesCustomized === true) {
@@ -1205,6 +1147,12 @@ async function updateEstimateRoute(
     if (isAuthError(error) || error instanceof AppError) {
       return sendCaughtError(reply, error, 'Failed to update estimate', 'Update estimate error:');
     }
+    if (isFkViolation(error)) {
+      return reply.status(409).send({
+        error:
+          'A layer material or solvent is no longer in your library. Re-select materials and save again.',
+      });
+    }
     request.log.error({ err: error }, 'Update estimate error');
     return reply.status(500).send({
       error: 'Failed to update estimate',
@@ -1310,15 +1258,21 @@ async function requoteEstimateRoute(
     const skuLabel = body?.skuLabel?.trim() || defaultLabel;
     const variantDescription = body?.variantDescription?.trim() || null;
 
+    const parentQuote = await loadQuoteForEstimate(db, tenantId, source.quoteId);
+    const inherited = inheritedQuoteFieldsFromParent(parentQuote, source);
+    const linkedCustomerId = inherited.isPriceCheck
+      ? null
+      : inherited.customerId ?? source.customerId;
+
     const quote = await createQuote(db, {
       tenantId,
-      customerId: source.customerId,
+      ...inherited,
+      customerId: linkedCustomerId,
       name: quoteName,
       notes: variantDescription,
       displayCurrency,
       exchangeRateUsdToDisplay,
       status: 'draft',
-      deliveryTerm: source.deliveryTerm,
       defaultPrintColorCount: source.printColorCount,
       defaultCostPerColor: source.costPerColor,
       defaultToolingBillingMode: source.toolingBillingMode as
@@ -1331,7 +1285,7 @@ async function requoteEstimateRoute(
     const { estimate: newEstimate, sourceLayers } = await cloneEstimate(db, id, {
       tenantId,
       quoteId: quote.id,
-      customerId: source.customerId,
+      customerId: linkedCustomerId,
       jobName: skuLabel,
       skuLabel,
       notes: variantDescription,
@@ -1447,14 +1401,20 @@ async function duplicateEstimateRoute(
       return reply.status(404).send({ error: 'Source estimate not found' });
     }
 
+    const parentQuote = await loadQuoteForEstimate(db, tenantId, source.quoteId);
+    const inherited = inheritedQuoteFieldsFromParent(parentQuote, source);
+    const linkedCustomerId = inherited.isPriceCheck
+      ? null
+      : inherited.customerId ?? source.customerId;
+
     const quote = await createQuote(db, {
       tenantId,
-      customerId: source.customerId,
+      ...inherited,
+      customerId: linkedCustomerId,
       name: `${source.jobName} (Copy)`,
       displayCurrency: source.displayCurrency,
       exchangeRateUsdToDisplay: source.exchangeRateUsdToDisplay,
       status: 'draft',
-      deliveryTerm: source.deliveryTerm,
       defaultPrintColorCount: source.printColorCount,
       defaultCostPerColor: source.costPerColor,
       defaultToolingBillingMode: source.toolingBillingMode as
@@ -1467,7 +1427,7 @@ async function duplicateEstimateRoute(
     const { estimate: newEstimate } = await cloneEstimate(db, id, {
       tenantId,
       quoteId: quote.id,
-      customerId: source.customerId,
+      customerId: linkedCustomerId,
       jobName: `${source.jobName} (Copy)`,
       skuLabel: source.skuLabel ?? source.jobName,
       brand: source.brand,
@@ -1717,11 +1677,15 @@ export async function registerEstimateRoutes(fastify: FastifyInstance) {
         }
 
         if (proposal.pdfPath) {
-          const { readStoredProposalPdf } = await import('../services/proposal-pdf');
-          const buffer = readStoredProposalPdf(proposal.pdfPath);
-          if (buffer) {
-            reply.header('Content-Type', 'application/pdf');
-            return reply.send(buffer);
+          try {
+            const { readStoredProposalPdf } = await import('../services/proposal-pdf');
+            const buffer = readStoredProposalPdf(proposal.pdfPath);
+            if (buffer) {
+              reply.header('Content-Type', 'application/pdf');
+              return reply.send(buffer);
+            }
+          } catch (readErr) {
+            request.log.warn({ err: readErr, proposalId }, 'Stored proposal PDF unreadable; regenerating');
           }
         }
 
@@ -1731,6 +1695,12 @@ export async function registerEstimateRoutes(fastify: FastifyInstance) {
         reply.header('Content-Type', 'application/pdf');
         return reply.send(buffer);
       } catch (error: unknown) {
+        if (error instanceof Error && error.message === 'Estimate not found') {
+          return reply.status(404).send({ error: error.message });
+        }
+        if (error instanceof Error && error.message.includes('not available')) {
+          return reply.status(403).send({ error: error.message });
+        }
     return sendCaughtError(reply, error, 'Failed to get proposal PDF', 'Get proposal PDF error:');
   }
     }

@@ -92,7 +92,10 @@ export function JobHeaderFields({
   showDeliveryFields = false,
   displayCurrency,
   showSkuFields = false,
+  showVariantField = false,
   showDevCostFields = false,
+  hideCustomer = false,
+  jobNameLabel = 'Job name',
 }: {
   customerId: string;
   onCustomerChange: (id: string) => void;
@@ -128,7 +131,12 @@ export function JobHeaderFields({
   showDeliveryFields?: boolean;
   displayCurrency?: string;
   showSkuFields?: boolean;
+  showVariantField?: boolean;
   showDevCostFields?: boolean;
+  /** Price check — no customer link. */
+  hideCustomer?: boolean;
+  /** Label for job name field (price check: "Product group"). */
+  jobNameLabel?: string;
   productType?: string;
   onProductTypeChange?: (type: string) => void;
   productTypeOptions?: ProductTypeOption[];
@@ -199,7 +207,13 @@ export function JobHeaderFields({
       .join(' '),
   };
 
-  const topRowGridClass = showSkuFields
+  const topRowGridClass = hideCustomer
+    ? showJobName && onJobNameChange != null
+      ? showVariantField
+        ? 'lg:grid-cols-[minmax(12rem,1fr)_minmax(8rem,0.75fr)]'
+        : 'lg:grid-cols-[minmax(12rem,1fr)]'
+      : 'hidden'
+    : showSkuFields
     ? showJobName && onJobNameChange != null
       ? 'lg:grid-cols-[minmax(9rem,1.225fr)_minmax(9rem,1.225fr)_minmax(5rem,0.5fr)_minmax(5.5rem,0.9fr)_minmax(5rem,0.55fr)]'
       : 'lg:grid-cols-[minmax(10rem,1.75fr)_minmax(5rem,0.5fr)_minmax(5.5rem,0.9fr)_minmax(5rem,0.55fr)]'
@@ -232,19 +246,21 @@ export function JobHeaderFields({
   return (
     <div className="space-y-3">
       <div className={`grid grid-cols-1 gap-x-3 gap-y-3 ${topRowGridClass}`}>
-        <div className="min-w-0">
-          <label className={labelClass}>Customer name</label>
-          <CustomerAutocomplete
-            value={customerId}
-            onChange={onCustomerChange}
-            onDraftChange={onCustomerDraftChange}
-            compact
-          />
-        </div>
+        {!hideCustomer && (
+          <div className="min-w-0">
+            <label className={labelClass}>Customer name</label>
+            <CustomerAutocomplete
+              value={customerId}
+              onChange={onCustomerChange}
+              onDraftChange={onCustomerDraftChange}
+              compact
+            />
+          </div>
+        )}
 
         {showJobName && onJobNameChange != null ? (
           <div className="min-w-0">
-            <label className={labelClass}>Job name</label>
+            <label className={labelClass}>{jobNameLabel}</label>
             <input
               type="text"
               placeholder={jobNamePlaceholder}
@@ -255,6 +271,19 @@ export function JobHeaderFields({
           </div>
         ) : showSkuFields ? null : (
           <div className="hidden lg:block" aria-hidden />
+        )}
+
+        {showVariantField && (
+          <div className="min-w-0">
+            <label className={labelClass}>Variant</label>
+            <input
+              type="text"
+              className={fieldClass}
+              value={skuLabel ?? ''}
+              onChange={(e) => onSkuLabelChange?.(e.target.value)}
+              placeholder="e.g. 200 ml"
+            />
+          </div>
         )}
 
         {showSkuFields && (

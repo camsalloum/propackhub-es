@@ -58,21 +58,24 @@ export default function QuoteSummaryPanel({
     ? new Date(validUntil).toLocaleDateString()
     : null;
 
+  const showRfq = Boolean(rfqNumber.trim());
+
   return (
     <div className="card py-3 px-4 sm:px-5">
       <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1 text-xs text-mist min-w-[8rem]">
-          RFQ number
-          <input
-            type="text"
-            className="input input-compact text-sm w-full min-w-[8rem]"
-            value={rfqNumber}
-            disabled={locked}
-            placeholder="Optional"
-            onChange={(e) => setRfqNumber(e.target.value)}
-            onBlur={() => void save()}
-          />
-        </label>
+        {showRfq && (
+          <label className="flex flex-col gap-1 text-xs text-mist min-w-[8rem]">
+            RFQ number
+            <input
+              type="text"
+              className="input input-compact text-sm w-full min-w-[8rem]"
+              value={rfqNumber}
+              disabled={locked}
+              onChange={(e) => setRfqNumber(e.target.value)}
+              onBlur={() => void save()}
+            />
+          </label>
+        )}
         <label className="flex flex-col gap-1 text-xs text-mist min-w-[5rem]">
           Incoterm
           <input

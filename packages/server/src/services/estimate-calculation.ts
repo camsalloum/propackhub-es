@@ -21,12 +21,21 @@ import { resolveEstimateProcesses } from '../utils/estimate-processes';
 import { cormDisplayPerKgToEngineUsd } from '../utils/currency';
 
 type Db = ReturnType<typeof import('../db').getDatabase>;
+type EstimateRow = typeof schema.estimates.$inferSelect;
+type LayerRow = typeof schema.layers.$inferSelect;
 
-export async function calculateAndPersistEstimate(
+export type EstimateCalculationBundle = {
+  result: CalculationResult;
+  estimate: EstimateRow;
+  layers: LayerRow[];
+};
+
+/** Load DB rows and run the engine — same inputs as persisted /calculate. */
+export async function calculateEstimateFromDatabase(
   db: Db,
   estimateId: string,
   tenantId: string
-): Promise<CalculationResult> {
+): Promise<EstimateCalculationBundle> {
   const [estimate] = await db
     .select()
     .from(schema.estimates)
@@ -65,7 +74,6 @@ export async function calculateAndPersistEstimate(
     .where(eq(schema.slabs.estimateId, estimateId))
     .orderBy(schema.slabs.quantityKg);
 
-  // Manufacturing & Operating method is a tenant setting (admin-defined).
   const [tenantRow] = await db
     .select({ operatingCostMethod: schema.tenants.operatingCostMethod })
     .from(schema.tenants)
@@ -83,7 +91,6 @@ export async function calculateAndPersistEstimate(
   ]);
   const wasteBands = wasteBandsForPrintMode(wasteBandsByMode, printMode);
 
-  // Fixed CoRM base (display currency/kg) for print mode; engine scales with waste %.
   let cormPerKgUsd: number | null = 0;
   if (tenantRow?.operatingCostMethod === 'fixed_per_group') {
     const fx = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;
@@ -141,6 +148,36 @@ export async function calculateAndPersistEstimate(
   estimateForEngine.dimensions.printingWebClass = derivePrintingWebClass(layerRefs, materialMap);
 
   const result = calculateEstimate(estimateForEngine, materialMap);
+  return { result, estimate, layers };
+}
+
+export async function calculateAndPersistEstimate(
+  db: Db,
+  estimateId: string,
+  tenantId: string
+): Promise<CalculationResult> {
+  const { result, estimate, layers } = await calculateEstimateFromDatabase(db, estimateId, tenantId);
+
+  const materials = await db
+    .select()
+    .from(schema.materials)
+    .where(eq(schema.materials.tenantId, tenantId));
+
+  const layerPriceOverrides = new Map<string, number>();
+  for (const layer of layers) {
+    if (layer.unit_cost_snapshot_usd) {
+      const override = parseFloat(layer.unit_cost_snapshot_usd);
+      if (override > 0) {
+        layerPriceOverrides.set(layer.materialId, override);
+      }
+    }
+  }
+
+  const slabs = await db
+    .select()
+    .from(schema.slabs)
+    .where(eq(schema.slabs.estimateId, estimateId))
+    .orderBy(schema.slabs.quantityKg);
 
   const safe = (n: number | undefined | null): number =>
     typeof n === 'number' && Number.isFinite(n) ? n : 0;

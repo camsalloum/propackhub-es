@@ -1,13 +1,22 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-05 (structure / layer build-up UI polish)
-**Session focus:** Phases 1–4 shipped. Structure table + Layer build-up UX fixes.
+**Last updated:** 2026-07-05 (end-of-session memory)
+**Session focus:** Price checks explorer hierarchy, re-quote/save fixes, clean DB for tomorrow’s testing.
 
 ---
 
 ## Where we stopped (read this first next session)
 
-### **START HERE:** Multi-SKU quotes & customer explorer
+### **START HERE:** Fresh price-check testing
+
+**DB is empty** — all estimates hard-deleted (`db:purge-estimates --all`, 29 rows) and quotes soft-deleted (3 rows). Price checks folder should show **No price checks yet**.
+
+**Test flow:**
+1. Estimates → **Price checks** → **New price check**
+2. Add first structure (template or scratch)
+3. Back to explorer → same card → **Add structure** for a 2nd variant on the **same** session
+4. Confirm explorer shows **one price check card** (`date · PKG ref`) with **nested structures**
+5. **New check** on a structure = re-quote (new session, fresh RM) — stays price check (no RFQ panel)
 
 Plan: [`docs/MULTI_SKU_QUOTE_EXPLORER_PLAN.md`](./MULTI_SKU_QUOTE_EXPLORER_PLAN.md).
 
@@ -19,11 +28,48 @@ Plan: [`docs/MULTI_SKU_QUOTE_EXPLORER_PLAN.md`](./MULTI_SKU_QUOTE_EXPLORER_PLAN.
 | 3 | Combined price list + colors/specs + solid-% / Contrib. + §0.4.1 | ✅ Done |
 | 4 | Structured multi-SKU PDF + Excel + sent lock + status sync/audit | ✅ Done |
 
-**Next implement session:** Phase 5 optional (whole-quote re-quote, RFQ, global search, versioning UI) — or other product work.
+**Next implement session:** Phase 5 optional (whole-quote re-quote, RFQ **entity**, global search, versioning UI) — or continue price-check / commercial polish from user testing.
 
-**2026-07-05 — New quote UX:** Customer required on New quote (search/create via `CustomerAutocomplete`); variant name → `quotes.name`, variant description → `quotes.notes`; params flow to first estimate. **Price check** → `is_price_check` flag + dedicated **Price checks** folder (`/estimates/customers/price-check`). **Repeat order:** pick customer → explorer `?repeatOrder=1` → select variant → re-quote with editable name/description (`POST /estimates/:id/requote` body).
+---
 
-**Phase 4 notes:** `GET /quotes/:id/proposal.pdf` (cover/summary/terms/dev charges/per-SKU/signature); Excel on combined price list; sent → estimates read-only (Unlock or Re-quote); draft→saved when all estimates non-draft; `activity_logs` for quote status/sent_at/valid_until.
+### 2026-07-05 session — shipped (summary)
+
+| Area | What |
+|------|------|
+| **Price check explorer** | Default group **Price check** (not flat month). Card title = `date · PKG ref`; product group in meta. Structures nested under each check. **Month** = month wrapper → nested price checks → structures. **Add structure** on card; button **New price check**. Structure action **New check** = re-quote. |
+| **Delete UX** | Confirm dialog **anchors beside trash** (CustomerExplorer + Estimates list) — no jump to screen center. |
+| **Re-quote type** | `POST /estimates/:id/requote` + legacy duplicate inherit parent `isPriceCheck`, RFQ, terms. Price-check re-quotes no longer become commercial (RFQ panel). |
+| **RFQ UI** | `QuoteSummaryPanel` shows RFQ field **only when quote already has a number**. New commercial quotes can still set RFQ at creation. Price checks: **no RFQ**. |
+| **Re-quote banner** | “Price changes vs original” hidden when all material deltas ≈ 0% (`meaningfulRequotePriceChanges`). |
+| **Save / PATCH** | `validateEstimateSaveRefs` → **409** with clear message for stale `materialId` / solvent (was opaque 500). Client pre-check + API surfaces `detail` in save alerts. Re-save does not force `sent` on already-saved estimates. |
+| **Create estimate** | First `POST /estimates` no longer fails Zod on `orderQuantityKg: 0`, zero slabs, bad UUIDs; client validates product group + variant name; price-check URL uses `skuLabel`. |
+| **Price list** | Structure column uses substrate **grade** (not family) in `buildStructureSummary`. |
+| **Micron display** | `formatMicronDisplay` truncates to 2 dp (structure table + layer build-up). |
+
+**Earlier same day (still valid):** price-check workspace scope (no customer/RFQ/PDF/Mark sent), combined price list, slab modes (Predefined/Custom), custom slab prefs per user, tooling scenario, solvent label renames, optional RFQ on commercial quotes, proposal PDF fix, save loop fix, duplicate estimate 500 fix.
+
+---
+
+### Product rules — price check vs commercial (locked this session)
+
+| | **Price check** | **Commercial quote** |
+|--|-----------------|----------------------|
+| Container | `quotes.is_price_check = true`, no customer | Customer required |
+| Folder | `/estimates/customers/price-check` | Per-customer explorer |
+| Combine structures | **Add structure** on same quote | Add estimate on same quote |
+| New session | **New price check** or **New check** (re-quote) | New quote or Re-quote |
+| RFQ | Never | Optional (`rfq_number`); panel only if set |
+| Explorer identity | `date · PKG ref` (not product group alone) | Quote name + PKG + RFQ if any |
+
+---
+
+### Prior notes (unchanged)
+
+**2026-07-05 — Price list prefs:** Custom slab quantities persist per user (by unit). **Below MOQ** warning on custom slabs (non-blocking).
+
+**2026-07-05 — New quote UX:** Customer-first new quote; repeat order via `?repeatOrder=1` + re-quote body.
+
+**Phase 4 notes:** Multi-SKU PDF, Excel, sent lock, quote status sync/audit — all shipped 2026-07-04.
 
 ### Prior: Commit housekeeping if not yet committed
 

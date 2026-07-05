@@ -154,6 +154,115 @@ export function dimensionsForSave(
   return next;
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function optionalUuid(value: unknown): string | undefined {
+  const s = typeof value === 'string' ? value.trim() : '';
+  return UUID_RE.test(s) ? s : undefined;
+}
+
+function positiveNumber(value: unknown): number | undefined {
+  const n = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+function nonnegativeNumber(value: unknown): number | undefined {
+  const n = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
+/** Drop values the create/PATCH Zod schema rejects (0 qty, empty UUIDs, bad enums). */
+export function sanitizeEstimateSavePayload(
+  payload: Record<string, unknown>
+): Record<string, unknown> {
+  const next = { ...payload };
+
+  if (next.orderQuantityKg !== undefined) {
+    const qty = positiveNumber(next.orderQuantityKg);
+    if (qty != null) next.orderQuantityKg = qty;
+    else delete next.orderQuantityKg;
+  }
+
+  if (next.customerId !== undefined) {
+    const id = optionalUuid(next.customerId);
+    if (id) next.customerId = id;
+    else delete next.customerId;
+  }
+
+  if (next.quoteId !== undefined) {
+    const id = optionalUuid(next.quoteId);
+    if (id) next.quoteId = id;
+    else delete next.quoteId;
+  }
+
+  if (next.solventMaterialId !== undefined) {
+    const id = optionalUuid(next.solventMaterialId);
+    if (id) next.solventMaterialId = id;
+    else delete next.solventMaterialId;
+  }
+
+  if (next.pricingMethod !== 'markup' && next.pricingMethod !== 'margin_per_kg') {
+    delete next.pricingMethod;
+  }
+
+  if (next.solventRatio !== undefined) {
+    const ratio = positiveNumber(next.solventRatio);
+    if (ratio != null) next.solventRatio = ratio;
+    else delete next.solventRatio;
+  }
+
+  if (Array.isArray(next.slabs)) {
+    const slabs = (next.slabs as Array<{ quantityKg?: unknown; pricePerKg?: unknown }>)
+      .map((s) => {
+        const quantityKg = positiveNumber(s.quantityKg);
+        if (quantityKg == null) return null;
+        return {
+          quantityKg,
+          pricePerKg: nonnegativeNumber(s.pricePerKg) ?? 0,
+        };
+      })
+      .filter((s): s is { quantityKg: number; pricePerKg: number } => s != null);
+    if (slabs.length > 0) next.slabs = slabs;
+    else delete next.slabs;
+  }
+
+  for (const key of [
+    'marginValuePerKgUsd',
+    'cormPerKgUsd',
+    'cormPerKgPlain',
+    'moqKg',
+    'solventCostPerKgUsd',
+    'cleaningSolventKgPerJob',
+    'toolingChargeUsd',
+    'deliveryChargeUsd',
+  ] as const) {
+    if (next[key] !== undefined) {
+      const n = nonnegativeNumber(next[key]);
+      if (n != null) next[key] = n;
+      else delete next[key];
+    }
+  }
+
+  return next;
+}
+
+export function validateSaveMaterialRefs(input: {
+  layers: Array<{ materialId: string }>;
+  materialIds: Iterable<string>;
+  needsSolventMix: boolean;
+  solventMaterialId?: string | null;
+}): string | null {
+  const known = new Set(input.materialIds);
+  if (input.layers.some((l) => !l.materialId?.trim() || !known.has(l.materialId))) {
+    return 'Select a valid material for every layer before saving.';
+  }
+  if (input.needsSolventMix && input.solventMaterialId && !known.has(input.solventMaterialId)) {
+    return 'Select a valid solvent material before saving.';
+  }
+  return null;
+}
+
 export function estimateNeedsConfiguration(dimensions?: Record<string, unknown> | null): boolean {
   return Boolean(dimensions?.configureFromTemplate);
 }

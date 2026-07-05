@@ -561,6 +561,14 @@ WHERE customer_id IS NULL
 CREATE INDEX IF NOT EXISTS quotes_price_check_idx ON quotes (tenant_id, is_price_check)
   WHERE deleted_at IS NULL AND is_price_check = true;
 
+-- Process table modern columns (process_key, process_quantity, cost_per_kg_usd)
+ALTER TABLE processes ADD COLUMN IF NOT EXISTS process_key VARCHAR(255);
+ALTER TABLE processes ADD COLUMN IF NOT EXISTS process_quantity INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE processes ADD COLUMN IF NOT EXISTS cost_per_kg_usd DECIMAL(12, 4) NOT NULL DEFAULT 0;
+UPDATE processes
+SET process_key = LOWER(REPLACE(TRIM(name), ' ', '_'))
+WHERE process_key IS NULL;
+
 -- Optional customer RFQ reference on quotes (2026-07-05)
 DO $$ BEGIN
   ALTER TABLE quotes ADD COLUMN IF NOT EXISTS rfq_number varchar(128);

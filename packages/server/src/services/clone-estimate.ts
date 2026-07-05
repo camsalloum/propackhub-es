@@ -5,6 +5,7 @@ import { getMasterDataVersion } from '../db/platform-master-data';
 import { buildLayerInsertValues, toMaterialLineageSource } from '../utils/layer-lineage';
 import { generateRefNumber } from '../utils/ref-numbers';
 import { deriveToolingFromColors, type ToolingBillingMode, type ToolingScenario } from './quote-helpers';
+import { insertEstimateProcess, loadRawEstimateProcesses } from '../utils/estimate-processes';
 
 type EstimateRow = typeof schema.estimates.$inferSelect;
 type LayerRow = typeof schema.layers.$inferSelect;
@@ -46,39 +47,6 @@ export type CloneEstimateResult = {
   sourceLayers: LayerRow[];
 };
 
-async function insertProcessRow(
-  db: Database,
-  values: {
-    estimateId: string;
-    name: string;
-    processKey?: string | null;
-    processQuantity?: number;
-    costPerHour: string;
-    costPerKgUsd?: string;
-    speedBasis: string;
-    speedValue: string;
-    setupHours: string;
-    enabled: boolean;
-    runHours?: string | null;
-    totalCost?: string | null;
-  }
-): Promise<void> {
-  await db.insert(schema.processes).values({
-    estimateId: values.estimateId,
-    name: values.name,
-    processKey: values.processKey ?? null,
-    processQuantity: values.processQuantity ?? 1,
-    costPerHour: values.costPerHour,
-    costPerKgUsd: values.costPerKgUsd ?? '0',
-    speedBasis: values.speedBasis,
-    speedValue: values.speedValue,
-    setupHours: values.setupHours,
-    enabled: values.enabled,
-    runHours: values.runHours ?? null,
-    totalCost: values.totalCost ?? null,
-  });
-}
-
 /**
  * Snapshot-clone an estimate into a target quote.
  * Shared by re-quote (new quote, refresh RM) and same-quote duplicate (keep RM snapshots).
@@ -109,10 +77,7 @@ export async function cloneEstimate(
     .where(eq(schema.layers.estimateId, sourceId))
     .orderBy(schema.layers.position);
 
-  const sourceProcesses = await db
-    .select()
-    .from(schema.processes)
-    .where(eq(schema.processes.estimateId, sourceId));
+  const sourceProcesses = await loadRawEstimateProcesses(db, sourceId);
 
   const sourceSlabs = await db
     .select()
@@ -251,7 +216,7 @@ export async function cloneEstimate(
   }
 
   for (const process of sourceProcesses) {
-    await insertProcessRow(db, {
+    await insertEstimateProcess(db, {
       estimateId: newEstimate.id,
       name: process.name,
       processKey: process.processKey,

@@ -134,7 +134,18 @@ export function sendCaughtError(
       )
     );
   }
+  if (isFkViolation(err)) {
+    return reply.status(409).send(
+      errorBody(
+        'FK_IN_USE',
+        'A referenced material or record no longer exists. Refresh and re-select materials.'
+      )
+    );
+  }
   const logger = reply.request?.log ?? log;
   logger.error({ err }, logLabel ?? internalMessage);
-  return reply.status(500).send({ error: internalMessage });
+  return reply.status(500).send({
+    error: internalMessage,
+    detail: err instanceof Error ? err.message : String(err),
+  });
 }

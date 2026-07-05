@@ -11,17 +11,11 @@ import {
   renderMultiSkuProposalPdf,
   type MultiSkuEstimateSection,
 } from '../utils/pdf-proposal-kit';
-import { structureIsPrinted, wasteBandsForPrintMode, plainCormFromPrinted } from '@es/engine';
-import {
-  getPlatformWasteBandsByPrintMode,
-  getPlatformCormScaleWithWaste,
-} from '../db/platform-master-data';
-import { calculateEstimateFromRows } from '../utils/estimate-engine-input';
-import { cormDisplayPerKgToEngineUsd } from '../utils/currency';
 import {
   buildStructureSummary,
   developmentTotalDisplay,
 } from './quote-helpers';
+import { calculateEstimateFromDatabase } from './estimate-calculation';
 
 type Db = ReturnType<typeof import('../db').getDatabase>;
 
@@ -71,84 +65,19 @@ export async function buildProposalPdfBuffer(
   tenantId: string,
   userId: string
 ): Promise<Buffer> {
-  const [estimate] = await db
-    .select()
-    .from(schema.estimates)
-    .where(and(eq(schema.estimates.id, estimateId), eq(schema.estimates.tenantId, tenantId)));
-
-  if (!estimate) {
-    throw new Error('Estimate not found');
-  }
-
   const profile = await getUserVisibilityProfile(db, userId);
   if (!profile.proposalPdf) {
     throw new Error('Proposal PDF is not available for this user');
   }
 
-  const layers = await db
-    .select()
-    .from(schema.layers)
-    .where(eq(schema.layers.estimateId, estimateId))
-    .orderBy(schema.layers.position);
-
-  const materials = await db
-    .select()
-    .from(schema.materials)
-    .where(eq(schema.materials.tenantId, tenantId));
-
-  const processes = await db
-    .select()
-    .from(schema.processes)
-    .where(eq(schema.processes.estimateId, estimateId));
-
-  const slabs = await db
-    .select()
-    .from(schema.slabs)
-    .where(eq(schema.slabs.estimateId, estimateId))
-    .orderBy(asc(schema.slabs.sortOrder), asc(schema.slabs.quantityKg));
-
-  const materialTypeById = new Map(materials.map((m) => [m.id, m.type]));
-  const printMode = structureIsPrinted(
-    layers.map((l) => ({ type: materialTypeById.get(l.materialId) ?? null }))
-  )
-    ? 'printed'
-    : 'plain';
-  const [wasteBandsByMode, cormScaleWithWaste, tenantRow] = await Promise.all([
-    getPlatformWasteBandsByPrintMode(),
-    getPlatformCormScaleWithWaste(),
-    db
-      .select({ operatingCostMethod: schema.tenants.operatingCostMethod })
-      .from(schema.tenants)
-      .where(eq(schema.tenants.id, tenantId))
-      .then((rows) => rows[0]),
-  ]);
-  const wasteBands = wasteBandsForPrintMode(wasteBandsByMode, printMode);
-  const fx = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;
-  const cormPrinted = estimate.cormPerKgUsd != null ? parseFloat(estimate.cormPerKgUsd) : 0;
-  const cormPlain =
-    estimate.cormPerKgPlain != null
-      ? parseFloat(estimate.cormPerKgPlain)
-      : plainCormFromPrinted(cormPrinted);
-  const cormDisplay = printMode === 'printed' ? cormPrinted : cormPlain;
-
-  const result = calculateEstimateFromRows({
-    estimate,
-    tenantId,
-    layers,
-    materials,
-    processes,
-    slabs,
-    wasteBands,
-    cormScaleWithWaste,
-    operatingCostMethod: tenantRow?.operatingCostMethod ?? 'markup_over_rm',
-    cormPerKgUsd: cormDisplayPerKgToEngineUsd(cormDisplay, fx),
-  });
+  const { result, estimate, layers } = await calculateEstimateFromDatabase(db, estimateId, tenantId);
 
   const fxRate = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;
-  const saleDisplay = usdToDisplay(
+  const saleRaw = usdToDisplay(
     result.estimate.salePricePerKg || parseFloat(estimate.salePricePerKg || '0'),
     fxRate
   );
+  const saleDisplay = Number.isFinite(saleRaw) ? saleRaw : 0;
   const slabDisplay = slabsUsdToDisplay(result.slabs, fxRate);
 
   const [tenant] = await db
@@ -233,20 +162,10 @@ export async function buildQuoteProposalPdfBuffer(
     throw new Error('Quote has no estimates');
   }
 
-  const materials = await db
+  const [tenant] = await db
     .select()
-    .from(schema.materials)
-    .where(eq(schema.materials.tenantId, tenantId));
-
-  const [wasteBandsByMode, cormScaleWithWaste, tenant] = await Promise.all([
-    getPlatformWasteBandsByPrintMode(),
-    getPlatformCormScaleWithWaste(),
-    db
-      .select()
-      .from(schema.tenants)
-      .where(eq(schema.tenants.id, tenantId))
-      .then((rows) => rows[0]),
-  ]);
+    .from(schema.tenants)
+    .where(eq(schema.tenants.id, tenantId));
 
   const customerName = quote.customerId
     ? (
@@ -273,57 +192,15 @@ export async function buildQuoteProposalPdfBuffer(
   }> = [];
 
   for (const estimate of estimates) {
-    const layers = await db
-      .select()
-      .from(schema.layers)
-      .where(eq(schema.layers.estimateId, estimate.id))
-      .orderBy(schema.layers.position);
-
-    const processes = await db
-      .select()
-      .from(schema.processes)
-      .where(eq(schema.processes.estimateId, estimate.id));
-
-    const slabs = await db
-      .select()
-      .from(schema.slabs)
-      .where(eq(schema.slabs.estimateId, estimate.id))
-      .orderBy(asc(schema.slabs.sortOrder), asc(schema.slabs.quantityKg));
-
-    const materialTypeById = new Map(materials.map((m) => [m.id, m.type]));
-    const printMode = structureIsPrinted(
-      layers.map((l) => ({ type: materialTypeById.get(l.materialId) ?? null }))
-    )
-      ? 'printed'
-      : 'plain';
-    const wasteBands = wasteBandsForPrintMode(wasteBandsByMode, printMode);
+    const { result } = await calculateEstimateFromDatabase(db, estimate.id, tenantId);
     const fxRate = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;
-    const cormPrinted = estimate.cormPerKgUsd != null ? parseFloat(estimate.cormPerKgUsd) : 0;
-    const cormPlain =
-      estimate.cormPerKgPlain != null
-        ? parseFloat(estimate.cormPerKgPlain)
-        : plainCormFromPrinted(cormPrinted);
-    const cormDisplay = printMode === 'printed' ? cormPrinted : cormPlain;
-
-    const result = calculateEstimateFromRows({
-      estimate,
-      tenantId,
-      layers,
-      materials,
-      processes,
-      slabs,
-      wasteBands,
-      cormScaleWithWaste,
-      operatingCostMethod: tenant?.operatingCostMethod ?? 'markup_over_rm',
-      cormPerKgUsd: cormDisplayPerKgToEngineUsd(cormDisplay, fxRate),
-    });
-
-    const saleDisplay = showSelling
+    const saleRaw = showSelling
       ? usdToDisplay(
           result.estimate.salePricePerKg || parseFloat(estimate.salePricePerKg || '0'),
           fxRate
         )
       : 0;
+    const saleDisplay = Number.isFinite(saleRaw) ? saleRaw : 0;
     const slabDisplay = showSlabs ? slabsUsdToDisplay(result.slabs, fxRate) : [];
     const structureSummary = await buildStructureSummary(db, estimate.id);
     const skuLabel =

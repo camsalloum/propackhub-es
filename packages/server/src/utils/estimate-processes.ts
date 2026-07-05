@@ -236,6 +236,97 @@ export async function loadRawEstimateProcesses(db: Db, estimateId: string): Prom
   }
 }
 
+export type ProcessInsertMode = 'modern' | 'legacy';
+
+export async function detectProcessInsertMode(dbLike: Db): Promise<ProcessInsertMode> {
+  const result = await dbLike.execute(sql`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'processes'
+  `);
+  const rows = Array.isArray((result as { rows?: unknown[] })?.rows)
+    ? (result as { rows: unknown[] }).rows
+    : (result as unknown[]);
+  const columns = new Set<string>(
+    rows.map((r) => String((r as { column_name: string }).column_name))
+  );
+  const hasModernColumns =
+    columns.has('process_key') &&
+    columns.has('process_quantity') &&
+    columns.has('cost_per_kg_usd');
+  return hasModernColumns ? 'modern' : 'legacy';
+}
+
+export async function insertProcessCompat(
+  dbLike: Db,
+  mode: ProcessInsertMode,
+  values: {
+    estimateId: string;
+    name: string;
+    processKey?: string | null;
+    processQuantity?: number;
+    costPerHour: string;
+    costPerKgUsd?: string;
+    speedBasis: string;
+    speedValue: string;
+    setupHours: string;
+    enabled: boolean;
+    runHours?: string | null;
+    totalCost?: string | null;
+  }
+): Promise<void> {
+  if (mode === 'modern') {
+    await dbLike.insert(schema.processes).values({
+      estimateId: values.estimateId,
+      name: values.name,
+      processKey: values.processKey ?? null,
+      processQuantity: values.processQuantity ?? 1,
+      costPerHour: values.costPerHour,
+      costPerKgUsd: values.costPerKgUsd ?? '0',
+      speedBasis: values.speedBasis,
+      speedValue: values.speedValue,
+      setupHours: values.setupHours,
+      enabled: values.enabled,
+      runHours: values.runHours ?? null,
+      totalCost: values.totalCost ?? null,
+    });
+    return;
+  }
+
+  await dbLike.execute(sql`
+    INSERT INTO processes (
+      estimate_id,
+      name,
+      cost_per_hour,
+      speed_basis,
+      speed_value,
+      setup_hours,
+      enabled,
+      run_hours,
+      total_cost
+    ) VALUES (
+      ${values.estimateId},
+      ${values.name},
+      ${values.costPerHour},
+      ${values.speedBasis},
+      ${values.speedValue},
+      ${values.setupHours},
+      ${values.enabled},
+      ${values.runHours ?? null},
+      ${values.totalCost ?? null}
+    )
+  `);
+}
+
+export async function insertEstimateProcess(
+  dbLike: Db,
+  values: Parameters<typeof insertProcessCompat>[2]
+): Promise<void> {
+  const mode = await detectProcessInsertMode(dbLike);
+  await insertProcessCompat(dbLike, mode, values);
+}
+
 export async function findEstimateTemplate(db: Db, estimate: EstimateRow): Promise<TemplateRow | null> {
   const activeTenantFilter = and(
     eq(schema.structureTemplates.tenantId, estimate.tenantId),

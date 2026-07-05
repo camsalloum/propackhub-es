@@ -95,6 +95,7 @@ function App() {
           <Route path="estimates/all" element={<EstimatesList />} />
           <Route path="estimates/customers/:customerId" element={<CustomerExplorer />} />
           <Route path="quotes/:quoteId" element={<QuoteWorkspace />} />
+          <Route path="quotes/:quoteId/price-list" element={<QuoteWorkspace />} />
           <Route path="quotes/:quoteId/estimates/:estimateId" element={<QuoteWorkspace />} />
           <Route path="customers" element={<CustomersList />} />
           <Route path="customers/:id" element={<CustomerDetail />} />

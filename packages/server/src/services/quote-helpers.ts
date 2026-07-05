@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { Database } from '../db';
 import { schema } from '../db';
 import { displayToUsd } from '../utils/currency';
@@ -148,6 +148,63 @@ export async function createQuote(
   return inserted[0];
 }
 
+export async function loadQuoteForEstimate(
+  db: Database,
+  tenantId: string,
+  quoteId: string | null | undefined
+): Promise<QuoteRow | null> {
+  if (!quoteId) return null;
+  const [row] = await db
+    .select()
+    .from(schema.quotes)
+    .where(
+      and(
+        eq(schema.quotes.id, quoteId),
+        eq(schema.quotes.tenantId, tenantId),
+        isNull(schema.quotes.deletedAt)
+      )
+    );
+  return row ?? null;
+}
+
+/** Carry parent quote commercial/price-check flags when cloning into a new quote row. */
+export function inheritedQuoteFieldsFromParent(
+  parent: QuoteRow | null,
+  sourceEstimate: { customerId?: string | null; deliveryTerm?: string | null }
+): Pick<
+  CreateQuoteInput,
+  'isPriceCheck' | 'customerId' | 'rfqNumber' | 'paymentTerms' | 'remarks' | 'deliveryTerm'
+> {
+  if (parent?.isPriceCheck) {
+    return {
+      isPriceCheck: true,
+      customerId: null,
+      rfqNumber: null,
+      paymentTerms: null,
+      remarks: null,
+      deliveryTerm: null,
+    };
+  }
+  if (parent) {
+    return {
+      isPriceCheck: false,
+      customerId: parent.customerId ?? sourceEstimate.customerId ?? null,
+      rfqNumber: parent.rfqNumber ?? null,
+      paymentTerms: parent.paymentTerms ?? null,
+      remarks: parent.remarks ?? null,
+      deliveryTerm: parent.deliveryTerm ?? null,
+    };
+  }
+  return {
+    isPriceCheck: false,
+    customerId: sourceEstimate.customerId ?? null,
+    rfqNumber: null,
+    paymentTerms: null,
+    remarks: null,
+    deliveryTerm: sourceEstimate.deliveryTerm ?? null,
+  };
+}
+
 /**
  * Derive engine tooling fields from print colors × cost per color.
  * costPerColor is display currency; toolingChargeUsd is USD at the estimate's frozen rate.
@@ -215,7 +272,7 @@ export function developmentTotalDisplay(
   return (billable * cost).toFixed(4);
 }
 
-/** Short structure label from substrate layers (e.g. "BOPP / PET / PE"). */
+/** Short structure label from substrate layer grades (e.g. "BOPP Transparent / PET Metalized HB / PE White"). */
 export async function buildStructureSummary(
   db: Database,
   estimateId: string
@@ -225,6 +282,7 @@ export async function buildStructureSummary(
       materialName: schema.layers.materialName,
       materialNameSnapshot: schema.layers.material_name_snapshot,
       type: schema.materials.type,
+      grade: schema.materials.substrateGrade,
       family: schema.materials.substrateFamily,
     })
     .from(schema.layers)
@@ -236,13 +294,40 @@ export async function buildStructureSummary(
   for (const row of rows) {
     if (row.type && row.type !== 'substrate') continue;
     const label =
-      (row.family && String(row.family).trim()) ||
+      (row.grade && String(row.grade).trim()) ||
       (row.materialNameSnapshot && String(row.materialNameSnapshot).trim()) ||
       (row.materialName && String(row.materialName).trim()) ||
+      (row.family && String(row.family).trim()) ||
       '';
     if (label && !parts.includes(label)) parts.push(label);
   }
   return parts.join(' / ');
+}
+
+const SAVE_REF_MISSING_MSG =
+  'One or more materials are no longer in your library. Re-select layer materials and solvent, then save again.';
+
+/** Ensure layer + solvent material IDs still exist for this tenant before save. */
+export async function validateEstimateSaveRefs(
+  db: Database,
+  tenantId: string,
+  data: { layers?: Array<{ materialId: string }>; solventMaterialId?: string | null }
+): Promise<string | null> {
+  const ids = new Set<string>();
+  for (const layer of data.layers ?? []) {
+    if (layer.materialId) ids.add(layer.materialId);
+  }
+  if (data.solventMaterialId) ids.add(data.solventMaterialId);
+  if (ids.size === 0) return null;
+
+  const rows = await db
+    .select({ id: schema.materials.id })
+    .from(schema.materials)
+    .where(
+      and(eq(schema.materials.tenantId, tenantId), inArray(schema.materials.id, [...ids]))
+    );
+
+  return rows.length === ids.size ? null : SAVE_REF_MISSING_MSG;
 }
 
 export async function nextEstimateSortOrder(

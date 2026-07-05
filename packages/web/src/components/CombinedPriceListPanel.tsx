@@ -36,6 +36,8 @@ type Props = {
   activeEstimateId?: string;
   onSelectEstimate?: (estimateId: string) => void;
   refreshKey?: number;
+  /** Price check — product group + structure only; no SKU/brand/dev columns. */
+  priceCheckMode?: boolean;
 };
 
 function fmt(n: string | number | null | undefined, digits = 2): string {
@@ -63,10 +65,11 @@ export default function CombinedPriceListPanel({
   activeEstimateId,
   onSelectEstimate,
   refreshKey = 0,
+  priceCheckMode = false,
 }: Props) {
   const { user } = useAuth();
   const { can } = useVisibilityProfile(user?.role);
-  const showDev = can('platesPerKg');
+  const showDev = !priceCheckMode && can('platesPerKg');
   const [rows, setRows] = useState<PriceListRow[]>([]);
   const [separateCharges, setSeparateCharges] = useState<
     Array<{
@@ -119,9 +122,8 @@ export default function CombinedPriceListPanel({
       });
 
       const headers = [
-        'SKU',
-        'Specs',
-        'Brand',
+        priceCheckMode ? 'Product group' : 'SKU',
+        ...(priceCheckMode ? [] : ['Specs', 'Brand']),
         'Structure',
         ...(showDev ? ['Colors', 'Dev cost', 'Billing'] : []),
         'GSM',
@@ -139,9 +141,8 @@ export default function CombinedPriceListPanel({
           (r.slabs || []).map((s) => [Number(s.quantityKg), Number(s.pricePerKg)])
         );
         sheet.addRow([
-          r.skuLabel || r.jobName || '',
-          r.specsCode || '',
-          r.brand || '',
+          r.jobName || r.skuLabel || '',
+          ...(priceCheckMode ? [] : [r.specsCode || '', r.brand || '']),
           r.structureSummary || '',
           ...(showDev
             ? [
@@ -222,7 +223,9 @@ export default function CombinedPriceListPanel({
   return (
     <div className="card p-0 overflow-hidden">
       <div className="px-4 py-2.5 border-b border-border flex items-center justify-between gap-2">
-        <h3 className="font-display font-semibold text-brand text-sm">Combined price list</h3>
+        <h3 className="font-display font-semibold text-brand text-sm">
+          {priceCheckMode ? 'Price check comparison' : 'Combined price list'}
+        </h3>
         <button
           type="button"
           className="btn-secondary text-xs"
@@ -241,9 +244,15 @@ export default function CombinedPriceListPanel({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-raised/50 text-xs text-mist">
-              <th className="text-left py-2 px-3 font-medium">SKU</th>
-              <th className="text-left py-2 px-3 font-medium">Specs</th>
-              <th className="text-left py-2 px-3 font-medium">Brand</th>
+              <th className="text-left py-2 px-3 font-medium">
+                {priceCheckMode ? 'Product group' : 'SKU'}
+              </th>
+              {!priceCheckMode && (
+                <>
+                  <th className="text-left py-2 px-3 font-medium">Specs</th>
+                  <th className="text-left py-2 px-3 font-medium">Brand</th>
+                </>
+              )}
               <th className="text-left py-2 px-3 font-medium">Structure</th>
               {showDev && (
                 <>
@@ -279,10 +288,14 @@ export default function CombinedPriceListPanel({
                   onClick={() => onSelectEstimate?.(r.id)}
                 >
                   <td className="py-2 px-3 font-medium whitespace-nowrap">
-                    {r.skuLabel || r.jobName || '—'}
+                    {priceCheckMode ? r.jobName || '—' : r.skuLabel || r.jobName || '—'}
                   </td>
-                  <td className="py-2 px-3 font-mono text-xs">{r.specsCode || '—'}</td>
-                  <td className="py-2 px-3">{r.brand || '—'}</td>
+                  {!priceCheckMode && (
+                    <>
+                      <td className="py-2 px-3 font-mono text-xs">{r.specsCode || '—'}</td>
+                      <td className="py-2 px-3">{r.brand || '—'}</td>
+                    </>
+                  )}
                   <td className="py-2 px-3 text-mist max-w-[10rem] truncate" title={r.structureSummary || ''}>
                     {r.structureSummary || '—'}
                   </td>

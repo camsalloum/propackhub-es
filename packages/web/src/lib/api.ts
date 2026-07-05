@@ -269,12 +269,25 @@ export class ApiClient {
         return this.request<T>(method, path, body, true);
       }
 
-      const error = await response.json().catch(() => ({
-        error: response.statusText,
-      }));
-      // Support both legacy `{ error: 'string' }` and new envelope `{ error: { code, message } }`
+      const raw = await response.text();
+      let error: Record<string, unknown> | null = null;
+      if (raw) {
+        try {
+          error = JSON.parse(raw) as Record<string, unknown>;
+        } catch {
+          error = null;
+        }
+      }
+      if (!error) {
+        const err = new Error(
+          raw.trim() ? `${response.statusText}: ${raw.trim().slice(0, 240)}` : response.statusText
+        ) as Error & { status?: number };
+        err.status = response.status;
+        throw err;
+      }
+      // Support legacy `{ error: 'string' }`, `{ error, detail }`, and envelope `{ error: { code, message } }`
       const envelope = error?.error;
-      const message =
+      let message =
         typeof envelope === 'object' && envelope !== null
           ? (envelope as { message?: string }).message ?? response.statusText
           : typeof envelope === 'string'
@@ -294,6 +307,18 @@ export class ApiClient {
       if (code) err.code = code;
       if ((error as { unresolvedLayers?: unknown })?.unresolvedLayers) {
         err.details = (error as { unresolvedLayers: unknown }).unresolvedLayers;
+      }
+      const zodDetails = (error as { details?: unknown }).details;
+      if (Array.isArray(zodDetails) && zodDetails.length > 0) {
+        err.details = zodDetails;
+        const hints = zodDetails
+          .slice(0, 4)
+          .map((d: { path?: Array<string | number>; message?: string }) => {
+            const path = (d.path ?? []).join('.') || 'body';
+            return `${path}: ${d.message ?? 'invalid'}`;
+          })
+          .join('; ');
+        if (hints) err.message = `${message} (${hints})`;
       }
       // Surface a server-provided `detail` (root-cause message) so 500s aren't opaque.
       if ((error as { detail?: unknown })?.detail) {

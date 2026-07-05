@@ -1,10 +1,13 @@
 import { useMemo, type CSSProperties } from 'react';
+import { formatMicronDisplay } from '../lib/formatMicron';
 
 export type FilmLayer = {
   id: string | number;
   type?: string;
   material?: string;
   micron?: number;
+  /** Physical thickness (µ) — substrate µ; ink/adhesive dry gsm ÷ density. */
+  physicalMicron?: number;
   gsm?: number;
   family?: string | null;
   /** Display-currency material cost/kg — only when visibility allows. */
@@ -16,6 +19,8 @@ export type FilmLayer = {
 type Props = {
   layers: FilmLayer[];
   className?: string;
+  /** Engine total construction µ — matches structure table when set. */
+  totalMicron?: number | null;
   /** Display currency code for Contrib. header (e.g. AED). */
   displayCurrency?: string;
   /** When false, hide Contrib. column entirely. */
@@ -102,17 +107,17 @@ const STACK_STYLES = `
     align-items: stretch;
   }
   .film-stack-metrics--pct {
-    grid-template-columns: 2.75rem 2.75rem;
+    grid-template-columns: 3rem 3rem;
   }
   .film-stack-metrics--full {
-    grid-template-columns: 2.75rem 2.75rem 3.25rem 3.25rem;
+    grid-template-columns: 3rem 3rem 3.5rem 3.5rem;
   }
   @media (min-width: 640px) {
     .film-stack-metrics--pct {
-      grid-template-columns: 3rem 3rem;
+      grid-template-columns: 3.25rem 3.25rem;
     }
     .film-stack-metrics--full {
-      grid-template-columns: 3rem 3rem 3.5rem 3.5rem;
+      grid-template-columns: 3.25rem 3.25rem 3.75rem 3.75rem;
     }
   }
   .film-stack-metrics__head-cell,
@@ -219,6 +224,9 @@ function inkPctClass(layer: FilmLayer): string {
 }
 
 function layerThickness(l: FilmLayer): number {
+  if (l.physicalMicron != null && Number.isFinite(l.physicalMicron) && l.physicalMicron > 0) {
+    return l.physicalMicron;
+  }
   const micron = Number(l.micron || 0);
   if (micron > 0) return micron;
   const gsm = Number(l.gsm || 0);
@@ -255,7 +263,7 @@ function formatPercentLabels(shares: number[]): string[] {
 
 const IN_BAR_SHARE_MIN = 0.09;
 /** Ink/adhesive are often thin µ but should still show labels inside the swatch. */
-const THIN_LAYER_MIN_ROW_PX = 26;
+const THIN_LAYER_MIN_ROW_PX = 28;
 
 function showInBarLabels(layer: FilmLayer, share: number): boolean {
   if (layer.type === 'ink' || layer.type === 'adhesive') return true;
@@ -265,6 +273,7 @@ function showInBarLabels(layer: FilmLayer, share: number): boolean {
 export default function FilmStackVisualizer({
   layers,
   className,
+  totalMicron: totalMicronProp,
   displayCurrency = 'USD',
   showContrib = false,
 }: Props) {
@@ -335,14 +344,17 @@ export default function FilmStackVisualizer({
       thicknessShares,
       thicknessPctLabels: formatPercentLabels(thicknessShares),
       gsmPctLabels: formatPercentLabels(gsmShares),
-      totalMicron: micronTotal,
+      totalMicron:
+        totalMicronProp != null && Number.isFinite(totalMicronProp) && totalMicronProp > 0
+          ? totalMicronProp
+          : micronTotal,
       totalGsm: gsmTotal,
       contribKgValues,
       contribM2Values,
       contribKgTitles,
       contribM2Titles,
     };
-  }, [layers, showContrib, displayCurrency]);
+  }, [layers, showContrib, displayCurrency, totalMicronProp]);
 
   const dense = layerCount > 5;
   const metricsGridClass = showContrib
@@ -366,30 +378,30 @@ export default function FilmStackVisualizer({
         <div className="flex flex-1 min-h-0 px-2 py-2 gap-2">
           <div className="w-5 shrink-0 flex items-center justify-center">
             <span
-              className="text-[9px] text-text-secondary font-mono whitespace-nowrap"
+              className="text-[10px] text-text-secondary font-mono whitespace-nowrap"
               style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
             >
-              {totalMicron.toFixed(1)} µ
+              {formatMicronDisplay(totalMicron)} µ
             </span>
           </div>
 
           <div className="flex flex-col flex-1 min-h-0 min-w-0 border border-border/60 rounded-md overflow-hidden shadow-sm">
             <div className="shrink-0 flex items-stretch border-b border-border/50 bg-surface-raised">
               <div className="w-[5.5rem] sm:w-24 shrink-0 border-r border-border/40" aria-hidden />
-              <div className="flex-1 min-w-0 px-2 py-1 flex items-center text-[10px] text-text-secondary tabular-nums">
-                {layerCount} layers · {totalMicron.toFixed(1)} µ
+              <div className="flex-1 min-w-0 px-2 py-1.5 flex items-center text-[11px] text-text-secondary tabular-nums">
+                {layerCount} layers · {formatMicronDisplay(totalMicron)} µ
                 {totalGsm > 0 ? ` · ${totalGsm.toFixed(1)} gsm` : ''}
               </div>
               <div
-                className={`${metricsGridClass} shrink-0 font-mono text-[9px] font-medium text-text-secondary tabular-nums`}
+                className={`${metricsGridClass} shrink-0 font-mono text-[10px] font-medium text-text-secondary tabular-nums`}
               >
                 <span className="film-stack-metrics__head-cell film-stack-metrics__head-stacked border-r border-border/30 bg-surface-sunken/40">
                   <span>µ</span>
-                  <span className="text-[8px] font-normal opacity-75">%</span>
+                  <span className="text-[9px] font-normal opacity-75">%</span>
                 </span>
                 <span className="film-stack-metrics__head-cell film-stack-metrics__head-stacked border-r border-border/30 bg-surface-sunken/40">
                   <span>GSM</span>
-                  <span className="text-[8px] font-normal opacity-75">%</span>
+                  <span className="text-[9px] font-normal opacity-75">%</span>
                 </span>
                 {showContrib && (
                   <>
@@ -405,7 +417,11 @@ export default function FilmStackVisualizer({
             </div>
             <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
               {layers.map((layer, i) => {
-                const micron = Number(layer.micron || 0);
+                const displayMicron =
+                  layer.physicalMicron != null && Number.isFinite(layer.physicalMicron) && layer.physicalMicron > 0
+                    ? layer.physicalMicron
+                    : Number(layer.micron || 0);
+                const micron = displayMicron;
                 const gsm = Number(layer.gsm || 0);
                 const inkIdx = inkIndexById.get(layer.id) ?? 0;
                 const appearance = layerAppearance(layer, inkIdx);
@@ -413,7 +429,7 @@ export default function FilmStackVisualizer({
                 const thinLayer = layer.type === 'ink' || layer.type === 'adhesive';
                 const inBar = showInBarLabels(layer, share);
                 const cellClass = `film-stack-metrics__cell font-mono font-semibold tabular-nums leading-tight ${
-                  dense ? 'text-[10px]' : 'text-[11px]'
+                  dense ? 'text-[11px]' : 'text-xs'
                 }`;
                 const contribKg = contribKgValues[i];
                 const contribM2 = contribM2Values[i];
@@ -440,22 +456,24 @@ export default function FilmStackVisualizer({
                         <span
                           className={`relative z-10 text-center font-mono leading-none px-0.5 ${
                             appearance.darkText ? 'text-slate-800' : 'text-white'
-                          } ${thinLayer && share < IN_BAR_SHARE_MIN ? 'text-[7px]' : dense ? 'text-[8px]' : 'text-[9px]'}`}
+                          } ${thinLayer && share < IN_BAR_SHARE_MIN ? 'text-[8px]' : dense ? 'text-[9px]' : 'text-[10px]'}`}
                         >
-                          {micron > 0 && <span className="block font-semibold">{micron}µ</span>}
+                          {micron > 0 && (
+                            <span className="block font-semibold">{formatMicronDisplay(micron)}µ</span>
+                          )}
                           {gsm > 0 && <span className="block opacity-90">{gsm.toFixed(1)}g</span>}
                         </span>
                       )}
                     </div>
 
                     <div className="flex-1 min-w-0 flex items-center gap-2 px-2 py-1 bg-surface-raised">
-                      <p className={`leading-tight text-brand min-w-0 flex-1 ${dense ? 'text-[10px]' : 'text-xs'}`}>
+                      <p className={`leading-snug text-brand min-w-0 flex-1 ${dense ? 'text-[11px]' : 'text-[13px]'}`}>
                         <span className="text-text-secondary font-medium">{i + 1}.</span>{' '}
                         <span className={inkLabelClass(layer)}>{layerLabel(layer, i)}</span>
                         <span className="text-text-secondary font-normal">
                           {' '}
                           · {typeLabel(layer.type)}
-                          {!inBar && micron > 0 ? ` · ${micron}µ` : ''}
+                          {!inBar && micron > 0 ? ` · ${formatMicronDisplay(micron)}µ` : ''}
                           {!inBar && gsm > 0 ? ` · ${gsm.toFixed(1)} gsm` : ''}
                         </span>
                       </p>

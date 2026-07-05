@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Download, Loader2, Lock, Plus, Unlock } from 'lucide-react';
+import { Link, useMatch, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Calculator, Download, Layers, Loader2, Lock, Plus, Unlock } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import {
   estimateStatusBadgeClass,
   estimateStatusLabel,
 } from '../lib/estimateStatus';
-import CombinedPriceListPanel from '../components/CombinedPriceListPanel';
+import CombinedVariantPriceList from '../components/CombinedVariantPriceList';
 import DuplicateEstimateDialog from '../components/DuplicateEstimateDialog';
 import QuoteSummaryPanel from '../components/QuoteSummaryPanel';
 import EstimateEditor from './EstimateEditor';
 
 type QuoteEstimate = {
   id: string;
+  refNumber?: string;
   skuLabel?: string | null;
   brand?: string | null;
   jobName?: string;
@@ -35,17 +36,18 @@ type QuotePayload = {
   paymentTerms?: string | null;
   remarks?: string | null;
   customerId?: string | null;
+  isPriceCheck?: boolean;
   estimates: QuoteEstimate[];
 };
 
-function railLabel(est: QuoteEstimate): string {
-  return est.skuLabel || est.jobName || 'Estimate';
+/** Label that distinguishes variants (200 ml, 300 ml, …) — not the shared product group. */
+function variantLabel(est: QuoteEstimate, priceCheck: boolean, index: number): string {
+  const sku = est.skuLabel?.trim();
+  if (sku) return sku;
+  if (!priceCheck) return est.jobName?.trim() || est.refNumber || `Estimate ${index + 1}`;
+  return est.refNumber?.trim() || `Variant ${index + 1}`;
 }
 
-function railPrice(est: QuoteEstimate): string {
-  if (est.salePricePerKg == null || est.salePricePerKg === '') return '—';
-  return `${est.displayCurrency || 'USD'} ${Number(est.salePricePerKg).toFixed(2)}/kg`;
-}
 
 function quoteStatusLabel(status: string): string {
   switch (status) {
@@ -67,6 +69,7 @@ function isLockedQuote(quote: QuotePayload | null): boolean {
 
 const QuoteWorkspace = () => {
   const { quoteId, estimateId } = useParams<{ quoteId: string; estimateId?: string }>();
+  const priceListTab = Boolean(useMatch('/quotes/:quoteId/price-list'));
   const navigate = useNavigate();
   const [quote, setQuote] = useState<QuotePayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -98,31 +101,53 @@ const QuoteWorkspace = () => {
 
   const estimates = quote?.estimates ?? [];
   const multi = estimates.length > 1;
+  const priceCheck = Boolean(quote?.isPriceCheck);
   const activeId = estimateId || estimates[0]?.id;
   const activeEstimate = estimates.find((e) => e.id === activeId);
   const locked = isLockedQuote(quote);
 
+  const workspaceTitle = useMemo(() => {
+    if (!quote) return '';
+    if (!priceCheck) return quote.name;
+    const productGroup = estimates.find((e) => e.jobName?.trim())?.jobName?.trim();
+    return productGroup || quote.name;
+  }, [quote, priceCheck, estimates]);
+
   useEffect(() => {
-    if (!quote || !quoteId) return;
+    if (!quote || !quoteId || priceListTab) return;
     if (estimates.length === 0) return;
     if (!estimateId) {
       navigate(`/quotes/${quoteId}/estimates/${estimates[0].id}`, { replace: true });
     }
-  }, [quote, quoteId, estimateId, estimates, navigate]);
+  }, [quote, quoteId, estimateId, estimates, navigate, priceListTab]);
 
   const backTo = useMemo(() => {
     if (!quote) return '/estimates';
+    if (priceCheck) return '/estimates/customers/price-check';
     return `/estimates/customers/${quote.customerId ?? 'none'}`;
-  }, [quote]);
+  }, [quote, priceCheck]);
 
-  const handleDuplicateConfirm = async (values: { skuLabel: string; brand: string }) => {
+  const handleDuplicateConfirm = async (values: {
+    skuLabel: string;
+    brand: string;
+    variantLabel?: string;
+  }) => {
     if (!quoteId || !activeId || duplicating || locked) return;
     setDuplicating(true);
     try {
-      const created = await apiClient.duplicateEstimateOnQuote(quoteId, activeId, {
-        skuLabel: values.skuLabel || null,
-        brand: values.brand || null,
-      });
+      const created = await apiClient.duplicateEstimateOnQuote(
+        quoteId,
+        activeId,
+        priceCheck
+          ? {
+              skuLabel: values.variantLabel?.trim() || values.skuLabel?.trim() || null,
+              brand: null,
+            }
+          : {
+              skuLabel: values.skuLabel || null,
+              brand: values.brand || null,
+            }
+      );
       setShowDuplicate(false);
       await load();
       if (created?.id) {
@@ -139,7 +164,8 @@ const QuoteWorkspace = () => {
     if (!quoteId || locked) return;
     const qs = new URLSearchParams();
     qs.set('quote', quoteId);
-    if (quote?.customerId) qs.set('customer', quote.customerId);
+    if (priceCheck) qs.set('priceCheck', '1');
+    else if (quote?.customerId) qs.set('customer', quote.customerId);
     navigate(`/estimate/choose?${qs.toString()}`);
   };
 
@@ -247,32 +273,34 @@ const QuoteWorkspace = () => {
           <p className="font-mono text-xs text-mist truncate flex items-center gap-1.5">
             <span>
               {quote.refNumber}
-              {quote.rfqNumber ? ` · RFQ ${quote.rfqNumber}` : ''}
+              {!priceCheck && quote.rfqNumber ? ` · RFQ ${quote.rfqNumber}` : ''}
               {' · '}
-              {quoteStatusLabel(quote.status)}
+              {priceCheck ? 'Price check' : quoteStatusLabel(quote.status)}
               {multi ? ` · ${estimates.length} estimates` : ''}
             </span>
             {locked && <Lock className="w-3 h-3 shrink-0" aria-label="Locked" />}
           </p>
           <h1 className="font-display font-semibold text-brand truncate text-lg leading-tight">
-            {quote.name}
+            {workspaceTitle}
           </h1>
         </div>
         <div className="flex flex-wrap gap-1.5 shrink-0">
-          <button
-            type="button"
-            className="btn-secondary text-xs"
-            disabled={pdfBusy || estimates.length === 0}
-            onClick={() => void downloadQuotePdf()}
-          >
-            {pdfBusy ? (
-              <Loader2 className="w-3.5 h-3.5 inline mr-1 animate-spin" />
-            ) : (
-              <Download className="w-3.5 h-3.5 inline mr-1" />
-            )}
-            PDF
-          </button>
-          {locked ? (
+          {!priceCheck && (
+            <button
+              type="button"
+              className="btn-secondary text-xs"
+              disabled={pdfBusy || estimates.length === 0}
+              onClick={() => void downloadQuotePdf()}
+            >
+              {pdfBusy ? (
+                <Loader2 className="w-3.5 h-3.5 inline mr-1 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5 inline mr-1" />
+              )}
+              PDF
+            </button>
+          )}
+          {!priceCheck && (locked ? (
             <button
               type="button"
               className="btn-secondary text-xs"
@@ -300,7 +328,7 @@ const QuoteWorkspace = () => {
               )}
               Mark sent
             </button>
-          )}
+          ))}
           {!locked && (
             <>
               <button
@@ -321,7 +349,7 @@ const QuoteWorkspace = () => {
         </div>
       </div>
 
-      {quoteId && (
+      {quoteId && !priceCheck && !priceListTab && (
         <QuoteSummaryPanel
           quoteId={quoteId}
           locked={locked}
@@ -334,64 +362,114 @@ const QuoteWorkspace = () => {
         />
       )}
 
-      {quoteId && (
-        <CombinedPriceListPanel
-          quoteId={quoteId}
-          quoteRef={quote.refNumber}
-          activeEstimateId={activeId}
-          refreshKey={priceListKey}
-          onSelectEstimate={(id) => navigate(`/quotes/${quoteId}/estimates/${id}`)}
-        />
-      )}
-
-      <div className={multi ? 'flex flex-col lg:flex-row gap-4' : ''}>
-        {multi && (
-          <aside className="lg:w-56 shrink-0 space-y-2">
-            {estimates.map((est) => {
-              const active = est.id === activeId;
-              return (
-                <button
-                  key={est.id}
-                  type="button"
-                  onClick={() => navigate(`/quotes/${quoteId}/estimates/${est.id}`)}
-                  className={`w-full text-left card p-3 transition-colors ${
-                    active ? 'ring-2 ring-accent border-accent' : 'hover:border-gold/40'
-                  }`}
-                >
-                  <p className="font-medium text-sm truncate">{railLabel(est)}</p>
-                  <p className="text-gold text-sm font-semibold">{railPrice(est)}</p>
-                  <div className="flex items-center justify-between gap-2 mt-1">
-                    <span className={`badge text-[10px] ${estimateStatusBadgeClass(est.status)}`}>
-                      {estimateStatusLabel(est.status)}
-                    </span>
-                  </div>
-                  {est.structureSummary && (
-                    <p className="text-xs text-mist truncate mt-1">{est.structureSummary}</p>
-                  )}
-                </button>
-              );
-            })}
-          </aside>
-        )}
-
-        <div className="min-w-0 flex-1">
-          {activeId && (
-            <EstimateEditor
-              key={activeId}
-              embedded
-              estimateIdOverride={activeId}
-              backTo={backTo}
-              hideEstimateRef={!multi}
-              readOnly={locked}
-            />
-          )}
-        </div>
+      <div className="flex flex-wrap items-center gap-2 border-b border-border pb-2">
+        <button
+          type="button"
+          onClick={() =>
+            navigate(
+              `/quotes/${quoteId}/estimates/${activeId || estimates[0]?.id}`
+            )
+          }
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm whitespace-nowrap transition-colors ${
+            !priceListTab
+              ? 'bg-accent-soft text-accent-text font-medium'
+              : 'text-text-primary hover:bg-surface-base'
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          {priceCheck ? 'Structures' : 'Estimates'}
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate(`/quotes/${quoteId}/price-list`)}
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm whitespace-nowrap transition-colors ${
+            priceListTab
+              ? 'bg-accent-soft text-accent-text font-medium'
+              : 'text-text-primary hover:bg-surface-base'
+          }`}
+        >
+          <Calculator className="w-4 h-4" />
+          Price list
+        </button>
       </div>
+
+      {priceListTab ? (
+        quoteId && (
+          <CombinedVariantPriceList
+            quoteId={quoteId}
+            quoteRef={quote.refNumber}
+            estimateIds={estimates.map((e) => e.id)}
+            activeEstimateId={activeId}
+            refreshKey={priceListKey}
+            priceCheckMode={priceCheck}
+            rowLabels={Object.fromEntries(
+              estimates.map((e, i) => [e.id, variantLabel(e, priceCheck, i)])
+            )}
+            structureSummaries={Object.fromEntries(
+              estimates.map((e) => [e.id, e.structureSummary])
+            )}
+            onSelectEstimate={(id) => navigate(`/quotes/${quoteId}/estimates/${id}`)}
+          />
+        )
+      ) : (
+        <>
+          {multi && (
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              {estimates.map((est, i) => {
+                const active = est.id === activeId;
+                const label = variantLabel(est, priceCheck, i);
+                const group = est.jobName?.trim();
+                return (
+                  <button
+                    key={est.id}
+                    type="button"
+                    onClick={() => navigate(`/quotes/${quoteId}/estimates/${est.id}`)}
+                    className={`shrink-0 text-left card p-3 min-w-[10rem] max-w-[14rem] transition-colors ${
+                      active ? 'ring-2 ring-accent border-accent' : 'hover:border-gold/40'
+                    }`}
+                  >
+                    <p className="font-medium text-sm truncate">{label}</p>
+                    {priceCheck && group && group !== label && (
+                      <p className="text-xs text-mist truncate mt-0.5">{group}</p>
+                    )}
+                    {!priceCheck && est.brand?.trim() && (
+                      <p className="text-xs text-mist truncate mt-0.5">{est.brand}</p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className={`badge text-[10px] ${estimateStatusBadgeClass(est.status)}`}>
+                        {estimateStatusLabel(est.status)}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="min-w-0">
+            {activeId && (
+              <EstimateEditor
+                key={activeId}
+                embedded
+                estimateIdOverride={activeId}
+                backTo={backTo}
+                hideEstimateRef={!multi}
+                readOnly={locked}
+                priceCheckMode={priceCheck}
+                multiOnQuote={multi}
+                hidePriceListTab
+                onSaved={() => void load()}
+              />
+            )}
+          </div>
+        </>
+      )}
 
       <DuplicateEstimateDialog
         open={showDuplicate}
-        sourceLabel={activeEstimate ? railLabel(activeEstimate) : 'Estimate'}
+        sourceLabel={activeEstimate ? variantLabel(activeEstimate, priceCheck, estimates.findIndex((e) => e.id === activeId)) : 'Estimate'}
         defaultBrand={activeEstimate?.brand}
+        priceCheckMode={priceCheck}
         busy={duplicating}
         onCancel={() => setShowDuplicate(false)}
         onConfirm={(v) => void handleDuplicateConfirm(v)}

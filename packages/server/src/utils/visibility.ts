@@ -143,6 +143,11 @@ export function stripEstimateRow(row: any, profile: VisibilityProfile): any {
     refNumber: row.refNumber,
     jobName: row.jobName,
     customerId: row.customerId,
+    quoteId: row.quoteId ?? null,
+    sortOrder: row.sortOrder ?? 0,
+    skuLabel: row.skuLabel ?? null,
+    brand: row.brand ?? null,
+    specsCode: row.specsCode ?? null,
     status: row.status,
     productType: row.productType,
     printingWebClass: row.printingWebClass,
@@ -157,6 +162,7 @@ export function stripEstimateRow(row: any, profile: VisibilityProfile): any {
     masterDataVersion: row.masterDataVersion,
     sourceTemplateKey: row.sourceTemplateKey,
     sourceEstimationId: row.sourceEstimationId,
+    copiedFromEstimateId: row.copiedFromEstimateId ?? null,
     productSubtype: row.productSubtype,
   };
 
@@ -181,6 +187,17 @@ export function stripEstimateRow(row: any, profile: VisibilityProfile): any {
 
   if (profile.platesPerKg) {
     visible.platesPerKg = row.platesPerKg;
+    // Development cost fields — same gate as plates/tooling.
+    visible.printColorCount = row.printColorCount ?? null;
+    visible.costPerColor = row.costPerColor ?? null;
+    visible.toolingBillingMode = row.toolingBillingMode ?? null;
+    if (row.printColorCount != null && row.costPerColor != null) {
+      const colors = Number(row.printColorCount);
+      const cost = Number(row.costPerColor);
+      if (Number.isFinite(colors) && Number.isFinite(cost)) {
+        visible.developmentTotal = (colors * cost).toFixed(4);
+      }
+    }
   }
 
   if (profile.deliveryPerKg) {

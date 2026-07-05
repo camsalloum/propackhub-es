@@ -328,12 +328,79 @@ export const customers = pgTable('customers', {
   tenantIdIdx: index('customers_tenant_id_idx').on(table.tenantId),
 }));
 
+// Quotes (commercial container — multi-SKU package)
+// @ts-expect-error Drizzle self-referential FK (supersedesQuoteId)
+export const quotes = pgTable('quotes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+
+  name: varchar('name', { length: 255 }).notNull(),
+  refNumber: varchar('ref_number', { length: 32 }).notNull(), // PKG-YYYY-NNNNN
+  status: varchar('status', { length: 16 }).notNull().default('draft'), // draft | saved | sent | archived
+
+  defaultBrand: varchar('default_brand', { length: 255 }),
+  salespersonUserId: uuid('salesperson_user_id').references(() => users.id, { onDelete: 'set null' }),
+  displayCurrency: varchar('display_currency', { length: 3 }).notNull(),
+  exchangeRateUsdToDisplay: decimal('exchange_rate_usd_to_display', { precision: 10, scale: 6 }).notNull(),
+  validUntil: timestamp('valid_until', { withTimezone: true }),
+  deliveryTerm: varchar('delivery_term', { length: 32 }),
+  paymentTerms: varchar('payment_terms', { length: 255 }),
+  remarks: text('remarks'),
+  notes: text('notes'),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+
+  defaultPrintColorCount: integer('default_print_color_count'),
+  defaultCostPerColor: decimal('default_cost_per_color', { precision: 12, scale: 4 }),
+  defaultToolingBillingMode: varchar('default_tooling_billing_mode', { length: 16 }),
+
+  rfqId: uuid('rfq_id'),
+
+  /** Customer RFQ reference (optional text until full RFQ entity ships). */
+  rfqNumber: varchar('rfq_number', { length: 128 }),
+
+  // @ts-expect-error Drizzle self-referential FK callback
+  supersedesQuoteId: uuid('supersedes_quote_id').references(() => quotes.id, { onDelete: 'set null' }),
+  versionNumber: integer('version_number').notNull().default(1),
+
+  approvalStatus: varchar('approval_status', { length: 32 }),
+  approvedByUserId: uuid('approved_by_user_id'),
+  approvedAt: timestamp('approved_at', { withTimezone: true }),
+  customerPo: varchar('customer_po', { length: 128 }),
+  expectedOrderAt: timestamp('expected_order_at', { withTimezone: true }),
+  opportunityProbability: integer('opportunity_probability'),
+  lostReason: text('lost_reason'),
+
+  /** Internal price-check quotes (no customer) — separate folder from other null-customer quotes. */
+  isPriceCheck: boolean('is_price_check').notNull().default(false),
+
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  tenantIdIdx: index('quotes_tenant_id_idx').on(table.tenantId),
+  customerIdIdx: index('quotes_customer_id_idx').on(table.tenantId, table.customerId),
+  statusIdx: index('quotes_status_idx').on(table.tenantId, table.status),
+  tenantRefIdx: index('quotes_tenant_ref_idx').on(table.tenantId, table.refNumber),
+  deletedAtIdx: index('quotes_deleted_at_idx').on(table.deletedAt),
+}));
+
 // Estimates (tenant-owned)
 // @ts-expect-error Drizzle self-referential FK (sourceEstimationId)
 export const estimates = pgTable('estimates', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+  quoteId: uuid('quote_id').references(() => quotes.id, { onDelete: 'set null' }),
+  sortOrder: integer('sort_order').notNull().default(0),
+  skuLabel: varchar('sku_label', { length: 255 }),
+  brand: varchar('brand', { length: 255 }),
+  specsCode: varchar('specs_code', { length: 64 }),
+  printColorCount: integer('print_color_count'),
+  costPerColor: decimal('cost_per_color', { precision: 12, scale: 4 }),
+  toolingBillingMode: varchar('tooling_billing_mode', { length: 16 }),
+  // @ts-expect-error Drizzle self-referential FK callback
+  copiedFromEstimateId: uuid('copied_from_estimate_id').references(() => estimates.id, { onDelete: 'set null' }),
   refNumber: varchar('ref_number', { length: 20 }).notNull(), // QT-2026-XXXXX
   jobName: varchar('job_name', { length: 255 }).notNull(),
   status: estimateStatusEnum('status').notNull().default('draft'),
@@ -393,7 +460,6 @@ export const estimates = pgTable('estimates', {
   notes: text('notes'),
 
   // Re-quote tracking
-  // @ts-expect-error Drizzle self-referential FK callback
   sourceEstimationId: uuid('source_estimation_id').references(() => estimates.id, { onDelete: 'set null' }),
 
   // Soft delete support
@@ -424,6 +490,7 @@ export const estimates = pgTable('estimates', {
 }, (table) => ({
   tenantIdIdx: index('estimates_tenant_id_idx').on(table.tenantId),
   customerIdIdx: index('estimates_customer_id_idx').on(table.customerId),
+  quoteIdIdx: index('estimates_quote_id_idx').on(table.quoteId),
   statusIdx: index('estimates_status_idx').on(table.status),
   refNumberIdx: index('estimates_ref_number_idx').on(table.refNumber),
   deletedAtIdx: index('estimates_deleted_at_idx').on(table.deletedAt),
@@ -690,15 +757,26 @@ export const usersRelations = relations(users, ({ one }) => ({
 
 export const customersRelations = relations(customers, ({ many }) => ({
   estimates: many(estimates),
+  quotes: many(quotes),
+}));
+
+export const quotesRelations = relations(quotes, ({ one, many }) => ({
+  tenant: one(tenants, { fields: [quotes.tenantId], references: [tenants.id] }),
+  customer: one(customers, { fields: [quotes.customerId], references: [customers.id] }),
+  salesperson: one(users, { fields: [quotes.salespersonUserId], references: [users.id] }),
+  estimates: many(estimates),
+  supersedesQuote: one(quotes, { fields: [quotes.supersedesQuoteId], references: [quotes.id] }),
 }));
 
 export const estimatesRelations = relations(estimates, ({ one, many }) => ({
   tenant: one(tenants, { fields: [estimates.tenantId], references: [tenants.id] }),
   customer: one(customers, { fields: [estimates.customerId], references: [customers.id] }),
+  quote: one(quotes, { fields: [estimates.quoteId], references: [quotes.id] }),
   layers: many(layers),
   processes: many(processes),
   slabs: many(slabs),
   sourceEstimate: one(estimates, { fields: [estimates.sourceEstimationId], references: [estimates.id] }),
+  copiedFromEstimate: one(estimates, { fields: [estimates.copiedFromEstimateId], references: [estimates.id] }),
 }));
 
 export const layersRelations = relations(layers, ({ one }) => ({

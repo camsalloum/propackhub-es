@@ -261,7 +261,7 @@ describe('CoRM helpers', () => {
 });
 
 describe('final price breakup — slab ladder', () => {
-  it('varies waste per band while keeping M&O/PrePress/Transport flat over the order qty', () => {
+  it('varies waste per band and amortizes PrePress/Transport over each slab qty', () => {
     const result = calculateEstimate(
       baseEstimate({
         operatingCostMethod: 'process_per_kg',
@@ -271,7 +271,7 @@ describe('final price breakup — slab ladder', () => {
         toolingChargeUsd: 500,
         toolingBilledToCustomer: true,
         deliveryChargeUsd: 200,
-        orderQuantityKg: 1000, // PrePress 0.5, Transport 0.2 (flat across slabs)
+        orderQuantityKg: 1000, // headline sale still uses order qty
         slabs: [
           { quantityKg: 100, pricePerKg: 0 },   // band 81–150 → waste 22%
           { quantityKg: 5000, pricePerKg: 0 },  // band 3001–5000 → waste 4%
@@ -279,10 +279,12 @@ describe('final price breakup — slab ladder', () => {
       }),
       materials
     );
-    // slab 100kg: RM 2×1.22=2.44 + M&O 1.0 + 0.5 + 0.2 = 4.14
-    // slab 5000kg: RM 2×1.04=2.08 + M&O 1.0 + 0.5 + 0.2 = 3.78
-    expect(result.slabs[0].pricePerKg).toBeCloseTo(4.14, 6);
-    expect(result.slabs[1].pricePerKg).toBeCloseTo(3.78, 6);
+    // Headline (order 1000): PrePress 0.5, Transport 0.2 unchanged
+    expect(result.estimate.salePricePerKg).toBeCloseTo(3.84, 6);
+    // slab 100kg: RM 2×1.22=2.44 + M&O 1.0 + 500/100 + 200/100 = 2.44+1+5+2 = 10.44
+    // slab 5000kg: RM 2×1.04=2.08 + M&O 1.0 + 500/5000 + 200/5000 = 2.08+1+0.1+0.04 = 3.22
+    expect(result.slabs[0].pricePerKg).toBeCloseTo(10.44, 6);
+    expect(result.slabs[1].pricePerKg).toBeCloseTo(3.22, 6);
   });
 });
 

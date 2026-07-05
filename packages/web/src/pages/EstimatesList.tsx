@@ -23,6 +23,10 @@ import {
   estimateStatusLabel,
 } from '../lib/estimateStatus';
 
+function estimateOpenPath(e: { id: string; quoteId?: string | null }): string {
+  return e.quoteId ? `/quotes/${e.quoteId}/estimates/${e.id}` : `/estimate/${e.id}`;
+}
+
 const EstimatesList = () => {
   const navigate = useNavigate();
   // Smooth list → editor transition via the browser-native View Transitions API
@@ -124,7 +128,10 @@ const EstimatesList = () => {
     try {
       const res = await apiClient.requoteEstimate(estimateId);
       if (res?.id) {
-        navigate(`/estimate/${res.id}`, {
+        const path = res.quoteId
+          ? `/quotes/${res.quoteId}/estimates/${res.id}`
+          : `/estimate/${res.id}`;
+        navigate(path, {
           state: {
             priceChanges: res.price_changes || [],
             warnings: res.warnings || [],
@@ -181,7 +188,7 @@ const EstimatesList = () => {
   }
 
   return (
-    <div ref={entranceRef} className="pb-4 max-w-7xl mx-auto">
+    <div ref={entranceRef} className="pb-4 w-full">
       {flashNotice && (
         <div
           role="status"
@@ -203,13 +210,15 @@ const EstimatesList = () => {
           <SectionTitle
             as="h1"
             className="text-2xl lg:text-3xl font-display font-bold text-navy"
-            hint="Search past quotes, filter by structure, re-quote with new prices."
           >
-            Estimates
+            All estimates
           </SectionTitle>
+          <Link to="/estimates" className="text-sm text-accent-text hover:underline">
+            Customer folders
+          </Link>
         </div>
-        <Link to="/estimate/choose" className="btn-primary text-center w-full sm:w-auto">
-          New estimate
+        <Link to="/estimates" className="btn-primary text-center w-full sm:w-auto">
+          New quote
         </Link>
       </div>
 
@@ -274,7 +283,7 @@ const EstimatesList = () => {
           title="No estimates yet"
           body="Start your first cost estimate from a template or from scratch. Saved quotes land here so the whole team can find them."
           action={
-            <Link to="/estimate/choose" className="btn-primary inline-flex">
+            <Link to="/estimates" className="btn-primary inline-flex">
               Create your first quote
             </Link>
           }
@@ -320,10 +329,10 @@ const EstimatesList = () => {
                 </p>
                 <div className="flex gap-2 mt-3">
                   <Link
-                    to={`/estimate/${e.id}`}
+                    to={estimateOpenPath(e)}
                     onClick={(ev) => {
                       ev.preventDefault();
-                      navigateWithTransition(`/estimate/${e.id}`);
+                      navigateWithTransition(estimateOpenPath(e));
                     }}
                     className="btn-secondary flex-1 text-center text-sm py-2"
                   >
@@ -387,10 +396,10 @@ const EstimatesList = () => {
                       <td className="py-4 px-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Link
-                            to={`/estimate/${e.id}`}
+                            to={estimateOpenPath(e)}
                             onClick={(ev) => {
                               ev.preventDefault();
-                              navigateWithTransition(`/estimate/${e.id}`);
+                              navigateWithTransition(estimateOpenPath(e));
                             }}
                             className="text-gold font-medium text-sm"
                           >

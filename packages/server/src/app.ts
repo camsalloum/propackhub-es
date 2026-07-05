@@ -10,6 +10,7 @@ import { ZodError } from 'zod';
 import { registerAuthRoutes } from './routes/auth';
 import { registerMaterialRoutes } from './routes/materials';
 import { registerEstimateRoutes } from './routes/estimates';
+import { registerQuoteRoutes } from './routes/quotes';
 import { registerCustomerRoutes } from './routes/customers';
 import { registerSettingsRoutes } from './routes/settings';
 import { registerTemplateRoutes } from './routes/templates';
@@ -152,6 +153,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   registerAuthRoutes(fastify);
   registerMaterialRoutes(fastify);
   registerEstimateRoutes(fastify);
+  registerQuoteRoutes(fastify);
   registerCustomerRoutes(fastify);
   registerSettingsRoutes(fastify);
   registerTemplateRoutes(fastify);

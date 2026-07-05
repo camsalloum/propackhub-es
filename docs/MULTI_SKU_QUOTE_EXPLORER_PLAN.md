@@ -1,6 +1,6 @@
 # Multi-SKU Quotes & Customer Explorer — Implementation Plan
 
-**Status:** Planned (not started) — amended 2026-07-04 (peer review + Interplast gaps + build-up Contrib.)  
+**Status:** Phase 1–4 done — Phase 5 optional — amended 2026-07-04  
 **Self-review:** 2026-07-04 — consistent; ready for Phase 1 (see §14)  
 **Created:** 2026-07-04  
 **Product:** ProPackHub Estimation Studio (`apps/estimation-studio/`)  
@@ -960,19 +960,19 @@ Implement in order. Each phase should be shippable.
 
 **Deliverables:**
 
-- [ ] `quotes` table with commercial + color defaults + future-nullable columns (§5.1) + Drizzle relations
-- [ ] Estimate columns: `quote_id`, `sort_order`, `sku_label`, `brand`, `specs_code`, `print_color_count`, `cost_per_color`, `tooling_billing_mode`, `copied_from_estimate_id`
-- [ ] Idempotent migration + backfill (one quote per existing estimate; copy currency/delivery_term onto quote; preserve `sourceEstimationId`)
-- [ ] Quote ref via BUG-11-style retry helper (`PKG-YYYY-NNNNN`); rate+currency set at quote create
-- [ ] Save/calc maps colors × costPerColor → `toolingChargeUsd` + `toolingBilledToCustomer` per billing mode (frozen estimate FX)
-- [ ] Visibility strip: development-cost fields gated like plates/tooling
-- [ ] `POST/GET/PATCH/DELETE /api/v1/quotes` (commercial + default color fields on PATCH; cascade customer_id to children)
-- [ ] `GET /api/v1/estimates/by-customer` (quoteCount, estimateCount, lastActivity = max across quotes+estimates, drafts)
-- [ ] `GET /api/v1/customers/:id/explorer` (`estimates` array, not `lines`; include specsCode / colors / billing mode when allowed)
-- [ ] Auto-create quote when `POST /estimates` omits `quoteId` (one quote per call)
-- [ ] Extract `cloneEstimate`; wire **duplicate estimate** under `/quotes/:id/estimates/...`
-- [ ] API client methods
-- [ ] Server build + typecheck clean for touched files
+- [x] `quotes` table with commercial + color defaults + future-nullable columns (§5.1) + Drizzle relations
+- [x] Estimate columns: `quote_id`, `sort_order`, `sku_label`, `brand`, `specs_code`, `print_color_count`, `cost_per_color`, `tooling_billing_mode`, `copied_from_estimate_id`
+- [x] Idempotent migration + backfill (one quote per existing estimate; copy currency/delivery_term onto quote; preserve `sourceEstimationId`)
+- [x] Quote ref via BUG-11-style retry helper (`PKG-YYYY-NNNNN`); rate+currency set at quote create
+- [x] Save/calc maps colors × costPerColor → `toolingChargeUsd` + `toolingBilledToCustomer` per billing mode (frozen estimate FX)
+- [x] Visibility strip: development-cost fields gated like plates/tooling
+- [x] `POST/GET/PATCH/DELETE /api/v1/quotes` (commercial + default color fields on PATCH; cascade customer_id to children)
+- [x] `GET /api/v1/estimates/by-customer` (quoteCount, estimateCount, lastActivity = max across quotes+estimates, drafts)
+- [x] `GET /api/v1/customers/:id/explorer` (`estimates` array, not `lines`; include specsCode / colors / billing mode when allowed)
+- [x] Auto-create quote when `POST /estimates` omits `quoteId` (one quote per call)
+- [x] Extract `cloneEstimate`; wire **duplicate estimate** under `/quotes/:id/estimates/...`
+- [x] API client methods
+- [x] Server build + typecheck clean for touched files
 
 **Verify:** migrate **empty** DB (seed + login); folder summary counts; create quote + one estimate; duplicate estimate; separate tooling on calculate. Per-slab amortized tooling is **§0.4.1** (may be same PR or immediately before Phase 3).
 
@@ -980,13 +980,13 @@ Implement in order. Each phase should be shippable.
 
 **Deliverables:**
 
-- [ ] Rewrite `/estimates` as customer folder view (rich cards §4.1)
-- [ ] Customer explorer page with group by Quote / Brand / SKU / Date
-- [ ] Search at folder level and within customer (sku/brand/ref ready for global search later)
-- [ ] Optional `/estimates/all` flat list (old table)
-- [ ] New quote entry points (folders, explorer, dashboard, customer detail)
-- [ ] Open estimate → quote workspace (single-estimate quote still feels like today)
-- [ ] Enforce `estimates.quote_id NOT NULL`
+- [x] Rewrite `/estimates` as customer folder view (rich cards §4.1)
+- [x] Customer explorer page with group by Quote / Brand / SKU / Date
+- [x] Search at folder level and within customer (sku/brand/ref ready for global search later)
+- [x] Optional `/estimates/all` flat list (old table)
+- [x] New quote entry points (folders, explorer, dashboard, customer detail)
+- [x] Open estimate → quote workspace (single-estimate quote still feels like today)
+- [x] Enforce `estimates.quote_id NOT NULL` (CHECK: active rows require `quote_id`)
 
 **Verify:** UI matches §4.1–4.2; no regression on delete/re-quote from explorer; no orphan estimates.
 
@@ -1007,14 +1007,14 @@ Ship as **sub-PRs** (reviewable chunks):
 
 **Deliverables:**
 
-- [ ] Structured multi-SKU PDF (§4.8) — not PDF concat; include specs code, colors, development charges section
-- [ ] Excel export for combined price list (incl. separate dev costs)
-- [ ] Quote-level status sync rules (e.g. all estimates saved → quote saved)
-- [ ] **Sent lock:** quote `sent` → child estimates read-only; change path = re-quote (preferred) or unlock
-- [ ] Multi-SKU PDF: **re-apply visibility gating explicitly** (do not assume JSON strip; mirror or share `proposal-pdf.ts` cost stripping for development fields)
-- [ ] Quote status transition audit log (mirror estimate-audit pattern) — status / sent_at / valid_until
-- [ ] Empty/loading/error states
-- [ ] Update `ES_WIREFRAMES` / mockup if maintained
+- [x] Structured multi-SKU PDF (§4.8) — not PDF concat; include specs code, colors, development charges section
+- [x] Excel export for combined price list (incl. separate dev costs)
+- [x] Quote-level status sync rules (e.g. all estimates saved → quote saved)
+- [x] **Sent lock:** quote `sent` → child estimates read-only; change path = re-quote (preferred) or unlock
+- [x] Multi-SKU PDF: **re-apply visibility gating explicitly** (do not assume JSON strip; mirror or share `proposal-pdf.ts` cost stripping for development fields)
+- [x] Quote status transition audit log (mirror estimate-audit pattern) — status / sent_at / valid_until
+- [x] Empty/loading/error states
+- [x] Update `ES_WIREFRAMES` / mockup if maintained — N/A (no maintained wireframes file)
 
 **Verify:** PDF has cover/summary/terms/dev charges/per-estimate sections; sales visibility strips costs **and** development fields; sent quote cannot edit estimates without unlock/re-quote.
 

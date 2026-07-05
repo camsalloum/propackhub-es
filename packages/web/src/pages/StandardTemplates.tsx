@@ -164,6 +164,9 @@ const StandardTemplates = () => {
   const pickerTab: 'standard' | 'mine' =
     searchParams.get('tab') === 'mine' ? 'mine' : 'standard';
   const customerFromUrl = searchParams.get('customer')?.trim() || '';
+  const quoteFromUrl = searchParams.get('quote')?.trim() || '';
+  const variantNameFromUrl = searchParams.get('variantName')?.trim() || '';
+  const variantDescriptionFromUrl = searchParams.get('variantDescription')?.trim() || '';
   const { reference: masterRef } = useMasterDataReference();
   const isAdmin = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
   const isPlatformAdmin = user?.role === 'platform_admin';
@@ -353,11 +356,15 @@ const StandardTemplates = () => {
     try {
       const preview = await apiClient.previewTemplate(template.id, {
         customerId: customerFromUrl || undefined,
-        jobName: template.name,
+        jobName: variantNameFromUrl || template.name,
+        quoteId: quoteFromUrl || undefined,
       });
-      const estimatePath = customerFromUrl
-        ? `/estimate/new?customer=${encodeURIComponent(customerFromUrl)}`
-        : '/estimate/new';
+      const qs = new URLSearchParams();
+      if (customerFromUrl) qs.set('customer', customerFromUrl);
+      if (quoteFromUrl) qs.set('quote', quoteFromUrl);
+      if (variantNameFromUrl) qs.set('variantName', variantNameFromUrl);
+      if (variantDescriptionFromUrl) qs.set('variantDescription', variantDescriptionFromUrl);
+      const estimatePath = qs.toString() ? `/estimate/new?${qs}` : '/estimate/new';
       navigate(estimatePath, {
         state: {
           returnTo: '/estimates',

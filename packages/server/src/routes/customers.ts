@@ -1,11 +1,16 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { eq, and, ilike, isNull, count as drizzleCount } from 'drizzle-orm';
+import { eq, and, ilike, isNull, asc, desc, count as drizzleCount } from 'drizzle-orm';
 import { z } from 'zod';
 import * as schema from '../db/schema';
 import { getDatabase } from '../db';
-import { extractTenantFromRequest } from '../utils/auth';
+import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
 import { errorBody, isFkViolation, sendCaughtError } from '../utils/errors';
 import { parsePagination, paginate } from '../utils/pagination';
+import { getEffectiveProfile, stripEstimateRow } from '../utils/visibility';
+import {
+  buildStructureSummary,
+  developmentTotalDisplay,
+} from '../services/quote-helpers';
 
 // ---------------------------------------------------------------------------
 // Validation schemas
@@ -315,6 +320,144 @@ async function getCustomerEstimatesRoute(
   }
 }
 
+/**
+ * GET /customers/:id/explorer — quotes + estimates for customer explorer UI.
+ * Special ids: `none` (null customer, non–price-check), `price-check` (internal price checks).
+ */
+async function getCustomerExplorerRoute(
+  request: FastifyRequest<{ Params: { id: string }; Querystring: { q?: string } }>,
+  reply: FastifyReply
+) {
+  try {
+    await request.jwtVerify();
+    const tenantId = extractTenantFromRequest(request);
+    const user = extractUserFromRequest(request);
+    const { id } = request.params;
+    const q = (request.query.q || '').trim().toLowerCase();
+    const db = getDatabase();
+
+    let customer: { id: string | null; companyName: string };
+    let priceCheckOnly = false;
+    if (id === 'price-check') {
+      customer = { id: 'price-check', companyName: 'Price checks' };
+      priceCheckOnly = true;
+    } else if (id === 'none') {
+      customer = { id: null, companyName: '(No customer)' };
+    } else {
+      const [row] = await db
+        .select({ id: schema.customers.id, companyName: schema.customers.companyName })
+        .from(schema.customers)
+        .where(and(eq(schema.customers.id, id), eq(schema.customers.tenantId, tenantId)));
+      if (!row) {
+        return reply.status(404).send(errorBody('NOT_FOUND', 'Customer not found'));
+      }
+      customer = row;
+    }
+
+    const [userRecord] = await db
+      .select({ visibilityProfile: schema.users.visibilityProfile, role: schema.users.role })
+      .from(schema.users)
+      .where(eq(schema.users.id, user.userId));
+    const profile = getEffectiveProfile(userRecord?.role, userRecord?.visibilityProfile);
+
+    const quoteConditions = [
+      eq(schema.quotes.tenantId, tenantId),
+      isNull(schema.quotes.deletedAt),
+      priceCheckOnly
+        ? and(isNull(schema.quotes.customerId), eq(schema.quotes.isPriceCheck, true))
+        : customer.id == null
+          ? and(isNull(schema.quotes.customerId), eq(schema.quotes.isPriceCheck, false))
+          : eq(schema.quotes.customerId, customer.id),
+    ];
+
+    const quotes = await db
+      .select()
+      .from(schema.quotes)
+      .where(and(...quoteConditions))
+      .orderBy(desc(schema.quotes.updatedAt));
+
+    const resultQuotes = [];
+    for (const quote of quotes) {
+      const estimates = await db
+        .select()
+        .from(schema.estimates)
+        .where(
+          and(
+            eq(schema.estimates.quoteId, quote.id),
+            eq(schema.estimates.tenantId, tenantId),
+            isNull(schema.estimates.deletedAt)
+          )
+        )
+        .orderBy(asc(schema.estimates.sortOrder), asc(schema.estimates.createdAt));
+
+      const estimateSummaries = [];
+      for (const est of estimates) {
+        const structureSummary = await buildStructureSummary(db, est.id);
+        const base = stripEstimateRow(est, profile);
+        const developmentTotal = developmentTotalDisplay(est.printColorCount, est.costPerColor);
+        const summary = {
+          ...base,
+          structureSummary,
+          orderQuantityKg: est.orderQuantityKg,
+          productType: est.productType,
+          ...(profile.platesPerKg
+            ? {
+                printColorCount: est.printColorCount,
+                costPerColor: est.costPerColor,
+                developmentTotal,
+                toolingBillingMode: est.toolingBillingMode,
+              }
+            : {}),
+        };
+
+        if (q) {
+          const hay = [
+            quote.name,
+            quote.refNumber,
+            quote.rfqNumber,
+            quote.notes,
+            est.refNumber,
+            est.skuLabel,
+            est.brand,
+            est.jobName,
+            est.specsCode,
+            structureSummary,
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+          if (!hay.includes(q)) continue;
+        }
+        estimateSummaries.push({
+          ...summary,
+          variantDescription: quote.notes,
+        });
+      }
+
+      if (q && estimateSummaries.length === 0) {
+        const quoteHay = `${quote.name} ${quote.refNumber}`.toLowerCase();
+        if (!quoteHay.includes(q)) continue;
+      }
+
+      resultQuotes.push({
+        id: quote.id,
+        name: quote.name,
+        refNumber: quote.refNumber,
+        rfqNumber: quote.rfqNumber,
+        status: quote.status,
+        validUntil: quote.validUntil,
+        updatedAt: quote.updatedAt,
+        notes: quote.notes,
+        estimates: estimateSummaries,
+      });
+    }
+
+    return reply.send({ customer, quotes: resultQuotes });
+  } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to load explorer', 'Customer explorer error:');
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Route registration
 // ---------------------------------------------------------------------------
@@ -325,6 +468,7 @@ export async function registerCustomerRoutes(fastify: FastifyInstance) {
   fastify.post('/api/v1/customers', createCustomerRoute);
   fastify.get('/api/v1/customers/:id', getCustomerRoute);
   fastify.get('/api/v1/customers/:id/estimates', getCustomerEstimatesRoute);
+  fastify.get('/api/v1/customers/:id/explorer', getCustomerExplorerRoute);
   fastify.patch('/api/v1/customers/:id', updateCustomerRoute);
   fastify.delete('/api/v1/customers/:id', deleteCustomerRoute);
 }

@@ -54,7 +54,7 @@ export default function CustomerAutocomplete({
     setLoading(true);
     try {
       const { apiClient } = await import('../lib/api');
-      const results = await apiClient.getCustomers();
+      const results = await apiClient.listCustomers(100);
       setOptions(
         (results || []).slice(0, 25).map((c: CustomerOption) => ({
           id: c.id,

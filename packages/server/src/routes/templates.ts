@@ -2,7 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest, isTenantAdmin } from '../utils/auth';
-import { eq, and, asc, desc } from 'drizzle-orm';
+import { eq, and, asc, desc, isNull } from 'drizzle-orm';
 import { ensureTemplatesForTenant, relinkTemplatesForTenant, syncMissingStandardTemplates, pruneDuplicateStandardTemplates, syncTemplateKeysForTenant } from '../db/seed-templates';
 import { quantitiesForSlabTemplateKey } from '../db/seed-slab-templates';
 import {
@@ -17,8 +17,9 @@ import {
   plainCormFromPrinted,
 } from '@es/engine';
 import { buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
-import { generateRefNumber } from './estimates';
+import { generateRefNumber } from '../utils/ref-numbers';
 import { getMasterDataVersion, getPlatformWasteBandsByPrintMode } from '../db/platform-master-data';
+import { createQuote, isQuoteLocked, nextEstimateSortOrder } from '../services/quote-helpers';
 
 type EstimateRow = typeof schema.estimates.$inferSelect;
 import { buildLayerInsertValues, toMaterialLineageSource } from '../utils/layer-lineage';
@@ -250,11 +251,12 @@ export async function instantiateByKeyRoute(
       jobName?: string;
       orderQuantityKg?: number;
       orderQuantityUnit?: string;
+      quoteId?: string;
     };
   }>,
   reply: FastifyReply
 ) {
-  const { templateKey, templateId, customerId, jobName, orderQuantityKg, orderQuantityUnit } =
+  const { templateKey, templateId, customerId, jobName, orderQuantityKg, orderQuantityUnit, quoteId } =
     request.body || {};
   if (!templateKey && !templateId) {
     return reply.status(400).send({ error: 'templateKey or templateId required' });
@@ -290,7 +292,7 @@ export async function instantiateByKeyRoute(
       {
         ...request,
         params: { id: id! },
-        body: { customerId, jobName, orderQuantityKg, orderQuantityUnit },
+        body: { customerId, jobName, orderQuantityKg, orderQuantityUnit, quoteId },
       } as FastifyRequest<{
         Params: { id: string };
         Body: {
@@ -298,6 +300,7 @@ export async function instantiateByKeyRoute(
           jobName?: string;
           orderQuantityKg?: number;
           orderQuantityUnit?: string;
+          quoteId?: string;
         };
       }>,
       reply
@@ -319,6 +322,7 @@ export async function instantiateTemplateRoute(
       jobName?: string;
       orderQuantityKg?: number;
       orderQuantityUnit?: string;
+      quoteId?: string;
       /** When true, resolve the template but DO NOT persist — return the data so the
        *  editor can open a new (unsaved) estimate. Nothing is written until the user saves. */
       preview?: boolean;
@@ -330,7 +334,8 @@ export async function instantiateTemplateRoute(
     await request.jwtVerify();
     const tenantId = extractTenantFromRequest(request);
     const { id } = request.params;
-    const { customerId, jobName, orderQuantityKg, orderQuantityUnit, preview } = request.body || {};
+    const { customerId, jobName, orderQuantityKg, orderQuantityUnit, quoteId: bodyQuoteId, preview } =
+      request.body || {};
     const db = getDatabase();
 
     await relinkTemplatesForTenant(tenantId);
@@ -549,13 +554,58 @@ export async function instantiateTemplateRoute(
       });
     }
 
+    const estimateJobName = jobName || template.name;
+    let quoteId = bodyQuoteId || null;
+    let displayCurrency = tenant.displayCurrency;
+    let exchangeRateUsdToDisplay = String(tenant.exchangeRateUsdToDisplay);
+    let resolvedCustomerId = customerId || null;
+    let sortOrder = 0;
+
+    if (quoteId) {
+      const [quote] = await db
+        .select()
+        .from(schema.quotes)
+        .where(
+          and(
+            eq(schema.quotes.id, quoteId),
+            eq(schema.quotes.tenantId, tenantId),
+            isNull(schema.quotes.deletedAt)
+          )
+        );
+      if (!quote) {
+        return reply.status(404).send({ error: 'Quote not found' });
+      }
+      if (isQuoteLocked(quote)) {
+        return reply.status(409).send({
+          error: 'Quote is sent and locked. Unlock or re-quote to edit.',
+        });
+      }
+      displayCurrency = quote.displayCurrency;
+      exchangeRateUsdToDisplay = String(quote.exchangeRateUsdToDisplay);
+      resolvedCustomerId = quote.customerId ?? resolvedCustomerId;
+      sortOrder = await nextEstimateSortOrder(db, quote.id);
+    } else {
+      const quote = await createQuote(db, {
+        tenantId,
+        customerId: resolvedCustomerId,
+        name: estimateJobName,
+        displayCurrency,
+        exchangeRateUsdToDisplay,
+        status: 'draft',
+      });
+      quoteId = quote.id;
+    }
+
     const [estimate] = (await db
     .insert(schema.estimates)
     .values({
       tenantId,
-      customerId: customerId || null,
+      customerId: resolvedCustomerId,
+      quoteId,
+      sortOrder,
+      skuLabel: estimateJobName,
       refNumber,
-      jobName: jobName || template.name,
+      jobName: estimateJobName,
       productType: template.productType,
       productSubtype: template.productSubtype ?? undefined,
       printingWebClass,
@@ -563,8 +613,8 @@ export async function instantiateTemplateRoute(
       markupPercent: tenant.defaultMarkupPercent || '15.00',
       platesPerKg: '0',
       deliveryPerKg: '0',
-      displayCurrency: tenant.displayCurrency,
-      exchangeRateUsdToDisplay: tenant.exchangeRateUsdToDisplay,
+      displayCurrency,
+      exchangeRateUsdToDisplay,
       status: 'draft',
       masterDataVersion,
       sourceTemplateKey,

@@ -172,6 +172,41 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 
 ## Session log
 
+### 2026-07-04 — Phase 3 commercial review + editor UX
+
+- Engine: slab `pricePerKg` amortizes tooling/delivery over **slab qty** (headline sale still order qty)
+- Quote workspace: combined price list (dev columns gated by plates visibility; separate charges block)
+- Job header: SKU, brand, specs code, print colors, cost/color, billing mode → tooling FX path
+- Build-up: Contrib. `{CUR}/kg` (same gate as mat costs); µ/gsm in chart bar when share ≳9%
+- Structure table: Material/Area double-row headers; solid chip when `solidPercent < 100`
+- Next: Phase 4 multi-SKU PDF + Excel + sent lock
+
+### 2026-07-05 — Customer-first new quote + repeat order
+
+- **New quote:** customer required (tenant-scoped search + inline create); variant name → `quotes.name`; variant description → `quotes.notes`; URL params `variantName` / `variantDescription` prefill first estimate (`skuLabel`, `notes`, `jobName`)
+- **Price check:** `quotes.is_price_check`; one-click creates `{ isPriceCheck: true, customerId: null }`; folder **Price checks** at `/estimates/customers/price-check` (separate from `(No customer)`)
+- **Repeat order:** Estimates → pick customer → explorer `?repeatOrder=1` → select variant → dialog → `POST /estimates/:id/requote` with `{ quoteName, skuLabel, variantDescription }`
+- Migration `0015_quotes_price_check_flag.sql`
+
+### 2026-07-04 — Phase 2 customer folders + explorer
+
+- `/estimates` = customer folder cards; `/estimates/all` = legacy flat table; `/estimates/customers/:id` explorer (group by quote/brand/SKU/date)
+- Minimal `QuoteWorkspace`: quote header (PKG- ref), multi-SKU rail, embedded `EstimateEditor`; single-SKU hides estimate ref
+- New quote from folders / explorer / dashboard / customer detail; `quote` + `customer` query params through choose → templates/scratch
+- Standalone `/estimate/:id` redirects to `/quotes/:quoteId/estimates/:id` when `quoteId` present
+- CHECK: active estimates must have `quote_id`
+- Next: Phase 3 combined price list, colors/specs in job header, solid-% hover, Contrib.
+
+### 2026-07-04 — Phase 1 multi-SKU quotes (API)
+
+- Implemented plan Phase 1 only (no UI): `quotes` commercial container; estimates gain `quote_id`, `sku_label`, `brand`, `specs_code`, print colors / cost per color / `tooling_billing_mode`
+- Backfill: one `PKG-…` quote per existing estimate; 0 orphans after `db:patch`
+- APIs: `/quotes` CRUD + price-list + same-quote duplicate; `/estimates/by-customer`; `/customers/:id/explorer` (use `none` for no-customer folder)
+- `cloneEstimate` shared by requote (new quote, refresh RM) and duplicate (same or new quote, keep snapshots)
+- Colors × cost → `toolingChargeUsd` at **estimate frozen FX**; billing `amortized` | `separate` (default) | `not_billed`
+- Legacy `POST /estimates` and template instantiate auto-create a one-estimate quote when `quoteId` omitted
+- Next: Phase 2 customer folder UI
+
 ### 2026-06-11 — PRD + platform scope
 
 - ES standalone SaaS; individual-first tenant
@@ -979,17 +1014,15 @@ Settings → General no longer shows Default Slab Template. Slab quantities and 
 
 Headline **Selling price** card shows display-currency prices for every applicable unit: `/ kg` (primary), `/ m²` (when GSM known), `/ LM` (reel width), `/ roll` (custom roll length), `/ pc` + `/ Kpcs` (when piece yield known). Removed “Live preview — save to persist”.
 
-### 2026-07-04 — Multi-SKU quotes & customer explorer (planned)
+### 2026-07-04 — Multi-SKU quotes & customer explorer (Phases 1–4 done)
 
-**Doc:** [MULTI_SKU_QUOTE_EXPLORER_PLAN.md](./MULTI_SKU_QUOTE_EXPLORER_PLAN.md) — not implemented yet. Amended after peer review (CPQ separation).
+**Doc:** [MULTI_SKU_QUOTE_EXPLORER_PLAN.md](./MULTI_SKU_QUOTE_EXPLORER_PLAN.md). Phases 1–4 shipped.
 
 **Model:** Customer → Quote (commercial) → Estimates (costing objects / full engine). **No “Line” entity.** Single-SKU = one-estimate quote. Duplicate estimate = snapshot on same quote (keep RM costs); amend SKU/brand/dimensions/slabs. Re-quote → new quote (version-ready). Quote owns commercial terms; estimates keep engine snapshots (currency freeze).
 
-**Interplast gaps in plan:** `specs_code`; `print_color_count` × `cost_per_color`; `tooling_billing_mode` = amortized (in /kg) | separate (lump, not in /kg) | not_billed. Wire via existing tooling charge flags. **Not** Contract 1/2. Solid-% hover on ink/SB adhesive/coatings. **Contrib. {CUR}/kg** on layer build-up (with µ%/GSM%), not structure table; µ/gsm in chart bars when tall enough; structure table Material/Area only + header/width polish.
+**Phase 4:** `GET /api/v1/quotes/:id/proposal.pdf` — structured multi-SKU PDF (cover, summary, terms, separate development charges, per-estimate price lists, signature). Visibility re-applied for material cost, markup, plates/dev fields, slabs. Combined price list **Excel** export (dev charges sheet when separate). **Sent lock:** `status=sent` or `sent_at` set → child estimates read-only (PATCH/calculate/delete/duplicate blocked); **Unlock** clears `sent_at` and sets draft/saved; **Re-quote** still creates a new quote. Status sync: all estimates non-draft → quote `saved` (never auto-sent). Quote status/sent_at/valid_until → `activity_logs` (`entityType: quote`).
 
-**UI:** customer folders; explorer; quote workspace = summary + rail + editor + combined price list (specs, colors, dev cost, billing). Future-proof: `rfq_id`, versioning FKs — no UI yet.
-
-**Phases:** 1 schema/API+backfill → 2 folders+explorer → 3 workspace+colors/specs+solid hover → 4 structured multi-SKU PDF.
+**Phases:** 1–4 done. Phase 5 optional (whole-quote re-quote, RFQ, search, versioning UI).
 
 ### 2026-07-04 — Editable field highlight (global)
 

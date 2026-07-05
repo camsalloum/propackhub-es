@@ -4,19 +4,26 @@ import { SectionTitle } from '../components/SectionTitle';
 
 /**
  * New-estimate chooser: two clear starting points.
- *  - Template  → predefined, structure-locked stack (fast path for standard products).
- *  - Scratch   → fully editable, build the layer stack from nothing (custom jobs).
- * The customer query param (if present, e.g. from a customer page) is carried through
- * to whichever path the user picks so the new estimate stays linked to that customer.
+ * Customer / quote query params (from folders or explorer) are carried through.
  */
 const EstimateStart = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const customer = searchParams.get('customer')?.trim() || '';
-  const customerQs = customer ? `?customer=${encodeURIComponent(customer)}` : '';
+  const quote = searchParams.get('quote')?.trim() || '';
+  const priceCheck = searchParams.get('priceCheck') === '1';
+  const variantName = searchParams.get('variantName')?.trim() || '';
+  const variantDescription = searchParams.get('variantDescription')?.trim() || '';
+  const qs = new URLSearchParams();
+  if (customer) qs.set('customer', customer);
+  if (quote) qs.set('quote', quote);
+  if (priceCheck) qs.set('priceCheck', '1');
+  if (variantName) qs.set('variantName', variantName);
+  if (variantDescription) qs.set('variantDescription', variantDescription);
+  const qstr = qs.toString() ? `?${qs.toString()}` : '';
 
-  const startFromTemplate = () => navigate(`/templates${customerQs}`);
-  const startFromScratch = () => navigate(`/estimate/new${customerQs}`);
+  const startFromTemplate = () => navigate(`/templates${qstr}`);
+  const startFromScratch = () => navigate(`/estimate/new${qstr}`);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -24,9 +31,8 @@ const EstimateStart = () => {
         <SectionTitle
           as="h1"
           className="text-2xl lg:text-3xl font-display font-bold text-navy"
-          hint="Choose how you want to start. You can always change the details later."
         >
-          New estimate
+          {priceCheck ? 'Price check' : 'New estimate'}
         </SectionTitle>
       </div>
 
@@ -48,7 +54,7 @@ const EstimateStart = () => {
             <h2 className="font-display font-semibold text-lg text-brand mb-1">Start from a template</h2>
             <p className="text-sm text-text-secondary">
               Pick a predefined structure. The substrate stack is fixed — you adjust grades, inks,
-              coatings, quantities and pricing. Fastest for standard, repeat products.
+              coatings, quantities and pricing.
             </p>
           </div>
           <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-medium text-accent-text">
@@ -73,7 +79,7 @@ const EstimateStart = () => {
             <h2 className="font-display font-semibold text-lg text-brand mb-1">Start from scratch</h2>
             <p className="text-sm text-text-secondary">
               Define everything yourself: choose the product type, then build the layer stack —
-              substrates, adhesives, inks. Best for custom or one-off jobs.
+              substrates, adhesives, inks.
             </p>
           </div>
           <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-medium text-accent-text">

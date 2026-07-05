@@ -45,7 +45,9 @@ const Layout = () => {
     location.pathname === path || location.pathname.startsWith(path + '/');
 
   const isEstimateEditor =
-    location.pathname.startsWith('/estimate/') && !location.pathname.startsWith('/estimate/choose');
+    (location.pathname.startsWith('/estimate/') &&
+      !location.pathname.startsWith('/estimate/choose')) ||
+    location.pathname.startsWith('/quotes/');
 
   const hideMobileBottomNav = isEstimateEditor;
 

@@ -1,7 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { getDatabase, schema } from '../db';
-import type { Database } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
 import { eq, and, desc, sql, isNull, asc, count as drizzleCount } from 'drizzle-orm';
 import { type VisibilityProfile, derivePrintingWebClass } from '@es/engine';
@@ -32,8 +31,44 @@ import {
   logEstimateStateTransition,
 } from '../utils/estimate-audit';
 import { AppError, isAuthError, sendCaughtError } from '../utils/errors';
+import { generateRefNumber } from '../utils/ref-numbers';
+import { cloneEstimate } from '../services/clone-estimate';
+import {
+  createQuote,
+  deriveToolingFromColors,
+  isQuoteLocked,
+  mapEstimateStatusToQuoteStatus,
+  nextEstimateSortOrder,
+  syncQuoteStatusFromEstimates,
+} from '../services/quote-helpers';
+import { logQuoteStatusTransition } from '../utils/quote-audit';
+
+export { generateRefNumber };
 
 type EstimateRow = typeof schema.estimates.$inferSelect;
+
+/** Returns 409 payload when parent quote is sent/locked; null when editable. */
+async function quoteLockError(
+  db: ReturnType<typeof getDatabase>,
+  tenantId: string,
+  quoteId: string | null | undefined
+): Promise<{ error: string } | null> {
+  if (!quoteId) return null;
+  const [quote] = await db
+    .select({ status: schema.quotes.status, sentAt: schema.quotes.sentAt })
+    .from(schema.quotes)
+    .where(
+      and(
+        eq(schema.quotes.id, quoteId),
+        eq(schema.quotes.tenantId, tenantId),
+        isNull(schema.quotes.deletedAt)
+      )
+    );
+  if (isQuoteLocked(quote)) {
+    return { error: 'Quote is sent and locked. Unlock or re-quote to edit.' };
+  }
+  return null;
+}
 type LayerRow = typeof schema.layers.$inferSelect;
 type ProcessInsertMode = 'modern' | 'legacy';
 
@@ -203,51 +238,25 @@ const EstimateCreateSchema = z.object({
   note: z.string().optional(), // used in activity log
   structureForked: z.boolean().optional(),
   processesCustomized: z.boolean().optional(),
+  // Multi-SKU quote fields
+  quoteId: z.string().uuid().optional(),
+  skuLabel: z.string().max(255).optional().nullable(),
+  brand: z.string().max(255).optional().nullable(),
+  specsCode: z.string().max(64).optional().nullable(),
+  printColorCount: z.coerce.number().int().nonnegative().optional().nullable(),
+  costPerColor: z.coerce.number().nonnegative().optional().nullable(),
+  toolingBillingMode: z.enum(['amortized', 'separate', 'not_billed']).optional().nullable(),
+  sortOrder: z.coerce.number().int().nonnegative().optional(),
 });
 
 /** PATCH accepts any subset of the create fields. */
 const EstimateUpdateSchema = EstimateCreateSchema.partial();
 
-export async function generateRefNumber(db: Database, tenantId: string): Promise<string> {
-  const year = new Date().getFullYear();
-  // BUG-11: retry loop guards against race conditions where two concurrent
-  // requests grab the same COUNT and try to insert the same ref number.
-  // The UNIQUE index on (tenant_id, ref_number) catches the collision;
-  // we re-count and try the next slot (up to 5 attempts).
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const result = await db
-      .select({ count: sql`COUNT(*)` })
-      .from(schema.estimates)
-      .where(
-        and(
-          eq(schema.estimates.tenantId, tenantId),
-          isNull(schema.estimates.deletedAt),
-          sql`EXTRACT(YEAR FROM ${schema.estimates.createdAt}) = ${year}`
-        )
-      );
-
-    const count = Number(result[0]?.count ?? 0);
-    // On retry add the attempt offset so we skip already-taken slots
-    const candidate = `QT-${year}-${String(count + 1 + attempt).padStart(5, '0')}`;
-
-    // Check whether this ref already exists (avoids relying solely on insert-catch)
-    const clash = await db
-      .select({ id: schema.estimates.id })
-      .from(schema.estimates)
-      .where(
-        and(
-          eq(schema.estimates.tenantId, tenantId),
-          eq(schema.estimates.refNumber, candidate)
-        )
-      )
-      .limit(1);
-
-    if (clash.length === 0) return candidate;
-    // Clash found — loop and try count+2, count+3 …
-  }
-  // Fallback: timestamp-based ref (should never reach here in practice)
-  return `QT-${year}-${Date.now().toString().slice(-5)}`;
-}
+const RequoteBodySchema = z.object({
+  quoteName: z.string().min(1).optional(),
+  skuLabel: z.string().optional(),
+  variantDescription: z.string().optional().nullable(),
+});
 
 export async function getEstimatesRoute(
   _fastify: FastifyInstance,
@@ -337,6 +346,76 @@ export async function createEstimateRoute(
     // Generate ref number
     const refNumber = await generateRefNumber(db, tenantId);
 
+    // Resolve parent quote (auto-create one-estimate quote when omitted — D5).
+    let quoteId = data.quoteId ?? null;
+    let displayCurrency = tenant.displayCurrency;
+    let exchangeRateUsdToDisplay = tenant.exchangeRateUsdToDisplay.toString();
+    let customerId = data.customerId ?? null;
+    let printColorCount = data.printColorCount ?? null;
+    let costPerColor = data.costPerColor ?? null;
+    let toolingBillingMode = data.toolingBillingMode ?? null;
+    let sortOrder = data.sortOrder ?? 0;
+
+    if (quoteId) {
+      const [quote] = await db
+        .select()
+        .from(schema.quotes)
+        .where(
+          and(
+            eq(schema.quotes.id, quoteId),
+            eq(schema.quotes.tenantId, tenantId),
+            isNull(schema.quotes.deletedAt)
+          )
+        );
+      if (!quote) {
+        return reply.status(404).send({ error: 'Quote not found' });
+      }
+      if (isQuoteLocked(quote)) {
+        return reply.status(409).send({
+          error: 'Quote is sent and locked. Unlock or re-quote to edit.',
+        });
+      }
+      displayCurrency = quote.displayCurrency;
+      exchangeRateUsdToDisplay = String(quote.exchangeRateUsdToDisplay);
+      customerId = quote.customerId ?? customerId;
+      if (printColorCount == null && quote.defaultPrintColorCount != null) {
+        printColorCount = quote.defaultPrintColorCount;
+      }
+      if (costPerColor == null && quote.defaultCostPerColor != null) {
+        costPerColor = Number(quote.defaultCostPerColor);
+      }
+      if (toolingBillingMode == null && quote.defaultToolingBillingMode != null) {
+        toolingBillingMode = quote.defaultToolingBillingMode as
+          | 'amortized'
+          | 'separate'
+          | 'not_billed';
+      }
+      if (data.sortOrder == null) {
+        sortOrder = await nextEstimateSortOrder(db, quote.id);
+      }
+    } else {
+      const quote = await createQuote(db, {
+        tenantId,
+        customerId,
+        name: data.jobName,
+        displayCurrency,
+        exchangeRateUsdToDisplay,
+        status: mapEstimateStatusToQuoteStatus(data.status),
+        deliveryTerm: data.deliveryTerm,
+        defaultPrintColorCount: printColorCount,
+        defaultCostPerColor: costPerColor,
+        defaultToolingBillingMode: toolingBillingMode,
+      });
+      quoteId = quote.id;
+    }
+
+    const derivedTooling = deriveToolingFromColors({
+      printColorCount,
+      costPerColor,
+      toolingBillingMode,
+      exchangeRateUsdToDisplay,
+    });
+
     const tenantMaterials = await db
       .select()
       .from(schema.materials)
@@ -375,7 +454,15 @@ export async function createEstimateRoute(
       .insert(schema.estimates)
       .values({
         tenantId,
-        customerId: data.customerId,
+        customerId,
+        quoteId,
+        sortOrder,
+        skuLabel: data.skuLabel ?? data.jobName,
+        brand: data.brand ?? null,
+        specsCode: data.specsCode ?? null,
+        printColorCount,
+        costPerColor: costPerColor != null ? String(costPerColor) : null,
+        toolingBillingMode: derivedTooling?.toolingBillingMode ?? toolingBillingMode,
         refNumber,
         jobName: data.jobName,
         productType: data.productType,
@@ -385,8 +472,8 @@ export async function createEstimateRoute(
         markupPercent: data.markupPercent.toString(),
         platesPerKg: data.platesPerKg.toString(),
         deliveryPerKg: data.deliveryPerKg.toString(),
-        displayCurrency: tenant.displayCurrency,
-        exchangeRateUsdToDisplay: tenant.exchangeRateUsdToDisplay.toString(),
+        displayCurrency,
+        exchangeRateUsdToDisplay,
         status: data.status ?? 'draft',
         notes: data.notes ?? undefined,
         masterDataVersion,
@@ -401,8 +488,11 @@ export async function createEstimateRoute(
         cormPerKgUsd: data.cormPerKgUsd != null ? String(data.cormPerKgUsd) : undefined,
         cormPerKgPlain: data.cormPerKgPlain != null ? String(data.cormPerKgPlain) : undefined,
         moqKg: data.moqKg != null ? String(data.moqKg) : undefined,
-        toolingChargeUsd: data.toolingChargeUsd != null ? String(data.toolingChargeUsd) : undefined,
-        toolingBilledToCustomer: data.toolingBilledToCustomer ?? false,
+        toolingChargeUsd:
+          derivedTooling?.toolingChargeUsd ??
+          (data.toolingChargeUsd != null ? String(data.toolingChargeUsd) : undefined),
+        toolingBilledToCustomer:
+          derivedTooling?.toolingBilledToCustomer ?? data.toolingBilledToCustomer ?? false,
         deliveryTerm: data.deliveryTerm ?? undefined,
         deliveryChargeUsd: data.deliveryChargeUsd != null ? String(data.deliveryChargeUsd) : undefined,
         solventMaterialId: data.solventMaterialId,
@@ -485,6 +575,22 @@ export async function calculateEstimateRoute(
 
     const db = getDatabase();
 
+    const [estimateRow] = await db
+      .select({ quoteId: schema.estimates.quoteId })
+      .from(schema.estimates)
+      .where(
+        and(
+          eq(schema.estimates.id, id),
+          eq(schema.estimates.tenantId, tenantId),
+          isNull(schema.estimates.deletedAt)
+        )
+      );
+    if (!estimateRow) {
+      return reply.status(404).send({ error: 'Estimate not found' });
+    }
+    const lockErr = await quoteLockError(db, tenantId, estimateRow.quoteId);
+    if (lockErr) return reply.status(409).send(lockErr);
+
     const profile = await getUserVisibilityProfile(db, user.userId);
     const result = await calculateAndPersistEstimate(db, id, tenantId);
     return reply.send(stripCalculationResult(result, profile));
@@ -519,6 +625,9 @@ export async function generateProposalPdfRoute(
     reply.header('Content-Type', 'application/pdf');
     return reply.send(pdfBuffer);
   } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes('not available')) {
+      return reply.status(403).send({ error: error.message });
+    }
     return sendCaughtError(reply, error, 'Failed to generate proposal PDF', 'Generate proposal PDF error:');
   }
 }
@@ -655,6 +764,9 @@ async function updateEstimateRoute(
       return reply.status(404).send({ error: 'Estimate not found' });
     }
 
+    const lockErr = await quoteLockError(db, tenantId, existing.quoteId);
+    if (lockErr) return reply.status(409).send(lockErr);
+
     // PHASE 5 VALIDATION: State transition rules
     // Rule 1: Cannot customize processes unless structure is already forked
     if (data.processesCustomized === true) {
@@ -770,11 +882,44 @@ async function updateEstimateRoute(
     if (data.moqKg !== undefined) {
       updates.moqKg = String(data.moqKg);
     }
-    if (data.toolingChargeUsd !== undefined) {
-      updates.toolingChargeUsd = String(data.toolingChargeUsd);
+    if (data.skuLabel !== undefined) updates.skuLabel = data.skuLabel;
+    if (data.brand !== undefined) updates.brand = data.brand;
+    if (data.specsCode !== undefined) updates.specsCode = data.specsCode;
+    if (data.sortOrder !== undefined) updates.sortOrder = data.sortOrder;
+    if (data.printColorCount !== undefined) updates.printColorCount = data.printColorCount;
+    if (data.costPerColor !== undefined) {
+      updates.costPerColor = data.costPerColor != null ? String(data.costPerColor) : null;
     }
-    if (data.toolingBilledToCustomer !== undefined) {
-      updates.toolingBilledToCustomer = data.toolingBilledToCustomer;
+    if (data.toolingBillingMode !== undefined) {
+      updates.toolingBillingMode = data.toolingBillingMode;
+    }
+
+    // Colors × cost → toolingChargeUsd at frozen estimate FX (not live quote rate).
+    const nextPrintColors =
+      data.printColorCount !== undefined ? data.printColorCount : existing.printColorCount;
+    const nextCostPerColor =
+      data.costPerColor !== undefined ? data.costPerColor : existing.costPerColor;
+    const nextBillingMode =
+      data.toolingBillingMode !== undefined
+        ? data.toolingBillingMode
+        : existing.toolingBillingMode;
+    const derivedTooling = deriveToolingFromColors({
+      printColorCount: nextPrintColors,
+      costPerColor: nextCostPerColor,
+      toolingBillingMode: nextBillingMode,
+      exchangeRateUsdToDisplay: existing.exchangeRateUsdToDisplay,
+    });
+    if (derivedTooling) {
+      updates.toolingChargeUsd = derivedTooling.toolingChargeUsd;
+      updates.toolingBilledToCustomer = derivedTooling.toolingBilledToCustomer;
+      updates.toolingBillingMode = derivedTooling.toolingBillingMode;
+    } else {
+      if (data.toolingChargeUsd !== undefined) {
+        updates.toolingChargeUsd = String(data.toolingChargeUsd);
+      }
+      if (data.toolingBilledToCustomer !== undefined) {
+        updates.toolingBilledToCustomer = data.toolingBilledToCustomer;
+      }
     }
     if (data.deliveryTerm !== undefined) {
       updates.deliveryTerm = data.deliveryTerm || null;
@@ -999,6 +1144,33 @@ async function updateEstimateRoute(
       }
     }
 
+    // Quote status sync: all estimates non-draft → quote saved (never auto-sent).
+    const quoteIdForSync = responseRow?.quoteId ?? existing.quoteId;
+    if (quoteIdForSync) {
+      const [quoteBefore] = await db
+        .select({
+          status: schema.quotes.status,
+          sentAt: schema.quotes.sentAt,
+          validUntil: schema.quotes.validUntil,
+        })
+        .from(schema.quotes)
+        .where(eq(schema.quotes.id, quoteIdForSync));
+      const synced = await syncQuoteStatusFromEstimates(db, quoteIdForSync, tenantId);
+      if (synced && quoteBefore && synced.status !== quoteBefore.status) {
+        await logQuoteStatusTransition(db, {
+          tenantId,
+          userId: user.userId,
+          quoteId: quoteIdForSync,
+          before: quoteBefore,
+          after: {
+            status: synced.status,
+            sentAt: synced.sentAt,
+            validUntil: synced.validUntil,
+          },
+        });
+      }
+    }
+
     reply.header('Cache-Control', 'no-store');
     return reply.send(responseRow ?? updated);
   } catch (error: unknown) {
@@ -1030,6 +1202,22 @@ async function deleteEstimateRoute(
     const { id } = request.params;
     const db = getDatabase();
 
+    const [existing] = await db
+      .select({ id: schema.estimates.id, quoteId: schema.estimates.quoteId })
+      .from(schema.estimates)
+      .where(
+        and(
+          eq(schema.estimates.id, id),
+          eq(schema.estimates.tenantId, tenantId),
+          isNull(schema.estimates.deletedAt)
+        )
+      );
+    if (!existing) {
+      return reply.status(404).send({ error: 'Estimate not found' });
+    }
+    const lockErr = await quoteLockError(db, tenantId, existing.quoteId);
+    if (lockErr) return reply.status(409).send(lockErr);
+
     const [deleted] = (await db
       .update(schema.estimates)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
@@ -1051,11 +1239,12 @@ async function deleteEstimateRoute(
   }
 }
 
-// Re-quote estimate (create new estimate from existing, refresh material prices)
+// Re-quote: new single-estimate quote with fresh library prices (D2).
 async function requoteEstimateRoute(
   _fastify: FastifyInstance,
   request: FastifyRequest<{
     Params: { id: string };
+    Body: z.infer<typeof RequoteBodySchema>;
   }>,
   reply: FastifyReply
 ) {
@@ -1063,10 +1252,9 @@ async function requoteEstimateRoute(
     await request.jwtVerify();
     const tenantId = extractTenantFromRequest(request);
     const { id } = request.params;
+    const body = RequoteBodySchema.safeParse(request.body ?? {}).data;
     const db = getDatabase();
-    const processInsertMode = await detectProcessInsertMode(db);
 
-    // Get source estimate (BUG-5: honor soft-delete)
     const [source] = await db
       .select()
       .from(schema.estimates)
@@ -1082,131 +1270,72 @@ async function requoteEstimateRoute(
       return reply.status(404).send({ error: 'Source estimate not found' });
     }
 
-    // Get tenant's current currency settings (PRD §7.5: re-quote uses current, not frozen)
     const [tenant] = await db
       .select()
       .from(schema.tenants)
       .where(eq(schema.tenants.id, tenantId));
 
-    // Get layers with current material prices
-    const sourceLayers = await db
-      .select()
-      .from(schema.layers)
-      .where(eq(schema.layers.estimateId, id))
-      .orderBy(schema.layers.position);
-
-    // Generate new ref number via shared helper (BUG-11: excludes soft-deleted)
-    const newRefNumber = await generateRefNumber(db, tenantId);
-
-    const tenantMaterials = await db
-      .select()
-      .from(schema.materials)
-      .where(eq(schema.materials.tenantId, tenantId));
-    const materialById = new Map<string, MaterialRow>(
-      tenantMaterials.map((m: MaterialRow) => [m.id, m])
+    const displayCurrency = tenant?.displayCurrency || source.displayCurrency;
+    const exchangeRateUsdToDisplay = String(
+      tenant?.exchangeRateUsdToDisplay || source.exchangeRateUsdToDisplay
     );
-    const masterDataVersion = await getMasterDataVersion();
 
-    // Create new estimate
-    const [newEstimate] = (await db
-      .insert(schema.estimates)
-      .values({
-        tenantId,
-        customerId: source.customerId,
-        refNumber: newRefNumber,
-        jobName: `${source.jobName} (Re-quote)`,
-        status: 'draft',
-        productType: source.productType,
-        printingWebClass: source.printingWebClass,
-        dimensions: source.dimensions,
-        markupPercent: source.markupPercent,
-        platesPerKg: source.platesPerKg,
-        deliveryPerKg: source.deliveryPerKg,
-        // PRD §7.5: re-quote always uses current tenant currency/rate, not frozen source rate
-        displayCurrency: tenant?.displayCurrency || source.displayCurrency,
-        exchangeRateUsdToDisplay: tenant?.exchangeRateUsdToDisplay || source.exchangeRateUsdToDisplay,
-        solventMaterialId: source.solventMaterialId,
-        solventCostPerKgUsd: source.solventCostPerKgUsd,
-        solventRatio: source.solventRatio,
-        laminationRecipeOverrides: source.laminationRecipeOverrides,
-        cleaningSolventKgPerJob: source.cleaningSolventKgPerJob,
-        inkPrintingProcess: source.inkPrintingProcess,
-        orderQuantityKg: source.orderQuantityKg,
-        pricingMethod: source.pricingMethod,
-        marginValuePerKgUsd: source.marginValuePerKgUsd,
-        cormPerKgUsd: source.cormPerKgUsd,
-        cormPerKgPlain: source.cormPerKgPlain,
-        moqKg: source.moqKg,
-        toolingChargeUsd: source.toolingChargeUsd,
-        toolingBilledToCustomer: source.toolingBilledToCustomer,
-        deliveryTerm: source.deliveryTerm,
-        deliveryChargeUsd: source.deliveryChargeUsd,
-        sourceEstimationId: id,
-        masterDataVersion,
-        sourceTemplateKey: source.sourceTemplateKey,
-      })
-      .returning()) as EstimateRow[];
+    const defaultLabel = source.skuLabel?.trim() || source.jobName?.trim() || 'Variant';
+    const quoteName = body?.quoteName?.trim() || defaultLabel;
+    const skuLabel = body?.skuLabel?.trim() || defaultLabel;
+    const variantDescription = body?.variantDescription?.trim() || null;
 
-    // Copy layers (fresh lineage snapshots from current tenant materials)
-    for (const layer of sourceLayers) {
-      const mat = materialById.get(layer.materialId);
-      await db.insert(schema.layers).values(
-        buildLayerInsertValues({
-          estimateId: newEstimate.id,
-          materialId: layer.materialId,
-          micron: layer.micron,
-          position: layer.position,
-          material: mat ? toMaterialLineageSource(mat) : null,
-        })
-      );
-    }
+    const quote = await createQuote(db, {
+      tenantId,
+      customerId: source.customerId,
+      name: quoteName,
+      notes: variantDescription,
+      displayCurrency,
+      exchangeRateUsdToDisplay,
+      status: 'draft',
+      deliveryTerm: source.deliveryTerm,
+      defaultPrintColorCount: source.printColorCount,
+      defaultCostPerColor: source.costPerColor,
+      defaultToolingBillingMode: source.toolingBillingMode as
+        | 'amortized'
+        | 'separate'
+        | 'not_billed'
+        | null,
+    });
 
-    // Copy processes
-    const sourceProcesses = await db
-      .select()
-      .from(schema.processes)
-      .where(eq(schema.processes.estimateId, id));
+    const { estimate: newEstimate, sourceLayers } = await cloneEstimate(db, id, {
+      tenantId,
+      quoteId: quote.id,
+      customerId: source.customerId,
+      jobName: skuLabel,
+      skuLabel,
+      notes: variantDescription,
+      brand: source.brand,
+      specsCode: source.specsCode,
+      printColorCount: source.printColorCount,
+      costPerColor: source.costPerColor,
+      toolingBillingMode: source.toolingBillingMode,
+      sortOrder: 0,
+      sourceEstimationId: id,
+      refreshMaterialPrices: true,
+      displayCurrency,
+      exchangeRateUsdToDisplay,
+    });
 
-    for (const process of sourceProcesses) {
-      await insertProcessCompat(db, processInsertMode, {
-        estimateId: newEstimate.id,
-        name: process.name,
-        costPerHour: process.costPerHour,
-        costPerKgUsd: process.costPerKgUsd,
-        speedBasis: process.speedBasis,
-        speedValue: process.speedValue,
-        setupHours: process.setupHours,
-        enabled: process.enabled,
-        runHours: process.runHours,
-        totalCost: process.totalCost,
-      });
-    }
-
-    // Copy slabs
-    const sourceSlabs = await db
-      .select()
-      .from(schema.slabs)
-      .where(eq(schema.slabs.estimateId, id));
-
-    for (const slab of sourceSlabs) {
-      await db.insert(schema.slabs).values({
-        estimateId: newEstimate.id,
-        quantityKg: slab.quantityKg,
-        pricePerKg: slab.pricePerKg,
-      });
-    }
-
-    // Build price_changes: compare current material costs vs source
     const allMaterials = await db
       .select()
       .from(schema.materials)
       .where(eq(schema.materials.tenantId, tenantId));
-    const materialMap = new Map<string, MaterialRow>(allMaterials.map((m: MaterialRow) => [m.id, m]));
+    const materialMap = new Map<string, MaterialRow>(
+      allMaterials.map((m: MaterialRow) => [m.id, m])
+    );
 
     const priceChanges = sourceLayers.map((layer: LayerRow) => {
       const mat = materialMap.get(layer.materialId);
       const newCostUsd = mat ? parseFloat(mat.costPerKgUsd) : 0;
-      const snapshotCost = layer.unit_cost_snapshot_usd ? parseFloat(layer.unit_cost_snapshot_usd) : null;
+      const snapshotCost = layer.unit_cost_snapshot_usd
+        ? parseFloat(layer.unit_cost_snapshot_usd)
+        : null;
       const oldCostPerSqM = Number(layer.costPerM2 || 0);
       const micron = parseFloat(layer.micron);
       const density = mat ? parseFloat(mat.density) : 1;
@@ -1227,9 +1356,11 @@ async function requoteEstimateRoute(
 
     const warnings = priceChanges
       .filter((pc: { materialStale?: boolean }) => pc.materialStale)
-      .map((pc: { materialName: string }) => `Material "${pc.materialName}" is no longer in the library — cost set to 0.`);
+      .map(
+        (pc: { materialName: string }) =>
+          `Material "${pc.materialName}" is no longer in the library — cost set to 0.`
+      );
 
-    // E6: auto-calculate with refreshed library prices
     let calcResult;
     try {
       calcResult = await calculateAndPersistEstimate(db, newEstimate.id, tenantId);
@@ -1244,14 +1375,16 @@ async function requoteEstimateRoute(
 
     return reply.status(201).send({
       ...refreshed,
+      quoteId: quote.id,
+      quoteRefNumber: quote.refNumber,
       price_changes: priceChanges,
       warnings,
       calculated: calcResult
         ? {
-          salePricePerKg: calcResult.estimate.salePricePerKg,
-          materialCostPerKg: calcResult.estimate.materialCostPerKg,
-          totalGsm: calcResult.estimate.totalGsm,
-        }
+            salePricePerKg: calcResult.estimate.salePricePerKg,
+            materialCostPerKg: calcResult.estimate.materialCostPerKg,
+            totalGsm: calcResult.estimate.totalGsm,
+          }
         : undefined,
     });
   } catch (error: unknown) {
@@ -1259,7 +1392,8 @@ async function requoteEstimateRoute(
   }
 }
 
-// Duplicate estimate — frozen prices (PRD §9.6)
+// Legacy standalone duplicate — new one-estimate quote, frozen RM snapshots (PRD §9.6).
+// Same-quote SKU copy: POST /quotes/:id/estimates/:estimateId/duplicate
 async function duplicateEstimateRoute(
   _fastify: FastifyInstance,
   request: FastifyRequest<{ Params: { id: string } }>,
@@ -1270,137 +1404,194 @@ async function duplicateEstimateRoute(
     const tenantId = extractTenantFromRequest(request);
     const { id } = request.params;
     const db = getDatabase();
-    const processInsertMode = await detectProcessInsertMode(db);
 
     const [source] = await db
       .select()
       .from(schema.estimates)
-      .where(and(eq(schema.estimates.id, id), eq(schema.estimates.tenantId, tenantId), isNull(schema.estimates.deletedAt)));
+      .where(
+        and(
+          eq(schema.estimates.id, id),
+          eq(schema.estimates.tenantId, tenantId),
+          isNull(schema.estimates.deletedAt)
+        )
+      );
 
     if (!source) {
       return reply.status(404).send({ error: 'Source estimate not found' });
     }
 
-    // Get tenant's current currency settings (frozen prices + current FX)
-    const [tenant] = await db
-      .select()
-      .from(schema.tenants)
-      .where(eq(schema.tenants.id, tenantId));
+    const quote = await createQuote(db, {
+      tenantId,
+      customerId: source.customerId,
+      name: `${source.jobName} (Copy)`,
+      displayCurrency: source.displayCurrency,
+      exchangeRateUsdToDisplay: source.exchangeRateUsdToDisplay,
+      status: 'draft',
+      deliveryTerm: source.deliveryTerm,
+      defaultPrintColorCount: source.printColorCount,
+      defaultCostPerColor: source.costPerColor,
+      defaultToolingBillingMode: source.toolingBillingMode as
+        | 'amortized'
+        | 'separate'
+        | 'not_billed'
+        | null,
+    });
 
-    const sourceLayers = await db
-      .select()
-      .from(schema.layers)
-      .where(eq(schema.layers.estimateId, id))
-      .orderBy(schema.layers.position);
-
-    const sourceProcesses = await db
-      .select()
-      .from(schema.processes)
-      .where(eq(schema.processes.estimateId, id));
-
-    const sourceSlabs = await db
-      .select()
-      .from(schema.slabs)
-      .where(eq(schema.slabs.estimateId, id))
-      .orderBy(asc(schema.slabs.sortOrder), asc(schema.slabs.quantityKg));
-
-    const newRefNumber = await generateRefNumber(db, tenantId);
-
-    const tenantMaterials = await db
-      .select()
-      .from(schema.materials)
-      .where(eq(schema.materials.tenantId, tenantId));
-    const materialById = new Map<string, MaterialRow>(
-      tenantMaterials.map((m: MaterialRow) => [m.id, m])
-    );
-    const masterDataVersion = await getMasterDataVersion();
-
-    const [newEstimate] = (await db
-      .insert(schema.estimates)
-      .values({
-        tenantId,
-        customerId: source.customerId,
-        refNumber: newRefNumber,
-        jobName: `${source.jobName} (Copy)`,
-        status: 'draft',
-        productType: source.productType,
-        printingWebClass: source.printingWebClass,
-        dimensions: source.dimensions,
-        markupPercent: source.markupPercent,
-        platesPerKg: source.platesPerKg,
-        deliveryPerKg: source.deliveryPerKg,
-        // Duplicate keeps frozen prices but uses current tenant currency/FX for display
-        displayCurrency: tenant?.displayCurrency || source.displayCurrency,
-        exchangeRateUsdToDisplay: tenant?.exchangeRateUsdToDisplay || source.exchangeRateUsdToDisplay,
-        solventMaterialId: source.solventMaterialId,
-        solventCostPerKgUsd: source.solventCostPerKgUsd,
-        solventRatio: source.solventRatio,
-        laminationRecipeOverrides: source.laminationRecipeOverrides,
-        cleaningSolventKgPerJob: source.cleaningSolventKgPerJob,
-        inkPrintingProcess: source.inkPrintingProcess,
-        orderQuantityKg: source.orderQuantityKg,
-        orderQuantityUnit: source.orderQuantityUnit,
-        pricingMethod: source.pricingMethod,
-        marginValuePerKgUsd: source.marginValuePerKgUsd,
-        cormPerKgUsd: source.cormPerKgUsd,
-        cormPerKgPlain: source.cormPerKgPlain,
-        moqKg: source.moqKg,
-        toolingChargeUsd: source.toolingChargeUsd,
-        toolingBilledToCustomer: source.toolingBilledToCustomer,
-        deliveryTerm: source.deliveryTerm,
-        deliveryChargeUsd: source.deliveryChargeUsd,
-        totalGsm: source.totalGsm,
-        totalMicron: source.totalMicron,
-        materialCostPerKg: source.materialCostPerKg,
-        salePricePerKg: source.salePricePerKg,
-        lastCalculatedAt: source.lastCalculatedAt,
-        sourceEstimationId: id,
-        masterDataVersion,
-        sourceTemplateKey: source.sourceTemplateKey,
-      })
-      .returning()) as EstimateRow[];
-
-    for (const layer of sourceLayers) {
-      const mat = materialById.get(layer.materialId);
-      await db.insert(schema.layers).values(
-        buildLayerInsertValues({
-          estimateId: newEstimate.id,
-          materialId: layer.materialId,
-          micron: layer.micron,
-          position: layer.position,
-          material: mat ? toMaterialLineageSource(mat) : null,
-        })
-      );
-    }
-
-    for (const process of sourceProcesses) {
-      await insertProcessCompat(db, processInsertMode, {
-        estimateId: newEstimate.id,
-        name: process.name,
-        costPerHour: process.costPerHour,
-        costPerKgUsd: process.costPerKgUsd,
-        speedBasis: process.speedBasis,
-        speedValue: process.speedValue,
-        setupHours: process.setupHours,
-        enabled: process.enabled,
-        runHours: process.runHours,
-        totalCost: process.totalCost,
-      });
-    }
-
-    for (let i = 0; i < sourceSlabs.length; i++) {
-      const slab = sourceSlabs[i];
-      await db.insert(schema.slabs).values({
-        estimateId: newEstimate.id,
-        quantityKg: slab.quantityKg,
-        pricePerKg: slab.pricePerKg,
-        sortOrder: slab.sortOrder ?? i,
-      });
-    }
+    const { estimate: newEstimate } = await cloneEstimate(db, id, {
+      tenantId,
+      quoteId: quote.id,
+      customerId: source.customerId,
+      jobName: `${source.jobName} (Copy)`,
+      skuLabel: source.skuLabel ?? source.jobName,
+      brand: source.brand,
+      specsCode: source.specsCode,
+      printColorCount: source.printColorCount,
+      costPerColor: source.costPerColor,
+      toolingBillingMode: source.toolingBillingMode,
+      sortOrder: 0,
+      copiedFromEstimateId: id,
+      refreshMaterialPrices: false,
+      displayCurrency: source.displayCurrency,
+      exchangeRateUsdToDisplay: String(source.exchangeRateUsdToDisplay),
+      copyCalculatedTotals: true,
+    });
 
     return reply.status(201).send(newEstimate);
   } catch (error: unknown) {
     return sendCaughtError(reply, error, 'Failed to duplicate estimate', 'Duplicate estimate error:');
+  }
+}
+
+/** Customer folder cards for Estimates page. */
+async function estimatesByCustomerRoute(
+  _fastify: FastifyInstance,
+  request: FastifyRequest<{ Querystring: { q?: string } }>,
+  reply: FastifyReply
+) {
+  try {
+    await request.jwtVerify();
+    const tenantId = extractTenantFromRequest(request);
+    const db = getDatabase();
+    const q = (request.query.q || '').trim();
+    const searchPattern = q ? '%' + q.replace(/[\\%_]/g, (ch) => `\\${ch}`) + '%' : null;
+
+    const searchSql = searchPattern
+      ? sql`AND (
+          c.company_name ILIKE ${searchPattern}
+          OR q.name ILIKE ${searchPattern}
+          OR q.ref_number ILIKE ${searchPattern}
+          OR e.sku_label ILIKE ${searchPattern}
+          OR e.brand ILIKE ${searchPattern}
+          OR e.ref_number ILIKE ${searchPattern}
+        )`
+      : sql``;
+
+    const customerRows = await db.execute(sql`
+      SELECT
+        q.customer_id::text AS "customerId",
+        COALESCE(c.company_name, '(No customer)') AS "companyName",
+        COUNT(DISTINCT q.id)::int AS "quoteCount",
+        COUNT(DISTINCT e.id)::int AS "estimateCount",
+        MAX(GREATEST(q.updated_at, COALESCE(e.updated_at, q.updated_at))) AS "lastActivityAt",
+        COUNT(DISTINCT CASE
+          WHEN q.status = 'draft' OR e.status = 'draft' THEN q.id
+          ELSE NULL
+        END)::int AS "draftQuoteCount"
+      FROM quotes q
+      LEFT JOIN customers c
+        ON c.id = q.customer_id AND c.tenant_id = q.tenant_id
+      LEFT JOIN estimates e
+        ON e.quote_id = q.id
+        AND e.tenant_id = q.tenant_id
+        AND e.deleted_at IS NULL
+      WHERE q.tenant_id = ${tenantId}
+        AND q.deleted_at IS NULL
+        AND q.customer_id IS NOT NULL
+        AND q.is_price_check = false
+        ${searchSql}
+      GROUP BY q.customer_id, c.company_name
+    `);
+
+    const priceCheckRows = await db.execute(sql`
+      SELECT
+        'price-check' AS "customerId",
+        'Price checks' AS "companyName",
+        COUNT(DISTINCT q.id)::int AS "quoteCount",
+        COUNT(DISTINCT e.id)::int AS "estimateCount",
+        MAX(GREATEST(q.updated_at, COALESCE(e.updated_at, q.updated_at))) AS "lastActivityAt",
+        COUNT(DISTINCT CASE
+          WHEN q.status = 'draft' OR e.status = 'draft' THEN q.id
+          ELSE NULL
+        END)::int AS "draftQuoteCount"
+      FROM quotes q
+      LEFT JOIN estimates e
+        ON e.quote_id = q.id
+        AND e.tenant_id = q.tenant_id
+        AND e.deleted_at IS NULL
+      WHERE q.tenant_id = ${tenantId}
+        AND q.deleted_at IS NULL
+        AND q.is_price_check = true
+        AND q.customer_id IS NULL
+        ${searchSql}
+    `);
+
+    const noCustomerRows = await db.execute(sql`
+      SELECT
+        NULL::text AS "customerId",
+        '(No customer)' AS "companyName",
+        COUNT(DISTINCT q.id)::int AS "quoteCount",
+        COUNT(DISTINCT e.id)::int AS "estimateCount",
+        MAX(GREATEST(q.updated_at, COALESCE(e.updated_at, q.updated_at))) AS "lastActivityAt",
+        COUNT(DISTINCT CASE
+          WHEN q.status = 'draft' OR e.status = 'draft' THEN q.id
+          ELSE NULL
+        END)::int AS "draftQuoteCount"
+      FROM quotes q
+      LEFT JOIN estimates e
+        ON e.quote_id = q.id
+        AND e.tenant_id = q.tenant_id
+        AND e.deleted_at IS NULL
+      WHERE q.tenant_id = ${tenantId}
+        AND q.deleted_at IS NULL
+        AND q.customer_id IS NULL
+        AND q.is_price_check = false
+        ${searchSql}
+    `);
+
+    const extract = (rows: unknown) =>
+      Array.isArray((rows as { rows?: unknown[] })?.rows)
+        ? (rows as { rows: unknown[] }).rows
+        : (rows as unknown as unknown[]);
+
+    type FolderRow = {
+      customerId: string | null;
+      companyName: string;
+      quoteCount: number;
+      estimateCount: number;
+      lastActivityAt: string | null;
+      draftQuoteCount: number;
+    };
+
+    const merged: FolderRow[] = [
+      ...(extract(customerRows) as FolderRow[]),
+      ...(extract(priceCheckRows) as FolderRow[]).filter((r) => Number(r.quoteCount) > 0),
+      ...(extract(noCustomerRows) as FolderRow[]).filter((r) => Number(r.quoteCount) > 0),
+    ];
+
+    merged.sort((a, b) => {
+      const ta = a.lastActivityAt ? new Date(a.lastActivityAt).getTime() : 0;
+      const tb = b.lastActivityAt ? new Date(b.lastActivityAt).getTime() : 0;
+      return tb - ta;
+    });
+
+    return reply.send(merged);
+  } catch (error: unknown) {
+    return sendCaughtError(
+      reply,
+      error,
+      'Failed to load customer folders',
+      'Estimates by customer error:'
+    );
   }
 }
 
@@ -1410,6 +1601,12 @@ export async function registerEstimateRoutes(fastify: FastifyInstance) {
   }>(
     '/api/v1/estimates',
     async (request, reply) => getEstimatesRoute(fastify, request, reply)
+  );
+
+  // Must register before /:id so "by-customer" is not captured as an id.
+  fastify.get<{ Querystring: { q?: string } }>(
+    '/api/v1/estimates/by-customer',
+    async (request, reply) => estimatesByCustomerRoute(fastify, request, reply)
   );
 
   fastify.post<{ Body: z.infer<typeof EstimateCreateSchema> }>(
@@ -1437,7 +1634,7 @@ export async function registerEstimateRoutes(fastify: FastifyInstance) {
     async (request, reply) => calculateEstimateRoute(fastify, request, reply)
   );
 
-  fastify.post<{ Params: { id: string } }>(
+  fastify.post<{ Params: { id: string }; Body: z.infer<typeof RequoteBodySchema> }>(
     '/api/v1/estimates/:id/requote',
     async (request, reply) => requoteEstimateRoute(fastify, request, reply)
   );

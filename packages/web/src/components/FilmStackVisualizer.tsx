@@ -7,15 +7,22 @@ export type FilmLayer = {
   micron?: number;
   gsm?: number;
   family?: string | null;
+  /** Display-currency material cost/kg — only when visibility allows. */
+  costPerKg?: number | null;
+  /** Display-currency area cost/m² from engine. */
+  costPerM2?: number | null;
 };
 
 type Props = {
   layers: FilmLayer[];
   className?: string;
+  /** Display currency code for Contrib. header (e.g. AED). */
+  displayCurrency?: string;
+  /** When false, hide Contrib. column entirely. */
+  showContrib?: boolean;
 };
 
 const STACK_STYLES = `
-  /* Color movement is ink-only (print layer). Films / adhesives stay static. */
   @keyframes film-stack-ink-flow {
     0% { background-position: 0% 50%; }
     100% { background-position: 300% 50%; }
@@ -77,33 +84,44 @@ const STACK_STYLES = `
     background: linear-gradient(180deg, #64748B 0%, #334155 50%, #0F172A 100%);
   }
 
-  /* Films / adhesives: flat solid fills only (no gradients). */
-  .film-stack-metallized {
-    background: #94A3B8;
-  }
-
-  .film-stack-paper {
-    background: #E8DFD0;
-  }
-
-  .film-stack-natural {
-    background: #E8DFD0;
-  }
-
-  .film-stack-adhesive {
-    background: #D97706;
-  }
-
-  .film-stack-film {
-    position: relative;
-    overflow: hidden;
-  }
+  .film-stack-metallized { background: #94A3B8; }
+  .film-stack-paper { background: #E8DFD0; }
+  .film-stack-natural { background: #E8DFD0; }
+  .film-stack-adhesive { background: #D97706; }
+  .film-stack-film { position: relative; overflow: hidden; }
 
   @media (prefers-reduced-motion: reduce) {
     .film-stack-ink,
     .film-stack-ink::after {
       animation: none !important;
     }
+  }
+
+  .film-stack-metrics {
+    display: grid;
+    align-items: stretch;
+  }
+  .film-stack-metrics--pct {
+    grid-template-columns: 2.75rem 2.75rem;
+  }
+  .film-stack-metrics--full {
+    grid-template-columns: 2.75rem 2.75rem 3.25rem 3.25rem;
+  }
+  @media (min-width: 640px) {
+    .film-stack-metrics--pct {
+      grid-template-columns: 3rem 3rem;
+    }
+    .film-stack-metrics--full {
+      grid-template-columns: 3rem 3rem 3.5rem 3.5rem;
+    }
+  }
+  .film-stack-metrics__head-group,
+  .film-stack-metrics__head-cell,
+  .film-stack-metrics__cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
   }
 `;
 
@@ -144,39 +162,40 @@ function substrateBg(family?: string | null): string {
   return '#E8EDF4';
 }
 
-type LayerAppearance = { className: string; style?: CSSProperties };
+type LayerAppearance = { className: string; style?: CSSProperties; darkText?: boolean };
 
 function layerAppearance(layer: FilmLayer, inkIndex: number): LayerAppearance {
   const name = materialKey(layer);
 
   if (layer.type === 'ink') {
     const variant = inkVariant(name);
-    if (variant === 'white') return { className: 'film-stack-ink-white' };
-    if (variant === 'black') return { className: 'film-stack-ink-black' };
-    return { className: `film-stack-ink film-stack-ink-${inkIndex % 5}` };
+    if (variant === 'white') return { className: 'film-stack-ink-white', darkText: true };
+    if (variant === 'black') return { className: 'film-stack-ink-black', darkText: false };
+    return { className: `film-stack-ink film-stack-ink-${inkIndex % 5}`, darkText: false };
   }
 
   if (layer.type === 'adhesive') {
-    return { className: 'film-stack-adhesive' };
+    return { className: 'film-stack-adhesive', darkText: false };
   }
 
   if (isMetallizedName(name)) {
-    return { className: 'film-stack-metallized' };
+    return { className: 'film-stack-metallized', darkText: true };
   }
   if (isPaperName(name)) {
-    return { className: 'film-stack-paper' };
+    return { className: 'film-stack-paper', darkText: true };
   }
   if (isWhiteName(name)) {
-    return {
-      className: 'film-stack-film',
-      style: { background: '#F8FAFC' },
-    };
+    return { className: 'film-stack-film', style: { background: '#F8FAFC' }, darkText: true };
   }
   if (isNaturalName(name)) {
-    return { className: 'film-stack-natural' };
+    return { className: 'film-stack-natural', darkText: true };
   }
 
-  return { className: 'film-stack-film', style: { background: substrateBg(layer.family) } };
+  return {
+    className: 'film-stack-film',
+    style: { background: substrateBg(layer.family) },
+    darkText: true,
+  };
 }
 
 function inkLabelClass(layer: FilmLayer): string {
@@ -184,8 +203,6 @@ function inkLabelClass(layer: FilmLayer): string {
   const variant = inkVariant(materialKey(layer));
   if (variant === 'white') return 'font-semibold text-text-secondary';
   if (variant === 'black') return 'font-semibold text-text-primary';
-  // Rainbow ink: the gradient itself is intentional domain art (represents
-  // multi-color CMYK printing), not a theme color — keep verbatim.
   return 'font-semibold bg-gradient-to-r from-rose-500 via-violet-500 to-cyan-500 bg-clip-text text-transparent';
 }
 
@@ -214,7 +231,6 @@ function typeLabel(type?: string): string {
   return type || 'Layer';
 }
 
-/** One decimal place per layer; largest-remainder adjustment so displayed values sum to 100.0%. */
 function formatPercentLabels(shares: number[]): string[] {
   if (shares.length === 0) return [];
   const SCALE = 10;
@@ -232,7 +248,14 @@ function formatPercentLabels(shares: number[]): string[] {
   return adjusted.map((t) => `${(t / SCALE).toFixed(1)}%`);
 }
 
-export default function FilmStackVisualizer({ layers, className }: Props) {
+const IN_BAR_SHARE_MIN = 0.09;
+
+export default function FilmStackVisualizer({
+  layers,
+  className,
+  displayCurrency = 'USD',
+  showContrib = false,
+}: Props) {
   const inkIndexById = useMemo(() => {
     const map = new Map<string | number, number>();
     let n = 0;
@@ -244,34 +267,81 @@ export default function FilmStackVisualizer({ layers, className }: Props) {
 
   const layerCount = layers.length;
 
-  const { thicknessShares, thicknessPctLabels, gsmPctLabels, totalMicron, totalGsm } = useMemo(() => {
+  const {
+    thicknessShares,
+    thicknessPctLabels,
+    gsmPctLabels,
+    totalMicron,
+    totalGsm,
+    contribKgValues,
+    contribM2Values,
+    contribKgTitles,
+    contribM2Titles,
+  } = useMemo(() => {
     const th = layers.map(layerThickness);
     const micronTotal = Math.max(1, th.reduce((a, b) => a + b, 0));
     const gsmVals = layers.map((l) => Number(l.gsm) || 0);
     const gsmTotal = gsmVals.reduce((a, b) => a + b, 0);
     const thicknessShares = th.map((t) => t / micronTotal);
-    // Fall back to thickness share when GSM is missing so both columns stay defined.
     const gsmShares =
-      gsmTotal > 0
-        ? gsmVals.map((g) => (g > 0 ? g / gsmTotal : 0))
-        : thicknessShares;
+      gsmTotal > 0 ? gsmVals.map((g) => (g > 0 ? g / gsmTotal : 0)) : thicknessShares;
+
+    const matCostPerKg = layers.reduce((sum, l) => {
+      const c = Number(l.costPerKg);
+      return sum + (Number.isFinite(c) ? c : 0);
+    }, 0);
+
+    const contribKgValues = layers.map((l) => {
+      if (gsmTotal <= 0 || !showContrib) return null;
+      const gsm = Number(l.gsm) || 0;
+      const cost = Number(l.costPerKg);
+      if (!Number.isFinite(cost)) return null;
+      return (gsm / gsmTotal) * cost;
+    });
+
+    const contribM2Values = layers.map((l) => {
+      if (!showContrib) return null;
+      const c = Number(l.costPerM2);
+      return Number.isFinite(c) && c > 0 ? c : null;
+    });
+
+    const contribKgTitles = layers.map((l, i) => {
+      const v = contribKgValues[i];
+      if (v == null || gsmTotal <= 0) return undefined;
+      const gsm = Number(l.gsm) || 0;
+      const cost = Number(l.costPerKg) || 0;
+      return `${gsm.toFixed(1)}/${gsmTotal.toFixed(1)} GSM × ${cost.toFixed(2)} = ${v.toFixed(2)}`;
+    });
+
+    const contribM2Titles = contribM2Values.map((v) =>
+      v == null ? undefined : `${displayCurrency}/m²: ${v.toFixed(4)}`
+    );
+
+    void matCostPerKg;
+
     return {
       thicknessShares,
       thicknessPctLabels: formatPercentLabels(thicknessShares),
       gsmPctLabels: formatPercentLabels(gsmShares),
       totalMicron: micronTotal,
       totalGsm: gsmTotal,
+      contribKgValues,
+      contribM2Values,
+      contribKgTitles,
+      contribM2Titles,
     };
-  }, [layers]);
+  }, [layers, showContrib, displayCurrency]);
 
   const dense = layerCount > 5;
+  const metricsGridClass = showContrib
+    ? 'film-stack-metrics film-stack-metrics--full shrink-0'
+    : 'film-stack-metrics film-stack-metrics--pct shrink-0';
 
   if (layerCount === 0) {
     return (
       <div className={`flex h-full min-h-0 items-center justify-center bg-surface-raised ${className ?? ''}`}>
         <p className="text-sm text-text-secondary px-4 text-center">
           Add layers to preview build-up
-          <span className="block text-xs mt-1">Up to 4 films · 3 adhesives · unlimited ink &amp; coating</span>
         </p>
       </div>
     );
@@ -300,14 +370,50 @@ export default function FilmStackVisualizer({ layers, className }: Props) {
           </div>
 
           <div className="flex flex-col flex-1 min-h-0 min-w-0 border border-border/60 rounded-md overflow-hidden shadow-sm">
-            <div className="shrink-0 flex items-center border-b border-border/50 bg-surface-raised">
-              <div className="w-16 sm:w-[4.5rem] shrink-0 border-r border-border/40" aria-hidden />
-              <div className="flex-1 min-w-0 flex items-center justify-between gap-2 px-2 py-1">
-                <span className="text-[10px] text-text-secondary" />
-                <span className="shrink-0 flex items-center gap-0 font-mono text-[10px] font-medium text-text-secondary tabular-nums">
-                  <span className="w-11 text-right">µ</span>
-                  <span className="w-11 text-right">GSM</span>
-                </span>
+            <div className="shrink-0 border-b border-border/50 bg-surface-raised">
+              <div className="flex items-stretch">
+                <div className="w-[5.5rem] sm:w-24 shrink-0 border-r border-border/40" aria-hidden />
+                <div className="flex-1 min-w-0 flex items-stretch">
+                  <div className="flex-1 min-w-0" aria-hidden />
+                  <div className={metricsGridClass}>
+                    <div className="film-stack-metrics__head-group col-span-2 border-r border-border/30 bg-surface-sunken/60 px-1 py-0.5">
+                      <span className="text-[9px] font-semibold text-text-secondary leading-tight">%</span>
+                    </div>
+                    {showContrib && (
+                      <div className="film-stack-metrics__head-group col-span-2 bg-success/10 px-1 py-0.5">
+                        <span className="text-[9px] font-semibold text-text-secondary leading-tight">
+                          Cost contribution
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-stretch border-t border-border/30">
+                <div className="w-[5.5rem] sm:w-24 shrink-0 border-r border-border/40" aria-hidden />
+                <div className="flex-1 min-w-0 flex items-stretch">
+                  <div className="flex-1 min-w-0" aria-hidden />
+                  <div
+                    className={`${metricsGridClass} font-mono text-[9px] font-medium text-text-secondary tabular-nums leading-tight`}
+                  >
+                    <span className="film-stack-metrics__head-cell border-r border-border/30 bg-surface-sunken/40 py-1">
+                      µ
+                    </span>
+                    <span className="film-stack-metrics__head-cell border-r border-border/30 bg-surface-sunken/40 py-1">
+                      GSM
+                    </span>
+                    {showContrib && (
+                      <>
+                        <span className="film-stack-metrics__head-cell border-r border-border/30 bg-success/5 py-1">
+                          {displayCurrency}/kg
+                        </span>
+                        <span className="film-stack-metrics__head-cell bg-success/5 py-1">
+                          {displayCurrency}/m²
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
             <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
@@ -316,17 +422,20 @@ export default function FilmStackVisualizer({ layers, className }: Props) {
                 const gsm = Number(layer.gsm || 0);
                 const inkIdx = inkIndexById.get(layer.id) ?? 0;
                 const appearance = layerAppearance(layer, inkIdx);
-                const pctClass = `w-11 text-right font-mono font-bold tabular-nums leading-tight ${
-                  dense ? 'text-[10px]' : 'text-xs'
+                const share = thicknessShares[i];
+                const showInBar = share >= IN_BAR_SHARE_MIN;
+                const cellClass = `film-stack-metrics__cell font-mono font-semibold tabular-nums leading-tight ${
+                  dense ? 'text-[10px]' : 'text-[11px]'
                 }`;
+                const contribKg = contribKgValues[i];
+                const contribM2 = contribM2Values[i];
 
                 return (
                   <div
                     key={String(layer.id)}
                     className="film-stack-row flex items-stretch border-b border-border/50 last:border-b-0 transition-[flex-grow] duration-500 ease-out"
                     style={{
-                      // Grow by thickness share (edge view). Never shrink below label height.
-                      flexGrow: thicknessShares[i],
+                      flexGrow: share,
                       flexShrink: 0,
                       flexBasis: 'auto',
                       animationDelay: `${i * 0.05}s`,
@@ -334,31 +443,54 @@ export default function FilmStackVisualizer({ layers, className }: Props) {
                     title={layerLabel(layer, i)}
                   >
                     <div
-                      className={`w-16 sm:w-[4.5rem] shrink-0 border-r border-border/40 relative overflow-hidden ${appearance.className}`}
+                      className={`w-[5.5rem] sm:w-24 shrink-0 border-r border-border/40 relative overflow-hidden flex items-center justify-center ${appearance.className}`}
                       style={appearance.style}
                       aria-hidden
-                    />
-
-                    <div className="flex-1 min-w-0 flex items-center justify-between gap-2 px-2 py-1 bg-surface-raised">
-                      <p className={`leading-tight text-brand min-w-0 ${dense ? 'text-[10px]' : 'text-xs'}`}>
-                        <span className="text-text-secondary font-medium">{i + 1}.</span>{' '}
-                        <span className={inkLabelClass(layer)}>
-                          {layerLabel(layer, i)}
+                    >
+                      {showInBar && (
+                        <span
+                          className={`relative z-10 text-center font-mono leading-tight px-0.5 ${
+                            appearance.darkText ? 'text-slate-800' : 'text-white'
+                          } ${dense ? 'text-[8px]' : 'text-[9px]'}`}
+                        >
+                          {micron > 0 && <span className="block font-semibold">{micron}µ</span>}
+                          {gsm > 0 && <span className="block opacity-90">{gsm.toFixed(1)}g</span>}
                         </span>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0 flex items-center gap-2 px-2 py-1 bg-surface-raised">
+                      <p className={`leading-tight text-brand min-w-0 flex-1 ${dense ? 'text-[10px]' : 'text-xs'}`}>
+                        <span className="text-text-secondary font-medium">{i + 1}.</span>{' '}
+                        <span className={inkLabelClass(layer)}>{layerLabel(layer, i)}</span>
                         <span className="text-text-secondary font-normal">
-                          {' '}· {typeLabel(layer.type)}
-                          {micron > 0 ? ` · ${micron}µ` : ''}
-                          {gsm > 0 ? ` · ${gsm.toFixed(1)} gsm` : ''}
+                          {' '}
+                          · {typeLabel(layer.type)}
+                          {!showInBar && micron > 0 ? ` · ${micron}µ` : ''}
+                          {!showInBar && gsm > 0 ? ` · ${gsm.toFixed(1)} gsm` : ''}
                         </span>
                       </p>
-                      <span className="shrink-0 flex items-center gap-0">
-                        <span className={`${pctClass} ${inkPctClass(layer)}`}>
+                      <div className={metricsGridClass}>
+                        <span className={`${cellClass} ${inkPctClass(layer)} border-r border-border/20`}>
                           {thicknessPctLabels[i]}
                         </span>
-                        <span className={`${pctClass} text-text-secondary`}>
+                        <span className={`${cellClass} text-text-secondary border-r border-border/20`}>
                           {gsmPctLabels[i]}
                         </span>
-                      </span>
+                        {showContrib && (
+                          <>
+                            <span
+                              className={`${cellClass} text-brand border-r border-border/20`}
+                              title={contribKgTitles[i]}
+                            >
+                              {contribKg == null ? '—' : contribKg.toFixed(2)}
+                            </span>
+                            <span className={`${cellClass} text-brand`} title={contribM2Titles[i]}>
+                              {contribM2 == null ? '—' : contribM2.toFixed(4)}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

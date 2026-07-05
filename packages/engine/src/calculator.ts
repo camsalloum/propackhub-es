@@ -135,10 +135,17 @@ export function calculateEstimate(
     operatingCostMethod === 'markup_over_rm' ? mfgOperatingPerKg : 0;
   const totalCost = salePricePerKg;
 
-  // Slab ladder: waste % (and Fixed CoRM scaled with waste) vary per slab qty;
-  // prepress and transport stay amortized over the entered order qty.
+  // Slab ladder: waste % (and Fixed CoRM scaled with waste) vary per slab qty.
+  // Prepress/transport amortize over each slab's qty so price lists reflect
+  // development $/kg at that band (fallback to order qty when slab qty ≤ 0).
   const slabsWithTotals: CalculationResult['slabs'] = estimate.slabs.map(slab => {
-    const p = priceWithNewModel({ ...charges, wasteQtyKg: slab.quantityKg });
+    const amortizeQtyKg =
+      slab.quantityKg > 0 ? slab.quantityKg : trueOrderQuantityKg;
+    const p = priceWithNewModel({
+      ...charges,
+      wasteQtyKg: slab.quantityKg,
+      amortizeQtyKg,
+    });
     return { ...slab, pricePerKg: p.salePricePerKg, total: slab.quantityKg * p.salePricePerKg };
   });
 

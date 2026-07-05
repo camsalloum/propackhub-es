@@ -1,77 +1,149 @@
-// Feature: es-ui-revamp — Customers List page migration (Requirement 20).
-//
-// - All text/background/border/surface colors source from semantic Design_Token
-//   utilities (text-brand, text-text-secondary, accent-text, bg-surface-raised,
-//   border-border, …); no raw hex or legacy palette literals remain (R20.1).
-// - List content animates in on mount via `useEntrance`, a no-op under reduced
-//   motion so content renders in its final state (R20.3, R20.5).
-// - Customer rows are interactive Cards (`data-interactive="true"`) / token-backed
-//   row hover so a background/border micro-interaction applies and reverts on
-//   hover/focus end (R20.4, R20.5).
-// - Listing, search, and navigation behavior are unchanged (R20.6).
-
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Users, Plus, Search } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
 import { useEntrance } from '../hooks/useEntrance';
-import { useViewTransition } from '../hooks/useViewTransition';
 import EmptyState from '../components/EmptyState';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import CustomerFormDialog, { type CustomerFormValues } from '../components/CustomerFormDialog';
+import { SectionTitle } from '../components/SectionTitle';
 import { apiClient } from '../lib/api';
 
+type CustomerRow = {
+  id: string;
+  companyName: string;
+  contactName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
+};
+
+const PAGE_SIZE = 100;
+
 export default function CustomersList() {
-  // Single-play mount entrance for the list content; no-op under reduced motion (R20.3, R20.5).
+  const navigate = useNavigate();
   const { ref: entranceRef } = useEntrance<HTMLDivElement>();
-  // View Transitions API for the list → detail morph (instant fallback elsewhere).
-  const navigate = useViewTransition();
-  const [customers, setCustomers] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<CustomerRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [formOpen, setFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+  const [editing, setEditing] = useState<CustomerRow | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<CustomerRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
-  const fetchCustomers = async () => {
+  const loadPage = useCallback(async (nextOffset: number, append: boolean) => {
     try {
-      setLoading(true);
-      setError(null);
-      const data = await apiClient.getCustomers();
-      setCustomers(data);
+      if (append) setLoadingMore(true);
+      else {
+        setLoading(true);
+        setError(null);
+      }
+      const res = await apiClient.getCustomers({ limit: PAGE_SIZE, offset: nextOffset });
+      const rows = (res.items || []) as CustomerRow[];
+      setTotal(res.total ?? rows.length);
+      setOffset(nextOffset + rows.length);
+      setCustomers((prev) => (append ? [...prev, ...rows] : rows));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load customers');
-      console.error('Failed to load customers:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadPage(0, false);
+  }, [loadPage]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return customers;
+    return customers.filter(
+      (c) =>
+        c.companyName?.toLowerCase().includes(q) ||
+        c.contactName?.toLowerCase().includes(q) ||
+        c.email?.toLowerCase().includes(q) ||
+        c.phone?.toLowerCase().includes(q)
+    );
+  }, [customers, search]);
+
+  const openCreate = () => {
+    setFormMode('create');
+    setEditing(null);
+    setFormOpen(true);
+  };
+
+  const openEdit = (c: CustomerRow) => {
+    setFormMode('edit');
+    setEditing(c);
+    setFormOpen(true);
+  };
+
+  const handleSave = async (values: CustomerFormValues) => {
+    setSaving(true);
+    try {
+      const payload = {
+        companyName: values.companyName.trim(),
+        contactName: values.contactName.trim() || undefined,
+        email: values.email.trim() || undefined,
+        phone: values.phone.trim() || undefined,
+        notes: values.notes.trim() || undefined,
+      };
+      if (formMode === 'create') {
+        await apiClient.createCustomer(payload);
+      } else if (editing) {
+        await apiClient.updateCustomer(editing.id, payload);
+      }
+      setFormOpen(false);
+      setEditing(null);
+      await loadPage(0, false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to save customer');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const filtered = customers.filter((c) => {
-    const q = search.toLowerCase();
-    return (
-      c.companyName?.toLowerCase().includes(q) ||
-      c.contactName?.toLowerCase().includes(q) ||
-      c.email?.toLowerCase().includes(q)
-    );
-  });
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await apiClient.deleteCustomer(pendingDelete.id);
+      setPendingDelete(null);
+      await loadPage(0, false);
+    } catch (err) {
+      const status = (err as { status?: number }).status;
+      const msg = err instanceof Error ? err.message : 'Delete failed';
+      alert(
+        status === 409 || msg.toLowerCase().includes('estimate')
+          ? 'This customer has estimates and cannot be deleted.'
+          : msg
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
 
-  if (loading) {
+  const hasMore = customers.length < total;
+
+  if (loading && customers.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <div className="spinner h-12 w-12 mx-auto mb-4" />
-          <p className="text-text-secondary">Loading customers...</p>
-        </div>
+        <div className="spinner h-10 w-10" />
       </div>
     );
   }
 
-  if (error) {
+  if (error && customers.length === 0) {
     return (
-      <div className="max-w-6xl mx-auto card border border-danger/30 text-center py-12">
-        <p className="text-danger font-medium">Could not load customers</p>
-        <p className="text-text-secondary text-sm mt-1">{error}</p>
-        <button type="button" className="btn-primary mt-4" onClick={fetchCustomers}>
+      <div className="card border border-danger/30 text-center py-10">
+        <p className="text-danger font-medium">{error}</p>
+        <button type="button" className="btn-primary mt-4" onClick={() => void loadPage(0, false)}>
           Retry
         </button>
       </div>
@@ -79,106 +151,179 @@ export default function CustomersList() {
   }
 
   return (
-    <div ref={entranceRef} className="max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-3">
-          <Users className="w-8 h-8 text-accent-text" />
-          <div>
-            <h1 className="text-2xl font-display font-bold text-brand">Customers</h1>
-            <p className="text-sm text-text-secondary">{customers.length} customers</p>
-          </div>
+    <div ref={entranceRef} className="w-full pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div>
+          <SectionTitle as="h1" className="text-2xl lg:text-3xl font-display font-bold text-navy">
+            Customers
+          </SectionTitle>
+          <p className="text-sm text-text-secondary mt-1">{total} total</p>
         </div>
-        <Link to="/estimate/choose" className="btn-primary inline-flex items-center space-x-2">
+        <button type="button" className="btn-primary inline-flex items-center gap-2" onClick={openCreate}>
           <Plus className="w-4 h-4" />
-          <span>New Estimate</span>
-        </Link>
+          New customer
+        </button>
       </div>
 
-      {/* Search */}
-      <div className="relative mb-6">
+      <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
         <input
-          type="text"
-          placeholder="Search by company, contact, or email..."
+          type="search"
+          placeholder="Search company, contact, email, phone…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="input-field pl-10"
+          className="input w-full pl-10"
         />
       </div>
 
-      {/* Table */}
       {filtered.length === 0 ? (
-        customers.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            title="No customers yet"
-            body="Customers are auto-saved the first time you assign one to an estimate. Once added, they show up here with quote history."
-            action={
-              <Link to="/estimate/choose" className="btn-primary inline-flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                <span>Start a new estimate</span>
-              </Link>
-            }
-          />
-        ) : (
-          <EmptyState
-            icon={Search}
-            title="No customers match your search"
-            body="Try a different company name, contact, or email."
-            action={
+        <EmptyState
+          icon={Users}
+          title={customers.length === 0 ? 'No customers yet' : 'No matches'}
+          body={
+            customers.length === 0
+              ? 'Add a customer here or when starting a new quote.'
+              : 'Try a different search term.'
+          }
+          action={
+            customers.length === 0 ? (
+              <button type="button" className="btn-primary" onClick={openCreate}>
+                New customer
+              </button>
+            ) : (
               <button type="button" className="btn-secondary" onClick={() => setSearch('')}>
                 Clear search
               </button>
-            }
-          />
-        )
+            )
+          }
+        />
       ) : (
-        <div className="card p-0">
-          <div className="table-wrap">
-          <table className="w-full min-w-[640px]">
-            <thead>
-              <tr className="border-b border-border bg-surface-base/50">
-                <th className="text-left px-6 py-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Company</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Contact</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Email</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-text-secondary uppercase tracking-wider">Phone</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((c) => (
-                <tr
-                  key={c.id}
-                  className="border-b border-border last:border-0 hover:bg-surface-base/50 transition-colors duration-micro ease-micro cursor-pointer"
-                >
-                  <td className="px-6 py-4">
-                    <Link
-                      to={`/customers/${c.id}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        navigate(`/customers/${c.id}`);
-                      }}
-                      className="font-medium text-brand hover:text-accent-text transition-colors duration-micro ease-micro"
-                    >
-                      {c.companyName}
-                    </Link>
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    {c.contactName || <span className="text-text-secondary">—</span>}
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    {c.email || <span className="text-text-secondary">—</span>}
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    {c.phone || <span className="text-text-secondary">—</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <>
+          <div className="card p-0 overflow-hidden">
+            <div className="table-wrap">
+              <table className="w-full min-w-[720px]">
+                <thead>
+                  <tr className="border-b border-border bg-surface-base/50">
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                      Company
+                    </th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                      Contact
+                    </th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                      Phone
+                    </th>
+                    <th className="text-right px-4 py-2.5 text-xs font-semibold text-text-secondary uppercase tracking-wider w-28">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((c) => (
+                    <tr key={c.id} className="border-b border-border last:border-0 hover:bg-surface-base/40">
+                      <td className="px-4 py-2.5">
+                        <button
+                          type="button"
+                          className="font-medium text-brand hover:text-accent-text text-left"
+                          onClick={() => navigate(`/customers/${c.id}`)}
+                        >
+                          {c.companyName}
+                        </button>
+                      </td>
+                      <td className="px-4 py-2.5 text-sm text-text-primary">
+                        {c.contactName || <span className="text-text-secondary">—</span>}
+                      </td>
+                      <td className="px-4 py-2.5 text-sm text-text-primary">
+                        {c.email || <span className="text-text-secondary">—</span>}
+                      </td>
+                      <td className="px-4 py-2.5 text-sm text-text-primary">
+                        {c.phone || <span className="text-text-secondary">—</span>}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            className="p-2 text-mist hover:text-accent-text rounded-lg"
+                            title="Edit"
+                            onClick={() => openEdit(c)}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            className="p-2 text-mist hover:text-danger rounded-lg"
+                            title="Delete"
+                            onClick={() => setPendingDelete(c)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+          {hasMore && !search.trim() && (
+            <div className="flex justify-center mt-4">
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={loadingMore}
+                onClick={() => void loadPage(offset, true)}
+              >
+                {loadingMore ? 'Loading…' : `Load more (${customers.length} of ${total})`}
+              </button>
+            </div>
+          )}
+        </>
       )}
+
+      <CustomerFormDialog
+        open={formOpen}
+        mode={formMode}
+        saving={saving}
+        initial={
+          editing
+            ? {
+                companyName: editing.companyName,
+                contactName: editing.contactName ?? '',
+                email: editing.email ?? '',
+                phone: editing.phone ?? '',
+                notes: editing.notes ?? '',
+              }
+            : undefined
+        }
+        onClose={() => {
+          if (!saving) {
+            setFormOpen(false);
+            setEditing(null);
+          }
+        }}
+        onSave={(values) => void handleSave(values)}
+      />
+
+      <ConfirmDialog
+        open={pendingDelete != null}
+        title="Delete customer?"
+        message={
+          pendingDelete ? (
+            <>
+              Delete <strong>{pendingDelete.companyName}</strong>? Customers with estimates cannot be
+              deleted.
+            </>
+          ) : null
+        }
+        confirmLabel="Delete"
+        destructive
+        busy={deleting}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

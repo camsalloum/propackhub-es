@@ -512,13 +512,19 @@ export class ApiClient {
   }
 
   // Customers
-  getCustomers() {
-    return this.request<{ items: any[]; total: number; limit: number; offset: number } | any[]>(
-      'GET', '/api/v1/customers'
-    ).then(res => {
-      if (res && !Array.isArray(res) && 'items' in res) return res.items;
-      return res as any[];
-    });
+  getCustomers(params?: { limit?: number; offset?: number }) {
+    const qs = new URLSearchParams();
+    if (params?.limit != null) qs.set('limit', String(params.limit));
+    if (params?.offset != null) qs.set('offset', String(params.offset));
+    const query = qs.toString();
+    return this.request<{ items: any[]; total: number; limit: number; offset: number }>(
+      'GET',
+      `/api/v1/customers${query ? `?${query}` : ''}`
+    );
+  }
+
+  listCustomers(limit = 1000) {
+    return this.getCustomers({ limit }).then((res) => res.items || []);
   }
 
   autocompleteCustomers(q: string) {
@@ -536,8 +542,41 @@ export class ApiClient {
     return this.request<any[]>(`GET`, `/api/v1/customers/${customerId}/estimates`);
   }
 
+  getCustomerExplorer(customerId: string, q?: string) {
+    const qs = q ? `?q=${encodeURIComponent(q)}` : '';
+    return this.request<{
+      customer: { id: string | null; companyName: string };
+      quotes: Array<{
+        id: string;
+        name: string;
+        refNumber: string;
+        status: string;
+        validUntil: string | null;
+        updatedAt: string;
+        estimates: any[];
+      }>;
+    }>('GET', `/api/v1/customers/${customerId}/explorer${qs}`);
+  }
+
   createCustomer(customer: any) {
     return this.request('POST', '/api/v1/customers', customer);
+  }
+
+  updateCustomer(
+    id: string,
+    customer: {
+      companyName?: string;
+      contactName?: string;
+      email?: string;
+      phone?: string;
+      notes?: string;
+    }
+  ) {
+    return this.request('PATCH', `/api/v1/customers/${id}`, customer);
+  }
+
+  deleteCustomer(id: string) {
+    return this.request('DELETE', `/api/v1/customers/${id}`);
   }
 
   createMaterial(material: any) {
@@ -645,12 +684,132 @@ export class ApiClient {
     return this.request<any>('POST', `/api/v1/estimates/${id}/calculate`);
   }
 
-  requoteEstimate(id: string) {
-    return this.request<any>('POST', `/api/v1/estimates/${id}/requote`);
+  requoteEstimate(
+    id: string,
+    body?: { quoteName?: string; skuLabel?: string; variantDescription?: string | null }
+  ) {
+    return this.request<any>('POST', `/api/v1/estimates/${id}/requote`, body);
   }
 
   duplicateEstimate(id: string) {
     return this.request<any>('POST', `/api/v1/estimates/${id}/duplicate`);
+  }
+
+  getEstimatesByCustomer(q?: string) {
+    const qs = q ? `?q=${encodeURIComponent(q)}` : '';
+    return this.request<
+      Array<{
+        customerId: string | null;
+        companyName: string;
+        quoteCount: number;
+        estimateCount: number;
+        lastActivityAt: string | null;
+        draftQuoteCount: number;
+      }>
+    >('GET', `/api/v1/estimates/by-customer${qs}`);
+  }
+
+  // Quotes (multi-SKU commercial container)
+  getQuotes(params?: { customerId?: string; status?: string; limit?: number }) {
+    const qs = new URLSearchParams();
+    if (params?.customerId) qs.set('customerId', params.customerId);
+    if (params?.status) qs.set('status', params.status);
+    if (params?.limit != null) qs.set('limit', String(params.limit));
+    const query = qs.toString();
+    return this.request<any[]>('GET', `/api/v1/quotes${query ? `?${query}` : ''}`);
+  }
+
+  getQuote(id: string) {
+    return this.request<any>('GET', `/api/v1/quotes/${id}`);
+  }
+
+  createQuote(body: {
+    name: string;
+    customerId?: string | null;
+    notes?: string | null;
+    rfqNumber?: string | null;
+    isPriceCheck?: boolean;
+    displayCurrency?: string;
+    exchangeRateUsdToDisplay?: number;
+    deliveryTerm?: string | null;
+    paymentTerms?: string | null;
+    remarks?: string | null;
+    defaultPrintColorCount?: number | null;
+    defaultCostPerColor?: number | null;
+    defaultToolingBillingMode?: 'amortized' | 'separate' | 'not_billed' | null;
+  }) {
+    return this.request<any>('POST', '/api/v1/quotes', body);
+  }
+
+  updateQuote(id: string, updates: Record<string, unknown>) {
+    return this.request<any>('PATCH', `/api/v1/quotes/${id}`, updates);
+  }
+
+  deleteQuote(id: string) {
+    return this.request('DELETE', `/api/v1/quotes/${id}`);
+  }
+
+  getQuotePriceList(id: string) {
+    return this.request<{
+      quoteId: string;
+      refNumber: string;
+      name: string;
+      displayCurrency: string;
+      rows: any[];
+      separateDevelopmentCharges: any[];
+    }>('GET', `/api/v1/quotes/${id}/price-list`);
+  }
+
+  async getQuoteProposalPdf(id: string) {
+    const token = this.getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE_URL}/api/v1/quotes/${id}/proposal.pdf`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || `API error: ${res.status}`);
+    }
+
+    return res.blob();
+  }
+
+  duplicateEstimateOnQuote(
+    quoteId: string,
+    estimateId: string,
+    body?: {
+      skuLabel?: string | null;
+      brand?: string | null;
+      specsCode?: string | null;
+      printColorCount?: number | null;
+      costPerColor?: number | null;
+      toolingBillingMode?: 'amortized' | 'separate' | 'not_billed' | null;
+      jobName?: string;
+    }
+  ) {
+    return this.request<any>(
+      'POST',
+      `/api/v1/quotes/${quoteId}/estimates/${estimateId}/duplicate`,
+      body ?? {}
+    );
+  }
+
+  addEstimateToQuote(
+    quoteId: string,
+    body: {
+      mode?: 'blank' | 'duplicate';
+      sourceEstimateId?: string;
+      skuLabel?: string | null;
+      brand?: string | null;
+      specsCode?: string | null;
+      jobName?: string;
+    }
+  ) {
+    return this.request<any>('POST', `/api/v1/quotes/${quoteId}/estimates`, body);
   }
 
   getSupportedCurrencies(q?: string) {
@@ -801,6 +960,7 @@ export class ApiClient {
     jobName?: string;
     orderQuantityKg?: number;
     orderQuantityUnit?: string;
+    quoteId?: string;
   }) {
     return this.request<any>('POST', `/api/v1/templates/${id}/instantiate`, data);
   }
@@ -814,6 +974,7 @@ export class ApiClient {
     jobName?: string;
     orderQuantityKg?: number;
     orderQuantityUnit?: string;
+    quoteId?: string;
   }) {
     return this.request<{
       preview: true;

@@ -8,6 +8,9 @@ import Dashboard from './pages/Dashboard';
 import EstimateEditor from './pages/EstimateEditor';
 import EstimateStart from './pages/EstimateStart';
 import EstimatesList from './pages/EstimatesList';
+import EstimatesFolders from './pages/EstimatesFolders';
+import CustomerExplorer from './pages/CustomerExplorer';
+import QuoteWorkspace from './pages/QuoteWorkspace';
 import CustomerDetail from './pages/CustomerDetail';
 import CustomersList from './pages/CustomersList';
 import Settings from './pages/Settings';
@@ -88,7 +91,11 @@ function App() {
           />
           <Route path="estimate/new" element={<EstimateEditor />} />
           <Route path="estimate/:id" element={<EstimateEditor />} />
-          <Route path="estimates" element={<EstimatesList />} />
+          <Route path="estimates" element={<EstimatesFolders />} />
+          <Route path="estimates/all" element={<EstimatesList />} />
+          <Route path="estimates/customers/:customerId" element={<CustomerExplorer />} />
+          <Route path="quotes/:quoteId" element={<QuoteWorkspace />} />
+          <Route path="quotes/:quoteId/estimates/:estimateId" element={<QuoteWorkspace />} />
           <Route path="customers" element={<CustomersList />} />
           <Route path="customers/:id" element={<CustomerDetail />} />
           <Route path="library" element={<RawMaterials />} />

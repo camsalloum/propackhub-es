@@ -20,6 +20,7 @@ import { MES_OUTCOME_ENABLED } from '../lib/estimateStatus';
 
 interface SummaryEstimate {
   id: string;
+  quoteId?: string | null;
   refNumber: string;
   jobName?: string;
   customerName?: string | null;
@@ -271,9 +272,9 @@ const Dashboard = () => {
             Track quotes, conversions, and proposal velocity at a glance. All numbers update live.
           </p>
         </div>
-        <Link to="/estimate/choose" className="btn-primary">
+        <Link to="/estimates" className="btn-primary">
           <PlusCircle className="w-5 h-5" />
-          <span>New estimate</span>
+          <span>New quote</span>
         </Link>
       </div>
 
@@ -313,7 +314,13 @@ const Dashboard = () => {
                   </span>
                   <button
                     type="button"
-                    onClick={() => navigate(`/estimate/${est.id}`)}
+                    onClick={() =>
+                      navigate(
+                        est.quoteId
+                          ? `/quotes/${est.quoteId}/estimates/${est.id}`
+                          : `/estimate/${est.id}`
+                      )
+                    }
                     className="text-sm text-accent-text font-medium hover:underline inline-flex items-center gap-1"
                   >
                     Open
@@ -373,7 +380,13 @@ const Dashboard = () => {
                     <td>
                       <button
                         type="button"
-                        onClick={() => navigate(`/estimate/${estimate.id}`)}
+                        onClick={() =>
+                          navigate(
+                            estimate.quoteId
+                              ? `/quotes/${estimate.quoteId}/estimates/${estimate.id}`
+                              : `/estimate/${estimate.id}`
+                          )
+                        }
                         className="text-sm text-accent-text font-medium hover:underline inline-flex items-center gap-1"
                       >
                         Open
@@ -392,9 +405,9 @@ const Dashboard = () => {
           title="No estimates yet"
           body="Pick a template, configure your stack, and your first cost estimate appears here. Saved quotes show up across the workspace once you create them."
           action={
-            <Link to="/estimate/choose" className="btn-primary">
+            <Link to="/estimates" className="btn-primary">
               <PlusCircle className="w-5 h-5" />
-              <span>Create first estimate</span>
+              <span>Create first quote</span>
             </Link>
           }
           secondary={<>Browse the <Link to="/templates" className="text-accent-text hover:underline">templates library</Link> first if you're not sure where to start.</>}

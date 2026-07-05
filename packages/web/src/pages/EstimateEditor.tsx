@@ -120,12 +120,31 @@ const LAYER_TYPE_TABLE_LABELS: Record<string, string> = {
   adhesive: 'Adhesive',
 };
 
-const EstimateEditor = () => {
-  const { id } = useParams<{ id: string }>();
+type EstimateEditorProps = {
+  /** Rendered inside QuoteWorkspace — parent owns Back / quote chrome. */
+  embedded?: boolean;
+  estimateIdOverride?: string;
+  backTo?: string;
+  /** Single-estimate quote: hide estimate ref so only Quote PKG-… shows in parent. */
+  hideEstimateRef?: boolean;
+  /** Parent quote is sent — structure/price edits blocked (re-quote or unlock). */
+  readOnly?: boolean;
+};
+
+const EstimateEditor = ({
+  embedded = false,
+  estimateIdOverride,
+  backTo,
+  hideEstimateRef = false,
+  readOnly = false,
+}: EstimateEditorProps = {}) => {
+  const { id: routeId } = useParams<{ id: string }>();
+  const id = estimateIdOverride ?? routeId;
   const { user, tenant } = useAuth();
   const { can } = useVisibilityProfile(user?.role);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const quoteIdFromUrl = searchParams.get('quote')?.trim() || '';
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -209,6 +228,14 @@ const EstimateEditor = () => {
   const [cormPerKgPlain, setCormPerKgPlain] = useState(0);
   const [moqKg, setMoqKg] = useState<number | null>(null);
   const [toolingChargeUsd, setToolingChargeUsd] = useState(0);
+  const [skuLabel, setSkuLabel] = useState('');
+  const [brand, setBrand] = useState('');
+  const [specsCode, setSpecsCode] = useState('');
+  const [printColorCount, setPrintColorCount] = useState<number | null>(null);
+  const [costPerColor, setCostPerColor] = useState<number | null>(null);
+  const [toolingBillingMode, setToolingBillingMode] = useState<
+    'amortized' | 'separate' | 'not_billed' | null
+  >(null);
   const [deliveryTerm, setDeliveryTerm] = useState('EXW');
   const [deliveryChargeUsd, setDeliveryChargeUsd] = useState(0);
   // Waste bands + CoRM base: Printed vs Plain from structure (ink → Printed).
@@ -257,9 +284,10 @@ const EstimateEditor = () => {
     configureFromTemplate?: boolean;
   } | null;
   const returnTo =
-    locationState?.returnTo === '/templates'
+    backTo ||
+    (locationState?.returnTo === '/templates'
       ? '/templates'
-      : '/estimates';
+      : '/estimates');
 
   const editingLayer = layers.find((l) => l.id === editingLayerId) ?? null;
 
@@ -400,6 +428,7 @@ const EstimateEditor = () => {
   };
 
   const addLayerOfType = (type: 'substrate' | 'ink' | 'adhesive', materialId?: string) => {
+    if (readOnly) return;
     if (estimate?.sourceTemplateKey && type !== 'ink') return;
     const defaultMat = materialId
       ? materials.find((m) => m.id === materialId)
@@ -611,13 +640,22 @@ const EstimateEditor = () => {
             (location.state as { instantiated: Parameters<typeof hydrateFromInstantiated>[0] }).instantiated,
             mats || []
           );
+          const paramVariantName = searchParams.get('variantName')?.trim() || '';
+          const paramVariantDescription = searchParams.get('variantDescription')?.trim() || '';
+          if (paramVariantName) {
+            setJobName(paramVariantName);
+            setSkuLabel(paramVariantName);
+          }
+          if (paramVariantDescription) setNotes(paramVariantDescription);
           const statePriceChanges = (location.state as { priceChanges?: unknown[] } | null)?.priceChanges;
           if (statePriceChanges) setPriceChanges(statePriceChanges as never[]);
           setLoading(false);
         } else {
           const templateId = searchParams.get('template') ? Number(searchParams.get('template')) : null;
           const paramCustomer = searchParams.get('customer') || '';
-          const paramJobName = searchParams.get('jobName') || 'New estimate';
+          const paramVariantName = searchParams.get('variantName')?.trim() || '';
+          const paramVariantDescription = searchParams.get('variantDescription')?.trim() || '';
+          const paramJobName = paramVariantName || searchParams.get('jobName') || 'New estimate';
           const paramProductType = normalizeProductType(
             searchParams.get('productType') || searchParams.get('type'),
             productTypeOptions
@@ -627,6 +665,8 @@ const EstimateEditor = () => {
           const defaultLayers = getTemplateLayers(templateId, mats || []);
           setJobName(paramJobName);
           setCustomerId(paramCustomer);
+          if (paramVariantName) setSkuLabel(paramVariantName);
+          if (paramVariantDescription) setNotes(paramVariantDescription);
           setProductType(paramProductType);
           if (paramOrderQty && !Number.isNaN(Number(paramOrderQty))) {
             setOrderQuantity(Number(paramOrderQty));
@@ -659,6 +699,16 @@ const EstimateEditor = () => {
     const fromUrl = searchParams.get('customer')?.trim();
     if (fromUrl && !customerId) setCustomerId(fromUrl);
   }, [searchParams, customerId]);
+
+  // Standalone /estimate/:id → quote workspace when the estimate belongs to a quote.
+  useEffect(() => {
+    if (embedded || estimateIdOverride) return;
+    if (!estimate?.id || !estimate?.quoteId) return;
+    navigate(`/quotes/${estimate.quoteId}/estimates/${estimate.id}`, {
+      replace: true,
+      state: location.state,
+    });
+  }, [embedded, estimateIdOverride, estimate?.id, estimate?.quoteId, navigate, location.state]);
 
   // When connectivity returns, sync any draft saved while offline.
   useEffect(() => {
@@ -889,6 +939,26 @@ const EstimateEditor = () => {
         );
       }
       setToolingChargeUsd(parseFloat(data.toolingChargeUsd) || 0);
+      setSkuLabel(typeof data.skuLabel === 'string' ? data.skuLabel : '');
+      setBrand(typeof data.brand === 'string' ? data.brand : '');
+      setSpecsCode(typeof data.specsCode === 'string' ? data.specsCode : '');
+      setPrintColorCount(
+        data.printColorCount != null && data.printColorCount !== ''
+          ? Number(data.printColorCount)
+          : null
+      );
+      setCostPerColor(
+        data.costPerColor != null && data.costPerColor !== ''
+          ? Number(data.costPerColor)
+          : null
+      );
+      setToolingBillingMode(
+        data.toolingBillingMode === 'amortized' ||
+          data.toolingBillingMode === 'separate' ||
+          data.toolingBillingMode === 'not_billed'
+          ? data.toolingBillingMode
+          : null
+      );
       {
         const term =
           typeof data.deliveryTerm === 'string' && data.deliveryTerm ? data.deliveryTerm : 'EXW';
@@ -1074,8 +1144,21 @@ const EstimateEditor = () => {
       cormPerKgUsd,
       cormPerKgPlain,
       moqKg: moqKg ?? undefined,
-      toolingChargeUsd,
-      toolingBilledToCustomer: toolingChargeUsd > 0,
+      skuLabel: skuLabel.trim() || undefined,
+      brand: brand.trim() || undefined,
+      specsCode: specsCode.trim() || undefined,
+      printColorCount: printColorCount ?? undefined,
+      costPerColor: costPerColor ?? undefined,
+      toolingBillingMode:
+        printColorCount != null && costPerColor != null
+          ? toolingBillingMode ?? 'separate'
+          : undefined,
+      toolingChargeUsd:
+        printColorCount != null && costPerColor != null ? undefined : toolingChargeUsd,
+      toolingBilledToCustomer:
+        printColorCount != null && costPerColor != null
+          ? (toolingBillingMode ?? 'separate') === 'amortized'
+          : toolingChargeUsd > 0,
       deliveryTerm: deliveryTerm || undefined,
       deliveryChargeUsd: isExwDelivery(deliveryTerm) ? 0 : deliveryChargeUsd,
       solventMaterialId: needsSolventMix ? solventMaterialId ?? undefined : undefined,
@@ -1093,6 +1176,7 @@ const EstimateEditor = () => {
       // save (substrate stack fixed; ink/coating still editable). Without this the
       // create payload drops the key and the saved estimate unlocks unexpectedly.
       sourceTemplateKey: estimate?.sourceTemplateKey?.trim() || undefined,
+      quoteId: estimate?.quoteId || quoteIdFromUrl || undefined,
       layers: layers.map((l, i) => ({
         materialId: l.materialId,
         micron: Number(l.micron),
@@ -1113,14 +1197,14 @@ const EstimateEditor = () => {
       }));
     }
     return payload;
-  }, [jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, productType, productTypeOptions, productSubtype, needsSolventMix, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, cormPerKgPlain, moqKg, toolingChargeUsd, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
+  }, [jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, estimate?.quoteId, quoteIdFromUrl, productType, productTypeOptions, productSubtype, needsSolventMix, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, cormPerKgPlain, moqKg, toolingChargeUsd, skuLabel, brand, specsCode, printColorCount, costPerColor, toolingBillingMode, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   /** Link estimate to a customer row — create customer record if user typed a new name. */
   const ensureCustomerForSave = async (): Promise<string | undefined> => {
     if (customerId?.trim()) return customerId;
     const name = customerDraftName.trim();
     if (!name) return undefined;
-    const customers = await apiClient.getCustomers();
+    const customers = await apiClient.listCustomers(1000);
     const match = (customers || []).find(
       (c: { companyName?: string }) => c.companyName?.toLowerCase() === name.toLowerCase()
     ) as { id?: string } | undefined;
@@ -1190,8 +1274,14 @@ const EstimateEditor = () => {
         operatingCostMethod: tenant?.operatingCostMethod ?? undefined,
         cormPerKgUsd: baseCormDisplay,
         cormScaleWithWaste,
-        toolingChargeUsd,
-        toolingBilledToCustomer: toolingChargeUsd > 0,
+        toolingChargeUsd:
+          printColorCount != null && costPerColor != null
+            ? printColorCount * costPerColor
+            : toolingChargeUsd,
+        toolingBilledToCustomer:
+          printColorCount != null && costPerColor != null
+            ? (toolingBillingMode ?? 'separate') === 'amortized'
+            : toolingChargeUsd > 0,
         deliveryTerm,
         deliveryChargeUsd: isExwDelivery(deliveryTerm) ? 0 : deliveryChargeUsd,
         wasteBands,
@@ -1206,7 +1296,8 @@ const EstimateEditor = () => {
     solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob,
     hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, layers.length, accessories,
     orderQuantity, orderQuantityUnit, masterReference, wasteBands,
-    pricingMethod, marginValuePerKgUsd, baseCormDisplay, cormScaleWithWaste, toolingChargeUsd, deliveryTerm, deliveryChargeUsd,
+    pricingMethod, marginValuePerKgUsd, baseCormDisplay, cormScaleWithWaste, toolingChargeUsd,
+    printColorCount, costPerColor, toolingBillingMode, deliveryTerm, deliveryChargeUsd,
     tenant?.operatingCostMethod, processesState,
   ]);
 
@@ -1282,10 +1373,21 @@ const EstimateEditor = () => {
     };
   }, [clientCalcResult, layers]);
 
+  const fxRateForUi = parseFloat(estimate?.exchangeRateUsdToDisplay) || 1;
+  const colorsDriveTooling =
+    printColorCount != null &&
+    costPerColor != null &&
+    Number.isFinite(printColorCount) &&
+    Number.isFinite(costPerColor);
+  const effectiveToolingDisplay = colorsDriveTooling
+    ? printColorCount! * costPerColor!
+    : toolingChargeUsd;
+
   const visualizerLayers = useMemo(
     () =>
-      layers.map((l) => {
+      layers.map((l, i) => {
         const mat = materials.find((m) => m.id === l.materialId);
+        const calcLayer = clientCalcResult?.estimate.layers[i];
         return {
           id: l.id,
           type: l.materialType,
@@ -1293,9 +1395,16 @@ const EstimateEditor = () => {
           micron: l.micron,
           gsm: l.gsm,
           family: mat?.substrateFamily ?? null,
+          costPerKg: can('materialCostPerKg')
+            ? usdToDisplay(l.costPerKgUsd, fxRateForUi)
+            : null,
+          costPerM2:
+            can('materialCostPerKg') && calcLayer?.costPerM2 != null
+              ? usdToDisplayPrecise(calcLayer.costPerM2, fxRateForUi)
+              : null,
         };
       }),
-    [layers, materials]
+    [layers, materials, can, fxRateForUi, clientCalcResult]
   );
 
   useEffect(() => {
@@ -1425,6 +1534,10 @@ const EstimateEditor = () => {
    */
   type SaveMode = 'draft' | 'final' | 'silent';
   const persistEstimate = async (mode: SaveMode = 'draft'): Promise<boolean> => {
+    if (readOnly) {
+      if (mode !== 'silent') alert('This quote is sent and locked. Unlock or re-quote to edit.');
+      return false;
+    }
     if (saving) return false;
     if (layers.length === 0) {
       if (mode !== 'silent') alert('Add at least one layer before saving.');
@@ -1508,7 +1621,14 @@ const EstimateEditor = () => {
           console.warn('Recalculate on save skipped:', calcErr);
         }
       }
-      navigate(`/estimate/${saved.id}`, { replace: true });
+      {
+        const qid = saved.quoteId || quoteIdFromUrl;
+        if (qid) {
+          navigate(`/quotes/${qid}/estimates/${saved.id}`, { replace: true });
+        } else {
+          navigate(`/estimate/${saved.id}`, { replace: true });
+        }
+      }
       if (mode === 'draft') setSaveNotice('Draft saved.');
       else if (mode === 'final') setSaveNotice('Saved.');
       return true;
@@ -1542,7 +1662,10 @@ const EstimateEditor = () => {
       if (res?.id) {
         setPriceChanges(res.price_changes || []);
         setRequoteWarnings(res.warnings || []);
-        navigate(`/estimate/${res.id}`, {
+        const dest = res.quoteId
+          ? `/quotes/${res.quoteId}/estimates/${res.id}`
+          : `/estimate/${res.id}`;
+        navigate(dest, {
           state: { priceChanges: res.price_changes || [], warnings: res.warnings || [] },
         });
       }
@@ -1676,7 +1799,7 @@ const EstimateEditor = () => {
           <button type="button" className="btn-primary" onClick={() => { setLoading(true); fetchEstimate(id!); }}>
             Retry
           </button>
-          <Link to="/estimates" className="text-gold hover:underline text-sm">Back to estimates</Link>
+          <Link to={returnTo} className="text-gold hover:underline text-sm">Back</Link>
         </div>
       </div>
     );
@@ -1690,7 +1813,7 @@ const EstimateEditor = () => {
 
   /** Template quotes: add/remove/reorder — ink only */
   const canEditLayerStructure = (layer: { materialType: string }) =>
-    !structureLocked || layer.materialType === 'ink';
+    !readOnly && (!structureLocked || layer.materialType === 'ink');
   const showStructureCosts = can('materialCostPerKg');
   const showInkControlsCol = structureLocked;
   const showLayerActionsCol = !structureLocked;
@@ -1705,22 +1828,50 @@ const EstimateEditor = () => {
     { key: 'family', track: 'minmax(0,0.85fr)', label: 'Family' },
     { key: 'grade', track: 'minmax(0,1fr)', label: 'Grade' },
     {
-      // Fits "xx.xx" + unit (µ / gsm) inside the field chrome; was 5.5rem (clipped).
       key: 'value',
-      track: '7.75rem',
+      track: '6.25rem',
       label: (
-        <span className="inline-flex items-baseline gap-1">
-          <span>Value</span>
-          <span className="font-normal opacity-80">µ/gsm</span>
+        <span className="leading-tight text-center">
+          <span className="block">Value</span>
+          <span className="block font-normal opacity-80 text-[10px]">µ/gsm</span>
         </span>
       ),
     },
-    // Fits "126.40" / "16.80" in mono tabular-nums; was 4rem (clipped).
-    { key: 'gsm', track: '5.75rem', label: 'GSM' },
+    {
+      key: 'gsm',
+      track: '4.5rem',
+      label: (
+        <span className="leading-tight text-center">
+          <span className="block">GSM</span>
+        </span>
+      ),
+    },
     ...(showStructureCosts
       ? [
-          { key: 'perKg', track: '5.25rem', label: `${displayCurrencyLabel}/kg` },
-          { key: 'perM2', track: '5.25rem', label: `${displayCurrencyLabel}/m²` },
+          {
+            key: 'perKg',
+            track: '5.25rem',
+            label: (
+              <span className="leading-tight text-center">
+                <span className="block">Material</span>
+                <span className="block font-normal opacity-80 text-[10px]">
+                  {displayCurrencyLabel}/kg
+                </span>
+              </span>
+            ),
+          },
+          {
+            key: 'perM2',
+            track: '5.25rem',
+            label: (
+              <span className="leading-tight text-center">
+                <span className="block">Area</span>
+                <span className="block font-normal opacity-80 text-[10px]">
+                  {displayCurrencyLabel}/m²
+                </span>
+              </span>
+            ),
+          },
         ]
       : []),
     ...(showLayerControlsCol ? [{ key: 'actions', track: '2rem', label: '' as ReactNode }] : []),
@@ -2069,24 +2220,28 @@ const EstimateEditor = () => {
         </div>
       )}
       {/* Compact estimate header — sticky so Save/Calculate stay reachable while scrolling */}
-      <div className="sticky top-0 z-30 -mx-4 lg:-mx-8 px-4 lg:px-8 py-3 mb-6 bg-surface-base/95 backdrop-blur border-b border-border flex items-center justify-between gap-3">
-        {/* Left: Back + title */}
+      <div className={`${embedded ? 'relative z-20' : 'sticky top-0 z-30 -mx-4 lg:-mx-8 px-4 lg:px-8'} py-3 mb-6 ${embedded ? '' : 'bg-surface-base/95 backdrop-blur border-b border-border'} flex items-center justify-between gap-3`}>
+        {/* Left: Back + title (Back hidden when QuoteWorkspace owns chrome) */}
         <div className="flex items-center gap-3 min-w-0">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="btn-secondary inline-flex items-center gap-2 shrink-0"
-            title="Back — discards unsaved changes"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Back</span>
-          </button>
+          {!embedded && (
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="btn-secondary inline-flex items-center gap-2 shrink-0"
+              title="Back — discards unsaved changes"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+          )}
           <div className="min-w-0">
             <p className="eyebrow font-mono leading-none truncate flex items-center gap-2 flex-wrap">
               <span>
-                {estimate?.refNumber
-                  ? `${estimate.refNumber} · ${estimateStatusLabel(estimate?.status)}${needsConfiguration ? ' · Needs configuration' : ''}`
-                  : `Draft estimate${needsConfiguration ? ' · Needs configuration' : ''}`}
+                {hideEstimateRef
+                  ? `${estimateStatusLabel(estimate?.status)}${needsConfiguration ? ' · Needs configuration' : ''}`
+                  : estimate?.refNumber
+                    ? `${estimate.refNumber} · ${estimateStatusLabel(estimate?.status)}${needsConfiguration ? ' · Needs configuration' : ''}`
+                    : `Draft estimate${needsConfiguration ? ' · Needs configuration' : ''}`}
               </span>
               {estimate?.structureForked && (
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-warning/10 text-warning rounded whitespace-nowrap" title="Layers differ from template">
@@ -2109,7 +2264,7 @@ const EstimateEditor = () => {
 
         {/* Right: actions — single toolbar (no bottom duplicates) */}
         <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
-          {estimate?.structureForked && estimate?.sourceTemplateKey && (
+          {!readOnly && estimate?.structureForked && estimate?.sourceTemplateKey && (
             <button
               type="button"
               onClick={handleSnapBack}
@@ -2121,52 +2276,60 @@ const EstimateEditor = () => {
               <span className="hidden sm:inline">Snap back</span>
             </button>
           )}
-          <button
-            type="button"
-            onClick={handleSaveDraft}
-            disabled={saving}
-            className="btn-secondary inline-flex items-center gap-1.5"
-            title="Save your in-progress work — you can come back to finish it later"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span className="hidden sm:inline">{saving ? 'Saving…' : 'Save draft'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleSaveFinal}
-            disabled={saving}
-            className="btn-primary inline-flex items-center gap-1.5"
-            title="Save the completed estimate — validates dimensions, layers, and structure"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-            <span>{saving ? 'Saving…' : 'Save'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={downloadProposalPdf}
-            disabled={!estimate?.id}
-            className="btn-secondary inline-flex items-center gap-1.5"
-            title="Download proposal PDF"
-          >
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">PDF</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleSaveAsTemplate}
-            disabled={!estimate?.id}
-            className="btn-secondary inline-flex items-center gap-1.5"
-            title="Save structure to My Templates"
-          >
-            <BookmarkPlus className="w-4 h-4" />
-            <span className="hidden md:inline">My Templates</span>
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={saving}
+              className="btn-secondary inline-flex items-center gap-1.5"
+              title="Save your in-progress work — you can come back to finish it later"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              <span className="hidden sm:inline">{saving ? 'Saving…' : 'Save draft'}</span>
+            </button>
+          )}
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={handleSaveFinal}
+              disabled={saving}
+              className="btn-primary inline-flex items-center gap-1.5"
+              title="Save the completed estimate — validates dimensions, layers, and structure"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              <span>{saving ? 'Saving…' : 'Save'}</span>
+            </button>
+          )}
+          {!embedded && (
+            <button
+              type="button"
+              onClick={downloadProposalPdf}
+              disabled={!estimate?.id}
+              className="btn-secondary inline-flex items-center gap-1.5"
+              title="Download proposal PDF"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">PDF</span>
+            </button>
+          )}
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={handleSaveAsTemplate}
+              disabled={!estimate?.id}
+              className="btn-secondary inline-flex items-center gap-1.5"
+              title="Save structure to My Templates"
+            >
+              <BookmarkPlus className="w-4 h-4" />
+              <span className="hidden md:inline">My Templates</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={handleRequote}
             disabled={!estimate?.id}
             className="btn-secondary inline-flex items-center gap-1.5"
-            title="Duplicate for re-quote"
+            title={readOnly ? 'Create a new quote with fresh prices' : 'Duplicate for re-quote'}
           >
             <Copy className="w-4 h-4" />
             <span className="hidden md:inline">Re-quote</span>
@@ -2174,6 +2337,10 @@ const EstimateEditor = () => {
         </div>
       </div>
 
+      <fieldset
+        disabled={readOnly}
+        className="min-w-0 border-0 p-0 m-0 disabled:opacity-90 [&_button:not([type='button'])]:disabled:pointer-events-none"
+      >
       <div className="card mb-6 py-3 px-4 sm:px-5">
         <SectionTitle
           as="h3"
@@ -2199,7 +2366,7 @@ const EstimateEditor = () => {
             setProductSubtype(next === 'bag' || next === 'pouch' ? null : defaultSubtypeForFamily(next as ProductFamily));
           }}
           productTypeOptions={productTypeOptions}
-          productTypeLocked={structureLocked}
+          productTypeLocked={structureLocked || readOnly}
           productSubtype={productSubtype}
           onProductSubtypeChange={(next) => {
             setProductSubtype(next);
@@ -2260,6 +2427,21 @@ const EstimateEditor = () => {
               />
             ) : undefined
           }
+          showSkuFields
+          skuLabel={skuLabel}
+          onSkuLabelChange={setSkuLabel}
+          brand={brand}
+          onBrandChange={setBrand}
+          specsCode={specsCode}
+          onSpecsCodeChange={setSpecsCode}
+          showDevCostFields={can('platesPerKg')}
+          printColorCount={printColorCount}
+          onPrintColorCountChange={setPrintColorCount}
+          costPerColor={costPerColor}
+          onCostPerColorChange={setCostPerColor}
+          toolingBillingMode={toolingBillingMode}
+          onToolingBillingModeChange={setToolingBillingMode}
+          displayCurrency={estimate?.displayCurrency || 'USD'}
         />
 
         {/* Development (tooling) & delivery — below the dimensions. */}
@@ -2267,17 +2449,30 @@ const EstimateEditor = () => {
           <div className="mt-4 pt-4 border-t border-border/80 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4">
             <div>
               <label className="block text-xs font-medium text-navy mb-1">
-                Tooling / development charge ({estimate?.displayCurrency || 'USD'})
+                {colorsDriveTooling
+                  ? `Development total (${estimate?.displayCurrency || 'USD'})`
+                  : `Tooling / development charge (${estimate?.displayCurrency || 'USD'})`}
               </label>
-              <input
-                type="number"
-                value={toolingChargeUsd}
-                step="0.01"
-                min="0"
-                onChange={(e) => setToolingChargeUsd(Number(e.target.value))}
-                onFocus={selectOnFocus}
-                className="input input-compact w-full"
-              />
+              {colorsDriveTooling ? (
+                <p className="input input-compact input-static w-full tabular-nums">
+                  {effectiveToolingDisplay.toFixed(2)}
+                  {(toolingBillingMode ?? 'separate') === 'separate'
+                    ? ' · separate'
+                    : (toolingBillingMode ?? 'separate') === 'amortized'
+                      ? ' · in /kg'
+                      : ' · not billed'}
+                </p>
+              ) : (
+                <input
+                  type="number"
+                  value={toolingChargeUsd}
+                  step="0.01"
+                  min="0"
+                  onChange={(e) => setToolingChargeUsd(Number(e.target.value))}
+                  onFocus={selectOnFocus}
+                  className="input input-compact w-full"
+                />
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-navy mb-1">Delivery term</label>
@@ -2379,6 +2574,8 @@ const EstimateEditor = () => {
                     <div className="py-2">
                       <FilmStackVisualizer
                         layers={visualizerLayers}
+                        displayCurrency={displayCurrencyLabel}
+                        showContrib={showStructureCosts}
                       />
                     </div>
                   )}
@@ -2644,7 +2841,14 @@ const EstimateEditor = () => {
                                 return true;
                               });
 
+                              const solidPct = currentMat?.solidPercent ?? 100;
+                              const solidBasisTitle =
+                                solidPct < 100
+                                  ? `Cost/kg is solid basis (${solidPct}% solid). Wet ink cost is higher; solvent is costed separately.`
+                                  : undefined;
+
                               return (
+                                <div className="min-w-0 w-full" title={solidBasisTitle}>
                                 <StructureGradeSelect
                                   value={layer.materialId}
                                   options={gradeOptions.map((m) => ({
@@ -2675,6 +2879,7 @@ const EstimateEditor = () => {
                                     );
                                   }}
                                 />
+                                </div>
                               );
                             })()}
                           </div>
@@ -2725,6 +2930,13 @@ const EstimateEditor = () => {
                                   type="number"
                                   min="0"
                                   step="0.01"
+                                  title={
+                                    layer.materialType === 'ink' &&
+                                    (materials.find((m) => m.id === layer.materialId)?.solidPercent ?? 100) <
+                                      100
+                                      ? `Cost/kg is solid basis (${materials.find((m) => m.id === layer.materialId)?.solidPercent}% solid). Wet ink cost is higher; solvent is costed separately.`
+                                      : undefined
+                                  }
                                   value={usdToDisplay(layer.costPerKgUsd, fxRate).toFixed(2)}
                                   onChange={(e) => {
                                     const displayVal = parseFloat(e.target.value) || 0;
@@ -2903,6 +3115,8 @@ const EstimateEditor = () => {
                     <FilmStackVisualizer
                       layers={visualizerLayers}
                       className="h-full w-full"
+                      displayCurrency={displayCurrencyLabel}
+                      showContrib={showStructureCosts}
                     />
                   </div>
                 </div> {/* end structure body row */}
@@ -3302,12 +3516,15 @@ const EstimateEditor = () => {
               />
             </p>
           </div>
-          <button onClick={handleSaveFinal} disabled={saving} className="btn-primary px-4 py-2 text-sm min-h-[48px]">
-            {saving ? 'Saving...' : 'Save'}
-          </button>
+          {!readOnly && (
+            <button onClick={handleSaveFinal} disabled={saving} className="btn-primary px-4 py-2 text-sm min-h-[48px]">
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          )}
         </div>
       </div>
       )}
+      </fieldset>
 
       <BottomSheet
         open={layerSheetOpen && !!editingLayer}

@@ -3,9 +3,14 @@ import CustomerAutocomplete from './CustomerAutocomplete';
 import type { ProductTypeOption, UnitOption } from '../lib/masterDataReference';
 import type { DimensionFieldDef } from '../lib/productCatalog';
 import { selectOnFocus } from '../lib/inputs';
+import type { ToolingScenario } from '../lib/tooling';
 
 const fieldClass = 'input input-compact w-full min-w-0';
-const labelClass = 'block text-xs font-medium text-navy mb-1 text-center truncate px-0.5';
+const numFieldClass = `${fieldClass} tabular-nums text-center`;
+const labelClass = 'block text-xs font-medium text-navy mb-1 truncate';
+
+const isExwDelivery = (term: string | null | undefined) =>
+  !term || term.trim().toUpperCase() === 'EXW';
 
 function SpecField({
   label,
@@ -72,6 +77,19 @@ export function JobHeaderFields({
   onCostPerColorChange,
   toolingBillingMode,
   onToolingBillingModeChange,
+  toolingScenario,
+  onToolingScenarioChange,
+  billableColorCount,
+  onBillableColorCountChange,
+  effectiveToolingDisplay,
+  colorsDriveTooling,
+  toolingChargeUsd,
+  onToolingChargeUsdChange,
+  deliveryTerm,
+  onDeliveryTermChange,
+  deliveryChargeUsd,
+  onDeliveryChargeUsdChange,
+  showDeliveryFields = false,
   displayCurrency,
   showSkuFields = false,
   showDevCostFields = false,
@@ -95,6 +113,19 @@ export function JobHeaderFields({
   onCostPerColorChange?: (v: number | null) => void;
   toolingBillingMode?: 'amortized' | 'separate' | 'not_billed' | null;
   onToolingBillingModeChange?: (v: 'amortized' | 'separate' | 'not_billed') => void;
+  toolingScenario?: ToolingScenario | null;
+  onToolingScenarioChange?: (v: ToolingScenario) => void;
+  billableColorCount?: number | null;
+  onBillableColorCountChange?: (v: number | null) => void;
+  effectiveToolingDisplay?: number;
+  colorsDriveTooling?: boolean;
+  toolingChargeUsd?: number;
+  onToolingChargeUsdChange?: (v: number) => void;
+  deliveryTerm?: string;
+  onDeliveryTermChange?: (v: string) => void;
+  deliveryChargeUsd?: number;
+  onDeliveryChargeUsdChange?: (v: number) => void;
+  showDeliveryFields?: boolean;
   displayCurrency?: string;
   showSkuFields?: boolean;
   showDevCostFields?: boolean;
@@ -168,11 +199,41 @@ export function JobHeaderFields({
       .join(' '),
   };
 
+  const topRowGridClass = showSkuFields
+    ? showJobName && onJobNameChange != null
+      ? 'lg:grid-cols-[minmax(9rem,1.225fr)_minmax(9rem,1.225fr)_minmax(5rem,0.5fr)_minmax(5.5rem,0.9fr)_minmax(5rem,0.55fr)]'
+      : 'lg:grid-cols-[minmax(10rem,1.75fr)_minmax(5rem,0.5fr)_minmax(5.5rem,0.9fr)_minmax(5rem,0.55fr)]'
+    : 'lg:grid-cols-[minmax(10rem,35%)_minmax(10rem,35%)]';
+
+  const devCol = {
+    tooling: 'minmax(5.5rem, 0.85fr)',
+    printColors: 'minmax(4rem, 0.55fr)',
+    changedColors: 'minmax(4rem, 0.5fr)',
+    costPerColor: 'minmax(5rem, 0.72fr)',
+    devTotal: 'minmax(5.5rem, 0.95fr)',
+    devBilling: 'minmax(5.5rem, 0.85fr)',
+    deliveryTerm: 'minmax(4.5rem, 0.65fr)',
+    freight: 'minmax(4.5rem, 0.62fr)',
+  };
+  const isExistingTooling = toolingScenario === 'existing';
+  const devRowColumns = [
+    showDevCostFields ? devCol.tooling : null,
+    showDevCostFields && !isExistingTooling ? devCol.printColors : null,
+    showDevCostFields && toolingScenario === 'modification' ? devCol.changedColors : null,
+    showDevCostFields && !isExistingTooling ? devCol.costPerColor : null,
+    showDevCostFields && !isExistingTooling ? devCol.devTotal : null,
+    showDevCostFields && !isExistingTooling ? devCol.devBilling : null,
+    showDeliveryFields ? devCol.deliveryTerm : null,
+    showDeliveryFields ? devCol.freight : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-3">
+      <div className={`grid grid-cols-1 gap-x-3 gap-y-3 ${topRowGridClass}`}>
         <div className="min-w-0">
-          <label className="block text-xs font-medium text-navy mb-1">Customer name</label>
+          <label className={labelClass}>Customer name</label>
           <CustomerAutocomplete
             value={customerId}
             onChange={onCustomerChange}
@@ -183,7 +244,7 @@ export function JobHeaderFields({
 
         {showJobName && onJobNameChange != null ? (
           <div className="min-w-0">
-            <label className="block text-xs font-medium text-navy mb-1">Job name</label>
+            <label className={labelClass}>Job name</label>
             <input
               type="text"
               placeholder={jobNamePlaceholder}
@@ -192,94 +253,210 @@ export function JobHeaderFields({
               onChange={(e) => onJobNameChange(e.target.value)}
             />
           </div>
-        ) : (
+        ) : showSkuFields ? null : (
           <div className="hidden lg:block" aria-hidden />
+        )}
+
+        {showSkuFields && (
+          <>
+            <div className="min-w-0">
+              <label className={labelClass}>SKU / size</label>
+              <input
+                type="text"
+                className={fieldClass}
+                value={skuLabel ?? ''}
+                onChange={(e) => onSkuLabelChange?.(e.target.value)}
+                placeholder="e.g. 200 ml"
+              />
+            </div>
+            <div className="min-w-0">
+              <label className={labelClass}>Brand</label>
+              <input
+                type="text"
+                className={fieldClass}
+                value={brand ?? ''}
+                onChange={(e) => onBrandChange?.(e.target.value)}
+              />
+            </div>
+            <div className="min-w-0">
+              <label className={labelClass}>Specs / item code</label>
+              <input
+                type="text"
+                className={fieldClass}
+                value={specsCode ?? ''}
+                onChange={(e) => onSpecsCodeChange?.(e.target.value)}
+              />
+            </div>
+          </>
         )}
       </div>
 
-      {showSkuFields && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3">
-          <div className="min-w-0">
-            <label className="block text-xs font-medium text-navy mb-1">SKU / size</label>
-            <input
-              type="text"
-              className={fieldClass}
-              value={skuLabel ?? ''}
-              onChange={(e) => onSkuLabelChange?.(e.target.value)}
-              placeholder="e.g. 200 ml"
-            />
-          </div>
-          <div className="min-w-0">
-            <label className="block text-xs font-medium text-navy mb-1">Brand</label>
-            <input
-              type="text"
-              className={fieldClass}
-              value={brand ?? ''}
-              onChange={(e) => onBrandChange?.(e.target.value)}
-            />
-          </div>
-          <div className="min-w-0">
-            <label className="block text-xs font-medium text-navy mb-1">Specs / item code</label>
-            <input
-              type="text"
-              className={fieldClass}
-              value={specsCode ?? ''}
-              onChange={(e) => onSpecsCodeChange?.(e.target.value)}
-            />
-          </div>
-        </div>
-      )}
-
-      {showDevCostFields && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-3">
-          <div className="min-w-0">
-            <label className="block text-xs font-medium text-navy mb-1">Print colors</label>
-            <input
-              type="number"
-              min={0}
-              step={1}
-              className={`${fieldClass} text-center tabular-nums`}
-              value={printColorCount ?? ''}
-              onChange={(e) => {
-                const raw = e.target.value;
-                onPrintColorCountChange?.(raw === '' ? null : Number(raw));
-              }}
-              onFocus={selectOnFocus}
-            />
-          </div>
-          <div className="min-w-0">
-            <label className="block text-xs font-medium text-navy mb-1">
-              Cost per color ({displayCurrency || 'USD'})
-            </label>
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              className={`${fieldClass} text-center tabular-nums`}
-              value={costPerColor ?? ''}
-              onChange={(e) => {
-                const raw = e.target.value;
-                onCostPerColorChange?.(raw === '' ? null : Number(raw));
-              }}
-              onFocus={selectOnFocus}
-            />
-          </div>
-          <div className="min-w-0">
-            <label className="block text-xs font-medium text-navy mb-1">Dev billing</label>
-            <select
-              className={fieldClass}
-              value={toolingBillingMode ?? 'separate'}
-              onChange={(e) =>
-                onToolingBillingModeChange?.(
-                  e.target.value as 'amortized' | 'separate' | 'not_billed'
-                )
-              }
-            >
-              <option value="separate">Separate</option>
-              <option value="amortized">Amortized</option>
-              <option value="not_billed">Not billed</option>
-            </select>
-          </div>
+      {(showDevCostFields || showDeliveryFields) && devRowColumns && (
+        <div
+          className="job-header-dev-row"
+          style={{ ['--job-dev-cols' as string]: devRowColumns }}
+        >
+          {showDevCostFields && (
+            <>
+              <div className="min-w-0">
+                <label className={labelClass}>Tooling</label>
+                <select
+                  className={fieldClass}
+                  value={toolingScenario ?? 'new'}
+                  onChange={(e) =>
+                    onToolingScenarioChange?.(e.target.value as ToolingScenario)
+                  }
+                >
+                  <option value="new">New</option>
+                  <option value="existing">Existing</option>
+                  <option value="modification">Modification</option>
+                </select>
+              </div>
+              {!isExistingTooling && (
+                <div className="min-w-0">
+                  <label className={labelClass}>Print colors</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    className={numFieldClass}
+                    value={printColorCount ?? ''}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      onPrintColorCountChange?.(raw === '' ? null : Number(raw));
+                    }}
+                    onFocus={selectOnFocus}
+                    title="Total colors on the job"
+                  />
+                </div>
+              )}
+              {toolingScenario === 'modification' && (
+                <div className="min-w-0">
+                  <label className={labelClass}>Changed colors</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={printColorCount ?? undefined}
+                    step={1}
+                    className={numFieldClass}
+                    value={billableColorCount ?? ''}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      onBillableColorCountChange?.(raw === '' ? null : Number(raw));
+                    }}
+                    onFocus={selectOnFocus}
+                    title={
+                      printColorCount != null
+                        ? `New/changed cylinders to charge (${printColorCount} total on job)`
+                        : undefined
+                    }
+                  />
+                </div>
+              )}
+              {toolingScenario !== 'existing' && (
+                <div className="min-w-0">
+                  <label className={labelClass}>Cost / color ({displayCurrency || 'USD'})</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className={numFieldClass}
+                    value={costPerColor ?? ''}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      onCostPerColorChange?.(raw === '' ? null : Number(raw));
+                    }}
+                    onFocus={selectOnFocus}
+                  />
+                </div>
+              )}
+              {!isExistingTooling && (
+                <div className="min-w-0">
+                  <label className={labelClass}>
+                    {colorsDriveTooling ? 'Dev total' : 'Tooling charge'} ({displayCurrency || 'USD'})
+                  </label>
+                  {colorsDriveTooling ? (
+                    <p className={`${numFieldClass} input-static`}>
+                      {(effectiveToolingDisplay ?? 0).toFixed(2)}
+                      {(toolingBillingMode ?? 'separate') === 'separate'
+                        ? ' · sep'
+                        : (toolingBillingMode ?? 'separate') === 'amortized'
+                          ? ' · /kg'
+                          : ' · n/b'}
+                    </p>
+                  ) : (
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      className={numFieldClass}
+                      value={toolingChargeUsd ?? 0}
+                      onChange={(e) => onToolingChargeUsdChange?.(Number(e.target.value) || 0)}
+                      onFocus={selectOnFocus}
+                    />
+                  )}
+                </div>
+              )}
+              {!isExistingTooling && (
+                <div className="min-w-0">
+                  <label className={labelClass}>Dev billing</label>
+                  <select
+                    className={fieldClass}
+                    value={toolingBillingMode ?? 'separate'}
+                    onChange={(e) =>
+                      onToolingBillingModeChange?.(
+                        e.target.value as 'amortized' | 'separate' | 'not_billed'
+                      )
+                    }
+                  >
+                    <option value="separate">Separate</option>
+                    <option value="amortized">Amortized</option>
+                    <option value="not_billed">Not billed</option>
+                  </select>
+                </div>
+              )}
+            </>
+          )}
+          {showDeliveryFields && (
+            <>
+              <div className="min-w-0">
+                <label className={labelClass}>Delivery term</label>
+                <select
+                  className={fieldClass}
+                  value={deliveryTerm ?? 'EXW'}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    onDeliveryTermChange?.(next);
+                    if (isExwDelivery(next)) onDeliveryChargeUsdChange?.(0);
+                  }}
+                >
+                  {['EXW', 'FOB', 'CIF', 'CFR', 'DAP', 'DDP', 'Other'].map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="min-w-0">
+                <label className={labelClass}>Freight (USD)</label>
+                <input
+                  type="number"
+                  value={isExwDelivery(deliveryTerm) ? 0 : deliveryChargeUsd ?? 0}
+                  step="0.01"
+                  min={0}
+                  disabled={isExwDelivery(deliveryTerm)}
+                  onChange={(e) => onDeliveryChargeUsdChange?.(Number(e.target.value) || 0)}
+                  onFocus={selectOnFocus}
+                  className={numFieldClass}
+                  title={
+                    isExwDelivery(deliveryTerm)
+                      ? 'EXW — no freight charge'
+                      : undefined
+                  }
+                />
+              </div>
+            </>
+          )}
         </div>
       )}
 

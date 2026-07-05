@@ -1104,6 +1104,19 @@
    * (set via --structure-cols). No column-gap — only cell padding — so empty
    * header/cell boxes line up with no content.
    */
+  .job-header-dev-row {
+    display: grid;
+    width: 100%;
+    align-items: end;
+    gap: 0.75rem;
+    grid-template-columns: var(--job-dev-cols);
+  }
+  @media (max-width: 767px) {
+    .job-header-dev-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
   .structure-grid {
     width: 100%;
     min-width: 48rem;
@@ -1134,6 +1147,14 @@
     line-height: 1.25;
     color: rgb(var(--color-mist));
     white-space: nowrap;
+  }
+  .structure-grid__cell--head-center,
+  .structure-grid__cell--col-center {
+    justify-content: center;
+  }
+  .structure-grid__cell--col-center .structure-grid__field input,
+  .structure-grid__cell--col-center .cell-input {
+    text-align: center;
   }
   .structure-grid__cell > .cell-input,
   .structure-grid__cell > select.cell-input,

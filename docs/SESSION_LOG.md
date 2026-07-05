@@ -1,6 +1,7 @@
 # SESSION LOG — Estimation Studio
 
 | DATE | AGENT | Summary | Files | Tech debt |
+| 2026-07-05 | Cursor | **Job header + tooling scenario:** compact dev/delivery row (with print colors); Tooling New/Existing/Modification + Changed colors; repeat re-quote defaults Existing (0 charge); migration 0017. | JobHeaderFields, EstimateEditor, quote-helpers, clone-estimate, 0017 | Run db:patch |
 | 2026-07-05 | Cursor | **Layer build-up polish:** centered metric headers (shared grid); Value field reserves same unit gap for µ and gsm. | FilmStackVisualizer, index.css | — |
 | 2026-07-05 | Cursor | **Structure / layer build-up UI:** removed visible solid label (hover-only on grade + Material AED/kg); fixed µ/gsm unit overlapping value input; Layer build-up grouped headers (% + Cost contribution) with AED/kg and AED/m² columns. | EstimateEditor, FilmStackVisualizer, index.css | — |
 | 2026-07-05 | Cursor | **Optional RFQ number:** `quotes.rfq_number` (migration 0016); New quote + quote workspace; not required — price check / repeat order work without it. | schema 0016, NewQuoteDialog, QuoteSummaryPanel, QuoteWorkspace, quotes.ts, customers.ts, api.ts | Run db:patch |

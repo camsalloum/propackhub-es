@@ -441,6 +441,9 @@ ALTER TABLE estimates ADD COLUMN IF NOT EXISTS specs_code VARCHAR(64);
 ALTER TABLE estimates ADD COLUMN IF NOT EXISTS print_color_count INTEGER;
 ALTER TABLE estimates ADD COLUMN IF NOT EXISTS cost_per_color DECIMAL(12, 4);
 ALTER TABLE estimates ADD COLUMN IF NOT EXISTS tooling_billing_mode VARCHAR(16);
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS tooling_scenario VARCHAR(16) DEFAULT 'new';
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS billable_color_count INTEGER;
+UPDATE estimates SET tooling_scenario = 'new' WHERE tooling_scenario IS NULL;
 ALTER TABLE estimates ADD COLUMN IF NOT EXISTS copied_from_estimate_id UUID REFERENCES estimates(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS estimates_quote_id_idx ON estimates(quote_id);
 

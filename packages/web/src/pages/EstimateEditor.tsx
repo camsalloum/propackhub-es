@@ -38,6 +38,7 @@ import {
 } from '../lib/estimateConfigure';
 import { setWorkingEstimateForTemplate } from '../lib/estimateSession';
 import { selectOnFocus } from '../lib/inputs';
+import { normalizeToolingScenario, toolingDevelopmentTotal } from '../lib/tooling';
 import { estimateStatusLabel, MES_OUTCOME_ENABLED } from '../lib/estimateStatus';
 import { groupMaterialsForPicker, type CategoryNode } from '../lib/materialTaxonomy';
 import { stackNeedsSolventMix, stackHasSbInk, defaultInkPrintingProcess, inkSolventRatioForProcess, materialAllowedForTemplateLayer, DEFAULT_CLEANING_SOLVENT_KG_PER_JOB, DEFAULT_WASTE_BANDS_BY_PRINT_MODE, DEFAULT_CORM_SCALE_WITH_WASTE, structureIsPrinted, wasteBandsForPrintMode, plainCormFromPrinted, type LaminationRecipe, type InkPrintingProcess, type PouchAccessorySelection, type WasteBand } from '@es/engine';
@@ -236,6 +237,8 @@ const EstimateEditor = ({
   const [toolingBillingMode, setToolingBillingMode] = useState<
     'amortized' | 'separate' | 'not_billed' | null
   >(null);
+  const [toolingScenario, setToolingScenario] = useState<'new' | 'existing' | 'modification'>('new');
+  const [billableColorCount, setBillableColorCount] = useState<number | null>(null);
   const [deliveryTerm, setDeliveryTerm] = useState('EXW');
   const [deliveryChargeUsd, setDeliveryChargeUsd] = useState(0);
   // Waste bands + CoRM base: Printed vs Plain from structure (ink → Printed).
@@ -959,6 +962,12 @@ const EstimateEditor = ({
           ? data.toolingBillingMode
           : null
       );
+      setToolingScenario(normalizeToolingScenario(data.toolingScenario));
+      setBillableColorCount(
+        data.billableColorCount != null && data.billableColorCount !== ''
+          ? Number(data.billableColorCount)
+          : null
+      );
       {
         const term =
           typeof data.deliveryTerm === 'string' && data.deliveryTerm ? data.deliveryTerm : 'EXW';
@@ -1153,6 +1162,14 @@ const EstimateEditor = ({
         printColorCount != null && costPerColor != null
           ? toolingBillingMode ?? 'separate'
           : undefined,
+      toolingScenario:
+        printColorCount != null && costPerColor != null ? toolingScenario : undefined,
+      billableColorCount:
+        printColorCount != null && costPerColor != null && toolingScenario === 'modification'
+          ? billableColorCount ?? undefined
+          : toolingScenario === 'existing'
+            ? 0
+            : undefined,
       toolingChargeUsd:
         printColorCount != null && costPerColor != null ? undefined : toolingChargeUsd,
       toolingBilledToCustomer:
@@ -1197,7 +1214,7 @@ const EstimateEditor = ({
       }));
     }
     return payload;
-  }, [jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, estimate?.quoteId, quoteIdFromUrl, productType, productTypeOptions, productSubtype, needsSolventMix, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, cormPerKgPlain, moqKg, toolingChargeUsd, skuLabel, brand, specsCode, printColorCount, costPerColor, toolingBillingMode, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
+  }, [jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, estimate?.quoteId, quoteIdFromUrl, productType, productTypeOptions, productSubtype, needsSolventMix, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, cormPerKgPlain, moqKg, toolingChargeUsd, skuLabel, brand, specsCode, printColorCount, costPerColor, toolingBillingMode, toolingScenario, billableColorCount, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   /** Link estimate to a customer row — create customer record if user typed a new name. */
   const ensureCustomerForSave = async (): Promise<string | undefined> => {
@@ -1276,11 +1293,22 @@ const EstimateEditor = ({
         cormScaleWithWaste,
         toolingChargeUsd:
           printColorCount != null && costPerColor != null
-            ? printColorCount * costPerColor
+            ? toolingDevelopmentTotal({
+                toolingScenario,
+                printColorCount,
+                billableColorCount,
+                costPerColor,
+              }) ?? 0
             : toolingChargeUsd,
         toolingBilledToCustomer:
           printColorCount != null && costPerColor != null
-            ? (toolingBillingMode ?? 'separate') === 'amortized'
+            ? (toolingBillingMode ?? 'separate') === 'amortized' &&
+              (toolingDevelopmentTotal({
+                toolingScenario,
+                printColorCount,
+                billableColorCount,
+                costPerColor,
+              }) ?? 0) > 0
             : toolingChargeUsd > 0,
         deliveryTerm,
         deliveryChargeUsd: isExwDelivery(deliveryTerm) ? 0 : deliveryChargeUsd,
@@ -1297,7 +1325,8 @@ const EstimateEditor = ({
     hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, layers.length, accessories,
     orderQuantity, orderQuantityUnit, masterReference, wasteBands,
     pricingMethod, marginValuePerKgUsd, baseCormDisplay, cormScaleWithWaste, toolingChargeUsd,
-    printColorCount, costPerColor, toolingBillingMode, deliveryTerm, deliveryChargeUsd,
+    printColorCount, costPerColor, toolingBillingMode, toolingScenario, billableColorCount,
+    deliveryTerm, deliveryChargeUsd,
     tenant?.operatingCostMethod, processesState,
   ]);
 
@@ -1380,7 +1409,12 @@ const EstimateEditor = ({
     Number.isFinite(printColorCount) &&
     Number.isFinite(costPerColor);
   const effectiveToolingDisplay = colorsDriveTooling
-    ? printColorCount! * costPerColor!
+    ? toolingDevelopmentTotal({
+        toolingScenario,
+        printColorCount,
+        billableColorCount,
+        costPerColor,
+      }) ?? 0
     : toolingChargeUsd;
 
   const visualizerLayers = useMemo(
@@ -1831,7 +1865,7 @@ const EstimateEditor = ({
       key: 'value',
       track: '6.25rem',
       label: (
-        <span className="leading-tight text-center">
+        <span className="block w-full leading-tight text-center">
           <span className="block">Value</span>
           <span className="block font-normal opacity-80 text-[10px]">µ/gsm</span>
         </span>
@@ -1877,6 +1911,7 @@ const EstimateEditor = ({
     ...(showLayerControlsCol ? [{ key: 'actions', track: '2rem', label: '' as ReactNode }] : []),
   ];
   const structureGridCols = structureColumns.map((c) => c.track).join(' ');
+  const centeredStructureColKeys = new Set(['value']);
   const structureGridStyle = {
     ['--structure-cols' as string]: structureGridCols,
   } as CSSProperties;
@@ -2439,77 +2474,27 @@ const EstimateEditor = ({
           onPrintColorCountChange={setPrintColorCount}
           costPerColor={costPerColor}
           onCostPerColorChange={setCostPerColor}
+          toolingScenario={toolingScenario}
+          onToolingScenarioChange={(next) => {
+            setToolingScenario(next);
+            if (next === 'existing') setBillableColorCount(0);
+            else if (next === 'new') setBillableColorCount(null);
+          }}
+          billableColorCount={billableColorCount}
+          onBillableColorCountChange={setBillableColorCount}
           toolingBillingMode={toolingBillingMode}
           onToolingBillingModeChange={setToolingBillingMode}
+          effectiveToolingDisplay={effectiveToolingDisplay}
+          colorsDriveTooling={colorsDriveTooling}
+          toolingChargeUsd={toolingChargeUsd}
+          onToolingChargeUsdChange={setToolingChargeUsd}
+          showDeliveryFields={can('markupPercent')}
+          deliveryTerm={deliveryTerm}
+          onDeliveryTermChange={setDeliveryTerm}
+          deliveryChargeUsd={deliveryChargeUsd}
+          onDeliveryChargeUsdChange={setDeliveryChargeUsd}
           displayCurrency={estimate?.displayCurrency || 'USD'}
         />
-
-        {/* Development (tooling) & delivery — below the dimensions. */}
-        {can('markupPercent') && (
-          <div className="mt-4 pt-4 border-t border-border/80 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4">
-            <div>
-              <label className="block text-xs font-medium text-navy mb-1">
-                {colorsDriveTooling
-                  ? `Development total (${estimate?.displayCurrency || 'USD'})`
-                  : `Tooling / development charge (${estimate?.displayCurrency || 'USD'})`}
-              </label>
-              {colorsDriveTooling ? (
-                <p className="input input-compact input-static w-full tabular-nums">
-                  {effectiveToolingDisplay.toFixed(2)}
-                  {(toolingBillingMode ?? 'separate') === 'separate'
-                    ? ' · separate'
-                    : (toolingBillingMode ?? 'separate') === 'amortized'
-                      ? ' · in /kg'
-                      : ' · not billed'}
-                </p>
-              ) : (
-                <input
-                  type="number"
-                  value={toolingChargeUsd}
-                  step="0.01"
-                  min="0"
-                  onChange={(e) => setToolingChargeUsd(Number(e.target.value))}
-                  onFocus={selectOnFocus}
-                  className="input input-compact w-full"
-                />
-              )}
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-navy mb-1">Delivery term</label>
-              <select
-                value={deliveryTerm}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setDeliveryTerm(next);
-                  if (isExwDelivery(next)) setDeliveryChargeUsd(0);
-                }}
-                className="input input-compact w-full"
-              >
-                {['EXW', 'FOB', 'CIF', 'CFR', 'DAP', 'DDP', 'Other'].map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-navy mb-1">Delivery / freight charge (USD)</label>
-              <input
-                type="number"
-                value={isExwDelivery(deliveryTerm) ? 0 : deliveryChargeUsd}
-                step="0.01"
-                min="0"
-                disabled={isExwDelivery(deliveryTerm)}
-                onChange={(e) => setDeliveryChargeUsd(Number(e.target.value))}
-                onFocus={selectOnFocus}
-                className="input input-compact w-full"
-                title={
-                  isExwDelivery(deliveryTerm)
-                    ? 'EXW has no freight — change delivery term to enter a charge'
-                    : undefined
-                }
-              />
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="min-w-0 max-w-full overflow-x-hidden">
@@ -2673,7 +2658,11 @@ const EstimateEditor = ({
                       {structureColumns.map((col) => (
                         <div
                           key={col.key}
-                          className="structure-grid__cell structure-grid__cell--head"
+                          className={`structure-grid__cell structure-grid__cell--head${
+                            centeredStructureColKeys.has(col.key)
+                              ? ' structure-grid__cell--head-center'
+                              : ''
+                          }`}
                           role="columnheader"
                         >
                           {col.label}
@@ -2884,7 +2873,7 @@ const EstimateEditor = ({
                             })()}
                           </div>
 
-                          <div className="structure-grid__cell" role="cell">
+                          <div className="structure-grid__cell structure-grid__cell--col-center" role="cell">
                             {(() => {
                               const mat = materials.find(m => m.id === layer.materialId);
                               const solidPct = mat?.solidPercent ?? 100;
@@ -3071,7 +3060,7 @@ const EstimateEditor = ({
                         Total
                       </div>
                       <div
-                        className="structure-grid__cell py-3"
+                        className="structure-grid__cell structure-grid__cell--col-center py-3"
                         title="Total structure (µ) — substrate µ + ink/adhesive dry gsm ÷ density."
                         role="cell"
                       >

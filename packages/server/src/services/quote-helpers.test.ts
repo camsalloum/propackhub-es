@@ -57,10 +57,59 @@ describe('deriveToolingFromColors', () => {
       })
     ).toBeNull();
   });
+
+  it('existing scenario charges zero regardless of print colors', () => {
+    const result = deriveToolingFromColors({
+      printColorCount: 5,
+      costPerColor: 500,
+      toolingScenario: 'existing',
+      toolingBillingMode: 'separate',
+      exchangeRateUsdToDisplay: 1,
+    });
+    expect(result!.developmentTotalDisplay).toBe(0);
+    expect(result!.billableColorCount).toBe(0);
+    expect(result!.toolingChargeUsd).toBe('0.00');
+  });
+
+  it('modification bills only changed colors', () => {
+    const result = deriveToolingFromColors({
+      printColorCount: 5,
+      costPerColor: 500,
+      toolingScenario: 'modification',
+      billableColorCount: 2,
+      toolingBillingMode: 'amortized',
+      exchangeRateUsdToDisplay: 1,
+    });
+    expect(result!.developmentTotalDisplay).toBe(1000);
+    expect(result!.billableColorCount).toBe(2);
+    expect(result!.toolingBilledToCustomer).toBe(true);
+  });
+
+  it('modification caps billable at print color count', () => {
+    const result = deriveToolingFromColors({
+      printColorCount: 3,
+      costPerColor: 100,
+      toolingScenario: 'modification',
+      billableColorCount: 9,
+      toolingBillingMode: 'separate',
+      exchangeRateUsdToDisplay: 1,
+    });
+    expect(result!.billableColorCount).toBe(3);
+    expect(result!.developmentTotalDisplay).toBe(300);
+  });
 });
 
 describe('developmentTotalDisplay', () => {
-  it('multiplies colors × cost per color', () => {
+  it('multiplies billable colors × cost per color', () => {
     expect(developmentTotalDisplay(8, '500')).toBe('4000.0000');
+    expect(
+      developmentTotalDisplay(5, '500', {
+        toolingScenario: 'modification',
+        billableColorCount: 2,
+      })
+    ).toBe('1000.0000');
+    expect(
+      developmentTotalDisplay(5, '500', { toolingScenario: 'existing' })
+    ).toBe('0.0000');
   });
 });

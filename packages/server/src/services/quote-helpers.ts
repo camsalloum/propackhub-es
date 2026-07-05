@@ -5,6 +5,38 @@ import { displayToUsd } from '../utils/currency';
 
 export type QuoteStatus = 'draft' | 'saved' | 'sent' | 'archived';
 export type ToolingBillingMode = 'amortized' | 'separate' | 'not_billed';
+export type ToolingScenario = 'new' | 'existing' | 'modification';
+
+export function normalizeToolingScenario(
+  value: string | null | undefined
+): ToolingScenario {
+  if (value === 'existing' || value === 'modification') return value;
+  return 'new';
+}
+
+/** Colors charged for plates/cylinders — separate from total print colors. */
+export function resolveBillableColorCount(input: {
+  toolingScenario?: ToolingScenario | string | null;
+  printColorCount?: number | null;
+  billableColorCount?: number | null;
+}): number | null {
+  const scenario = normalizeToolingScenario(input.toolingScenario);
+  const printColors =
+    input.printColorCount != null && Number.isFinite(Number(input.printColorCount))
+      ? Math.max(0, Number(input.printColorCount))
+      : null;
+
+  if (scenario === 'existing') return 0;
+  if (scenario === 'modification') {
+    const raw =
+      input.billableColorCount != null && Number.isFinite(Number(input.billableColorCount))
+        ? Math.max(0, Number(input.billableColorCount))
+        : printColors;
+    if (raw == null) return null;
+    return printColors != null ? Math.min(raw, printColors) : raw;
+  }
+  return printColors;
+}
 
 export type QuoteRow = typeof schema.quotes.$inferSelect;
 
@@ -124,48 +156,63 @@ export function deriveToolingFromColors(input: {
   printColorCount: number | null | undefined;
   costPerColor: number | string | null | undefined;
   toolingBillingMode: ToolingBillingMode | string | null | undefined;
+  toolingScenario?: ToolingScenario | string | null | undefined;
+  billableColorCount?: number | null | undefined;
   exchangeRateUsdToDisplay: number | string;
 }): {
   developmentTotalDisplay: number;
   toolingChargeUsd: string;
   toolingBilledToCustomer: boolean;
   toolingBillingMode: ToolingBillingMode;
+  billableColorCount: number;
 } | null {
-  const colors =
-    input.printColorCount != null && Number.isFinite(Number(input.printColorCount))
-      ? Number(input.printColorCount)
-      : null;
   const costPer =
     input.costPerColor != null && input.costPerColor !== ''
       ? Number(input.costPerColor)
       : null;
 
-  if (colors == null || costPer == null || colors < 0 || costPer < 0) {
+  const billable = resolveBillableColorCount({
+    toolingScenario: input.toolingScenario,
+    printColorCount: input.printColorCount,
+    billableColorCount: input.billableColorCount,
+  });
+
+  if (billable == null || costPer == null || billable < 0 || costPer < 0) {
     return null;
   }
 
   const mode = (input.toolingBillingMode ?? 'separate') as ToolingBillingMode;
-  const developmentTotalDisplay = colors * costPer;
+  const developmentTotalDisplay = billable * costPer;
   const rate = Number(input.exchangeRateUsdToDisplay);
   const toolingChargeUsd = displayToUsd(developmentTotalDisplay, rate);
 
   return {
     developmentTotalDisplay,
     toolingChargeUsd: toolingChargeUsd.toFixed(2),
-    toolingBilledToCustomer: mode === 'amortized',
+    toolingBilledToCustomer: mode === 'amortized' && developmentTotalDisplay > 0,
     toolingBillingMode: mode,
+    billableColorCount: billable,
   };
 }
 
 export function developmentTotalDisplay(
   printColorCount: number | null | undefined,
-  costPerColor: number | string | null | undefined
+  costPerColor: number | string | null | undefined,
+  options?: {
+    toolingScenario?: ToolingScenario | string | null;
+    billableColorCount?: number | null;
+  }
 ): string | null {
-  if (printColorCount == null || costPerColor == null || costPerColor === '') return null;
-  const colors = Number(printColorCount);
+  if (costPerColor == null || costPerColor === '') return null;
   const cost = Number(costPerColor);
-  if (!Number.isFinite(colors) || !Number.isFinite(cost)) return null;
-  return (colors * cost).toFixed(4);
+  if (!Number.isFinite(cost)) return null;
+  const billable = resolveBillableColorCount({
+    toolingScenario: options?.toolingScenario,
+    printColorCount,
+    billableColorCount: options?.billableColorCount,
+  });
+  if (billable == null) return null;
+  return (billable * cost).toFixed(4);
 }
 
 /** Short structure label from substrate layers (e.g. "BOPP / PET / PE"). */

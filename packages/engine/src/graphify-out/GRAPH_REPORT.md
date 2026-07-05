@@ -1,7 +1,7 @@
-# Graph Report - apps\estimation-studio\packages\engine\src  (2026-07-04)
+# Graph Report - apps\estimation-studio\packages\engine\src  (2026-07-05)
 
 ## Corpus Check
-- 35 files · ~25,586 words
+- 35 files · ~25,625 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary

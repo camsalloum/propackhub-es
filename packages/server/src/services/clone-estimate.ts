@@ -4,7 +4,7 @@ import { schema } from '../db';
 import { getMasterDataVersion } from '../db/platform-master-data';
 import { buildLayerInsertValues, toMaterialLineageSource } from '../utils/layer-lineage';
 import { generateRefNumber } from '../utils/ref-numbers';
-import { deriveToolingFromColors, type ToolingBillingMode } from './quote-helpers';
+import { deriveToolingFromColors, type ToolingBillingMode, type ToolingScenario } from './quote-helpers';
 
 type EstimateRow = typeof schema.estimates.$inferSelect;
 type LayerRow = typeof schema.layers.$inferSelect;
@@ -22,6 +22,8 @@ export type CloneEstimateOptions = {
   printColorCount?: number | null;
   costPerColor?: number | string | null;
   toolingBillingMode?: ToolingBillingMode | string | null;
+  toolingScenario?: ToolingScenario | string | null;
+  billableColorCount?: number | null;
   sortOrder?: number;
   /** Re-quote lineage (fresh commercial version). */
   sourceEstimationId?: string | null;
@@ -141,11 +143,21 @@ export async function cloneEstimate(
     options.toolingBillingMode !== undefined
       ? options.toolingBillingMode
       : source.toolingBillingMode;
+  const toolingScenario =
+    options.toolingScenario !== undefined
+      ? options.toolingScenario
+      : source.toolingScenario ?? 'new';
+  const billableColorCount =
+    options.billableColorCount !== undefined
+      ? options.billableColorCount
+      : source.billableColorCount;
 
   const derived = deriveToolingFromColors({
     printColorCount,
     costPerColor,
     toolingBillingMode,
+    toolingScenario,
+    billableColorCount,
     exchangeRateUsdToDisplay: options.exchangeRateUsdToDisplay,
   });
 
@@ -164,6 +176,8 @@ export async function cloneEstimate(
       printColorCount: printColorCount ?? null,
       costPerColor: costPerColor != null ? String(costPerColor) : null,
       toolingBillingMode: derived?.toolingBillingMode ?? toolingBillingMode ?? null,
+      toolingScenario: toolingScenario ?? 'new',
+      billableColorCount: derived?.billableColorCount ?? billableColorCount ?? null,
       copiedFromEstimateId: options.copiedFromEstimateId ?? null,
       refNumber: newRefNumber,
       jobName: options.jobName ?? source.jobName,

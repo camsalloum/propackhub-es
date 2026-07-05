@@ -399,6 +399,10 @@ export const estimates = pgTable('estimates', {
   printColorCount: integer('print_color_count'),
   costPerColor: decimal('cost_per_color', { precision: 12, scale: 4 }),
   toolingBillingMode: varchar('tooling_billing_mode', { length: 16 }),
+  /** new | existing | modification — how many colors are billable for plates/cylinders. */
+  toolingScenario: varchar('tooling_scenario', { length: 16 }).default('new'),
+  /** Charged colors when tooling_scenario = modification; 0 when existing. */
+  billableColorCount: integer('billable_color_count'),
   // @ts-expect-error Drizzle self-referential FK callback
   copiedFromEstimateId: uuid('copied_from_estimate_id').references(() => estimates.id, { onDelete: 'set null' }),
   refNumber: varchar('ref_number', { length: 20 }).notNull(), // QT-2026-XXXXX

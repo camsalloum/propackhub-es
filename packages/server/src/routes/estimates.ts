@@ -246,6 +246,8 @@ const EstimateCreateSchema = z.object({
   printColorCount: z.coerce.number().int().nonnegative().optional().nullable(),
   costPerColor: z.coerce.number().nonnegative().optional().nullable(),
   toolingBillingMode: z.enum(['amortized', 'separate', 'not_billed']).optional().nullable(),
+  toolingScenario: z.enum(['new', 'existing', 'modification']).optional().nullable(),
+  billableColorCount: z.coerce.number().int().nonnegative().optional().nullable(),
   sortOrder: z.coerce.number().int().nonnegative().optional(),
 });
 
@@ -354,6 +356,8 @@ export async function createEstimateRoute(
     let printColorCount = data.printColorCount ?? null;
     let costPerColor = data.costPerColor ?? null;
     let toolingBillingMode = data.toolingBillingMode ?? null;
+    let toolingScenario = data.toolingScenario ?? 'new';
+    let billableColorCount = data.billableColorCount ?? null;
     let sortOrder = data.sortOrder ?? 0;
 
     if (quoteId) {
@@ -413,6 +417,8 @@ export async function createEstimateRoute(
       printColorCount,
       costPerColor,
       toolingBillingMode,
+      toolingScenario,
+      billableColorCount,
       exchangeRateUsdToDisplay,
     });
 
@@ -463,6 +469,8 @@ export async function createEstimateRoute(
         printColorCount,
         costPerColor: costPerColor != null ? String(costPerColor) : null,
         toolingBillingMode: derivedTooling?.toolingBillingMode ?? toolingBillingMode,
+        toolingScenario: toolingScenario ?? 'new',
+        billableColorCount: derivedTooling?.billableColorCount ?? billableColorCount,
         refNumber,
         jobName: data.jobName,
         productType: data.productType,
@@ -893,6 +901,12 @@ async function updateEstimateRoute(
     if (data.toolingBillingMode !== undefined) {
       updates.toolingBillingMode = data.toolingBillingMode;
     }
+    if (data.toolingScenario !== undefined) {
+      updates.toolingScenario = data.toolingScenario ?? 'new';
+    }
+    if (data.billableColorCount !== undefined) {
+      updates.billableColorCount = data.billableColorCount;
+    }
 
     // Colors × cost → toolingChargeUsd at frozen estimate FX (not live quote rate).
     const nextPrintColors =
@@ -903,16 +917,27 @@ async function updateEstimateRoute(
       data.toolingBillingMode !== undefined
         ? data.toolingBillingMode
         : existing.toolingBillingMode;
+    const nextToolingScenario =
+      data.toolingScenario !== undefined
+        ? data.toolingScenario ?? 'new'
+        : existing.toolingScenario ?? 'new';
+    const nextBillableColors =
+      data.billableColorCount !== undefined
+        ? data.billableColorCount
+        : existing.billableColorCount;
     const derivedTooling = deriveToolingFromColors({
       printColorCount: nextPrintColors,
       costPerColor: nextCostPerColor,
       toolingBillingMode: nextBillingMode,
+      toolingScenario: nextToolingScenario,
+      billableColorCount: nextBillableColors,
       exchangeRateUsdToDisplay: existing.exchangeRateUsdToDisplay,
     });
     if (derivedTooling) {
       updates.toolingChargeUsd = derivedTooling.toolingChargeUsd;
       updates.toolingBilledToCustomer = derivedTooling.toolingBilledToCustomer;
       updates.toolingBillingMode = derivedTooling.toolingBillingMode;
+      updates.billableColorCount = derivedTooling.billableColorCount;
     } else {
       if (data.toolingChargeUsd !== undefined) {
         updates.toolingChargeUsd = String(data.toolingChargeUsd);
@@ -1315,6 +1340,8 @@ async function requoteEstimateRoute(
       printColorCount: source.printColorCount,
       costPerColor: source.costPerColor,
       toolingBillingMode: source.toolingBillingMode,
+      toolingScenario: 'existing',
+      billableColorCount: 0,
       sortOrder: 0,
       sourceEstimationId: id,
       refreshMaterialPrices: true,

@@ -1,4 +1,5 @@
 import type { CalculationResult, VisibilityProfile } from '@es/engine';
+import { developmentTotalDisplay } from '../services/quote-helpers';
 
 /** Keys for Settings customize grid */
 export const VISIBILITY_PROFILE_KEYS: Array<keyof VisibilityProfile> = [
@@ -191,12 +192,18 @@ export function stripEstimateRow(row: any, profile: VisibilityProfile): any {
     visible.printColorCount = row.printColorCount ?? null;
     visible.costPerColor = row.costPerColor ?? null;
     visible.toolingBillingMode = row.toolingBillingMode ?? null;
+    visible.toolingScenario = row.toolingScenario ?? 'new';
+    visible.billableColorCount = row.billableColorCount ?? null;
     if (row.printColorCount != null && row.costPerColor != null) {
-      const colors = Number(row.printColorCount);
-      const cost = Number(row.costPerColor);
-      if (Number.isFinite(colors) && Number.isFinite(cost)) {
-        visible.developmentTotal = (colors * cost).toFixed(4);
-      }
+      const devTotal = developmentTotalDisplay(
+        row.printColorCount,
+        row.costPerColor,
+        {
+          toolingScenario: row.toolingScenario,
+          billableColorCount: row.billableColorCount,
+        }
+      );
+      if (devTotal != null) visible.developmentTotal = devTotal;
     }
   }
 

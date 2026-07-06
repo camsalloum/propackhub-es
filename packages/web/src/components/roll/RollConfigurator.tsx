@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { RollFlatBlank } from './RollFlatBlank';
+import { LabelOnBottle } from './LabelOnBottle';
 import { RollSchematic } from './RollSchematic';
 import { RollSpecFields } from '../continuousWeb/RollSpecFields';
 import { WebInputField } from '../continuousWeb/WebInputField';
@@ -140,7 +141,17 @@ export function RollConfigurator({
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 bg-[#f8f9fb] divide-y lg:divide-y-0 lg:divide-x divide-slate">
+      <div
+        className={`grid grid-cols-1 ${isLabels ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} bg-[#f8f9fb] divide-y lg:divide-y-0 lg:divide-x divide-slate`}
+      >
+        {isLabels && (
+          <div className="flex flex-col min-h-[360px]">
+            <p className="px-3 pt-2 text-[11px] font-semibold text-navy/70 text-center">Label — on container</p>
+            <div className="flex-1 min-h-[320px]">
+              <LabelOnBottle dims={drawDims} />
+            </div>
+          </div>
+        )}
         <div className="flex flex-col min-h-[360px]">
           <p className="px-3 pt-2 text-[11px] font-semibold text-navy/70 text-center">Roll — wound view</p>
           <div className="flex-1 min-h-[320px]">

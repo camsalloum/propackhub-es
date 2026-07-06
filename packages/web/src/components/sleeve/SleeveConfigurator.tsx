@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
-import { SleeveFlatBlank } from './SleeveFlatBlank';
+import { SleeveBandPlacement } from './SleeveBandPlacement';
+import { SleeveOnBottle } from './SleeveOnBottle';
+import { SleeveOpenWeb } from './SleeveOpenWeb';
 import { SleeveSchematic } from './SleeveSchematic';
 import { RollSpecFields } from '../continuousWeb/RollSpecFields';
 import { WebInputField } from '../continuousWeb/WebInputField';
@@ -13,7 +15,7 @@ import {
   sleeveDrawDimsFromFields,
   sleeveFlatBlankLabel,
   sleeveFormedDiameterLabel,
-  sleeveOpenWebWidthMm,
+  SLEEVE_SEAM_OVERLAP_MM,
 } from '../../lib/sleeveDrawDims';
 import {
   CORE_INSIDE_MM_BY_INCH,
@@ -42,11 +44,9 @@ export function SleeveConfigurator({
     () => ({ totalGsm: Math.max(1, totalGsm), filmDensityGcm3: Math.max(0.01, filmDensityGcm3) }),
     [totalGsm, filmDensityGcm3]
   );
-  const openWebMm = sleeveOpenWebWidthMm(fieldVals.LF);
-
   const rollSpec = useMemo(
-    () => rollSpecFromDimensions(dimensions, structure, openWebMm, fieldVals.CO, 1),
-    [dimensions, structure, openWebMm, fieldVals.CO]
+    () => rollSpecFromDimensions(dimensions, structure, fieldVals.LF, fieldVals.CO, 1),
+    [dimensions, structure, fieldVals.LF, fieldVals.CO]
   );
 
   const drawDims = useMemo(() => sleeveDrawDimsFromFields(fieldVals, rollSpec), [fieldVals, rollSpec]);
@@ -61,7 +61,7 @@ export function SleeveConfigurator({
     }
     Object.assign(
       patch,
-      seedRollSpecPatch(dimensions, openWebMm, structure.totalGsm, structure.filmDensityGcm3)
+      seedRollSpecPatch(dimensions, fieldVals.LF, structure.totalGsm, structure.filmDensityGcm3)
     );
     if (Object.keys(patch).length > 0) onDimensionsChange(patch);
   }, [
@@ -75,7 +75,6 @@ export function SleeveConfigurator({
     dimensions.rollOutsideDiameterMm,
     dimensions.rollSpecOdDriven,
     fieldVals.LF,
-    openWebMm,
     structure.totalGsm,
     structure.filmDensityGcm3,
     onDimensionsChange,
@@ -110,6 +109,11 @@ export function SleeveConfigurator({
             disabled={disabled}
           />
         ))}
+        <SleeveBandPlacement
+          value={fieldVals.placement}
+          disabled={disabled}
+          onChange={(code) => onDimensionsChange({ sleeveBandPlacement: code })}
+        />
         <RollSpecFields
           idPrefix="sleeve"
           coreInsideMm={coreInsideMm}
@@ -127,7 +131,13 @@ export function SleeveConfigurator({
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 bg-[#f8f9fb] divide-y lg:divide-y-0 lg:divide-x divide-slate">
+      <div className="grid grid-cols-1 lg:grid-cols-3 bg-[#f8f9fb] divide-y lg:divide-y-0 lg:divide-x divide-slate">
+        <div className="flex flex-col min-h-[360px]">
+          <p className="px-3 pt-2 text-[11px] font-semibold text-navy/70 text-center">Sleeve — on container</p>
+          <div className="flex-1 min-h-[320px]">
+            <SleeveOnBottle dims={drawDims} />
+          </div>
+        </div>
         <div className="flex flex-col min-h-[360px]">
           <p className="px-3 pt-2 text-[11px] font-semibold text-navy/70 text-center">Sleeve — wound film</p>
           <div className="flex-1 min-h-[320px]">
@@ -135,9 +145,9 @@ export function SleeveConfigurator({
           </div>
         </div>
         <div className="flex flex-col min-h-[360px]">
-          <p className="px-3 pt-2 text-[11px] font-semibold text-navy/70 text-center">Sleeve — flat blank</p>
+          <p className="px-3 pt-2 text-[11px] font-semibold text-navy/70 text-center">Sleeve — open web</p>
           <div className="flex-1 min-h-[320px]">
-            <SleeveFlatBlank dims={drawDims} />
+            <SleeveOpenWeb dims={drawDims} />
           </div>
         </div>
       </div>
@@ -162,8 +172,7 @@ export function SleeveConfigurator({
           </span>
         </div>
         <p className="mt-1 leading-snug text-mist/90">
-          Lay-flat is the collapsed blank width. Wound view uses open web (2×LF + seam). Reel width follows lay-flat for
-          costing.
+          Wound roll shows LF. Open web = 2×LF + {SLEEVE_SEAM_OVERLAP_MM} mm seam.
         </p>
       </div>
     </div>

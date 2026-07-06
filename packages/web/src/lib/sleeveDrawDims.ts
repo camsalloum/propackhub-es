@@ -1,14 +1,21 @@
+import { SLEEVE_DEFAULTS } from './sleeveConfiguratorCatalog';
+import {
+  containerBandPlacementFromCode,
+  type ContainerBandPlacement,
+} from './containerBandViz';
+
 /** Normalized mm values for sleeve schematic renderers. */
 export interface SleeveDrawDims {
   LF: number;
   CO: number;
-  /** Open web on press = 2×LF + seam overlap (wound 3D view only). */
+  placement: ContainerBandPlacement;
+  /** Open web on press = 2×LF + seam overlap (open-web panel only). */
   openWebWidthMm: number;
   rollSpec?: import('@es/engine').RollSpecResult;
 }
 
 /** Seam allowance on the open sleeve blank (mm). */
-export const SLEEVE_SEAM_OVERLAP_MM = 4;
+export const SLEEVE_SEAM_OVERLAP_MM = 6;
 
 export function sleeveOpenWebWidthMm(lf: number, seamOverlapMm = SLEEVE_SEAM_OVERLAP_MM): number {
   return 2 * lf + seamOverlapMm;
@@ -18,9 +25,10 @@ export function sleeveDrawDimsFromFields(
   vals: Record<string, number>,
   rollSpec?: import('@es/engine').RollSpecResult
 ): SleeveDrawDims {
-  const LF = vals.LF > 0 ? vals.LF : 400;
-  const CO = vals.CO > 0 ? vals.CO : 300;
-  return { LF, CO, openWebWidthMm: sleeveOpenWebWidthMm(LF), rollSpec };
+  const LF = vals.LF > 0 ? vals.LF : SLEEVE_DEFAULTS.LF;
+  const CO = vals.CO > 0 ? vals.CO : SLEEVE_DEFAULTS.CO;
+  const placement = containerBandPlacementFromCode(vals.placement);
+  return { LF, CO, placement, openWebWidthMm: sleeveOpenWebWidthMm(LF), rollSpec };
 }
 
 export function sleeveBlankAreaCm2(d: SleeveDrawDims): string {

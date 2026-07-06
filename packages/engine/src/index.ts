@@ -19,6 +19,7 @@ export * from './waste-bands';
 export * from './derive-processes';
 export * from './structure-signature';
 export * from './roll-after-slitting';
+export * from './order-quantity-defaults';
 
 // Re-export for convenience
 export { calculateEstimate } from './calculator';

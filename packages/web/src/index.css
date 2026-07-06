@@ -99,6 +99,22 @@
     --color-badge-lost-bg:   254 226 226;  --color-badge-lost-fg:  185  28  28;
 
     /* ============================================================
+       MATERIAL-FAMILY palette (laminate layer identity)
+       Vivid, distinct hues that colour-code film layers in the template
+       cards' 3D stack. These are semantic "map-key" colours — they stay
+       recognisable across themes so a structure reads at a glance. A theme
+       may override any of them to harmonise; the card CHROME (stage, glow,
+       border, text) already follows the active theme via --color-* tokens.
+       ============================================================ */
+    --mat-pet:    20 184 166;   /* teal    — PET / polyester */
+    --mat-bopp:   59 130 246;   /* blue    — BOPP / OPP */
+    --mat-pe:     34 197  94;   /* green   — PE family: LDPE/LLDPE/HDPE/PP */
+    --mat-alu:   148 163 184;   /* silver  — aluminium / metallised */
+    --mat-paper: 245 158  11;   /* amber   — paper / kraft */
+    --mat-ink:   217  70 239;   /* magenta — print / ink */
+    --mat-adh:   244  63  94;   /* rose    — adhesive / laminating */
+
+    /* ============================================================
        DENSITY
        ============================================================ */
     --density-scale: 1;
@@ -981,6 +997,241 @@
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     border-color: rgb(255 255 255 / 0.20);
+  }
+
+  /* ---- Laminate stack (template card) — exploded isometric 3D ----
+     Film layers render as vivid, material-family-coloured slabs on a
+     theme-following stage (surface-sunken + accent glow). On card hover /
+     focus the stack explodes apart along Z so each film is legible, then
+     settles back on leave. Colour encodes the material family (--mat-*);
+     the stage, glow and border follow the active theme (--color-*). Slab
+     inline vars: --slab-a (family colour) and --slab-z (rest offset). */
+  .lam3d {
+    position: relative;
+    height: 132px;
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(120% 90% at 50% 12%, rgb(var(--color-accent) / 0.16), transparent 60%),
+      rgb(var(--color-surface-sunken));
+    border-bottom: 1px solid rgb(var(--color-border));
+    perspective: 900px;
+    overflow: hidden;
+    touch-action: pan-y pinch-zoom;
+  }
+  .lam3d--tappable {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .lam3d--tappable:focus-visible {
+    outline: 2px solid rgb(var(--color-focus-ring));
+    outline-offset: -2px;
+  }
+  .lam3d__stack {
+    position: relative;
+    width: 148px;
+    height: 96px;
+    transform-style: preserve-3d;
+    transform: rotateX(56deg) rotateZ(-42deg);
+    transition: transform var(--motion-enter) var(--ease-overlay);
+  }
+  .lam3d__slab {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -14px;
+    height: 124px;
+    border-radius: 7px;
+    --slab-b: color-mix(in srgb, var(--slab-a) 78%, white);
+    background: var(--slab-a); /* fallback if color-mix / gradient unsupported */
+    background: linear-gradient(120deg, var(--slab-a), var(--slab-b));
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.18), 0 14px 24px -16px rgb(0 0 0 / 0.5); /* fallback */
+    box-shadow:
+      inset 0 0 0 1px rgb(0 0 0 / 0.18),
+      0 16px 26px -16px color-mix(in srgb, var(--slab-a) 60%, transparent);
+    transform: translateZ(var(--slab-z));
+    transition: transform var(--motion-enter) var(--ease-spring);
+    display: grid;
+    place-items: center;
+  }
+  .lam3d__slab.is-adhesive {
+    background: repeating-linear-gradient(45deg,
+      var(--slab-a) 0 5px, rgb(255 255 255 / 0.32) 5px 10px);
+  }
+  .lam3d__tag {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    opacity: 0;
+    transform: rotateZ(42deg) rotateX(-56deg);
+    transition: opacity var(--motion-micro) var(--ease-micro);
+    text-shadow: 0 1px 3px rgb(0 0 0 / 0.55);
+    pointer-events: none;
+  }
+  .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__stack,
+  .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__stack {
+    transform: rotateX(50deg) rotateZ(-38deg);
+  }
+  .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__slab,
+  .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__slab {
+    transform: translateZ(calc(var(--slab-z) * 2.6));
+  }
+  .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__tag,
+  .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__tag {
+    opacity: 1;
+  }
+
+  /* Reduced motion — no explode animation; tap-expanded still reveals layer labels. */
+  @media (prefers-reduced-motion: reduce) {
+    .lam3d__stack, .lam3d__slab, .lam3d__tag { transition: none; }
+    .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__stack {
+      transform: rotateX(56deg) rotateZ(-42deg);
+    }
+    .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__slab {
+      transform: translateZ(var(--slab-z));
+    }
+    .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__tag { opacity: 0; }
+    .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__tag { opacity: 1; }
+  }
+  :root[data-reduced-motion="true"] .lam3d__stack,
+  :root[data-reduced-motion="true"] .lam3d__slab,
+  :root[data-reduced-motion="true"] .lam3d__tag { transition: none; }
+  :root[data-reduced-motion="true"] .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__stack {
+    transform: rotateX(56deg) rotateZ(-42deg);
+  }
+  :root[data-reduced-motion="true"] .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__slab {
+    transform: translateZ(var(--slab-z));
+  }
+  :root[data-reduced-motion="true"] .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__tag { opacity: 0; }
+  :root[data-reduced-motion="true"] .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__tag { opacity: 1; }
+
+  /* ---- Template deck — 3D depth-stack gallery ----
+     Cards stay in place; the active one is forward and neighbours recede into
+     depth. Contained (no scrollbar) and horizontal; `touch-action: pan-y` keeps
+     vertical page scroll intact while horizontal swipes drive the deck only.
+     Stage / glow / nav / dots all follow the active theme (--color-*). */
+  .deck {
+    position: relative;
+    height: clamp(360px, 52vh, 470px);
+    overflow: hidden;
+    outline: none;
+    touch-action: pan-y;
+    overscroll-behavior-x: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .deck:focus-visible {
+    box-shadow: inset 0 0 0 2px rgb(var(--color-focus-ring) / 0.6);
+    border-radius: var(--radius-2xl);
+  }
+  .deck__stage {
+    position: absolute;
+    inset: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    perspective: 1200px;
+    perspective-origin: 50% 44%;
+  }
+  /* Soft accent glow behind the front card — theme-driven, non-interactive. */
+  .deck__stage::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    width: 460px;
+    height: 320px;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(60% 60% at 50% 50%, rgb(var(--color-accent) / 0.14), transparent 70%);
+    pointer-events: none;
+  }
+  .deck__card {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform-style: preserve-3d;
+    will-change: transform, opacity;
+  }
+  .deck__card-inner {
+    width: 100%;
+    filter: drop-shadow(0 24px 40px rgb(0 0 0 / 0.18));
+  }
+  /* Transparent overlay that brings a receded neighbour to the front on click. */
+  .deck__select {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-2xl);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .deck__nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 20;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    background: rgb(var(--color-surface-raised));
+    border: 1px solid rgb(var(--color-border));
+    box-shadow: var(--elevation-2);
+    color: rgb(var(--color-text-secondary));
+    cursor: pointer;
+    transition:
+      transform var(--motion-micro) var(--ease-spring),
+      opacity var(--motion-micro) var(--ease-micro),
+      background-color var(--motion-micro) var(--ease-micro);
+  }
+  .deck__nav:where(:hover, :focus-visible) {
+    background: rgb(var(--color-surface-sunken));
+    transform: translateY(-50%) scale(1.06);
+  }
+  .deck__nav:active { transform: translateY(-50%) scale(0.96); }
+  .deck__nav:disabled { opacity: 0; pointer-events: none; }
+  .deck__nav--prev { left: clamp(4px, 3vw, 28px); }
+  .deck__nav--next { right: clamp(4px, 3vw, 28px); }
+  .deck__dots {
+    position: absolute;
+    left: 50%;
+    bottom: 10px;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    max-width: 80%;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .deck__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--radius-full);
+    border: none;
+    padding: 0;
+    background: rgb(var(--color-border-strong));
+    cursor: pointer;
+    transition:
+      width var(--motion-micro) var(--ease-spring),
+      background-color var(--motion-micro) var(--ease-micro);
+  }
+  .deck__dot.is-active {
+    width: 22px;
+    background: rgb(var(--color-accent));
+  }
+  .deck__dot:focus-visible {
+    outline: 2px solid rgb(var(--color-focus-ring));
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .deck__nav, .deck__dot { transition: none; }
   }
 
   /* ---- Inputs ----

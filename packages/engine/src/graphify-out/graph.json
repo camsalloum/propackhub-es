@@ -157,7 +157,7 @@
       "label": "computeMfgProcessCosts()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L429",
+      "source_location": "L435",
       "_origin": "ast",
       "id": "calculator_computemfgprocesscosts",
       "community": 1,
@@ -167,7 +167,7 @@
       "label": "priceWithNewModel()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L467",
+      "source_location": "L473",
       "_origin": "ast",
       "id": "calculator_pricewithnewmodel",
       "community": 9,
@@ -470,7 +470,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "index",
-      "community": 6,
+      "community": 4,
       "norm_label": "index.ts"
     },
     {
@@ -510,7 +510,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "ink_printing_inkprintingprocess",
-      "community": 1,
+      "community": 6,
       "norm_label": "inkprintingprocess"
     },
     {
@@ -660,7 +660,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "lamination_recipe_laminationrecipe",
-      "community": 3,
+      "community": 6,
       "norm_label": "laminationrecipe"
     },
     {
@@ -890,7 +890,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "layer_stack_stackneedssolventmix",
-      "community": 4,
+      "community": 6,
       "norm_label": "stackneedssolventmix()"
     },
     {
@@ -990,7 +990,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "pouch_flat_sheet_test",
-      "community": 7,
+      "community": 1,
       "norm_label": "pouch-flat-sheet.test.ts"
     },
     {
@@ -1000,7 +1000,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "pouch_flat_sheet",
-      "community": 7,
+      "community": 1,
       "norm_label": "pouch-flat-sheet.ts"
     },
     {
@@ -1010,7 +1010,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "pouch_flat_sheet_pouchconfiguratortype",
-      "community": 7,
+      "community": 1,
       "norm_label": "pouchconfiguratortype"
     },
     {
@@ -1020,7 +1020,7 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "pouch_flat_sheet_pouch_subtype_to_configurator",
-      "community": 7,
+      "community": 1,
       "norm_label": "pouch_subtype_to_configurator"
     },
     {
@@ -1030,7 +1030,7 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "pouch_flat_sheet_pouchflatsheetresult",
-      "community": 7,
+      "community": 1,
       "norm_label": "pouchflatsheetresult"
     },
     {
@@ -1040,7 +1040,7 @@
       "source_location": "L72",
       "_origin": "ast",
       "id": "pouch_flat_sheet_pouch_subtype_values",
-      "community": 7,
+      "community": 1,
       "norm_label": "pouch_subtype_values"
     },
     {
@@ -1050,7 +1050,7 @@
       "source_location": "L85",
       "_origin": "ast",
       "id": "pouch_flat_sheet_resolvepouchconfiguratortype",
-      "community": 7,
+      "community": 1,
       "norm_label": "resolvepouchconfiguratortype()"
     },
     {
@@ -1060,7 +1060,7 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "pouch_flat_sheet_calculatepouchflatsheetaream2",
-      "community": 7,
+      "community": 1,
       "norm_label": "calculatepouchflatsheetaream2()"
     },
     {
@@ -1092,6 +1092,196 @@
       "id": "pricing_model_test_baseestimate",
       "community": 9,
       "norm_label": "baseestimate()"
+    },
+    {
+      "label": "roll-after-slitting.test.ts",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "roll_after_slitting_test",
+      "community": 7,
+      "norm_label": "roll-after-slitting.test.ts"
+    },
+    {
+      "label": "roll-after-slitting.ts",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "roll_after_slitting",
+      "community": 7,
+      "norm_label": "roll-after-slitting.ts"
+    },
+    {
+      "label": "CORE_INSIDE_MM_BY_INCH",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L2",
+      "_origin": "ast",
+      "id": "roll_after_slitting_core_inside_mm_by_inch",
+      "community": 7,
+      "norm_label": "core_inside_mm_by_inch"
+    },
+    {
+      "label": "CoreInchPreset",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "roll_after_slitting_coreinchpreset",
+      "community": 7,
+      "norm_label": "coreinchpreset"
+    },
+    {
+      "label": "RollSpecDriver",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "roll_after_slitting_rollspecdriver",
+      "community": 7,
+      "norm_label": "rollspecdriver"
+    },
+    {
+      "label": "RollSpecInput",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L18",
+      "_origin": "ast",
+      "id": "roll_after_slitting_rollspecinput",
+      "community": 7,
+      "norm_label": "rollspecinput"
+    },
+    {
+      "label": "RollSpecResult",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L32",
+      "_origin": "ast",
+      "id": "roll_after_slitting_rollspecresult",
+      "community": 7,
+      "norm_label": "rollspecresult"
+    },
+    {
+      "label": "coreOdMm()",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L43",
+      "_origin": "ast",
+      "id": "roll_after_slitting_coreodmm",
+      "community": 7,
+      "norm_label": "coreodmm()"
+    },
+    {
+      "label": "effectiveFilmDensityGcm3()",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L47",
+      "_origin": "ast",
+      "id": "roll_after_slitting_effectivefilmdensitygcm3",
+      "community": 7,
+      "norm_label": "effectivefilmdensitygcm3()"
+    },
+    {
+      "label": "filmWeightKgFromOd()",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L54",
+      "_origin": "ast",
+      "id": "roll_after_slitting_filmweightkgfromod",
+      "community": 7,
+      "norm_label": "filmweightkgfromod()"
+    },
+    {
+      "label": "rollOdMmFromWeight()",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L69",
+      "_origin": "ast",
+      "id": "roll_after_slitting_rollodmmfromweight",
+      "community": 7,
+      "norm_label": "rollodmmfromweight()"
+    },
+    {
+      "label": "filmLengthMFromWeight()",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L84",
+      "_origin": "ast",
+      "id": "roll_after_slitting_filmlengthmfromweight",
+      "community": 7,
+      "norm_label": "filmlengthmfromweight()"
+    },
+    {
+      "label": "piecesPerRoll()",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L89",
+      "_origin": "ast",
+      "id": "roll_after_slitting_piecesperroll",
+      "community": 7,
+      "norm_label": "piecesperroll()"
+    },
+    {
+      "label": "wrapsPerCircumference()",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L94",
+      "_origin": "ast",
+      "id": "roll_after_slitting_wrapspercircumference",
+      "community": 7,
+      "norm_label": "wrapspercircumference()"
+    },
+    {
+      "label": "coreWeightKg()",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L100",
+      "_origin": "ast",
+      "id": "roll_after_slitting_coreweightkg",
+      "community": 7,
+      "norm_label": "coreweightkg()"
+    },
+    {
+      "label": "computeRollSpec()",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L115",
+      "_origin": "ast",
+      "id": "roll_after_slitting_computerollspec",
+      "community": 7,
+      "norm_label": "computerollspec()"
+    },
+    {
+      "label": "computeRollSpecFromWeight()",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L154",
+      "_origin": "ast",
+      "id": "roll_after_slitting_computerollspecfromweight",
+      "community": 7,
+      "norm_label": "computerollspecfromweight()"
+    },
+    {
+      "label": "computeRollSpecFromOd()",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L159",
+      "_origin": "ast",
+      "id": "roll_after_slitting_computerollspecfromod",
+      "community": 7,
+      "norm_label": "computerollspecfromod()"
+    },
+    {
+      "label": "weightKgForTargetOd()",
+      "file_type": "code",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L173",
+      "_origin": "ast",
+      "id": "roll_after_slitting_weightkgfortargetod",
+      "community": 7,
+      "norm_label": "weightkgfortargetod()"
     },
     {
       "label": "solvent-costing.test.ts",
@@ -1280,7 +1470,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "structure_signature",
-      "community": 10,
+      "community": 4,
       "norm_label": "structure-signature.ts"
     },
     {
@@ -1290,7 +1480,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "structure_signature_structuresignaturelayer",
-      "community": 10,
+      "community": 4,
       "norm_label": "structuresignaturelayer"
     },
     {
@@ -1300,7 +1490,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "structure_signature_normalizetoken",
-      "community": 10,
+      "community": 4,
       "norm_label": "normalizetoken()"
     },
     {
@@ -1310,7 +1500,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "structure_signature_fnv1a32",
-      "community": 10,
+      "community": 4,
       "norm_label": "fnv1a32()"
     },
     {
@@ -1320,7 +1510,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "structure_signature_computestructuresignature",
-      "community": 10,
+      "community": 4,
       "norm_label": "computestructuresignature()"
     },
     {
@@ -1897,7 +2087,7 @@
       "label": "validateLayers()",
       "file_type": "code",
       "source_file": "validator.ts",
-      "source_location": "L113",
+      "source_location": "L118",
       "_origin": "ast",
       "id": "validator_validatelayers",
       "community": 4,
@@ -1907,7 +2097,7 @@
       "label": "validateMaterial()",
       "file_type": "code",
       "source_file": "validator.ts",
-      "source_location": "L145",
+      "source_location": "L150",
       "_origin": "ast",
       "id": "validator_validatematerial",
       "community": 4,
@@ -1917,10 +2107,10 @@
       "label": "hasSolventBasedLayers()",
       "file_type": "code",
       "source_file": "validator.ts",
-      "source_location": "L178",
+      "source_location": "L183",
       "_origin": "ast",
       "id": "validator_hassolventbasedlayers",
-      "community": 4,
+      "community": 6,
       "norm_label": "hassolventbasedlayers()"
     },
     {
@@ -3533,6 +3723,17 @@
       "confidence_score": 1.0,
       "source": "index",
       "target": "pouch_flat_sheet"
+    },
+    {
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "index.ts",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "index",
+      "target": "roll_after_slitting",
+      "confidence_score": 1.0
     },
     {
       "relation": "re_exports",
@@ -5209,6 +5410,418 @@
       "confidence_score": 1.0,
       "source": "pricing_model_test",
       "target": "waste_bands_wastepercentforquantity"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "roll_after_slitting_test",
+      "target": "roll_after_slitting",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "roll_after_slitting_test",
+      "target": "roll_after_slitting_computerollspec",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "roll_after_slitting_test",
+      "target": "roll_after_slitting_computerollspecfromweight",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "roll_after_slitting_test",
+      "target": "roll_after_slitting_coreodmm",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "roll_after_slitting_test",
+      "target": "roll_after_slitting_filmlengthmfromweight",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "roll_after_slitting_test",
+      "target": "roll_after_slitting_filmweightkgfromod",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "roll_after_slitting_test",
+      "target": "roll_after_slitting_rollodmmfromweight",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "roll_after_slitting_test",
+      "target": "roll_after_slitting_weightkgfortargetod",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L115",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_computerollspec",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L159",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_computerollspecfromod",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L154",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_computerollspecfromweight",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_core_inside_mm_by_inch",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_coreinchpreset",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L43",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_coreodmm",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L100",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_coreweightkg",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L47",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_effectivefilmdensitygcm3",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L84",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_filmlengthmfromweight",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L54",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_filmweightkgfromod",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L89",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_piecesperroll",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L69",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_rollodmmfromweight",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_rollspecdriver",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_rollspecinput",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L32",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_rollspecresult",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L173",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_weightkgfortargetod",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L94",
+      "weight": 1.0,
+      "source": "roll_after_slitting",
+      "target": "roll_after_slitting_wrapspercircumference",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L116",
+      "weight": 1.0,
+      "source": "roll_after_slitting_computerollspec",
+      "target": "roll_after_slitting_coreodmm",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L106",
+      "weight": 1.0,
+      "source": "roll_after_slitting_coreweightkg",
+      "target": "roll_after_slitting_coreodmm",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L181",
+      "weight": 1.0,
+      "source": "roll_after_slitting_weightkgfortargetod",
+      "target": "roll_after_slitting_coreodmm",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L117",
+      "weight": 1.0,
+      "source": "roll_after_slitting_computerollspec",
+      "target": "roll_after_slitting_effectivefilmdensitygcm3",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L182",
+      "weight": 1.0,
+      "source": "roll_after_slitting_weightkgfortargetod",
+      "target": "roll_after_slitting_effectivefilmdensitygcm3",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L126",
+      "weight": 1.0,
+      "source": "roll_after_slitting_computerollspec",
+      "target": "roll_after_slitting_filmweightkgfromod",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L183",
+      "weight": 1.0,
+      "source": "roll_after_slitting_weightkgfortargetod",
+      "target": "roll_after_slitting_filmweightkgfromod",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L129",
+      "weight": 1.0,
+      "source": "roll_after_slitting_computerollspec",
+      "target": "roll_after_slitting_rollodmmfromweight",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L132",
+      "weight": 1.0,
+      "source": "roll_after_slitting_computerollspec",
+      "target": "roll_after_slitting_filmlengthmfromweight",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L148",
+      "weight": 1.0,
+      "source": "roll_after_slitting_computerollspec",
+      "target": "roll_after_slitting_piecesperroll",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L149",
+      "weight": 1.0,
+      "source": "roll_after_slitting_computerollspec",
+      "target": "roll_after_slitting_wrapspercircumference",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L134",
+      "weight": 1.0,
+      "source": "roll_after_slitting_computerollspec",
+      "target": "roll_after_slitting_coreweightkg",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L165",
+      "weight": 1.0,
+      "source": "roll_after_slitting_computerollspecfromod",
+      "target": "roll_after_slitting_computerollspec",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "roll-after-slitting.ts",
+      "source_location": "L155",
+      "weight": 1.0,
+      "source": "roll_after_slitting_computerollspecfromweight",
+      "target": "roll_after_slitting_computerollspec",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports_from",

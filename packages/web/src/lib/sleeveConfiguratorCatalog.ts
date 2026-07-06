@@ -3,6 +3,12 @@
  * Lay-flat drives product size; reelWidthMm is synced for engine costing.
  */
 
+import {
+  containerBandPlacementCode,
+  containerBandPlacementFromCode,
+  type ContainerBandPlacement,
+} from './containerBandViz';
+
 export interface SleeveConfiguratorField {
   id: string;
   label: string;
@@ -16,10 +22,13 @@ export interface SleeveConfiguratorConfig {
   fields: SleeveConfiguratorField[];
 }
 
+export const SLEEVE_DEFAULTS = { LF: 100, CO: 60 } as const;
+
 export const SLEEVE_CONFIGURATOR_DIMENSION_KEYS = new Set([
   'layFlatValue',
   'cutoffMm',
   'reelWidthMm',
+  'sleeveBandPlacement',
   'coreInsideDiameterMm',
   'coreThicknessMm',
   'requiredRollWeightKg',
@@ -37,10 +46,16 @@ const field = (
 
 export const SLEEVE_CONFIGURATOR: SleeveConfiguratorConfig = {
   fields: [
-    field('LF', 'Lay-flat (LF)', 'layFlatValue', 400, 'Flat width of one sleeve blank (collapsed tube + seam)'),
-    field('CO', 'Cut-off (CO)', 'cutoffMm', 300, 'Sleeve height along the container axis'),
+    field('LF', 'Lay-flat (LF)', 'layFlatValue', SLEEVE_DEFAULTS.LF, 'Flat width of one sleeve blank (collapsed tube + seam)'),
+    field('CO', 'Cut-off (CO)', 'cutoffMm', SLEEVE_DEFAULTS.CO, 'Sleeve height along the container axis'),
   ],
 };
+
+export function sleeveBandPlacementFromDimensions(
+  dimensions: Record<string, number | undefined>
+): ContainerBandPlacement {
+  return containerBandPlacementFromCode(dimensions.sleeveBandPlacement);
+}
 
 export function sleeveFieldValuesFromDimensions(
   dimensions: Record<string, number | undefined>
@@ -51,6 +66,7 @@ export function sleeveFieldValuesFromDimensions(
     const ok = stored != null && Number.isFinite(stored) && stored > 0;
     vals[f.id] = ok ? (stored as number) : f.defaultVal;
   }
+  vals.placement = containerBandPlacementCode(sleeveBandPlacementFromDimensions(dimensions));
   return vals;
 }
 
@@ -62,6 +78,9 @@ export function seedSleeveDimensionPatch(
     extraPrintingTrimMm: 0,
     piecesPerCut: 1,
   };
+  if (dimensions.sleeveBandPlacement == null || !Number.isFinite(dimensions.sleeveBandPlacement)) {
+    patch.sleeveBandPlacement = containerBandPlacementCode('full');
+  }
   for (const f of SLEEVE_CONFIGURATOR.fields) {
     const prevVal = dimensions[f.dimensionKey];
     const shouldReplace = prevVal == null || !Number.isFinite(prevVal) || (prevVal ?? 0) <= 0;

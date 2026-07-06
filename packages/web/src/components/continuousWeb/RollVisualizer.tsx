@@ -126,10 +126,8 @@ function RollVisualizerSvg({
     ? Math.max(widthMm, outerDiameterMm * NARROW_AXIAL_OD_FRACTION)
     : widthMm;
   const L = Math.max(1, axialMm);
-  // Steep oblique + strong face foreshorten so the end reads as an ellipse, not a disk.
-  const proj = isNarrowRoll ? rollProjection(1.28, -0.68, 0.44) : OBLIQUE_PROJ;
-  const { project, visT0, visT1, barrelVisible } = proj;
-  const backScale = isNarrowRoll ? 0.86 : BACK_SCALE;
+  const { project, visT0, visT1, barrelVisible } = OBLIQUE_PROJ;
+  const backScale = BACK_SCALE;
 
   const R = Math.max(1, outerDiameterMm) / 2;
   const coreMm = coreDiameterMm ?? outerDiameterMm * 0.16;
@@ -236,11 +234,15 @@ function RollVisualizerSvg({
   const maxY = Math.max(...all.map((p) => p.y));
   const spanX = Math.max(1e-6, maxX - minX);
   const spanY = Math.max(1e-6, maxY - minY);
-  const pad = showDimensions ? (showOuterDiameter ? 62 : isNarrowRoll ? 56 : 46) : 20;
+  const WIDTH_SIDE_GAP = 28;
+  const WIDTH_LABEL_BELOW = 16;
+  const padLeft = 20;
+  const padRight = showDimensions ? WIDTH_SIDE_GAP + 16 : 20;
+  const padBottom = showDimensions ? 42 : 20;
   const coLabelReserve = showCutOff && showDimensions ? 24 : 0;
-  const padTop = pad + coLabelReserve;
-  const scale = Math.min((width - pad * 2) / spanX, (height - padTop - pad) / spanY);
-  const offX = pad - minX * scale;
+  const padTop = padBottom + coLabelReserve;
+  const scale = Math.min((width - padLeft - padRight) / spanX, (height - padTop - padBottom) / spanY);
+  const offX = padLeft - minX * scale;
   const offY = padTop - minY * scale;
   const T = (p: Pt): Pt => ({ x: p.x * scale + offX, y: p.y * scale + offY });
 
@@ -259,7 +261,7 @@ function RollVisualizerSvg({
   const tMin = T(frontOuter[iMin]);
   const tMinB = T(backOuter[iMin]);
 
-  // Width dimension runs along the lower silhouette generator (front → back).
+  // Width dimension uses the lower silhouette generator (front → back).
   const maxIsBottom = tMax.y > tMin.y;
   const wF = maxIsBottom ? tMax : tMin;
   const wB = maxIsBottom ? tMaxB : tMinB;
@@ -292,9 +294,8 @@ function RollVisualizerSvg({
   const coreFill = '#c9a56f';
   const coreInnerFill = '#8a6a3a';
 
-  const widthLineOffset = 22;
+  const WIDTH_TICK_HALF = 4;
 
-  // Outer-Ø leader anchored to the front-face silhouette (left side).
   const faceLeft = Math.min(...fFrontOuter.map((p) => p.x));
   const faceTop = Math.min(...fFrontOuter.map((p) => p.y));
   const faceBot = Math.max(...fFrontOuter.map((p) => p.y));
@@ -441,35 +442,95 @@ function RollVisualizerSvg({
             </>
           )}
 
-          {/* Roll width — narrow rolls use a compact label (real RW, schematic depth). */}
-          {isNarrowRoll ? (
-            <text
-              x={(wF.x + wB.x) / 2}
-              y={Math.max(wF.y, wB.y) + widthLineOffset + 16}
-              textAnchor="middle"
-              fontSize={10}
-            >
-              {widthLabel} {fmt(widthMm)} mm{nLanes > 1 ? ` (${nLanes}×${fmt(laneWidthMm)})` : ''}
-            </text>
-          ) : (
-            <>
-              <line x1={wF.x} y1={wF.y} x2={wF.x} y2={wF.y + widthLineOffset} stroke={strokeFaint} strokeWidth={0.8} strokeDasharray="3 3" />
-              <line x1={wB.x} y1={wB.y} x2={wB.x} y2={wB.y + widthLineOffset} stroke={strokeFaint} strokeWidth={0.8} strokeDasharray="3 3" />
-              <line x1={wF.x} y1={wF.y + widthLineOffset} x2={wB.x} y2={wB.y + widthLineOffset} stroke={accent} strokeWidth={1.25} />
-              <line x1={wF.x} y1={wF.y + widthLineOffset - 4} x2={wF.x} y2={wF.y + widthLineOffset + 4} stroke={accent} strokeWidth={1.25} />
-              <line x1={wB.x} y1={wB.y + widthLineOffset - 4} x2={wB.x} y2={wB.y + widthLineOffset + 4} stroke={accent} strokeWidth={1.25} />
-              {nLanes > 1 &&
-                Array.from({ length: nLanes - 1 }, (_, k) => k + 1).map((k) => {
-                  const t = k / nLanes;
-                  const lx = wF.x + t * (wB.x - wF.x);
-                  const ly = wF.y + widthLineOffset + t * (wB.y - wF.y);
-                  return <line key={`lanetick-${k}`} x1={lx} y1={ly - 3} x2={lx} y2={ly + 3} stroke={accent} strokeWidth={1} opacity={0.7} />;
-                })}
-              <text x={(wF.x + wB.x) / 2} y={(wF.y + wB.y) / 2 + widthLineOffset + 16} textAnchor="middle">
-                {widthLabel} {fmt(widthMm)} mm{nLanes > 1 ? ` (${nLanes}×${fmt(laneWidthMm)})` : ''}
-              </text>
-            </>
-          )}
+          {/* Roll width (RW / LF / OW) — bottom edge, offset to the right */}
+          {(() => {
+            const dx = wB.x - wF.x;
+            const dy = wB.y - wF.y;
+            const shiftX = rollRight + WIDTH_SIDE_GAP - Math.max(wF.x, wB.x);
+            const dimF = { x: wF.x + shiftX, y: wF.y };
+            const dimB = { x: wB.x + shiftX, y: wB.y };
+            const tickDx = (-dy / (Math.hypot(dx, dy) || 1)) * WIDTH_TICK_HALF;
+            const tickDy = (dx / (Math.hypot(dx, dy) || 1)) * WIDTH_TICK_HALF;
+            const dimBotY = Math.max(dimF.y, dimB.y);
+            const labelX = (dimF.x + dimB.x) / 2;
+            const labelY = dimBotY + WIDTH_LABEL_BELOW;
+            const widthLbl = `${widthLabel} ${fmt(widthMm)} mm${nLanes > 1 ? ` (${nLanes}×${fmt(laneWidthMm)})` : ''}`;
+            return (
+              <>
+                <line
+                  x1={wF.x}
+                  y1={wF.y}
+                  x2={dimF.x}
+                  y2={wF.y}
+                  stroke={strokeFaint}
+                  strokeWidth={0.8}
+                  strokeDasharray="4 3"
+                />
+                <line
+                  x1={wB.x}
+                  y1={wB.y}
+                  x2={dimB.x}
+                  y2={wB.y}
+                  stroke={strokeFaint}
+                  strokeWidth={0.8}
+                  strokeDasharray="4 3"
+                />
+                <line x1={dimF.x} y1={dimF.y} x2={dimB.x} y2={dimB.y} stroke={accent} strokeWidth={1.25} />
+                <line
+                  x1={dimF.x - tickDx}
+                  y1={dimF.y - tickDy}
+                  x2={dimF.x + tickDx}
+                  y2={dimF.y + tickDy}
+                  stroke={accent}
+                  strokeWidth={1.25}
+                />
+                <line
+                  x1={dimB.x - tickDx}
+                  y1={dimB.y - tickDy}
+                  x2={dimB.x + tickDx}
+                  y2={dimB.y + tickDy}
+                  stroke={accent}
+                  strokeWidth={1.25}
+                />
+                {nLanes > 1 &&
+                  Array.from({ length: nLanes - 1 }, (_, k) => k + 1).map((k) => {
+                    const t = k / nLanes;
+                    const lx = dimF.x + t * (dimB.x - dimF.x);
+                    const ly = dimF.y + t * (dimB.y - dimF.y);
+                    return (
+                      <line
+                        key={`lanetick-${k}`}
+                        x1={lx - tickDx * 0.75}
+                        y1={ly - tickDy * 0.75}
+                        x2={lx + tickDx * 0.75}
+                        y2={ly + tickDy * 0.75}
+                        stroke={accent}
+                        strokeWidth={1}
+                        opacity={0.7}
+                      />
+                    );
+                  })}
+                <line
+                  x1={labelX}
+                  y1={dimBotY}
+                  x2={labelX}
+                  y2={labelY - 4}
+                  stroke={strokeFaint}
+                  strokeWidth={0.8}
+                  strokeDasharray="4 3"
+                />
+                <text
+                  x={labelX}
+                  y={labelY}
+                  textAnchor="middle"
+                  dominantBaseline="hanging"
+                  fontSize={isNarrowRoll ? 10 : 11}
+                >
+                  {widthLbl}
+                </text>
+              </>
+            );
+          })()}
 
           {/* Cut-off callout with leader — all rolls */}
           {showCutOff && (

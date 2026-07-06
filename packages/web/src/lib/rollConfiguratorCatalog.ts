@@ -83,21 +83,7 @@ export function rollConfiguratorDefaults(
 }
 
 /** True when estimate/template context is the Labels parent PG. */
-export function isLabelsRollContext(input: {
-  sourceTemplateKey?: string | null;
-  jobName?: string | null;
-  dimensions?: Record<string, unknown>;
-}): boolean {
-  const key = (input.sourceTemplateKey || '').toLowerCase();
-  if (key.includes('label')) return true;
-  const job = (input.jobName || '').toLowerCase();
-  if (/\blabels?\b/.test(job)) return true;
-  const dims = input.dimensions || {};
-  const tc = dims.templateClassification as Record<string, unknown> | undefined;
-  const pg = String(tc?.pebiParentPg || tc?.parentPg || '').toLowerCase();
-  if (pg.includes('label')) return true;
-  return false;
-}
+export { isLabelsRollContext, defaultOrderQuantityUnit } from '@es/engine';
 
 export function rollFieldValuesFromDimensions(
   dimensions: Record<string, number | undefined>,

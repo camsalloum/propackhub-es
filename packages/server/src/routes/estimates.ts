@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
 import { eq, and, desc, sql, isNull, asc, count as drizzleCount } from 'drizzle-orm';
-import { type VisibilityProfile, derivePrintingWebClass } from '@es/engine';
+import { type VisibilityProfile, derivePrintingWebClass, defaultOrderQuantityUnit } from '@es/engine';
 import { getEffectiveProfile, stripEstimateRow, stripCalculationResult } from '../utils/visibility';
 import { calculateAndPersistEstimate, buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
 import { loadTenantMaterialsByIds } from '../utils/material-map';
@@ -424,7 +424,14 @@ export async function createEstimateRoute(
         processesCustomized,
         structureSignature,
         orderQuantityKg: data.orderQuantityKg != null ? String(data.orderQuantityKg) : undefined,
-        orderQuantityUnit: data.orderQuantityUnit ?? 'kgs',
+        orderQuantityUnit:
+          data.orderQuantityUnit ??
+          defaultOrderQuantityUnit({
+            productType: data.productType,
+            sourceTemplateKey: data.sourceTemplateKey,
+            jobName: data.jobName,
+            dimensions: data.dimensions as Record<string, unknown> | undefined,
+          }),
         sourceTemplateKey: data.sourceTemplateKey ?? undefined,
         pricingMethod: data.pricingMethod ?? undefined,
         marginValuePerKgUsd: data.marginValuePerKgUsd != null ? String(data.marginValuePerKgUsd) : undefined,

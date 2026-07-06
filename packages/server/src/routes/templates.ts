@@ -15,6 +15,7 @@ import {
   wasteBandsForPrintMode,
   slabQuantitiesFromMoq,
   plainCormFromPrinted,
+  defaultOrderQuantityUnit,
 } from '@es/engine';
 import { buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
 import { generateRefNumber } from '../utils/ref-numbers';
@@ -460,6 +461,15 @@ export async function instantiateTemplateRoute(
         isStandard: template.isStandard,
         templateKey: template.templateKey,
       });
+    const resolvedOrderQuantityUnit =
+      orderQuantityUnit ??
+      defaultOrderQuantityUnit({
+        productType: template.productType,
+        sourceTemplateKey,
+        jobName: jobName || template.name,
+        pebiParentPg: template.pebiParentPg,
+        dimensions,
+      });
     const materialById = new Map<string, MaterialRow>(
       materials.map((m: MaterialRow) => [m.id, m])
     );
@@ -552,7 +562,7 @@ export async function instantiateTemplateRoute(
           displayCurrency: tenant.displayCurrency,
           exchangeRateUsdToDisplay: tenant.exchangeRateUsdToDisplay,
           orderQuantityKg: orderQuantityKg != null ? String(orderQuantityKg) : null,
-          orderQuantityUnit: orderQuantityUnit ?? 'kgs',
+          orderQuantityUnit: resolvedOrderQuantityUnit,
           sourceTemplateKey,
           masterDataVersion,
           structureForked: false,
@@ -646,7 +656,7 @@ export async function instantiateTemplateRoute(
       processesCustomized: false,
       structureSignature: templateStructureSignature,
       orderQuantityKg: orderQuantityKg != null ? String(orderQuantityKg) : undefined,
-      orderQuantityUnit: orderQuantityUnit ?? 'kgs',
+      orderQuantityUnit: resolvedOrderQuantityUnit,
     })
     .returning()) as EstimateRow[];
 

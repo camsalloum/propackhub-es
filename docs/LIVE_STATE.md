@@ -1,7 +1,7 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-06 (continuous web LM/kg when CO=0)
-**Session focus:** Engine decouples LM/kg from cut-off — plain rolls get length yield without fake CO; pcs/kg only when CO>0.
+**Last updated:** 2026-07-06 (Templates → 3D depth deck)
+**Session focus:** Templates page now uses `TemplateDeck` — a contained 3D depth-stack gallery (replaces the horizontal scroll rail, which is deleted). Active card centered; neighbours recede into depth and fan sideways. **Horizontal, but contained:** vertical page scroll is untouched (`touch-action: pan-y`), and a horizontal swipe moves between cards only — never navigates pages/history. Advance via drag/swipe, prev/next chevrons, arrow keys, dot rail, or click a receded card to bring it forward. Only the front card's buttons are active; a click guard stops a drag from firing them. Cards still use `LaminateStack3D` (exploded 3D laminate, material-family colours `--mat-*`, hover on desktop + tap on mobile). Reduced-motion: instant switch, no rotate/depth/blur. Typecheck + lint pass. **Verify in browser:** swipe/drag the deck horizontally (cards recede, page does NOT scroll away, no back-nav); tap a side card → it comes forward; vertical scroll still moves the whole page; switch themes → deck glow/nav/dots adapt; front card Create-estimate/Edit/Delete still click after a drag.
 
 ---
 

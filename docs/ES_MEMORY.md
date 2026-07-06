@@ -172,6 +172,19 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 
 ## Session log
 
+### 2026-07-06 — Sleeve seam 6 mm + LF/OW display split
+
+- **Seam:** `SLEEVE_SEAM_OVERLAP_MM = 6` → open web **OW = 2×LF + 6**.
+- **Wound roll:** shows **LF** (finished sleeve, matches bottle).
+- **Open web panel:** shows **OW** (press layout, two LF panels + seam strip).
+- **Roll spec:** driven by **LF** (same as costing `reelWidthMm`).
+
+### 2026-07-06 — Shrink sleeve defaults + bottle illustration
+
+- **Defaults:** LF **100 mm**, CO **60 mm** (`SLEEVE_DEFAULTS`).
+- **Configurator:** third panel **Sleeve — on container** — schematic bottle with shrink sleeve band; LF = formed tube circumference, CO = sleeve height on body.
+- **Layout:** 3 columns on large screens (container · wound · flat blank).
+
 ### 2026-07-06 — Continuous web (CO=0) LM/kg yield
 
 - **Rule:** Unprinted roll/sleeve (CO=0) has no pieces/kg; **LM/kg** still from RW + GSM: `(1000/GSM) / RW_mm × 1000`.

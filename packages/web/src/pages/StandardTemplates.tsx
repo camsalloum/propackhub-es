@@ -1,15 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { ReactNode } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Search, Plus } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
-import { useStagger } from '../hooks/useStagger';
-import { useEntrance } from '../hooks/useEntrance';
 import { SkeletonCard } from '../components/Skeleton';
 import { ClassFilterPanel, EMPTY_CLASS_FILTER } from '../components/ClassFilterPanel';
 import { TemplateStructureCard } from '../components/TemplateStructureCard';
 import { TemplateBuilder } from '../components/TemplateBuilder';
+import { TemplateDeck } from '../components/TemplateDeck';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
 import { useMaterialsContextOptional } from '../contexts/MaterialsContext';
 import { filterMaterialsForTemplateLayer, materialAllowedForTemplateLayer, inferStructureTypeFromSubstrateCount } from '@es/engine';
@@ -135,28 +133,10 @@ function visualizerLayers(template: StructureTemplate, materials: MaterialOption
       id: String(i),
       type: l.layer_type || 'substrate',
       material: mat?.name || l.ref_material_key || 'Layer',
-      micron: 1,
+      micron: l.default_micron || 1,
     };
   });
 }
-
-/**
- * Grid-cell wrapper that applies the staggered mount entrance (fade + slide)
- * to a single template card. The card itself (`TemplateStructureCard`) is
- * rendered as a child so its structure is untouched; the entrance is wired at
- * the grid level via `useEntrance({ delay })`, fed by `useStagger().getDelay`.
- * `useEntrance` is a no-op under reduced motion, so the card renders in its
- * final visual state (R19.4, R19.6). `h-full` preserves the equal-height grid
- * layout the cards relied on as direct grid items.
- */
-const TemplateGridCell = ({ delay, children }: { delay: number; children: ReactNode }) => {
-  const { ref } = useEntrance<HTMLDivElement>({ delay });
-  return (
-    <div ref={ref} className="h-full">
-      {children}
-    </div>
-  );
-};
 
 const StandardTemplates = () => {
   const { user } = useAuth();
@@ -173,10 +153,6 @@ const StandardTemplates = () => {
   const materialsCache = useMaterialsContextOptional();
   const isAdmin = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
   const isPlatformAdmin = user?.role === 'platform_admin';
-
-  // Per-item entrance delay for the staggered card-grid mount (R19.4);
-  // returns 0 under reduced motion so cards enter in their final state (R19.6).
-  const { getDelay } = useStagger();
 
   // Standards live in the platform catalog — only platform_admin may edit/delete
   // (tenant_admin PATCH was overwritten by platform sync on reload).
@@ -684,15 +660,16 @@ const StandardTemplates = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-          {activeTemplates.map((template, index) => (
-            <TemplateGridCell key={template.id} delay={getDelay(index)}>
-              {renderTemplateCard(template, {
-                badge: showMyGrid ? 'My template' : undefined,
-              })}
-            </TemplateGridCell>
-          ))}
-        </div>
+        <TemplateDeck
+          items={activeTemplates}
+          getKey={(template) => template.id}
+          ariaLabel={showMyGrid ? 'My templates' : 'Standard templates'}
+          renderItem={(template) =>
+            renderTemplateCard(template, {
+              badge: showMyGrid ? 'My template' : undefined,
+            })
+          }
+        />
       )}
 
       {/* Unified TemplateBuilder modal — create + edit (My Templates + Platform standards) */}

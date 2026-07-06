@@ -23,7 +23,7 @@ import {
   seedPouchDimensionPatch,
   canonicalPouchSubtype,
 } from '../lib/pouchConfiguratorCatalog';
-import { seedRollDimensionPatch, isLabelsRollContext } from '../lib/rollConfiguratorCatalog';
+import { seedRollDimensionPatch, isLabelsRollContext, defaultOrderQuantityUnit } from '../lib/rollConfiguratorCatalog';
 import { seedSleeveDimensionPatch } from '../lib/sleeveConfiguratorCatalog';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -764,7 +764,19 @@ const EstimateEditor = ({
           if (paramOrderQty && !Number.isNaN(Number(paramOrderQty))) {
             setOrderQuantity(Number(paramOrderQty));
           }
-          if (paramOrderUnit) setOrderQuantityUnit(normalizeUnitValue(paramOrderUnit, unitOptions));
+          if (paramOrderUnit) {
+            setOrderQuantityUnit(normalizeUnitValue(paramOrderUnit, unitOptions));
+          } else {
+            setOrderQuantityUnit(
+              normalizeUnitValue(
+                defaultOrderQuantityUnit({
+                  productType: paramProductType,
+                  jobName: paramJobName,
+                }),
+                unitOptions
+              )
+            );
+          }
           setLayers(defaultLayers);
           setPricingMethod(user?.pricingMethod ?? 'markup');
           setSlabsState([
@@ -936,7 +948,18 @@ const EstimateEditor = ({
     setDeliveryTerm('EXW');
     setDeliveryChargeUsd(0);
     if (pe.orderQuantityKg) setOrderQuantity(parseFloat(pe.orderQuantityKg));
-    if (pe.orderQuantityUnit) setOrderQuantityUnit(normalizeUnitValue(pe.orderQuantityUnit, unitOptions));
+    setOrderQuantityUnit(
+      normalizeUnitValue(
+        pe.orderQuantityUnit ||
+          defaultOrderQuantityUnit({
+            productType: pe.productType,
+            sourceTemplateKey: pe.sourceTemplateKey,
+            jobName: pe.jobName,
+            dimensions: pe.dimensions as Record<string, unknown> | undefined,
+          }),
+        unitOptions
+      )
+    );
     setSlabsState(
       ((instantiated.slabs && instantiated.slabs.length > 0
         ? instantiated.slabs
@@ -2628,6 +2651,15 @@ const EstimateEditor = ({
             // Bag/pouch: leave the subtype unselected ("Select type…") so the user picks from the
             // list and the configurator activates. Other families keep their first subtype as a default.
             setProductSubtype(next === 'bag' || next === 'pouch' ? null : defaultSubtypeForFamily(next as ProductFamily));
+            const nextUnit = defaultOrderQuantityUnit({
+              productType: next,
+              sourceTemplateKey: estimate?.sourceTemplateKey,
+              jobName,
+              dimensions: dimensions as Record<string, unknown>,
+            });
+            if (nextUnit === 'kpcs') {
+              setOrderQuantityUnit(normalizeUnitValue('kpcs', unitOptions));
+            }
           }}
           productTypeOptions={productTypeOptions}
           productTypeLocked={structureLocked || readOnly}

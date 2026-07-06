@@ -1,5 +1,6 @@
+import { useEffect, useRef, useState } from 'react';
 import { Pencil, Trash2, Star } from 'lucide-react';
-import LaminateVisualizer from './LaminateVisualizer';
+import { LaminateStack3D } from './LaminateStack3D';
 
 export interface TemplateCardLayer {
   id: string;
@@ -14,6 +15,7 @@ export interface TemplateCardLayer {
  */
 export function TemplateStructureCard({
   name,
+  metaLine,
   badge,
   layers,
   layerCount,
@@ -49,31 +51,41 @@ export function TemplateStructureCard({
   onDelete?: () => void;
   deleting?: boolean;
 }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [stackExpanded, setStackExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!stackExpanded) return;
+    const onDocPointerDown = (e: PointerEvent) => {
+      if (!cardRef.current?.contains(e.target as Node)) {
+        setStackExpanded(false);
+      }
+    };
+    document.addEventListener('pointerdown', onDocPointerDown);
+    return () => document.removeEventListener('pointerdown', onDocPointerDown);
+  }, [stackExpanded]);
+
   return (
-    // Token-backed surface/border/elevation via the shared `.card` class
-    // (R9.1). `!p-0` keeps the layer visualizer edge-to-edge while inner
-    // sections own their padding. `data-interactive="true"` enables the
-    // index.css elevation + translateY hover/focus micro-interaction that
-    // reverts on leave/blur within --motion-micro (R9.3); `tabIndex={0}`
-    // makes the card keyboard-focusable so the `.card:focus-visible` outline
-    // (≥3:1, R9.4) and focus micro-interaction apply.
     <div
+      ref={cardRef}
       className="card !p-0 overflow-hidden flex flex-col h-full"
       data-interactive="true"
-      tabIndex={0}
+      data-stack-expanded={stackExpanded ? 'true' : undefined}
     >
       {layerCount > 0 && (
-        <LaminateVisualizer
+        <LaminateStack3D
           layers={layers}
-          width={360}
-          height={32}
-          orientation="horizontal"
-          labelMode="number"
-          className="w-full pointer-events-none"
+          expanded={stackExpanded}
+          onToggle={() => setStackExpanded((v) => !v)}
         />
       )}
 
       <div className="px-3 pt-2.5 pb-2 flex-1 min-w-0">
+        {metaLine && (
+          <div className="font-mono text-[10px] uppercase tracking-wide text-accent-text mb-0.5 truncate">
+            {metaLine}
+          </div>
+        )}
         <div className="flex items-center gap-1.5 min-w-0">
           <h4 className="text-sm font-semibold text-brand truncate">{name}</h4>
           {badge && (

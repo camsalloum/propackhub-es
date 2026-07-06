@@ -29,3 +29,12 @@ At the end of any session with code or doc changes (all agents / IDEs):
 4. Say: **"Memory updated. [N] files changed."**
 
 Skip for read-only Q&A with no file edits.
+
+## File size policy (agents)
+
+**Do not grow god files.** See workspace rule `.cursor/rules/no-monolith-files.mdc`.
+
+- `pages/*.tsx` max **400** lines — shell only; logic in `features/<name>/hooks|sections`
+- Estimate work: `features/estimate-editor/` (never append to a 3k-line page)
+- At **>80% of limit**, split before implementing the requested feature
+- Never defer split to "later" / "P2" — extraction is part of the task

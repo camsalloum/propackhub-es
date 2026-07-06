@@ -5,33 +5,47 @@ import { seedMaterialsForTenant, ensureMaterialsForTenant } from './seed-materia
 import { seedTemplatesForTenant, ensureTemplatesForTenant } from './seed-templates';
 import { log } from '../utils/logger';
 
-const DEFAULT_ADMIN_EMAIL = 'admin@propackhub.com';
-const DEFAULT_ADMIN_PASSWORD = 'Pph654883!';
-const DEFAULT_ADMIN_NAME = 'Admin';
 const DEFAULT_TENANT_NAME = 'ProPackHub';
 const DEFAULT_CURRENCY = 'USD';
 
+function adminSeedConfig(): { email: string; password: string } | null {
+  if (process.env.ADMIN_SEED_ENABLED !== '1') {
+    return null;
+  }
+  const email = process.env.ADMIN_SEED_EMAIL?.trim();
+  const password = process.env.ADMIN_SEED_PASSWORD;
+  if (!email || !password) {
+    log.warn('ADMIN_SEED_ENABLED=1 but ADMIN_SEED_EMAIL / ADMIN_SEED_PASSWORD not set — skipping admin seed');
+    return null;
+  }
+  return { email, password };
+}
+
 /**
- * Ensure the default admin user exists.
- * Called on server startup — idempotent (skips if admin already exists).
- * Creates tenant + user + seeds materials + templates on first boot.
+ * Optionally seed a platform admin on startup.
+ * Requires ADMIN_SEED_ENABLED=1 and ADMIN_SEED_EMAIL / ADMIN_SEED_PASSWORD env vars.
  */
 export async function seedDefaultAdmin(): Promise<void> {
+  const config = adminSeedConfig();
+  if (!config) {
+    return;
+  }
+
+  const { email, password } = config;
   const db = getDatabase();
 
   try {
-    // Check if admin already exists
     const existing = await db
       .select({ id: schema.users.id })
       .from(schema.users)
-      .where(eq(schema.users.email, DEFAULT_ADMIN_EMAIL))
+      .where(eq(schema.users.email, email))
       .limit(1);
 
     if (existing.length > 0) {
       const [admin] = await db
         .select({ id: schema.users.id, tenantId: schema.users.tenantId, role: schema.users.role })
         .from(schema.users)
-        .where(eq(schema.users.email, DEFAULT_ADMIN_EMAIL))
+        .where(eq(schema.users.email, email))
         .limit(1);
 
       if (admin && admin.role !== 'platform_admin') {
@@ -39,35 +53,34 @@ export async function seedDefaultAdmin(): Promise<void> {
           .update(schema.users)
           .set({ role: 'platform_admin', updatedAt: new Date() })
           .where(eq(schema.users.id, admin.id));
-        log.info({ email: DEFAULT_ADMIN_EMAIL }, 'Promoted user to platform_admin');
+        log.info({ email }, 'Promoted user to platform_admin');
       }
 
       if (admin) {
         try {
           const matsAdded = await ensureMaterialsForTenant(admin.tenantId);
           if (matsAdded > 0) {
-            log.info({ count: matsAdded, tenantId: admin.tenantId }, 'Backfilled materials for default admin tenant');
+            log.info({ count: matsAdded, tenantId: admin.tenantId }, 'Backfilled materials for admin tenant');
           }
         } catch (seedErr) {
-          log.error({ err: seedErr }, 'Failed to backfill materials for default admin');
+          log.error({ err: seedErr }, 'Failed to backfill materials for admin tenant');
         }
         try {
           const added = await ensureTemplatesForTenant(admin.tenantId);
           if (added > 0) {
-            log.info({ count: added, tenantId: admin.tenantId }, 'Backfilled structure templates for default admin tenant');
+            log.info({ count: added, tenantId: admin.tenantId }, 'Backfilled structure templates for admin tenant');
           }
         } catch (seedErr) {
-          log.error({ err: seedErr }, 'Failed to backfill templates for default admin');
+          log.error({ err: seedErr }, 'Failed to backfill templates for admin tenant');
         }
       }
 
-      log.info({ email: DEFAULT_ADMIN_EMAIL }, 'Default admin already exists');
+      log.info({ email }, 'Admin seed user already exists');
       return;
     }
 
-    log.info({ email: DEFAULT_ADMIN_EMAIL }, 'Creating default admin user');
+    log.info({ email }, 'Creating admin seed user');
 
-    // Create tenant
     const [tenant] = await db
       .insert(schema.tenants)
       .values({
@@ -80,51 +93,47 @@ export async function seedDefaultAdmin(): Promise<void> {
       .returning();
 
     if (!tenant) {
-      log.error('Failed to create default admin tenant');
+      log.error('Failed to create admin seed tenant');
       return;
     }
 
-    // Hash password and create admin user
-    const passwordHash = await hashPassword(DEFAULT_ADMIN_PASSWORD);
+    const passwordHash = await hashPassword(password);
 
     const [user] = await db
       .insert(schema.users)
       .values({
         tenantId: tenant.id,
-        email: DEFAULT_ADMIN_EMAIL,
+        email,
         passwordHash,
-        displayName: DEFAULT_ADMIN_NAME,
+        displayName: 'Admin',
         role: 'platform_admin',
       })
       .returning();
 
     if (!user) {
-      log.error('Failed to create default admin user');
+      log.error('Failed to create admin seed user');
       return;
     }
 
-    // Seed master materials for the tenant
     try {
       const materialCount = await seedMaterialsForTenant(tenant.id);
-      log.info({ count: materialCount, tenantId: tenant.id }, 'Seeded materials for default admin');
+      log.info({ count: materialCount, tenantId: tenant.id }, 'Seeded materials for admin tenant');
     } catch (seedErr) {
-      log.error({ err: seedErr }, 'Failed to seed materials for default admin');
+      log.error({ err: seedErr }, 'Failed to seed materials for admin tenant');
     }
 
-    // Seed structure templates for the tenant
     try {
       const templateCount = await seedTemplatesForTenant(tenant.id);
-      log.info({ count: templateCount, tenantId: tenant.id }, 'Seeded structure templates for default admin');
+      log.info({ count: templateCount, tenantId: tenant.id }, 'Seeded structure templates for admin tenant');
     } catch (seedErr) {
-      log.error({ err: seedErr }, 'Failed to seed templates for default admin');
+      log.error({ err: seedErr }, 'Failed to seed templates for admin tenant');
     }
 
     log.info(
-      { email: DEFAULT_ADMIN_EMAIL, tenantId: tenant.id, tenantName: DEFAULT_TENANT_NAME, role: 'platform_admin' },
-      'Default admin created'
+      { email, tenantId: tenant.id, tenantName: DEFAULT_TENANT_NAME, role: 'platform_admin' },
+      'Admin seed user created'
     );
   } catch (error) {
-    log.error({ err: error }, 'Failed to seed default admin');
-    // Don't throw — server should still start even if admin seeding fails
+    log.error({ err: error }, 'Failed to seed admin user');
   }
 }

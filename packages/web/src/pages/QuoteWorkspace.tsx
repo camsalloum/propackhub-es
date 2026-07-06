@@ -10,6 +10,7 @@ import CombinedVariantPriceList from '../components/CombinedVariantPriceList';
 import DuplicateEstimateDialog from '../components/DuplicateEstimateDialog';
 import QuoteSummaryPanel from '../components/QuoteSummaryPanel';
 import EstimateEditor from './EstimateEditor';
+import type { QuotePriceListDisplayPrefs } from '../lib/quotePriceListPrefs';
 
 type QuoteEstimate = {
   id: string;
@@ -37,6 +38,7 @@ type QuotePayload = {
   remarks?: string | null;
   customerId?: string | null;
   isPriceCheck?: boolean;
+  priceListDisplayPrefs?: unknown;
   estimates: QuoteEstimate[];
 };
 
@@ -76,7 +78,6 @@ const QuoteWorkspace = () => {
   const [error, setError] = useState<string | null>(null);
   const [duplicating, setDuplicating] = useState(false);
   const [showDuplicate, setShowDuplicate] = useState(false);
-  const [priceListKey, setPriceListKey] = useState(0);
   const [statusBusy, setStatusBusy] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
 
@@ -87,7 +88,6 @@ const QuoteWorkspace = () => {
       setError(null);
       const data = await apiClient.getQuote(quoteId);
       setQuote(data as QuotePayload);
-      setPriceListKey((k) => k + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load quote');
     } finally {
@@ -105,6 +105,26 @@ const QuoteWorkspace = () => {
   const activeId = estimateId || estimates[0]?.id;
   const activeEstimate = estimates.find((e) => e.id === activeId);
   const locked = isLockedQuote(quote);
+
+  const estimateIds = useMemo(
+    () => estimates.map((e) => e.id),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stable when estimate set unchanged
+    [estimates.map((e) => e.id).join(',')]
+  );
+
+  const priceListRowLabels = useMemo(
+    () => Object.fromEntries(estimates.map((e, i) => [e.id, variantLabel(e, priceCheck, i)])),
+  [estimateIds, priceCheck, estimates]
+  );
+
+  const priceListStructureSummaries = useMemo(
+    () => Object.fromEntries(estimates.map((e) => [e.id, e.structureSummary])),
+    [estimateIds, estimates]
+  );
+
+  const handlePriceListPrefsSaved = useCallback((prefs: QuotePriceListDisplayPrefs | null) => {
+    setQuote((prev) => (prev ? { ...prev, priceListDisplayPrefs: prefs } : prev));
+  }, []);
 
   const workspaceTitle = useMemo(() => {
     if (!quote) return '';
@@ -400,14 +420,11 @@ const QuoteWorkspace = () => {
             quoteRef={quote.refNumber}
             estimateIds={estimates.map((e) => e.id)}
             activeEstimateId={activeId}
-            refreshKey={priceListKey}
+            priceListDisplayPrefs={quote.priceListDisplayPrefs as QuotePriceListDisplayPrefs | null}
+            onPriceListPrefsSaved={handlePriceListPrefsSaved}
             priceCheckMode={priceCheck}
-            rowLabels={Object.fromEntries(
-              estimates.map((e, i) => [e.id, variantLabel(e, priceCheck, i)])
-            )}
-            structureSummaries={Object.fromEntries(
-              estimates.map((e) => [e.id, e.structureSummary])
-            )}
+            rowLabels={priceListRowLabels}
+            structureSummaries={priceListStructureSummaries}
             onSelectEstimate={(id) => navigate(`/quotes/${quoteId}/estimates/${id}`)}
           />
         )

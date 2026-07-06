@@ -37,8 +37,21 @@ import {
 import { AppError, isAuthError, sendCaughtError } from '../utils/errors';
 import { log } from '../utils/logger';
 
+const TEMPLATE_PREPARE_TTL_MS = 5 * 60 * 1000;
+const templatePrepareLastRun = new Map<string, number>();
+
+export function invalidateTemplatePrepareCache(tenantId?: string): void {
+  if (tenantId) templatePrepareLastRun.delete(tenantId);
+  else templatePrepareLastRun.clear();
+}
+
 /** Seed missing standards, dedupe legacy rows, then assign stable keys. */
 async function prepareTemplatesForTenant(tenantId: string): Promise<void> {
+  const lastRun = templatePrepareLastRun.get(tenantId) ?? 0;
+  if (Date.now() - lastRun < TEMPLATE_PREPARE_TTL_MS) {
+    return;
+  }
+
   // Each pass is wrapped so an isolated failure (e.g. a fresh dev DB where
   // platform_standard_templates doesn't exist yet) cannot 500 the list
   // endpoint. The list response is still useful with stale data; the failed
@@ -56,6 +69,8 @@ async function prepareTemplatesForTenant(tenantId: string): Promise<void> {
   await runPass('pruneDuplicateStandardTemplates', () => pruneDuplicateStandardTemplates(tenantId));
   await runPass('syncTemplateKeysForTenant', () => syncTemplateKeysForTenant(tenantId));
   await runPass('relinkTemplatesForTenant', () => relinkTemplatesForTenant(tenantId));
+
+  templatePrepareLastRun.set(tenantId, Date.now());
 }
 
 type TemplateRow = typeof schema.structureTemplates.$inferSelect;
@@ -155,7 +170,9 @@ export async function getTemplatesRoute(
     const standardOnly = !userOnly && request.query.standard_only !== 'false';
     const templateKeyFilter = request.query.template_key?.trim();
 
-    await prepareTemplatesForTenant(tenantId);
+    if (!userOnly) {
+      await prepareTemplatesForTenant(tenantId);
+    }
 
     const conditions = [
       eq(schema.structureTemplates.tenantId, tenantId),

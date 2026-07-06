@@ -277,8 +277,21 @@ export async function buildStructureSummary(
   db: Database,
   estimateId: string
 ): Promise<string> {
+  const map = await buildStructureSummaries(db, [estimateId]);
+  return map.get(estimateId) ?? '';
+}
+
+/** Batched structure summaries — one query for N estimates instead of N round trips. */
+export async function buildStructureSummaries(
+  db: Database,
+  estimateIds: string[]
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  if (estimateIds.length === 0) return result;
+
   const rows = await db
     .select({
+      estimateId: schema.layers.estimateId,
       materialName: schema.layers.materialName,
       materialNameSnapshot: schema.layers.material_name_snapshot,
       type: schema.materials.type,
@@ -287,10 +300,10 @@ export async function buildStructureSummary(
     })
     .from(schema.layers)
     .leftJoin(schema.materials, eq(schema.layers.materialId, schema.materials.id))
-    .where(eq(schema.layers.estimateId, estimateId))
-    .orderBy(schema.layers.position);
+    .where(inArray(schema.layers.estimateId, estimateIds))
+    .orderBy(schema.layers.estimateId, schema.layers.position);
 
-  const parts: string[] = [];
+  const partsByEstimate = new Map<string, string[]>();
   for (const row of rows) {
     if (row.type && row.type !== 'substrate') continue;
     const label =
@@ -299,9 +312,16 @@ export async function buildStructureSummary(
       (row.materialName && String(row.materialName).trim()) ||
       (row.family && String(row.family).trim()) ||
       '';
-    if (label && !parts.includes(label)) parts.push(label);
+    if (!label) continue;
+    const parts = partsByEstimate.get(row.estimateId) ?? [];
+    if (!parts.includes(label)) parts.push(label);
+    partsByEstimate.set(row.estimateId, parts);
   }
-  return parts.join(' / ');
+
+  for (const id of estimateIds) {
+    result.set(id, (partsByEstimate.get(id) ?? []).join(' / '));
+  }
+  return result;
 }
 
 const SAVE_REF_MISSING_MSG =

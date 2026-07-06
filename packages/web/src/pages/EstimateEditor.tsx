@@ -49,6 +49,7 @@ import { stackNeedsSolventMix, stackHasSbInk, defaultInkPrintingProcess, inkSolv
 import LaminationFormulaModal from '../components/LaminationFormulaModal';
 import PriceListPanel, { type PriceListUnit } from '../components/PriceListPanel';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
+import { useMaterialsContextOptional } from '../contexts/MaterialsContext';
 import {
   DEFAULT_MASTER_REFERENCE,
   defaultUnitValue,
@@ -188,6 +189,7 @@ const EstimateEditor = ({
     version: masterDataVersion,
     reload: reloadMasterData,
   } = useMasterDataReference();
+  const materialsCache = useMaterialsContextOptional();
   const processCostCatalog = useMemo(
     () => buildProcessCostCatalogFromReference(masterReference),
     [masterReference.processRows, masterReference.processOptions]
@@ -636,23 +638,29 @@ const EstimateEditor = ({
   // Load materials + customers on mount
   const loadBaseData = useCallback(async () => {
     let mats: MaterialItem[] = [];
-    let custs: any[] = [];
+    const custs: any[] = [];
 
     try {
-      const [materialRows, cats] = await Promise.all([
-        apiClient.getMaterials(),
-        apiClient.getCategories().catch(() => []),
-      ]);
-      mats = materialRows || [];
-      setMaterials(mats);
-      setCategories(cats || []);
+      if (materialsCache?.materials.length) {
+        mats = materialsCache.materials as unknown as MaterialItem[];
+        setMaterials(mats);
+        setCategories(materialsCache.categories);
+      } else {
+        const [materialRows, cats] = await Promise.all([
+          apiClient.getMaterials(),
+          apiClient.getCategories().catch(() => []),
+        ]);
+        mats = materialRows || [];
+        setMaterials(mats);
+        setCategories(cats || []);
+      }
     } catch (err) {
       console.error('Failed to load materials:', err);
       setLoadError('Could not load materials. Layer defaults may be incomplete.');
     }
 
     return { mats, custs };
-  }, []);
+  }, [materialsCache?.materials, materialsCache?.categories]);
 
   useEffect(() => {
     const init = async () => {
@@ -2687,8 +2695,8 @@ const EstimateEditor = ({
           {(activeSection === 'structure' || hidePriceListTab) && (
             <div className="space-y-6">
               <div className="card p-0 overflow-hidden shadow-md">
-                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] border-b border-border bg-surface-raised">
-                  <div className="px-5 py-3.5 lg:border-r border-border">
+                <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] border-b border-border bg-surface-raised">
+                  <div className="px-5 py-3.5 xl:border-r border-border">
                     <SectionTitle
                       as="h3"
                       className="text-lg font-display font-semibold text-navy tracking-tight"
@@ -2707,7 +2715,7 @@ const EstimateEditor = ({
                       </p>
                     )}
                   </div>
-                  <div className="px-5 py-3.5 hidden lg:block border-l border-border bg-slate/20">
+                  <div className="px-5 py-3.5 hidden xl:block border-l border-border bg-slate/20">
                     <SectionTitle
                       as="h3"
                       className="text-lg font-display font-semibold text-navy tracking-tight"
@@ -2717,8 +2725,8 @@ const EstimateEditor = ({
                     </SectionTitle>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start">
-                  <div className="min-w-0 lg:border-r border-border">
+                <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start">
+                  <div className="min-w-0 xl:border-r border-border">
                 {/* Mobile cards + bottom sheets (PRD §5.8) */}
                 <div className="space-y-3 md:hidden pb-24">
                   <button
@@ -3266,10 +3274,20 @@ const EstimateEditor = ({
                     </div>
                   </div>
                 </div> {/* end hidden md:block */}
+
+                <div className="hidden md:block xl:hidden border-t border-border bg-surface-raised px-4 py-3">
+                  <FilmStackVisualizer
+                    layers={visualizerLayers}
+                    totalMicron={totalConstructionMicron}
+                    className="w-full"
+                    displayCurrency={displayCurrencyLabel}
+                    showContrib={showStructureCosts}
+                  />
+                </div>
                   </div> {/* end table column — self-sized, no stretch gap */}
 
                   <div
-                    className="hidden lg:block overflow-hidden bg-surface-raised border-l border-border"
+                    className="hidden xl:block overflow-hidden bg-surface-raised border-l border-border"
                     style={
                       structureTableHeight != null
                         ? { height: structureTableHeight, maxHeight: structureTableHeight }

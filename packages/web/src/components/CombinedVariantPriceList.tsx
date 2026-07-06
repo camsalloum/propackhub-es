@@ -3,14 +3,13 @@ import { Download, Loader2 } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
-import { usePriceListCustomSlabs } from '../hooks/usePriceListCustomSlabs';
+import { useQuotePriceListPrefs } from '../hooks/useQuotePriceListPrefs';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
 import { buildVariantPricingContext, type VariantPricingContext } from '../lib/variantPricingContext';
 import type { ClientCalcMaterial } from '../lib/estimateCalc';
 import {
   activeWasteBands,
   bandKey,
-  bandRangeKg,
   buildCustomSlabPrice,
   buildPriceListRows,
   customSlabKey,
@@ -18,20 +17,26 @@ import {
   formatCustomSlabQty,
   intersectPriceListUnits,
   kgToUnit,
+  pickUnitConversionInput,
+  predefinedSlabLabels,
   unionWasteBands,
   UNIT_LABELS,
   type PriceListUnit,
-  type SlabMode,
 } from '../lib/priceListPricing';
 import PriceListSlabControls from './PriceListSlabControls';
 import PriceListCellHints from './PriceListCellHints';
+import {
+  parseQuotePriceListDisplayPrefs,
+  type QuotePriceListDisplayPrefs,
+} from '../lib/quotePriceListPrefs';
 
 type Props = {
   quoteId: string;
   quoteRef?: string;
   estimateIds: string[];
   activeEstimateId?: string;
-  refreshKey?: number;
+  priceListDisplayPrefs?: QuotePriceListDisplayPrefs | null;
+  onPriceListPrefsSaved?: (prefs: QuotePriceListDisplayPrefs | null) => void;
   onSelectEstimate?: (estimateId: string) => void;
   structureSummaries?: Record<string, string | null | undefined>;
   rowLabels?: Record<string, string | null | undefined>;
@@ -43,11 +48,12 @@ export default function CombinedVariantPriceList({
   quoteRef,
   estimateIds,
   activeEstimateId,
-  refreshKey = 0,
   onSelectEstimate,
   structureSummaries,
   rowLabels,
   priceCheckMode = false,
+  priceListDisplayPrefs,
+  onPriceListPrefsSaved,
 }: Props) {
   const { user, tenant } = useAuth();
   const { reference: masterReference } = useMasterDataReference();
@@ -56,11 +62,35 @@ export default function CombinedVariantPriceList({
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  const [unit, setUnit] = useState<PriceListUnit | ''>('');
-  const [currency, setCurrency] = useState('');
-  const [slabMode, setSlabMode] = useState<SlabMode>('predefined');
-  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
-  const { customSlabs, setCustomSlabs } = usePriceListCustomSlabs(user?.id, slabMode, unit);
+  const {
+    hydrated: prefsHydrated,
+    unit,
+    setUnit,
+    currency,
+    setCurrency,
+    slabMode,
+    setSlabMode,
+    selectedKeys,
+    setSelectedKeys,
+    setSelectedKeysQuiet,
+    clearSelectedBands,
+    customSlabs,
+    setCustomSlabs,
+  } = useQuotePriceListPrefs({
+    quoteId,
+    initialPrefs: priceListDisplayPrefs,
+    onSaved: onPriceListPrefsSaved,
+  });
+
+  const estimateIdsKey = estimateIds.join(',');
+  const rowLabelsKey = useMemo(
+    () => JSON.stringify(rowLabels ?? {}),
+    [rowLabels]
+  );
+  const structureSummariesKey = useMemo(
+    () => JSON.stringify(structureSummaries ?? {}),
+    [structureSummaries]
+  );
 
   const load = useCallback(async () => {
     if (estimateIds.length === 0) {
@@ -73,6 +103,8 @@ export default function CombinedVariantPriceList({
       setError(null);
       const materials = (await apiClient.getMaterials()) as ClientCalcMaterial[];
       const estimates = await Promise.all(estimateIds.map((id) => apiClient.getEstimate(id)));
+      const labels = rowLabels ?? {};
+      const summaries = structureSummaries ?? {};
       const built = estimates
         .map((est) =>
           buildVariantPricingContext(
@@ -86,8 +118,8 @@ export default function CombinedVariantPriceList({
         .filter((c): c is VariantPricingContext => c != null && c.configured)
         .map((c) => ({
           ...c,
-          label: rowLabels?.[c.id]?.trim() || c.label,
-          structureSummary: structureSummaries?.[c.id] ?? c.structureSummary,
+          label: labels[c.id]?.trim() || c.label,
+          structureSummary: summaries[c.id] ?? c.structureSummary,
         }));
       setContexts(built);
     } catch (err) {
@@ -95,11 +127,21 @@ export default function CombinedVariantPriceList({
     } finally {
       setLoading(false);
     }
-  }, [estimateIds, masterReference, tenant, user?.pricingMethod, structureSummaries, rowLabels]);
+  }, [
+    estimateIds,
+    estimateIdsKey,
+    masterReference,
+    tenant,
+    user?.pricingMethod,
+    rowLabelsKey,
+    structureSummariesKey,
+    rowLabels,
+    structureSummaries,
+  ]);
 
   useEffect(() => {
     void load();
-  }, [load, refreshKey]);
+  }, [load]);
 
   const unionBands = useMemo(() => unionWasteBands(contexts), [contexts]);
   const activeBands = useMemo(() => activeWasteBands(unionBands), [unionBands]);
@@ -118,29 +160,68 @@ export default function CombinedVariantPriceList({
   }, [contexts]);
 
   useEffect(() => {
+    if (!prefsHydrated || loading || contexts.length === 0) return;
     if (unit && !availableUnits.includes(unit)) setUnit('');
-  }, [availableUnits, unit]);
+  }, [availableUnits, unit, prefsHydrated, loading, contexts.length]);
 
   useEffect(() => {
+    if (!prefsHydrated || loading || contexts.length === 0) return;
     if (currency && !currencyOptions.includes(currency)) setCurrency('');
-  }, [currencyOptions, currency]);
+  }, [currencyOptions, currency, prefsHydrated, loading, contexts.length]);
+
+  const bandsReady = !loading && contexts.length > 0 && activeBands.length > 0;
+
+  // Restore saved slab keys once waste bands are loaded (never autosave here).
+  useEffect(() => {
+    if (!prefsHydrated || !bandsReady) return;
+    const savedKeys = parseQuotePriceListDisplayPrefs(priceListDisplayPrefs)?.selectedBandKeys;
+    if (!savedKeys?.length) return;
+    setSelectedKeysQuiet((prev) => {
+      if (prev.size > 0) return prev;
+      const valid = new Set(activeBands.map(bandKey));
+      const restored = new Set(savedKeys.filter((k) => valid.has(k)));
+      return restored.size > 0 ? restored : prev;
+    });
+  }, [
+    bandsReady,
+    prefsHydrated,
+    priceListDisplayPrefs,
+    activeBands,
+    setSelectedKeysQuiet,
+  ]);
 
   useEffect(() => {
-    setSelectedKeys((prev) => {
+    if (!prefsHydrated || !bandsReady) return;
+    setSelectedKeysQuiet((prev) => {
       const valid = new Set(activeBands.map(bandKey));
       const next = new Set<string>();
       for (const key of prev) {
         if (valid.has(key)) next.add(key);
       }
+      if (prev.size === next.size) {
+        let same = true;
+        for (const key of prev) {
+          if (!next.has(key)) {
+            same = false;
+            break;
+          }
+        }
+        if (same) return prev;
+      }
       return next;
     });
-  }, [activeBands]);
+  }, [activeBands, bandsReady, prefsHydrated, setSelectedKeysQuiet]);
 
   const slabsReady =
     slabMode === 'predefined' ? selectedKeys.size > 0 : customSlabs.length > 0;
   const ready = Boolean(unit && currency && slabsReady);
 
   const selectedBands = activeBands.filter((b) => selectedKeys.has(bandKey(b)));
+
+  const slabLabelContext = useMemo(
+    () => (contexts[0] ? pickUnitConversionInput(contexts[0]) : null),
+    [contexts]
+  );
 
   const toggleBand = (key: string) => {
     setSelectedKeys((prev) => {
@@ -173,8 +254,8 @@ export default function CombinedVariantPriceList({
     if (slabMode === 'custom') {
       return customSlabs.map((q) => formatCustomSlabQty(q, unit));
     }
-    return selectedBands.map((b) => bandRangeKg(b));
-  }, [columnKeys, slabMode, customSlabs, unit, selectedBands]);
+    return predefinedSlabLabels(selectedBands, unit, slabLabelContext);
+  }, [columnKeys, slabMode, customSlabs, unit, selectedBands, slabLabelContext]);
 
   const tableRows = useMemo(() => {
     if (!ready || !unit || !currency) return [];
@@ -323,10 +404,11 @@ export default function CombinedVariantPriceList({
           selectedKeys={selectedKeys}
           onToggleBand={toggleBand}
           onSelectAllBands={() => setSelectedKeys(new Set(activeBands.map(bandKey)))}
-          onClearBands={() => setSelectedKeys(new Set())}
+          onClearBands={clearSelectedBands}
           customSlabs={customSlabs}
           onCustomSlabsChange={setCustomSlabs}
           onFillFromBands={slabMode === 'custom' ? fillCustomFromBands : undefined}
+          unitConversion={slabLabelContext}
         />
 
         {ready && (

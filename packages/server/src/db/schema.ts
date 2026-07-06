@@ -374,6 +374,9 @@ export const quotes = pgTable('quotes', {
   /** Internal price-check quotes (no customer) — separate folder from other null-customer quotes. */
   isPriceCheck: boolean('is_price_check').notNull().default(false),
 
+  /** Combined price list UI: unit, currency, slab mode, selected bands (autosaved). */
+  priceListDisplayPrefs: jsonb('price_list_display_prefs'),
+
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),

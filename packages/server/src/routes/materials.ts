@@ -335,6 +335,8 @@ export async function registerMaterialRoutes(fastify: FastifyInstance) {
         const materials = await listPlatformMasterMaterials();
         const result = await syncMaterialsForTenant(tenantId, materials, { pruneOrphans });
         const templatesRelinked = await relinkTemplatesForTenant(tenantId);
+        const { invalidateTemplatePrepareCache } = await import('../routes/templates');
+        invalidateTemplatePrepareCache(tenantId);
         return reply.send({
           tenantsSynced: 1,
           ...result,

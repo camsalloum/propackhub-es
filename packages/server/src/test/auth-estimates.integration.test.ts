@@ -3,9 +3,10 @@ import { sql } from 'drizzle-orm';
 import { buildApp } from '../app';
 import type { FastifyInstance } from 'fastify';
 import { initializeDatabase, closeDatabase, getDatabase } from '../db';
-import { hasDatabase } from './require-database';
+import { hasIntegrationDatabase } from './require-database';
+import { purgeIntegrationArtifacts } from './purge-integration-artifacts';
 
-describe.skipIf(!hasDatabase)('API integration — auth + estimates', () => {
+describe.skipIf(!hasIntegrationDatabase)('API integration — auth + estimates', () => {
   let app: FastifyInstance;
   const runId = Date.now();
   const email = `integration-${runId}@example.com`;
@@ -33,6 +34,12 @@ describe.skipIf(!hasDatabase)('API integration — auth + estimates', () => {
   });
 
   afterAll(async () => {
+    try {
+      const db = getDatabase();
+      await purgeIntegrationArtifacts(db, { runIds: [runId, runId + 1] });
+    } catch {
+      // DB may not be initialized if beforeAll failed
+    }
     if (app) await app.close();
     await closeDatabase();
   });

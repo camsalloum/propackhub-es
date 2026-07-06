@@ -18,14 +18,14 @@ export const UNIT_LABELS: Record<PriceListUnit, string> = {
   kpcs: 'Kpcs',
 };
 
-const UNIT_QTY_DECIMALS: Record<PriceListUnit, number> = {
-  kg: 0,
-  m2: 0,
-  lm: 0,
-  roll: 0,
-  pc: 0,
-  kpcs: 1,
-};
+const SLAB_QTY_DECIMALS = 0;
+
+function formatSlabQty(n: number): string {
+  return Math.round(n).toLocaleString(undefined, {
+    minimumFractionDigits: SLAB_QTY_DECIMALS,
+    maximumFractionDigits: SLAB_QTY_DECIMALS,
+  });
+}
 
 export type PriceListPricingInput = {
   wasteBands: WasteBand[];
@@ -66,6 +66,38 @@ type UnitConversionInput = Pick<
   PriceListPricingInput,
   'totalGsm' | 'piecesPerKg' | 'lmPerKgReel' | 'reelWidthMm' | 'rollLengthLm'
 >;
+
+export type { UnitConversionInput };
+
+export function pickUnitConversionInput(
+  input: UnitConversionInput | PriceListPricingInput
+): UnitConversionInput {
+  return {
+    totalGsm: input.totalGsm,
+    piecesPerKg: input.piecesPerKg,
+    lmPerKgReel: input.lmPerKgReel,
+    reelWidthMm: input.reelWidthMm,
+    rollLengthLm: input.rollLengthLm,
+  };
+}
+
+/** Predefined slab range label in the selected unit (matches custom slab formatting). */
+export function formatPredefinedSlabRange(
+  band: WasteBand,
+  unit: PriceListUnit,
+  input: UnitConversionInput
+): string {
+  return formatBandRange(band, unit, input);
+}
+
+export function predefinedSlabLabels(
+  bands: WasteBand[],
+  unit: PriceListUnit | '',
+  input: UnitConversionInput | null | undefined
+): string[] {
+  if (!unit || !input) return bands.map(bandRangeKg);
+  return bands.map((band) => formatPredefinedSlabRange(band, unit, input));
+}
 
 export function bandKey(band: WasteBand): string {
   return `${band.minKg}:${band.maxKg ?? 'open'}`;
@@ -158,8 +190,8 @@ export function customSlabKey(qty: number): string {
   return `custom:${qty}`;
 }
 
-export function formatCustomSlabQty(qty: number, unit: PriceListUnit): string {
-  return formatQty(qty, UNIT_QTY_DECIMALS[unit]);
+export function formatCustomSlabQty(qty: number, _unit: PriceListUnit): string {
+  return formatSlabQty(qty);
 }
 
 export function kgToUnit(kg: number, u: PriceListUnit, input: UnitConversionInput): number | null {
@@ -292,16 +324,15 @@ function priceUsdInUnit(
 }
 
 function formatBandRange(band: WasteBand, u: PriceListUnit, input: UnitConversionInput): string {
-  const qtyDecimals = UNIT_QTY_DECIMALS[u];
   const minU = kgToUnit(band.minKg, u, input);
   const maxU = band.maxKg == null ? null : kgToUnit(band.maxKg, u, input);
   if (minU == null) {
     return band.maxKg == null
-      ? `${band.minKg.toLocaleString()}+`
-      : `${band.minKg.toLocaleString()} – ${band.maxKg.toLocaleString()}`;
+      ? `${Math.round(band.minKg).toLocaleString()}+`
+      : `${Math.round(band.minKg).toLocaleString()} – ${Math.round(band.maxKg).toLocaleString()}`;
   }
-  if (maxU == null) return `${formatQty(minU, qtyDecimals)}+`;
-  return `${formatQty(minU, qtyDecimals)} – ${formatQty(maxU, qtyDecimals)}`;
+  if (maxU == null) return `${formatSlabQty(minU)}+`;
+  return `${formatSlabQty(minU)} – ${formatSlabQty(maxU)}`;
 }
 
 export function isQuantityBelowMoq(

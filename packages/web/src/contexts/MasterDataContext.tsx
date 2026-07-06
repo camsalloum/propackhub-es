@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { apiClient } from '../lib/api';
+import { useAuth } from './AuthContext';
 import {
   DEFAULT_MASTER_REFERENCE,
   DEFAULT_RM_TYPE_OPTIONS,
@@ -25,6 +26,7 @@ type MasterDataContextValue = {
 const MasterDataContext = createContext<MasterDataContextValue | null>(null);
 
 export function MasterDataProvider({ children }: { children: ReactNode }) {
+  const { authReady, isAuthenticated } = useAuth();
   const [reference, setReference] = useState<MasterDataReferenceState>(DEFAULT_MASTER_REFERENCE);
   const [loading, setLoading] = useState(true);
   const [version, setVersion] = useState(0);
@@ -32,6 +34,11 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
   const invalidate = useCallback(() => setVersion((v) => v + 1), []);
 
   useEffect(() => {
+    if (!authReady || !isAuthenticated) {
+      if (version === 0) setLoading(false);
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       // Initial load shows a spinner; later invalidate()/focus refreshes stay silent.
@@ -96,7 +103,7 @@ export function MasterDataProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [version]);
+  }, [version, authReady, isAuthenticated]);
 
   const value = useMemo(
     () => ({ reference, loading, version, invalidate }),

@@ -745,7 +745,12 @@ export async function syncPlatformMasterToAllTenants(options?: {
     orphans += result.orphans;
     pruned += result.pruned;
     templatesRelinked += await relinkTemplatesForTenant(tenantId);
+    const { invalidateTemplatePrepareCache } = await import('../routes/templates');
+    invalidateTemplatePrepareCache(tenantId);
   }
+
+  const { invalidateTemplatePrepareCache: invalidateAll } = await import('../routes/templates');
+  invalidateAll();
 
   return {
     tenantsSynced: tenantIds.length,

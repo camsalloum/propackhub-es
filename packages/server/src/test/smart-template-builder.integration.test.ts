@@ -11,10 +11,11 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { buildApp } from '../app';
 import type { FastifyInstance } from 'fastify';
-import { initializeDatabase, closeDatabase } from '../db';
-import { hasDatabase } from './require-database';
+import { initializeDatabase, closeDatabase, getDatabase } from '../db';
+import { hasIntegrationDatabase } from './require-database';
+import { purgeIntegrationArtifacts } from './purge-integration-artifacts';
 
-describe.skipIf(!hasDatabase)('Smart Template Builder — integration', () => {
+describe.skipIf(!hasIntegrationDatabase)('Smart Template Builder — integration', () => {
   let app: FastifyInstance;
   const runId = Date.now();
 
@@ -90,6 +91,12 @@ describe.skipIf(!hasDatabase)('Smart Template Builder — integration', () => {
   });
 
   afterAll(async () => {
+    try {
+      const db = getDatabase();
+      await purgeIntegrationArtifacts(db, { runIds: [runId] });
+    } catch {
+      // DB may not be initialized if beforeAll failed
+    }
     if (app) await app.close();
     await closeDatabase();
   });

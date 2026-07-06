@@ -3,11 +3,12 @@ import { ChevronDown, Plus, X } from 'lucide-react';
 import type { WasteBand } from '@es/engine';
 import {
   bandKey,
-  bandRangeKg,
   formatCustomSlabQty,
+  predefinedSlabLabels,
   UNIT_LABELS,
   type PriceListUnit,
   type SlabMode,
+  type UnitConversionInput,
 } from '../lib/priceListPricing';
 
 type Props = {
@@ -22,6 +23,8 @@ type Props = {
   customSlabs: number[];
   onCustomSlabsChange: (slabs: number[]) => void;
   onFillFromBands?: () => void;
+  /** Structure metrics used to show predefined bands in the selected unit. */
+  unitConversion?: UnitConversionInput | null;
 };
 
 function parseSlabInput(raw: string): number[] {
@@ -43,6 +46,7 @@ export default function PriceListSlabControls({
   customSlabs,
   onCustomSlabsChange,
   onFillFromBands,
+  unitConversion,
 }: Props) {
   const [slabsOpen, setSlabsOpen] = useState(false);
   const [draftQty, setDraftQty] = useState('');
@@ -144,7 +148,9 @@ export default function PriceListSlabControls({
                       onChange={() => onToggleBand(key)}
                       className="rounded border-border"
                     />
-                    <span className="font-mono">{bandRangeKg(band)}</span>
+                    <span className="font-mono">
+                      {predefinedSlabLabels([band], unit, unitConversion)[0]}
+                    </span>
                   </label>
                 );
               })}

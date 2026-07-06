@@ -373,18 +373,24 @@ export async function meRoute(
 }
 
 export async function registerAuthRoutes(fastify: FastifyInstance) {
+  const authRateLimit = { rateLimit: { max: 5, timeWindow: '1 minute' as const } };
+  const refreshRateLimit = { rateLimit: { max: 20, timeWindow: '1 minute' as const } };
+
   fastify.post<{ Body: z.infer<typeof RegisterSchema> }>(
     '/api/v1/auth/register',
+    { config: authRateLimit },
     async (request, reply) => registerRoute(fastify, request, reply)
   );
 
   fastify.post<{ Body: z.infer<typeof LoginSchema> }>(
     '/api/v1/auth/login',
+    { config: authRateLimit },
     async (request, reply) => loginRoute(fastify, request, reply)
   );
 
   fastify.post<{ Body: z.infer<typeof RefreshSchema> }>(
     '/api/v1/auth/refresh',
+    { config: refreshRateLimit },
     async (request, reply) => refreshRoute(fastify, request, reply)
   );
 

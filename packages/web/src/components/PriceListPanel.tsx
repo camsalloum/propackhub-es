@@ -428,6 +428,13 @@ export default function PriceListPanel({
           customSlabs={customSlabs}
           onCustomSlabsChange={setCustomSlabs}
           onFillFromBands={slabMode === 'custom' ? fillCustomFromBands : undefined}
+          unitConversion={{
+            totalGsm,
+            piecesPerKg,
+            lmPerKgReel,
+            reelWidthMm,
+            rollLengthLm,
+          }}
         />
 
         {ready && (

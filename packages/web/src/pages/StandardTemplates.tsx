@@ -11,6 +11,7 @@ import { ClassFilterPanel, EMPTY_CLASS_FILTER } from '../components/ClassFilterP
 import { TemplateStructureCard } from '../components/TemplateStructureCard';
 import { TemplateBuilder } from '../components/TemplateBuilder';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
+import { useMaterialsContextOptional } from '../contexts/MaterialsContext';
 import { filterMaterialsForTemplateLayer, materialAllowedForTemplateLayer, inferStructureTypeFromSubstrateCount } from '@es/engine';
 import type { LayerType, ProductTypeCode } from '@es/engine';
 import {
@@ -169,6 +170,7 @@ const StandardTemplates = () => {
   const variantNameFromUrl = searchParams.get('variantName')?.trim() || '';
   const variantDescriptionFromUrl = searchParams.get('variantDescription')?.trim() || '';
   const { reference: masterRef } = useMasterDataReference();
+  const materialsCache = useMaterialsContextOptional();
   const isAdmin = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
   const isPlatformAdmin = user?.role === 'platform_admin';
 
@@ -208,8 +210,11 @@ const StandardTemplates = () => {
     setLoading(true);
     setLoadError(null);
     try {
+      const cachedMats = materialsCache?.materials ?? [];
       const [mats, standard, my] = await Promise.all([
-        apiClient.getMaterials(),
+        cachedMats.length > 0
+          ? Promise.resolve(cachedMats)
+          : apiClient.getMaterials(),
         apiClient.getTemplates(true),
         apiClient.getMyTemplates(),
       ]);
@@ -230,7 +235,7 @@ const StandardTemplates = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [materialsCache?.materials]);
 
   useEffect(() => {
     loadData();

@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { eq, and, ilike, isNull, asc, desc, count as drizzleCount } from 'drizzle-orm';
+import { eq, and, ilike, inArray, isNull, asc, desc, count as drizzleCount } from 'drizzle-orm';
 import { z } from 'zod';
 import * as schema from '../db/schema';
 import { getDatabase } from '../db';
@@ -8,7 +8,7 @@ import { errorBody, isFkViolation, sendCaughtError } from '../utils/errors';
 import { parsePagination, paginate } from '../utils/pagination';
 import { getEffectiveProfile, stripEstimateRow } from '../utils/visibility';
 import {
-  buildStructureSummary,
+  buildStructureSummaries,
   developmentTotalDisplay,
 } from '../services/quote-helpers';
 
@@ -288,18 +288,7 @@ async function getCustomerEstimatesRoute(
         materialId: schema.layers.materialId,
       })
       .from(schema.layers)
-      .where(
-        // Drizzle inList for the set of estimate IDs
-        estimateIds.length === 1
-          ? eq(schema.layers.estimateId, estimateIds[0])
-          : estimateIds.reduce(
-              (acc: ReturnType<typeof eq> | null, eid: string) => {
-                const cond = eq(schema.layers.estimateId, eid);
-                return acc ? and(acc, cond) as unknown as ReturnType<typeof eq> : cond;
-              },
-              null
-            ) ?? eq(schema.layers.estimateId, estimateIds[0])
-      )
+      .where(inArray(schema.layers.estimateId, estimateIds))
       .orderBy(schema.layers.position);
 
     const layersByEstimate = new Map<string, typeof allLayers>();
@@ -376,23 +365,39 @@ async function getCustomerExplorerRoute(
       .where(and(...quoteConditions))
       .orderBy(desc(schema.quotes.updatedAt));
 
+    const quoteIds = quotes.map((quote) => quote.id);
+    const allEstimates =
+      quoteIds.length > 0
+        ? await db
+            .select()
+            .from(schema.estimates)
+            .where(
+              and(
+                inArray(schema.estimates.quoteId, quoteIds),
+                eq(schema.estimates.tenantId, tenantId),
+                isNull(schema.estimates.deletedAt)
+              )
+            )
+            .orderBy(asc(schema.estimates.sortOrder), asc(schema.estimates.createdAt))
+        : [];
+    const estimatesByQuote = new Map<string, typeof allEstimates>();
+    for (const est of allEstimates) {
+      const list = estimatesByQuote.get(est.quoteId) ?? [];
+      list.push(est);
+      estimatesByQuote.set(est.quoteId, list);
+    }
+    const structureSummaries = await buildStructureSummaries(
+      db,
+      allEstimates.map((est) => est.id)
+    );
+
     const resultQuotes = [];
     for (const quote of quotes) {
-      const estimates = await db
-        .select()
-        .from(schema.estimates)
-        .where(
-          and(
-            eq(schema.estimates.quoteId, quote.id),
-            eq(schema.estimates.tenantId, tenantId),
-            isNull(schema.estimates.deletedAt)
-          )
-        )
-        .orderBy(asc(schema.estimates.sortOrder), asc(schema.estimates.createdAt));
+      const estimates = estimatesByQuote.get(quote.id) ?? [];
 
       const estimateSummaries = [];
       for (const est of estimates) {
-        const structureSummary = await buildStructureSummary(db, est.id);
+        const structureSummary = structureSummaries.get(est.id) ?? '';
         const base = stripEstimateRow(est, profile);
         const developmentTotal = developmentTotalDisplay(est.printColorCount, est.costPerColor);
         const summary = {

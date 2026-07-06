@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './hooks/useAuth';
+import { useAuth, AuthProvider } from './hooks/useAuth';
 import { MasterDataProvider } from './contexts/MasterDataContext';
+import { MaterialsProvider } from './contexts/MaterialsContext';
 import { ThemeProvider } from './theme/ThemeProvider';
 import { ThemeStatusToast } from './theme/ThemeStatusToast';
 import Layout from './components/Layout';
@@ -67,6 +68,7 @@ function App() {
     <ThemeProvider>
       <ThemeStatusToast />
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AuthProvider>
         <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -74,9 +76,11 @@ function App() {
           path="/*"
           element={
             <ProtectedRoute>
+              <MaterialsProvider>
               <MasterDataProvider>
                 <Layout />
               </MasterDataProvider>
+              </MaterialsProvider>
             </ProtectedRoute>
           }
         >
@@ -113,6 +117,7 @@ function App() {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
+        </AuthProvider>
       </Router>
     </ThemeProvider>
   );

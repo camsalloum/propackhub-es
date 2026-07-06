@@ -17,9 +17,10 @@ import { buildApp } from '../app';
 import { initializeDatabase, closeDatabase, getDatabase, schema } from '../db';
 import { eq } from 'drizzle-orm';
 import { bootstrapPlatformStandardCatalog } from '../db/seed-platform-templates';
-import { hasDatabase } from './require-database';
+import { hasIntegrationDatabase } from './require-database';
+import { purgeIntegrationArtifacts } from './purge-integration-artifacts';
 
-describe.skipIf(!hasDatabase)('Admin Platform Templates — integration', () => {
+describe.skipIf(!hasIntegrationDatabase)('Admin Platform Templates — integration', () => {
   let app: FastifyInstance;
   const runId = Date.now();
   const emailPlatform = `apt-platform-${runId}@example.com`;
@@ -108,6 +109,12 @@ describe.skipIf(!hasDatabase)('Admin Platform Templates — integration', () => 
   });
 
   afterAll(async () => {
+    try {
+      const db = getDatabase();
+      await purgeIntegrationArtifacts(db, { runIds: [runId] });
+    } catch {
+      // DB may not be initialized if beforeAll failed
+    }
     if (app) await app.close();
     await closeDatabase();
   });

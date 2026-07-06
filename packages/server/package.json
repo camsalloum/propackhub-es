@@ -16,6 +16,7 @@
     "start": "node dist/index.js",
     "db:migrate": "tsx scripts/run-migrations.ts",
     "db:purge-estimates": "tsx scripts/cleanup-estimates.ts",
+    "db:purge-integration-artifacts": "tsx scripts/purge-integration-test-artifacts.ts",
     "test:migration": "tsx scripts/test-migration-fresh.ts",
     "db:push": "drizzle-kit push:pg",
     "db:seed-templates": "tsx scripts/seed-templates-backfill.ts",
@@ -29,6 +30,7 @@
   },
   "dependencies": {
     "@es/engine": "*",
+    "@fastify/compress": "^7.0.3",
     "@fastify/cors": "^9.0.1",
     "@fastify/helmet": "^11.1.1",
     "@fastify/jwt": "^8.0.1",

@@ -2,6 +2,7 @@ import Fastify, { FastifyInstance } from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import cors from '@fastify/cors';
 import fastifyHelmet from '@fastify/helmet';
+import fastifyCompress from '@fastify/compress';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
@@ -83,6 +84,11 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: 'cross-origin' },
+  });
+
+  await fastify.register(fastifyCompress, {
+    global: true,
+    threshold: 1024,
   });
 
   await fastify.register(fastifyJwt, {

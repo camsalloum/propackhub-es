@@ -1,7 +1,7 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-05 (end-of-session memory)
-**Session focus:** Price checks explorer hierarchy, re-quote/save fixes, clean DB for tomorrow’s testing.
+**Last updated:** 2026-07-06 (price list autosave slab keys)
+**Session focus:** Quote price list prefs PATCH — unit/currency saved but slab keys were dropped on early debounce; gated first save until full selection.
 
 ---
 
@@ -31,6 +31,12 @@ Plan: [`docs/MULTI_SKU_QUOTE_EXPLORER_PLAN.md`](./MULTI_SKU_QUOTE_EXPLORER_PLAN.
 **Next implement session:** Phase 5 optional (whole-quote re-quote, RFQ **entity**, global search, versioning UI) — or continue price-check / commercial polish from user testing.
 
 ---
+
+### 2026-07-06 session — shipped (summary)
+
+| Area | What |
+|------|------|
+| **Estimate editor layout** | Film Structure table + Layer build-up side-by-side only at **≥1280px** (`xl`). Below that: full-width table, layer build-up stacked below (tablet/desktop). Wide monitors unchanged. |
 
 ### 2026-07-05 session — shipped (summary)
 

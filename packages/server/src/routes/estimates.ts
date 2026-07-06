@@ -6,6 +6,7 @@ import { eq, and, desc, sql, isNull, asc, count as drizzleCount } from 'drizzle-
 import { type VisibilityProfile, derivePrintingWebClass } from '@es/engine';
 import { getEffectiveProfile, stripEstimateRow, stripCalculationResult } from '../utils/visibility';
 import { calculateAndPersistEstimate, buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
+import { loadTenantMaterialsByIds } from '../utils/material-map';
 import { getMasterDataVersion } from '../db/platform-master-data';
 import { buildLayerInsertValues, toMaterialLineageSource } from '../utils/layer-lineage';
 import {
@@ -356,10 +357,10 @@ export async function createEstimateRoute(
       exchangeRateUsdToDisplay,
     });
 
-    const tenantMaterials = await db
-      .select()
-      .from(schema.materials)
-      .where(eq(schema.materials.tenantId, tenantId));
+    const tenantMaterials = await loadTenantMaterialsByIds(tenantId, [
+      ...data.layers.map((l) => l.materialId),
+      data.solventMaterialId,
+    ]);
     const materialMap = buildEngineMaterialMap(tenantMaterials);
     const printingWebClass = derivePrintingWebClass(
       data.layers.map((l) => ({ materialId: l.materialId })),
@@ -490,6 +491,10 @@ export async function createEstimateRoute(
           pricePerKg: slab.pricePerKg.toString(),
           sortOrder: i,
         });
+    }
+
+    if (quoteId) {
+      await syncQuoteStatusFromEstimates(db, quoteId, tenantId);
     }
 
     return reply.status(201).send({
@@ -632,12 +637,12 @@ async function getEstimateRoute(
     const requestUser = extractUserFromRequest(request);
     const profile = await getUserVisibilityProfile(db, requestUser.userId);
 
-    // Enrich layers with material details
-    const allMaterials = await db
-      .select()
-      .from(schema.materials)
-      .where(eq(schema.materials.tenantId, tenantId));
-    const materialMap = new Map<string, MaterialRow>(allMaterials.map((m: MaterialRow) => [m.id, m]));
+    const layerMaterialIds = layers.map((l) => l.materialId);
+    const tenantMaterials = await loadTenantMaterialsByIds(tenantId, [
+      ...layerMaterialIds,
+      estimate.solventMaterialId,
+    ]);
+    const materialMap = new Map<string, MaterialRow>(tenantMaterials.map((m: MaterialRow) => [m.id, m]));
     const enrichedLayers = layers.map((l: (typeof layers)[number]) => {
       const mat = materialMap.get(l.materialId);
       const stale = !mat;
@@ -917,10 +922,10 @@ async function updateEstimateRoute(
 
       // 2. Layers (delete + re-insert)
       if (data.layers !== undefined) {
-        const tenantMaterials = await tx
-          .select()
-          .from(schema.materials)
-          .where(eq(schema.materials.tenantId, tenantId));
+        const tenantMaterials = await loadTenantMaterialsByIds(tenantId, [
+          ...data.layers.map((l) => l.materialId),
+          data.solventMaterialId ?? existing.solventMaterialId,
+        ]);
         const materialById = new Map<string, MaterialRow>(
           tenantMaterials.map((m: MaterialRow) => [m.id, m])
         );
@@ -1303,12 +1308,12 @@ async function requoteEstimateRoute(
       exchangeRateUsdToDisplay,
     });
 
-    const allMaterials = await db
-      .select()
-      .from(schema.materials)
-      .where(eq(schema.materials.tenantId, tenantId));
+    const tenantMaterials = await loadTenantMaterialsByIds(
+      tenantId,
+      sourceLayers.map((layer: LayerRow) => layer.materialId)
+    );
     const materialMap = new Map<string, MaterialRow>(
-      allMaterials.map((m: MaterialRow) => [m.id, m])
+      tenantMaterials.map((m: MaterialRow) => [m.id, m])
     );
 
     const priceChanges = sourceLayers.map((layer: LayerRow) => {

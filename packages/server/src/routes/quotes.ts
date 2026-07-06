@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
 import { getEffectiveProfile, stripEstimateRow } from '../utils/visibility';
@@ -9,6 +9,7 @@ import { sendCaughtError } from '../utils/errors';
 import { cloneEstimate } from '../services/clone-estimate';
 import {
   buildStructureSummary,
+  buildStructureSummaries,
   createQuote,
   developmentTotalDisplay,
   isQuoteLocked,
@@ -20,6 +21,17 @@ import { logQuoteStatusTransition } from '../utils/quote-audit';
 
 const QuoteStatusSchema = z.enum(['draft', 'saved', 'sent', 'archived']);
 const ToolingBillingModeSchema = z.enum(['amortized', 'separate', 'not_billed']);
+
+const PriceListDisplayPrefsSchema = z
+  .object({
+    v: z.literal(1),
+    unit: z.enum(['kg', 'm2', 'lm', 'roll', 'pc', 'kpcs']).optional(),
+    currency: z.string().length(3).optional(),
+    slabMode: z.enum(['predefined', 'custom']).optional(),
+    selectedBandKeys: z.array(z.string().min(1)).optional(),
+    customSlabs: z.array(z.coerce.number().positive()).optional(),
+  })
+  .nullable();
 
 const QuoteCreateSchema = z.object({
   customerId: z.string().uuid().optional().nullable(),
@@ -43,6 +55,7 @@ const QuoteCreateSchema = z.object({
 
 const QuoteUpdateSchema = QuoteCreateSchema.partial().extend({
   name: z.string().min(1).optional(),
+  priceListDisplayPrefs: PriceListDisplayPrefsSchema.optional(),
 });
 
 const DuplicateEstimateSchema = z.object({
@@ -215,11 +228,10 @@ async function getQuoteRoute(
       )
       .orderBy(asc(schema.estimates.sortOrder), asc(schema.estimates.createdAt));
 
-    const summaries = [];
-    for (const est of estimates) {
-      const structureSummary = await buildStructureSummary(db, est.id);
-      summaries.push(enrichEstimateSummary(est, structureSummary, profile));
-    }
+    const structureSummaries = await buildStructureSummaries(db, estimates.map((est) => est.id));
+    const summaries = estimates.map((est) =>
+      enrichEstimateSummary(est, structureSummaries.get(est.id) ?? '', profile)
+    );
 
     return reply.send({
       ...quote,
@@ -313,7 +325,9 @@ async function updateQuoteRoute(
         data.status !== 'sent' &&
         keys.length === 1 &&
         keys[0] === 'status';
-      if (!isUnlock) {
+      const isDisplayPrefsOnly =
+        keys.length === 1 && keys[0] === 'priceListDisplayPrefs';
+      if (!isUnlock && !isDisplayPrefsOnly) {
         return reply.status(409).send({
           error: 'Quote is sent and locked. Unlock or re-quote to edit.',
         });
@@ -379,6 +393,10 @@ async function updateQuoteRoute(
         if (!customer) return reply.status(404).send({ error: 'Customer not found' });
       }
       updates.customerId = data.customerId;
+    }
+
+    if (data.priceListDisplayPrefs !== undefined) {
+      updates.priceListDisplayPrefs = data.priceListDisplayPrefs;
     }
 
     const updatedRows = (await db
@@ -489,17 +507,29 @@ async function getQuotePriceListRoute(
       )
       .orderBy(asc(schema.estimates.sortOrder), asc(schema.estimates.createdAt));
 
-    const rows = [];
-    for (const est of estimates) {
-      const structureSummary = await buildStructureSummary(db, est.id);
-      const slabs = await db
-        .select()
-        .from(schema.slabs)
-        .where(eq(schema.slabs.estimateId, est.id))
-        .orderBy(asc(schema.slabs.sortOrder), asc(schema.slabs.quantityKg));
+    const estimateIds = estimates.map((est) => est.id);
+    const [structureSummaries, allSlabs] = await Promise.all([
+      buildStructureSummaries(db, estimateIds),
+      estimateIds.length > 0
+        ? db
+            .select()
+            .from(schema.slabs)
+            .where(inArray(schema.slabs.estimateId, estimateIds))
+            .orderBy(asc(schema.slabs.estimateId), asc(schema.slabs.sortOrder), asc(schema.slabs.quantityKg))
+        : Promise.resolve([]),
+    ]);
+    const slabsByEstimate = new Map<string, typeof allSlabs>();
+    for (const slab of allSlabs) {
+      const list = slabsByEstimate.get(slab.estimateId) ?? [];
+      list.push(slab);
+      slabsByEstimate.set(slab.estimateId, list);
+    }
 
+    const rows = estimates.map((est) => {
+      const structureSummary = structureSummaries.get(est.id) ?? '';
+      const slabs = slabsByEstimate.get(est.id) ?? [];
       const summary = enrichEstimateSummary(est, structureSummary, profile);
-      rows.push({
+      return {
         ...summary,
         slabs: profile.slabTable
           ? slabs.map((s) => ({
@@ -508,8 +538,8 @@ async function getQuotePriceListRoute(
               sortOrder: s.sortOrder,
             }))
           : undefined,
-      });
-    }
+      };
+    });
 
     const separateCharges = profile.platesPerKg
       ? rows

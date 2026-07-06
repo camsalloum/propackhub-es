@@ -280,6 +280,8 @@ export function validateConfiguredEstimate(input: {
   processes?: Array<{ enabled?: boolean }> | null;
   /** When true, order unit is Roll (custom length) — length (LM) is required. */
   requiresRollLength?: boolean;
+  /** Ink in structure → cut-off required for roll/sleeve. */
+  structureHasPrinting?: boolean;
 }): string | null {
   if (!hasConfiguredProcesses(input.processes)) {
     return 'Select at least one manufacturing process in Structure.';
@@ -298,8 +300,12 @@ export function validateConfiguredEstimate(input: {
 
   if (input.productType === 'roll' || input.productType === 'sleeve') {
     const w = Number(input.dimensions.reelWidthMm || 0);
-    const c = Number(input.dimensions.cutoffMm || 0);
-    if (w <= 0 || c <= 0) return 'Set reel width and cutoff in Dimensions.';
+    const c = Number(input.dimensions.cutoffMm ?? NaN);
+    if (w <= 0) return 'Set reel width in Dimensions.';
+    if (!Number.isFinite(c) || c < 0) return 'Cut-off cannot be negative.';
+    if (input.structureHasPrinting && c <= 0) {
+      return 'Set cut-off for printed or converted roll / sleeve.';
+    }
   }
 
   if (input.productType === 'pouch' || input.productType === 'bag') {

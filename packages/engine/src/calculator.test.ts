@@ -413,6 +413,50 @@ describe('Engine calculator — golden tests', () => {
     expect(result.estimate.linearMPerKgReel).toBeCloseTo(45.29, 1);
   });
 
+  it('should calculate LM/kg but not pcs/kg for continuous roll (cutoff 0)', () => {
+    const estimate: Estimate = {
+      id: 'test-continuous-roll',
+      jobName: 'Test continuous roll',
+      layers: [
+        {
+          id: 1,
+          materialId: 'pe-plain',
+          micron: 30,
+          gsm: 0,
+          costPerKg: 0,
+          costPerM2: 0,
+          material: undefined,
+        },
+      ],
+      slabs: [],
+      markupPercent: 15,
+      platesPerKg: 0,
+      deliveryPerKg: 0,
+      orderQuantityKg: 1000,
+      displayCurrency: 'AED',
+      salePricePerKg: 0,
+      materialCostPerKg: 0,
+      totalGsm: 0,
+      totalMicron: 0,
+      filmDensity: 0,
+      sqmPerKg: 0,
+      dimensions: {
+        productType: 'roll',
+        reelWidthMm: 250,
+        cutoffMm: 0,
+        piecesPerCut: 1,
+        numberOfUps: 1,
+        extraPrintingTrimMm: 0,
+      },
+      processes: [],
+    };
+
+    const result = calculateEstimate(estimate, materials);
+    expect(result.estimate.piecesPerKg).toBe(0);
+    expect(result.estimate.gramsPerPiece).toBe(0);
+    expect(result.estimate.linearMPerKgReel).toBeCloseTo(144.93, 1);
+  });
+
   it('should calculate material cost per kg including waste', () => {
     const estimate: Estimate = {
       id: 'test-8',

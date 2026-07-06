@@ -10,6 +10,8 @@ import { JobHeaderFields } from '../components/JobHeaderFields';
 import { SectionTitle } from '../components/SectionTitle';
 import { BagConfigurator } from '../components/BagConfigurator';
 import { PouchConfigurator } from '../components/PouchConfigurator';
+import { RollConfigurator } from '../components/roll/RollConfigurator';
+import { SleeveConfigurator } from '../components/sleeve/SleeveConfigurator';
 import NumberTicker from '../components/NumberTicker';
 import {
   configuratorTypeForBagSubtype,
@@ -21,6 +23,8 @@ import {
   seedPouchDimensionPatch,
   canonicalPouchSubtype,
 } from '../lib/pouchConfiguratorCatalog';
+import { seedRollDimensionPatch, isLabelsRollContext } from '../lib/rollConfiguratorCatalog';
+import { seedSleeveDimensionPatch } from '../lib/sleeveConfiguratorCatalog';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { runClientCalculation } from '../lib/estimateCalc';
@@ -266,6 +270,7 @@ const EstimateEditor = ({
   const [deliveryChargeUsd, setDeliveryChargeUsd] = useState(0);
   // Waste bands + CoRM base: Printed vs Plain from structure (ink → Printed).
   const wastePrintMode = structureIsPrinted(layers) ? 'printed' : 'plain';
+  const structureHasPrinting = wastePrintMode === 'printed';
   const wasteBands: WasteBand[] = useMemo(
     () =>
       wasteBandsForPrintMode(
@@ -559,6 +564,18 @@ const EstimateEditor = ({
   const bagConfiguratorActive = productFamily === 'bag' && bagConfiguratorType != null;
   const pouchConfiguratorType = configuratorTypeForPouchSubtype(productSubtype);
   const pouchConfiguratorActive = productFamily === 'pouch' && pouchConfiguratorType != null;
+  const rollConfiguratorActive = productFamily === 'roll';
+  const sleeveConfiguratorActive = productFamily === 'sleeve';
+  const webConfiguratorActive = rollConfiguratorActive || sleeveConfiguratorActive;
+  const isLabelsRoll = useMemo(
+    () =>
+      isLabelsRollContext({
+        sourceTemplateKey: estimate?.sourceTemplateKey,
+        jobName,
+        dimensions: dimensions as Record<string, unknown>,
+      }),
+    [estimate?.sourceTemplateKey, jobName, dimensions]
+  );
 
   // Accessory materials for the pouch configurator dropdowns.
   // Hardware (zipper/spout/valve/handle) comes from accessory-typed rows; the
@@ -634,6 +651,36 @@ const EstimateEditor = ({
       return { ...prev, ...patch };
     });
   }, [pouchConfiguratorActive, pouchConfiguratorType, productSubtype]);
+
+  useEffect(() => {
+    if (!rollConfiguratorActive) return;
+    setDimensions((prev) => {
+      const patch = seedRollDimensionPatch(prev, {
+        isLabels: isLabelsRoll,
+        continuousWeb: !structureHasPrinting,
+      });
+      if (Object.keys(patch).length === 0) return prev;
+      return { ...prev, ...patch };
+    });
+  }, [rollConfiguratorActive, productFamily, isLabelsRoll, structureHasPrinting]);
+
+  useEffect(() => {
+    if (structureHasPrinting) return;
+    setPrintColorCount(null);
+    setCostPerColor(null);
+    setToolingBillingMode(null);
+    setBillableColorCount(null);
+    setToolingScenario('new');
+  }, [structureHasPrinting]);
+
+  useEffect(() => {
+    if (!sleeveConfiguratorActive) return;
+    setDimensions((prev) => {
+      const patch = seedSleeveDimensionPatch(prev);
+      if (Object.keys(patch).length === 0) return prev;
+      return { ...prev, ...patch };
+    });
+  }, [sleeveConfiguratorActive, productFamily]);
 
   // Load materials + customers on mount
   const loadBaseData = useCallback(async () => {
@@ -1621,6 +1668,7 @@ const EstimateEditor = ({
       dimensions: dimensions as Record<string, unknown>,
       processes: processesState,
       requiresRollLength,
+      structureHasPrinting,
     });
     if (err) {
       alert(err);
@@ -1628,7 +1676,7 @@ const EstimateEditor = ({
       return false;
     }
     return true;
-  }, [layers, productType, dimensions, processesState, requiresRollLength]);
+  }, [layers, productType, dimensions, processesState, requiresRollLength, structureHasPrinting]);
 
   const goToSection = useCallback(
     (section: 'structure' | 'dimensions' | 'slabs') => {
@@ -1738,6 +1786,7 @@ const EstimateEditor = ({
         dimensions: dimensions as Record<string, unknown>,
         processes: processesState,
         requiresRollLength,
+        structureHasPrinting,
       });
       if (validationError) {
         alert(validationError);
@@ -2603,9 +2652,8 @@ const EstimateEditor = ({
           subtypeLabel={`${PRODUCT_FAMILY_LABELS[productFamily] ?? productFamily} type`}
           availableSubtypes={availableSubtypes}
           dimensionFields={
-            // Pouch/bag dimensions are entered only in the design panel (every
-            // subtype has a configurator). Roll/sleeve use the inline header fields.
-            productFamily === 'pouch' || productFamily === 'bag'
+            // Pouch/bag/roll/sleeve dimensions are entered in the design panel configurator.
+            productFamily === 'pouch' || productFamily === 'bag' || webConfiguratorActive
               ? []
               : estimationDimensionFields
           }
@@ -2640,6 +2688,22 @@ const EstimateEditor = ({
                 onAccessoriesChange={setAccessories}
                 accessoryMaterials={accessoryMaterialOptions}
               />
+            ) : rollConfiguratorActive ? (
+              <RollConfigurator
+                dimensions={dimensions}
+                onDimensionsChange={(patch) => setDimensions((prev) => ({ ...prev, ...patch }))}
+                totalGsm={totalGsm}
+                filmDensityGcm3={structureMetrics.structureDensity ?? 0}
+                isLabels={isLabelsRoll}
+                continuousWeb={!structureHasPrinting}
+              />
+            ) : sleeveConfiguratorActive ? (
+              <SleeveConfigurator
+                dimensions={dimensions}
+                onDimensionsChange={(patch) => setDimensions((prev) => ({ ...prev, ...patch }))}
+                totalGsm={totalGsm}
+                filmDensityGcm3={structureMetrics.structureDensity ?? 0}
+              />
             ) : undefined
           }
           showSkuFields={!isPriceCheck}
@@ -2650,7 +2714,7 @@ const EstimateEditor = ({
           onBrandChange={setBrand}
           specsCode={specsCode}
           onSpecsCodeChange={setSpecsCode}
-          showDevCostFields={!isPriceCheck && can('platesPerKg')}
+          showDevCostFields={!isPriceCheck && can('platesPerKg') && structureHasPrinting}
           printColorCount={printColorCount}
           onPrintColorCountChange={setPrintColorCount}
           costPerColor={costPerColor}
@@ -3380,15 +3444,29 @@ const EstimateEditor = ({
                     </div>
                   </div>
 
-                  {(orderQtyMetrics.piecesPerKg == null || orderQtyMetrics.lmPerKgReel == null) && (
-                    <p className="text-[11px] text-warning">
-                      Pieces &amp; LM need the product dimensions — set{' '}
-                      {productFamily === 'roll' || productFamily === 'sleeve'
-                        ? 'reel width, cut-off and pieces/cut'
-                        : 'the width, height and gussets'}{' '}
-                      in Job details.
-                    </p>
-                  )}
+                  {(() => {
+                    const isRollSleeve = productFamily === 'roll' || productFamily === 'sleeve';
+                    const missingLm = isRollSleeve && orderQtyMetrics.lmPerKgReel == null;
+                    const missingPieces =
+                      orderQtyMetrics.piecesPerKg == null &&
+                      (productFamily === 'pouch' ||
+                        productFamily === 'bag' ||
+                        (isRollSleeve && structureHasPrinting));
+                    if (!missingLm && !missingPieces) return null;
+                    let msg = 'Set the product dimensions in Job details.';
+                    if (missingLm && missingPieces) {
+                      msg =
+                        'Piece and length yield need reel width, cut-off and pieces/cut — set them in Job details.';
+                    } else if (missingLm) {
+                      msg = 'Length yield needs reel width — set it in Job details.';
+                    } else if (isRollSleeve && structureHasPrinting) {
+                      msg =
+                        'Piece yield needs reel width, cut-off and pieces/cut — set them in Job details.';
+                    } else if (productFamily === 'pouch' || productFamily === 'bag') {
+                      msg = 'Piece yield needs width, height and gussets — set them in Job details.';
+                    }
+                    return <p className="text-[11px] text-warning">{msg}</p>;
+                  })()}
                 </div>
               )}
 

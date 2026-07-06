@@ -54,8 +54,13 @@ export function validateDimensions(dimensions: EstimateDimensions): string[] {
       if (!dimensions.reelWidthMm || dimensions.reelWidthMm <= 0) {
         errors.push('reelWidthMm is required and must be positive for roll/sleeve');
       }
-      if (!dimensions.cutoffMm || dimensions.cutoffMm <= 0) {
-        errors.push('cutoffMm is required and must be positive for roll/sleeve');
+      if (
+        dimensions.cutoffMm === undefined ||
+        dimensions.cutoffMm === null ||
+        !Number.isFinite(dimensions.cutoffMm) ||
+        dimensions.cutoffMm < 0
+      ) {
+        errors.push('cutoffMm is required and cannot be negative for roll/sleeve');
       }
       if (dimensions.numberOfUps === undefined || dimensions.numberOfUps < 1) {
         errors.push('numberOfUps is required and must be at least 1');

@@ -1,15 +1,44 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-06 (price list autosave slab keys)
-**Session focus:** Quote price list prefs PATCH — unit/currency saved but slab keys were dropped on early debounce; gated first save until full selection.
+**Last updated:** 2026-07-06 (continuous web LM/kg when CO=0)
+**Session focus:** Engine decouples LM/kg from cut-off — plain rolls get length yield without fake CO; pcs/kg only when CO>0.
 
 ---
 
 ## Where we stopped (read this first next session)
 
-### **START HERE:** Fresh price-check testing
+### **START HERE:** Verify continuous web costing
 
-**DB is empty** — all estimates hard-deleted (`db:purge-estimates --all`, 29 rows) and quotes soft-deleted (3 rows). Price checks folder should show **No price checks yet**.
+1. Plain roll template → **CO = 0** → Production Summary shows **LM/kg** (not pcs/kg); no cut-off warning.
+2. Printed roll → CO > 0 → both **pcs/kg** and **LM/kg** populate.
+3. Price list **LM** / **roll** units work on plain continuous film.
+
+**Prior:** Roll spec + configurators — RW/CO/PPC + roll spec block; sleeve LF + open web width.
+
+**Key paths:** `engine/calculator.ts`, `lib/rollConfiguratorCatalog.ts`, `components/continuousWeb/`, `components/roll/`.
+
+---
+
+### Roll spec + configurators (prior)
+
+**Bug fixed (HAR `localhost.har`):** Slab selection saved correctly (`selectedBandKeys`) then ~7s later follow-up PATCHes **without** keys wiped the DB. Cause: band-filter effect ran before contexts loaded, cleared `selectedKeys`, and triggered immediate autosave.
+
+**Verify on a multi-SKU quote** (e.g. `PKG-2026-28593`):
+1. Open quote → **Price list** tab (`/quotes/:id/price-list`)
+2. Set **Unit**, **Currency**, pick **≥1 predefined slab** (or custom quantities)
+3. Network: one `PATCH /api/v1/quotes/:id` with full `priceListDisplayPrefs` including `selectedBandKeys` or `customSlabs`
+4. Wait for estimate reloads to finish — **no** follow-up PATCH dropping keys
+5. Hard refresh — all four dropdowns restore (unit, currency, slab source, slabs)
+
+**DB check:** `npx tsx packages/server/scripts/check-price-list-prefs.ts` — recent quotes should show `selectedBandKeys` when slabs were picked.
+
+**Still not persisted:** Per-estimate `PriceListPanel` inside `EstimateEditor` uses **user-level** custom slab prefs only (not quote autosave).
+
+---
+
+### Price-check testing (when DB clean)
+
+**DB was wiped 2026-07-05** for price-check flow testing. If folder is empty again, use flow below. Otherwise continue commercial/price-list polish above.
 
 **Test flow:**
 1. Estimates → **Price checks** → **New price check**
@@ -36,7 +65,13 @@ Plan: [`docs/MULTI_SKU_QUOTE_EXPLORER_PLAN.md`](./MULTI_SKU_QUOTE_EXPLORER_PLAN.
 
 | Area | What |
 |------|------|
+| **Quote price list autosave** | `quotes.price_list_display_prefs` JSONB; `useQuotePriceListPrefs` debounced PATCH for unit/currency, immediate for slab changes; hydrate on tab open; allowed on sent quotes (display-only). |
+| **Price list slab wipe fix** | HAR proved save-then-wipe: band filter cleared keys before contexts loaded → PATCH without `selectedBandKeys`. Fix: `setSelectedKeysQuiet`, save only when `canPersist` (unit+currency+slab), restore keys after bands load, explicit `clearSelectedBands` for None. |
+| **Price list UX** | Predefined slab labels in selected unit (Kpcs etc.); all slab qty labels rounded (`formatSlabQty`). |
 | **Estimate editor layout** | Film Structure table + Layer build-up side-by-side only at **≥1280px** (`xl`). Below that: full-width table, layer build-up stacked below (tablet/desktop). Wide monitors unchanged. |
+| **Infra / prevention** | P2 deferred plan MD; `no-monolith-files` Cursor rule; integration-test DB pollution purge. |
+
+**Key files:** `useQuotePriceListPrefs.ts`, `CombinedVariantPriceList.tsx`, `QuoteWorkspace.tsx`, `quotePriceListPrefs.ts`, `quotes.ts`, `schema-patches.sql`, `priceListPricing.ts`.
 
 ### 2026-07-05 session — shipped (summary)
 
@@ -70,6 +105,8 @@ Plan: [`docs/MULTI_SKU_QUOTE_EXPLORER_PLAN.md`](./MULTI_SKU_QUOTE_EXPLORER_PLAN.
 ---
 
 ### Prior notes (unchanged)
+
+**2026-07-06 — Quote price list prefs:** Combined quote **Price list** tab autosaves to `quotes.price_list_display_prefs` (not per-estimate editor panel). Shape: `{ v:1, unit?, currency?, slabMode?, selectedBandKeys?, customSlabs? }`.
 
 **2026-07-05 — Price list prefs:** Custom slab quantities persist per user (by unit). **Below MOQ** warning on custom slabs (non-blocking).
 

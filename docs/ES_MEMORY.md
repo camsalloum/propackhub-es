@@ -172,6 +172,27 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 
 ## Session log
 
+### 2026-07-06 — Continuous web (CO=0) LM/kg yield
+
+- **Rule:** Unprinted roll/sleeve (CO=0) has no pieces/kg; **LM/kg** still from RW + GSM: `(1000/GSM) / RW_mm × 1000`.
+- **Engine:** `calculateProductMetrics` decoupled length yield from cut-off; `validator` allows `cutoffMm >= 0`.
+- **UI:** Production Summary warning no longer asks for cut-off on plain continuous rolls.
+- **Not used:** Fake CO=1000 to equate pcs/kg with LM/kg — direct LM/kg only.
+
+### 2026-07-06 — Roll spec (weight-first OD)
+
+- **Input model:** Film weight (kg) is primary; OD, length, pieces/roll derived from structure GSM + density and core (ID preset 3"/5"/6", default **6"**, wall thickness default **12 mm**, editable).
+- **Default seed:** Weight auto-set so OD ≈ **600 mm** at first open (labels default reel).
+- **Roll panel:** RW, CO, PPC + roll spec block with live OD/length/pieces.
+- **Sleeve panel:** LF, CO only; roll spec width = **2×LF + 4 mm** seam (wound view **OW**); costing `reelWidthMm` stays lay-flat.
+- **Engine:** `packages/engine/src/roll-after-slitting.ts` (+ tests); web `lib/rollSpec.ts`, `RollSpecFields.tsx`.
+
+### 2026-07-06 — Roll + Sleeve configurators
+
+- **Roll:** RW, CO, PPC only (no ups in UI; engine defaults ups=1, trim=0). Two-panel: isometric wound roll + flat web (equal lanes when PPC>1).
+- **Sleeve:** LF, CO; `reelWidthMm` synced from lay-flat for costing. Two-panel: wound film roll + flat blank with seam strip.
+- **Files:** `components/roll/*`, `components/sleeve/*`, `components/continuousWeb/*`, `lib/rollConfiguratorCatalog.ts`, `lib/sleeveConfiguratorCatalog.ts`, minimal `EstimateEditor` wiring.
+
 ### 2026-07-05 — Full day (bugs, price checks, explorer)
 
 **End state:** DB empty for testing (29 estimates purged, 3 quotes soft-deleted). Price checks folder ready for clean multi-structure flow.
@@ -1097,3 +1118,22 @@ Server app code no longer uses `console.*` for runtime logs. Routes use `request
 ### 2026-07-04 — Repo housekeeping (HAR / zip)
 
 Deleted tracked `localhost.har` (~9MB network capture) and `stitch.zip`. Scan found no JWT Bearer tokens; cookies empty. Added `*.har` and `stitch.zip` to `.gitignore`. No history rewrite. Left alone: `.bat` launchers, `archive/legacy-laravel`, migration-script sprawl, `any` cleanup, web test coverage (opportunistic backlog).
+
+### 2026-07-06 — Quote price list display prefs (autosave)
+
+**Scope:** Combined quote **Price list** tab only (`/quotes/:id/price-list`, `CombinedVariantPriceList`). Per-estimate `PriceListPanel` in `EstimateEditor` still uses user-level custom slab prefs (localStorage), not quote JSONB.
+
+**Storage:** `quotes.price_list_display_prefs` JSONB. PATCH field `priceListDisplayPrefs` on `PATCH /api/v1/quotes/:id`. Allowed on sent/locked quotes (display-only). Schema patch in `schema-patches.sql`.
+
+**Payload shape:**
+```json
+{ "v": 1, "unit": "kpcs", "currency": "AED", "slabMode": "predefined", "selectedBandKeys": ["0:422"], "customSlabs": [5, 10] }
+```
+
+**Client:** `useQuotePriceListPrefs` — debounced save for unit/currency; immediate save for slab mode / band toggle / custom qty. Only PATCH when `canPersist` (unit + currency + ≥1 slab). `setSelectedKeysQuiet` for band validation (no autosave). Restore saved `selectedBandKeys` once waste bands load.
+
+**HAR root cause (2026-07-06):** Slab save succeeded (`selectedBandKeys: ["0:80"]`) then ~7s later multiple PATCHes **without** keys wiped DB. Band-filter effect ran while `activeBands` empty (contexts still loading) → cleared keys → immediate autosave. Fix above.
+
+**Also shipped:** Predefined slab column headers in selected unit (`formatPredefinedSlabRange`); slab qty labels rounded (`formatSlabQty`); stable `estimateIds` / load deps in `QuoteWorkspace` + `CombinedVariantPriceList`.
+
+**Verify:** `npx tsx packages/server/scripts/check-price-list-prefs.ts`; Network filter `quotes` + Method PATCH; hard refresh after web bundle change.

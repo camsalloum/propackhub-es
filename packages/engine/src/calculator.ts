@@ -302,39 +302,45 @@ function calculateProductMetrics(
   const sqmPerKg = 1000 / totalGsm;
 
   switch (dimensions.productType) {
-    case 'roll':
-      if (dimensions.reelWidthMm && dimensions.cutoffMm && dimensions.piecesPerCut) {
-        // pieces_per_kg = (1000 / (reel_width_mm × cut_off_mm × total_gsm × 1e-6)) × pieces_per_cut
-        result.piecesPerKg = (1000 / (dimensions.reelWidthMm * dimensions.cutoffMm * totalGsm * 1e-6)) * dimensions.piecesPerCut;
+    case 'roll': {
+      const rw = dimensions.reelWidthMm;
+      const co = dimensions.cutoffMm;
+      const ppc = dimensions.piecesPerCut;
+
+      if (rw && rw > 0) {
+        result.linearMPerKgReel = (sqmPerKg / rw) * 1000;
+      }
+
+      if (printingWebWidthMm > 0) {
+        result.linearMPerKgWeb = (sqmPerKg / printingWebWidthMm) * 1000;
+      }
+
+      if (rw && rw > 0 && co && co > 0 && ppc && ppc >= 1) {
+        result.piecesPerKg =
+          (1000 / (rw * co * totalGsm * 1e-6)) * ppc;
         result.gramsPerPiece = 1000 / result.piecesPerKg;
-
-        if (printingWebWidthMm > 0) {
-          // linear_m_per_kg_web = (sqm_per_kg / printing_web_width_mm) × 1000
-          result.linearMPerKgWeb = (sqmPerKg / printingWebWidthMm) * 1000;
-        }
-
-        if (dimensions.reelWidthMm > 0) {
-          // linear_m_per_kg_reel = (sqm_per_kg / reel_width_mm) × 1000
-          result.linearMPerKgReel = (sqmPerKg / dimensions.reelWidthMm) * 1000;
-        }
       }
       break;
+    }
 
-    case 'sleeve':
-      if (dimensions.reelWidthMm && dimensions.cutoffMm) {
-        // Same as roll but pieces_per_cut = 1
-        result.piecesPerKg = (1000 / (dimensions.reelWidthMm * dimensions.cutoffMm * totalGsm * 1e-6)) * 1;
+    case 'sleeve': {
+      const rw = dimensions.reelWidthMm;
+      const co = dimensions.cutoffMm;
+
+      if (rw && rw > 0) {
+        result.linearMPerKgReel = (sqmPerKg / rw) * 1000;
+      }
+
+      if (printingWebWidthMm > 0) {
+        result.linearMPerKgWeb = (sqmPerKg / printingWebWidthMm) * 1000;
+      }
+
+      if (rw && rw > 0 && co && co > 0) {
+        result.piecesPerKg = (1000 / (rw * co * totalGsm * 1e-6)) * 1;
         result.gramsPerPiece = 1000 / result.piecesPerKg;
-
-        if (printingWebWidthMm > 0) {
-          result.linearMPerKgWeb = (sqmPerKg / printingWebWidthMm) * 1000;
-        }
-
-        if (dimensions.reelWidthMm > 0) {
-          result.linearMPerKgReel = (sqmPerKg / dimensions.reelWidthMm) * 1000;
-        }
       }
       break;
+    }
 
     case 'pouch': {
       // Pouch: flat-sheet blank area model (front + back + gussets + seals).

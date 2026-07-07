@@ -172,6 +172,19 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 
 ## Session log
 
+### 2026-07-07 — Printed roll CO defaults (session closed)
+
+- **Problem:** Roll form showed **CO = 0** on printed rolls — templates seed `cutoffMm: 0` and seeder treated 0 as valid.
+- **Rule:** Plain continuous web → CO **0**. Printed rolls → `defaultCutoffMm()` proportional to RW (general **0.6×**, labels **~5.14×**); user can edit after seed.
+- **Files:** `lib/rollConfiguratorCatalog.ts`, `rollConfiguratorCatalog.test.ts`.
+
+### 2026-07-07 — Templates deck + laminate card preview (session closed)
+
+- **Deck:** `TemplateDeck.tsx` — horizontal 3D depth-stack gallery; non-passive `wheel` listener blocks browser back/forward on horizontal trackpad swipe; `TemplateCarousel` deleted.
+- **Card stack:** `LaminateStack3D` — **substrates only** (ink/adhesive filtered in `visualizerLayers` + component); uniform slab footprint; **layer 1 (print side) on top** (Z-order + z-index fixed).
+- **Colors:** New `lib/substrateFilmColor.ts` — flat fills shared with `FilmStackVisualizer` (transparent→gray `#7A94B0`, white→`#FFFFFF`, alu/met→`#8B9AAD`, natural→kraft `#C9A96E`). No gloss, gradients, or shadows on template slabs.
+- **Page:** `StandardTemplates.tsx` — search in header row, passes `substrateFamily` into layer data for color resolution.
+
 ### 2026-07-06 — Sleeve seam 6 mm + LF/OW display split
 
 - **Seam:** `SLEEVE_SEAM_OVERLAP_MM = 6` → open web **OW = 2×LF + 6**.
@@ -188,6 +201,7 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 ### 2026-07-06 — Continuous web (CO=0) LM/kg yield
 
 - **Rule:** Unprinted roll/sleeve (CO=0) has no pieces/kg; **LM/kg** still from RW + GSM: `(1000/GSM) / RW_mm × 1000`.
+- **Printed rolls:** CO defaults from RW (`defaultCutoffMm` in `rollConfiguratorCatalog.ts`) — not zero. Only plain continuous web keeps CO=0.
 - **Engine:** `calculateProductMetrics` decoupled length yield from cut-off; `validator` allows `cutoffMm >= 0`.
 - **UI:** Production Summary warning no longer asks for cut-off on plain continuous rolls.
 - **Not used:** Fake CO=1000 to equate pcs/kg with LM/kg — direct LM/kg only.

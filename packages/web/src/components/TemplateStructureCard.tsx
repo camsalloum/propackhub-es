@@ -7,6 +7,7 @@ export interface TemplateCardLayer {
   type: string;
   material: string;
   micron: number;
+  family?: string | null;
 }
 
 /**

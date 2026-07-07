@@ -106,13 +106,11 @@
        may override any of them to harmonise; the card CHROME (stage, glow,
        border, text) already follows the active theme via --color-* tokens.
        ============================================================ */
-    --mat-pet:    20 184 166;   /* teal    — PET / polyester */
-    --mat-bopp:   59 130 246;   /* blue    — BOPP / OPP */
-    --mat-pe:     34 197  94;   /* green   — PE family: LDPE/LLDPE/HDPE/PP */
-    --mat-alu:   148 163 184;   /* silver  — aluminium / metallised */
-    --mat-paper: 245 158  11;   /* amber   — paper / kraft */
-    --mat-ink:   217  70 239;   /* magenta — print / ink */
-    --mat-adh:   244  63  94;   /* rose    — adhesive / laminating */
+    --mat-pet:     13 148 136;   /* vivid clear PET */
+    --mat-bopp:    37  99 235;   /* vivid BOPP */
+    --mat-pe:      22 163  74;   /* vivid PE */
+    --mat-alu:    186 198 214;   /* bright foil silver */
+    --mat-paper:  180  83   9;   /* kraft */
 
     /* ============================================================
        DENSITY
@@ -999,21 +997,13 @@
     border-color: rgb(255 255 255 / 0.20);
   }
 
-  /* ---- Laminate stack (template card) — exploded isometric 3D ----
-     Film layers render as vivid, material-family-coloured slabs on a
-     theme-following stage (surface-sunken + accent glow). On card hover /
-     focus the stack explodes apart along Z so each film is legible, then
-     settles back on leave. Colour encodes the material family (--mat-*);
-     the stage, glow and border follow the active theme (--color-*). Slab
-     inline vars: --slab-a (family colour) and --slab-z (rest offset). */
+  /* ---- Laminate stack (template card) — substrate films only ---- */
   .lam3d {
     position: relative;
     height: 220px;
     display: grid;
     place-items: center;
-    background:
-      radial-gradient(120% 90% at 50% 12%, rgb(var(--color-accent) / 0.16), transparent 60%),
-      rgb(var(--color-surface-sunken));
+    background: rgb(var(--color-surface-sunken));
     border-bottom: 1px solid rgb(var(--color-border));
     border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
     perspective: 1100px;
@@ -1030,36 +1020,23 @@
   }
   .lam3d__stack {
     position: relative;
-    width: 200px;
-    height: 140px;
+    width: 212px;
+    height: 148px;
     transform-style: preserve-3d;
-    transform: rotateX(54deg) rotateZ(-40deg);
+    transform: rotateX(58deg) rotateZ(-38deg);
     transition: transform var(--motion-enter) var(--ease-overlay);
   }
   .lam3d__slab {
     position: absolute;
-    left: 0;
-    right: 0;
-    top: -20px;
-    height: 168px;
-    border-radius: 9px;
-    --slab-b: color-mix(in srgb, var(--slab-a) 78%, white);
-    background: var(--slab-a); /* fallback if color-mix / gradient unsupported */
-    background: linear-gradient(120deg, var(--slab-a), var(--slab-b));
-    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.18), 0 14px 24px -16px rgb(0 0 0 / 0.5); /* fallback */
-    box-shadow:
-      inset 0 0 0 1px rgb(0 0 0 / 0.18),
-      0 20px 32px -14px color-mix(in srgb, var(--slab-a) 65%, transparent);
+    inset: 0;
+    border-radius: 4px;
     transform: translateZ(var(--slab-z));
     transition: transform var(--motion-enter) var(--ease-spring);
   }
-  .lam3d__slab.is-adhesive {
-    background: repeating-linear-gradient(45deg,
-      var(--slab-a) 0 6px, rgb(255 255 255 / 0.32) 6px 12px);
-  }
+
   .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__stack,
   .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__stack {
-    transform: rotateX(48deg) rotateZ(-36deg);
+    transform: rotateX(52deg) rotateZ(-34deg);
   }
   .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__slab,
   .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__slab {
@@ -1071,7 +1048,7 @@
     .lam3d__stack, .lam3d__slab { transition: none; }
     .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__stack,
     .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__stack {
-      transform: rotateX(54deg) rotateZ(-40deg);
+      transform: rotateX(58deg) rotateZ(-38deg);
     }
     .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__slab,
     .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__slab {

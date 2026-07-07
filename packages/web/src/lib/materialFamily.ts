@@ -1,47 +1,61 @@
-// materialFamily — classify a laminate layer into a colour-coded material family
-// used by the template cards' 3D stack (see `--mat-*` tokens in index.css).
-//
-// Colour is data: each family maps to one token so a structure reads at a glance
-// (teal PET, blue BOPP, green PE, silver Alu, amber Paper, magenta Ink, rose
-// Adhesive). Ink/adhesive are driven by layer TYPE; substrates by material name.
-
-export type MaterialFamily = 'pet' | 'bopp' | 'pe' | 'alu' | 'paper' | 'ink' | 'adh';
-
-/**
- * Resolve the material family for a layer.
- *
- * @param material Free-text material name (e.g. "LDPE natural", "Met-PET", "BOPP").
- * @param type     Layer type; `ink` and `adhesive` take precedence over the name.
- */
-export function materialFamily(material: string, type?: string): MaterialFamily {
-  if (type === 'ink') return 'ink';
-  if (type === 'adhesive') return 'adh';
-
-  const n = (material || '').toLowerCase();
-
-  // Metallised / foil first — "met-pet" and "alu" must not fall through to PET/PE.
-  if (n.includes('alu') || n.includes('foil') || n.includes('met')) return 'alu';
-  if (n.includes('paper') || n.includes('kraft')) return 'paper';
-  if (n.includes('pet') || n.includes('polyester')) return 'pet';
-  if (n.includes('bopp') || n.includes('opp') || n.includes('cpp')) return 'bopp';
-  if (
-    n.includes('ldpe') ||
-    n.includes('lldpe') ||
-    n.includes('hdpe') ||
-    n.includes('mdpe') ||
-    n.includes('shrink') ||
-    n.includes('cast') ||
-    n.includes('pp') ||
-    n.includes('pe')
-  ) {
-    return 'pe';
-  }
-
-  // Unknown substrate → PE green (the most common film family here).
-  return 'pe';
-}
-
-/** CSS custom-property reference for a family's base colour (e.g. `rgb(var(--mat-pe))`). */
-export function materialFamilyColorVar(family: MaterialFamily): string {
-  return `rgb(var(--mat-${family}))`;
-}
+// materialFamily — substrate layer helpers for template cards and catalog.
+
+import { substrateFilmHex } from './substrateFilmColor';
+
+const NON_SUBSTRATE_TYPES = new Set(['ink', 'adhesive', 'solvent', 'accessory']);
+
+/** True when a layer row is a substrate film (preview shows these only). */
+export function isSubstrateLayerType(type?: string | null): boolean {
+  if (!type) return false;
+  return !NON_SUBSTRATE_TYPES.has(type.toLowerCase());
+}
+
+/** Resolve layer type from template row + optional material catalog row. */
+export function resolveLayerType(
+  layerType?: string | null,
+  materialType?: string | null,
+): string {
+  return (layerType || materialType || 'substrate').toLowerCase();
+}
+
+/** Inline flat fill — same rules as estimate layer build-up. */
+export function substrateFilmStyle(
+  material: string,
+  family?: string | null,
+): { background: string } {
+  return { background: substrateFilmHex(material, family) };
+}
+
+/** @deprecated Use substrateFilmStyle */
+export type SubstrateFamily = 'pet' | 'bopp' | 'pe' | 'alu' | 'paper';
+
+/** @deprecated Use substrateFilmStyle */
+export function substrateFilmClasses(_material: string): string {
+  return 'lam3d__slab';
+}
+
+/** @deprecated */
+export function substrateFamily(material: string): SubstrateFamily {
+  const n = (material || '').toLowerCase();
+  if (n.includes('alu') || n.includes('foil') || n.includes('met')) return 'alu';
+  if (n.includes('paper') || n.includes('kraft')) return 'paper';
+  if (n.includes('pet') || n.includes('polyester')) return 'pet';
+  if (n.includes('bopp') || n.includes('opp') || n.includes('cpp')) return 'bopp';
+  return 'pe';
+}
+
+/** @deprecated */
+export type MaterialFamily = SubstrateFamily | 'ink' | 'adh';
+
+/** @deprecated */
+export function materialFamily(material: string, type?: string): MaterialFamily {
+  if (type === 'ink') return 'ink';
+  if (type === 'adhesive') return 'adh';
+  return substrateFamily(material);
+}
+
+/** @deprecated */
+export function materialFamilyColorVar(family: MaterialFamily): string {
+  return `rgb(var(--mat-${family}))`;
+}
+

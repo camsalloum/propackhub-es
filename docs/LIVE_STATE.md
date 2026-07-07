@@ -1,25 +1,41 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-07 (Printed roll CO defaults proportional to RW)
-**Session focus:** CO default was 0 on printed rolls because templates seed `cutoffMm: 0` and the seeder treated 0 as valid. Fixed in `rollConfiguratorCatalog.ts`: plain continuous web keeps CO=0; printed rolls seed/display CO proportional to reel width (general 0.6×RW, labels ~5.14×RW). User can still edit CO after seeding.
+**Last updated:** 2026-07-07 (Roll CO defaults — session closed)
+**Session focus:** Printed roll form no longer defaults CO to 0. `defaultCutoffMm()` seeds CO from reel width; plain continuous web unchanged (CO=0). Prior sessions: template deck + laminate preview; roll wound-view spiral model.
 
 ---
 
 ## Where we stopped (read this first next session)
 
-### **START HERE:** Verify continuous web costing
+### **DONE (closed):** Printed roll CO defaults
 
-1. Plain roll template → **CO = 0** → Production Summary shows **LM/kg** (not pcs/kg); no cut-off warning.
-2. Printed roll → CO > 0 → both **pcs/kg** and **LM/kg** populate.
-3. Price list **LM** / **roll** units work on plain continuous film.
+- General printed roll: CO ≈ **0.6 × RW** (e.g. RW 250 → CO 150)
+- Labels roll: CO ≈ **5.14 × RW** (e.g. RW 35 → CO 180)
+- Plain continuous web (`continuousWeb`): CO **0**
+- Template `cutoffMm: 0` placeholder replaced on client seed when structure is printed
 
-**Prior:** Roll spec + configurators — RW/CO/PPC + roll spec block; sleeve LF + open web width.
+**Verify:** New printed roll estimate → CO pre-filled. Plain roll → CO 0. Edit CO freely after seed.
 
-**Key paths:** `engine/calculator.ts`, `lib/rollConfiguratorCatalog.ts`, `components/continuousWeb/`, `components/roll/`.
+**Key paths:** `lib/rollConfiguratorCatalog.ts`, `pages/EstimateEditor.tsx` (`continuousWeb={!structureHasPrinting}`).
 
 ---
 
-### Roll spec + configurators (prior)
+### **START HERE:** Templates page (`/templates`) — deck + laminate cards
+
+1. Horizontal **TemplateDeck** — swipe/drag advances cards; trackpad horizontal wheel must not navigate browser back.
+2. **Laminates · Triplex** card — 3 equal-size substrate slabs, top → bottom: gray PET transparent → metal foil → kraft natural LDPE.
+3. **Duplex** — 2 films only (PET + LDPE); no ink/adhesive in preview.
+4. Colors: flat fills from `lib/substrateFilmColor.ts` — transparent=gray, white=white, alu/met=metal, natural=kraft. **No** gradients, gloss, or drop-shadow on slabs.
+
+**Key paths:** `components/TemplateDeck.tsx`, `components/LaminateStack3D.tsx`, `lib/substrateFilmColor.ts`, `components/TemplateStructureCard.tsx`, `pages/StandardTemplates.tsx`, `index.css` (`.lam3d*`, `.deck*`).
+
+**Follow-up (optional):** `StandardTemplates.tsx` ~697 lines — split to `features/templates/` when next touching that page.
+
+**Prior:** Roll wound-view Archimedean spiral (`rollSpiralModel.ts`, `RollVisualizer.tsx`); printed roll CO defaults (`rollConfiguratorCatalog.ts`).
+
+---
+
+### Continuous web CO defaults (prior)
 
 **Bug fixed (HAR `localhost.har`):** Slab selection saved correctly (`selectedBandKeys`) then ~7s later follow-up PATCHes **without** keys wiped the DB. Cause: band-filter effect ran before contexts loaded, cleared `selectedKeys`, and triggered immediate autosave.
 

@@ -1,5 +1,9 @@
 import { useMemo, type CSSProperties } from 'react';
 import { formatMicronDisplay } from '../lib/formatMicron';
+import {
+  isWhiteMaterial,
+  substrateFilmHex,
+} from '../lib/substrateFilmColor';
 
 export type FilmLayer = {
   id: string | number;
@@ -139,37 +143,10 @@ function materialKey(layer: FilmLayer): string {
   return (layer.material || '').toUpperCase();
 }
 
-function isMetallizedName(name: string): boolean {
-  return /\d*ALU|AL\/|VMPET|VMOPP|METALL|METPET|METBOPP|FOIL|SILVER|ALUMIN/i.test(name);
-}
-
-function isPaperName(name: string): boolean {
-  return /PAPER|KRAFT|C1S|C2S|MG\s*PAPER|GP\s*PAPER|BOARD/i.test(name);
-}
-
-function isWhiteName(name: string): boolean {
-  return /WHITE|OPAQUE/i.test(name);
-}
-
-function isNaturalName(name: string): boolean {
-  return /NATURAL/i.test(name) && !isWhiteName(name);
-}
-
 function inkVariant(name: string): 'white' | 'black' | 'rainbow' {
-  if (isWhiteName(name)) return 'white';
+  if (isWhiteMaterial(name)) return 'white';
   if (/BLACK/i.test(name)) return 'black';
   return 'rainbow';
-}
-
-function substrateBg(family?: string | null): string {
-  const f = (family || '').toUpperCase();
-  if (f.includes('PET')) return '#9FB4C8';
-  if (f.includes('BOPP') || f.includes('OPP')) return '#E8EFF6';
-  if (f.includes('AL') || f.includes('MET') || f.includes('FOIL')) return '#B8BFC8';
-  if (f.includes('NY') || f.includes('PA')) return '#C4BFB6';
-  if (f.includes('EVOH')) return '#E0D5C4';
-  if (f.includes('PE')) return '#D1DAE6';
-  return '#E8EDF4';
 }
 
 type LayerAppearance = { className: string; style?: CSSProperties; darkText?: boolean };
@@ -188,22 +165,9 @@ function layerAppearance(layer: FilmLayer, inkIndex: number): LayerAppearance {
     return { className: 'film-stack-adhesive', darkText: false };
   }
 
-  if (isMetallizedName(name)) {
-    return { className: 'film-stack-metallized', darkText: true };
-  }
-  if (isPaperName(name)) {
-    return { className: 'film-stack-paper', darkText: true };
-  }
-  if (isWhiteName(name)) {
-    return { className: 'film-stack-film', style: { background: '#F8FAFC' }, darkText: true };
-  }
-  if (isNaturalName(name)) {
-    return { className: 'film-stack-natural', darkText: true };
-  }
-
   return {
     className: 'film-stack-film',
-    style: { background: substrateBg(layer.family) },
+    style: { background: substrateFilmHex(layer.material || name, layer.family) },
     darkText: true,
   };
 }

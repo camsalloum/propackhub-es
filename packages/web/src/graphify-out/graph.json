@@ -320,7 +320,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_bottomsheet",
-      "community": 41,
+      "community": 2,
       "norm_label": "bottomsheet.tsx"
     },
     {
@@ -330,7 +330,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "components_bottomsheet_bottomsheetprops",
-      "community": 41,
+      "community": 2,
       "norm_label": "bottomsheetprops"
     },
     {
@@ -340,7 +340,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "components_bottomsheet_readismobile",
-      "community": 41,
+      "community": 2,
       "norm_label": "readismobile()"
     },
     {
@@ -350,7 +350,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "components_bottomsheet_bottomsheet",
-      "community": 41,
+      "community": 2,
       "norm_label": "bottomsheet()"
     },
     {
@@ -690,7 +690,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_emptystate",
-      "community": 3,
+      "community": 37,
       "norm_label": "emptystate.tsx"
     },
     {
@@ -700,7 +700,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "components_emptystate_emptystateprops",
-      "community": 3,
+      "community": 37,
       "norm_label": "emptystateprops"
     },
     {
@@ -710,7 +710,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "components_emptystate_emptystate",
-      "community": 3,
+      "community": 37,
       "norm_label": "emptystate()"
     },
     {
@@ -720,7 +720,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_estimateprocessespanel",
-      "community": 35,
+      "community": 34,
       "norm_label": "estimateprocessespanel.tsx"
     },
     {
@@ -730,7 +730,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "components_estimateprocessespanel_estimateprocessrow",
-      "community": 35,
+      "community": 34,
       "norm_label": "estimateprocessrow"
     },
     {
@@ -740,7 +740,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "components_estimateprocessespanel_props",
-      "community": 35,
+      "community": 34,
       "norm_label": "props"
     },
     {
@@ -750,7 +750,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "components_estimateprocessespanel_estimateprocessespanel",
-      "community": 35,
+      "community": 34,
       "norm_label": "estimateprocessespanel()"
     },
     {
@@ -940,7 +940,7 @@
       "source_location": "L273",
       "_origin": "ast",
       "id": "components_filmstackvisualizer_filmstackvisualizer",
-      "community": 10,
+      "community": 35,
       "norm_label": "filmstackvisualizer()"
     },
     {
@@ -950,7 +950,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_jobheaderfields",
-      "community": 34,
+      "community": 38,
       "norm_label": "jobheaderfields.tsx"
     },
     {
@@ -960,7 +960,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "components_jobheaderfields_isexwdelivery",
-      "community": 34,
+      "community": 38,
       "norm_label": "isexwdelivery()"
     },
     {
@@ -970,7 +970,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "components_jobheaderfields_specfield",
-      "community": 34,
+      "community": 38,
       "norm_label": "specfield()"
     },
     {
@@ -980,8 +980,48 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "components_jobheaderfields_jobheaderfields",
-      "community": 34,
+      "community": 38,
       "norm_label": "jobheaderfields()"
+    },
+    {
+      "label": "LaminateStack3D.tsx",
+      "file_type": "code",
+      "source_file": "components/LaminateStack3D.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "components_laminatestack3d",
+      "community": 39,
+      "norm_label": "laminatestack3d.tsx"
+    },
+    {
+      "label": "LaminateStack3DLayer",
+      "file_type": "code",
+      "source_file": "components/LaminateStack3D.tsx",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "components_laminatestack3d_laminatestack3dlayer",
+      "community": 39,
+      "norm_label": "laminatestack3dlayer"
+    },
+    {
+      "label": "LaminateStack3DProps",
+      "file_type": "code",
+      "source_file": "components/LaminateStack3D.tsx",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "components_laminatestack3d_laminatestack3dprops",
+      "community": 39,
+      "norm_label": "laminatestack3dprops"
+    },
+    {
+      "label": "LaminateStack3D()",
+      "file_type": "code",
+      "source_file": "components/LaminateStack3D.tsx",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "components_laminatestack3d_laminatestack3d",
+      "community": 39,
+      "norm_label": "laminatestack3d()"
     },
     {
       "label": "LaminateVisualizer.tsx",
@@ -1210,7 +1250,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_numberticker",
-      "community": 39,
+      "community": 2,
       "norm_label": "numberticker.tsx"
     },
     {
@@ -1220,7 +1260,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "components_numberticker_numbertickerprops",
-      "community": 39,
+      "community": 2,
       "norm_label": "numbertickerprops"
     },
     {
@@ -1230,7 +1270,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "components_numberticker_numberticker",
-      "community": 39,
+      "community": 2,
       "norm_label": "numberticker()"
     },
     {
@@ -1730,7 +1770,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_quotesummarypanel",
-      "community": 36,
+      "community": 31,
       "norm_label": "quotesummarypanel.tsx"
     },
     {
@@ -1740,7 +1780,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "components_quotesummarypanel_props",
-      "community": 36,
+      "community": 31,
       "norm_label": "props"
     },
     {
@@ -1750,7 +1790,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "components_quotesummarypanel_quotesummarypanel",
-      "community": 36,
+      "community": 31,
       "norm_label": "quotesummarypanel()"
     },
     {
@@ -1800,7 +1840,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_routetransition",
-      "community": 39,
+      "community": 2,
       "norm_label": "routetransition.tsx"
     },
     {
@@ -1810,7 +1850,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "components_routetransition_routetransitionprops",
-      "community": 39,
+      "community": 2,
       "norm_label": "routetransitionprops"
     },
     {
@@ -1820,7 +1860,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "components_routetransition_readdurationms",
-      "community": 39,
+      "community": 2,
       "norm_label": "readdurationms()"
     },
     {
@@ -1830,7 +1870,7 @@
       "source_location": "L74",
       "_origin": "ast",
       "id": "components_routetransition_readstring",
-      "community": 39,
+      "community": 2,
       "norm_label": "readstring()"
     },
     {
@@ -1840,7 +1880,7 @@
       "source_location": "L92",
       "_origin": "ast",
       "id": "components_routetransition_routetransition",
-      "community": 39,
+      "community": 16,
       "norm_label": "routetransition()"
     },
     {
@@ -1850,7 +1890,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_sectiontitle",
-      "community": 15,
+      "community": 44,
       "norm_label": "sectiontitle.tsx"
     },
     {
@@ -1860,7 +1900,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "components_sectiontitle_sectiontitleprops",
-      "community": 15,
+      "community": 44,
       "norm_label": "sectiontitleprops"
     },
     {
@@ -1870,7 +1910,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "components_sectiontitle_sectiontitle",
-      "community": 15,
+      "community": 44,
       "norm_label": "sectiontitle()"
     },
     {
@@ -1930,7 +1970,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_sparkline",
-      "community": 45,
+      "community": 12,
       "norm_label": "sparkline.tsx"
     },
     {
@@ -1950,7 +1990,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "components_sparkline_sparklineprops",
-      "community": 45,
+      "community": 12,
       "norm_label": "sparklineprops"
     },
     {
@@ -1960,7 +2000,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "components_sparkline_tonevar",
-      "community": 45,
+      "community": 12,
       "norm_label": "tonevar()"
     },
     {
@@ -1970,7 +2010,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "components_sparkline_sparkline",
-      "community": 45,
+      "community": 12,
       "norm_label": "sparkline()"
     },
     {
@@ -2174,33 +2214,93 @@
       "norm_label": "templatebuilder()"
     },
     {
+      "label": "TemplateDeck.tsx",
+      "file_type": "code",
+      "source_file": "components/TemplateDeck.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "components_templatedeck",
+      "community": 2,
+      "norm_label": "templatedeck.tsx"
+    },
+    {
+      "label": "clamp()",
+      "file_type": "code",
+      "source_file": "components/TemplateDeck.tsx",
+      "source_location": "L38",
+      "_origin": "ast",
+      "id": "components_templatedeck_clamp",
+      "community": 2,
+      "norm_label": "clamp()"
+    },
+    {
+      "label": "TemplateDeckProps",
+      "file_type": "code",
+      "source_file": "components/TemplateDeck.tsx",
+      "source_location": "L40",
+      "_origin": "ast",
+      "id": "components_templatedeck_templatedeckprops",
+      "community": 2,
+      "norm_label": "templatedeckprops"
+    },
+    {
+      "label": "DeckCardProps",
+      "file_type": "code",
+      "source_file": "components/TemplateDeck.tsx",
+      "source_location": "L49",
+      "_origin": "ast",
+      "id": "components_templatedeck_deckcardprops",
+      "community": 2,
+      "norm_label": "deckcardprops"
+    },
+    {
+      "label": "DeckCard()",
+      "file_type": "code",
+      "source_file": "components/TemplateDeck.tsx",
+      "source_location": "L59",
+      "_origin": "ast",
+      "id": "components_templatedeck_deckcard",
+      "community": 2,
+      "norm_label": "deckcard()"
+    },
+    {
+      "label": "TemplateDeck()",
+      "file_type": "code",
+      "source_file": "components/TemplateDeck.tsx",
+      "source_location": "L109",
+      "_origin": "ast",
+      "id": "components_templatedeck_templatedeck",
+      "community": 2,
+      "norm_label": "templatedeck()"
+    },
+    {
       "label": "TemplateStructureCard.tsx",
       "file_type": "code",
       "source_file": "components/TemplateStructureCard.tsx",
       "source_location": "L1",
       "_origin": "ast",
       "id": "components_templatestructurecard",
-      "community": 18,
+      "community": 39,
       "norm_label": "templatestructurecard.tsx"
     },
     {
       "label": "TemplateCardLayer",
       "file_type": "code",
       "source_file": "components/TemplateStructureCard.tsx",
-      "source_location": "L4",
+      "source_location": "L5",
       "_origin": "ast",
       "id": "components_templatestructurecard_templatecardlayer",
-      "community": 18,
+      "community": 39,
       "norm_label": "templatecardlayer"
     },
     {
       "label": "TemplateStructureCard()",
       "file_type": "code",
       "source_file": "components/TemplateStructureCard.tsx",
-      "source_location": "L15",
+      "source_location": "L16",
       "_origin": "ast",
       "id": "components_templatestructurecard_templatestructurecard",
-      "community": 18,
+      "community": 39,
       "norm_label": "templatestructurecard()"
     },
     {
@@ -2414,70 +2514,20 @@
       "norm_label": "props"
     },
     {
-      "label": "Pt",
+      "label": "ellipsePath()",
       "file_type": "code",
       "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L42",
+      "source_location": "L27",
       "_origin": "ast",
-      "id": "continuousweb_rollvisualizer_pt",
+      "id": "continuousweb_rollvisualizer_ellipsepath",
       "community": 13,
-      "norm_label": "pt"
-    },
-    {
-      "label": "RollProjection",
-      "file_type": "code",
-      "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L44",
-      "_origin": "ast",
-      "id": "continuousweb_rollvisualizer_rollprojection",
-      "community": 13,
-      "norm_label": "rollprojection"
-    },
-    {
-      "label": "OBLIQUE_PROJ",
-      "file_type": "code",
-      "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L67",
-      "_origin": "ast",
-      "id": "continuousweb_rollvisualizer_oblique_proj",
-      "community": 13,
-      "norm_label": "oblique_proj"
-    },
-    {
-      "label": "ellipsePoints()",
-      "file_type": "code",
-      "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L69",
-      "_origin": "ast",
-      "id": "continuousweb_rollvisualizer_ellipsepoints",
-      "community": 13,
-      "norm_label": "ellipsepoints()"
-    },
-    {
-      "label": "ellipseArc()",
-      "file_type": "code",
-      "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L83",
-      "_origin": "ast",
-      "id": "continuousweb_rollvisualizer_ellipsearc",
-      "community": 13,
-      "norm_label": "ellipsearc()"
-    },
-    {
-      "label": "toPath()",
-      "file_type": "code",
-      "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L99",
-      "_origin": "ast",
-      "id": "continuousweb_rollvisualizer_topath",
-      "community": 13,
-      "norm_label": "topath()"
+      "norm_label": "ellipsepath()"
     },
     {
       "label": "fmt()",
       "file_type": "code",
       "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L106",
+      "source_location": "L35",
       "_origin": "ast",
       "id": "continuousweb_rollvisualizer_fmt",
       "community": 13,
@@ -2487,7 +2537,7 @@
       "label": "RollVisualizerSvg()",
       "file_type": "code",
       "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L108",
+      "source_location": "L37",
       "_origin": "ast",
       "id": "continuousweb_rollvisualizer_rollvisualizersvg",
       "community": 13,
@@ -2497,7 +2547,7 @@
       "label": "RollVisualizer()",
       "file_type": "code",
       "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L508",
+      "source_location": "L254",
       "_origin": "ast",
       "id": "continuousweb_rollvisualizer_rollvisualizer",
       "community": 13,
@@ -2532,6 +2582,86 @@
       "id": "continuousweb_webinputfield_webinputfield",
       "community": 13,
       "norm_label": "webinputfield()"
+    },
+    {
+      "label": "rollSpiralModel.test.ts",
+      "file_type": "code",
+      "source_file": "components/continuousWeb/rollSpiralModel.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "continuousweb_rollspiralmodel_test",
+      "community": 42,
+      "norm_label": "rollspiralmodel.test.ts"
+    },
+    {
+      "label": "rollSpiralModel.ts",
+      "file_type": "code",
+      "source_file": "components/continuousWeb/rollSpiralModel.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "continuousweb_rollspiralmodel",
+      "community": 42,
+      "norm_label": "rollspiralmodel.ts"
+    },
+    {
+      "label": "SpiralInput",
+      "file_type": "code",
+      "source_file": "components/continuousWeb/rollSpiralModel.ts",
+      "source_location": "L24",
+      "_origin": "ast",
+      "id": "continuousweb_rollspiralmodel_spiralinput",
+      "community": 42,
+      "norm_label": "spiralinput"
+    },
+    {
+      "label": "SpiralModel",
+      "file_type": "code",
+      "source_file": "components/continuousWeb/rollSpiralModel.ts",
+      "source_location": "L37",
+      "_origin": "ast",
+      "id": "continuousweb_rollspiralmodel_spiralmodel",
+      "community": 42,
+      "norm_label": "spiralmodel"
+    },
+    {
+      "label": "filmThicknessMm()",
+      "file_type": "code",
+      "source_file": "components/continuousWeb/rollSpiralModel.ts",
+      "source_location": "L65",
+      "_origin": "ast",
+      "id": "continuousweb_rollspiralmodel_filmthicknessmm",
+      "community": 42,
+      "norm_label": "filmthicknessmm()"
+    },
+    {
+      "label": "buildSpiralModel()",
+      "file_type": "code",
+      "source_file": "components/continuousWeb/rollSpiralModel.ts",
+      "source_location": "L75",
+      "_origin": "ast",
+      "id": "continuousweb_rollspiralmodel_buildspiralmodel",
+      "community": 42,
+      "norm_label": "buildspiralmodel()"
+    },
+    {
+      "label": "Pt2",
+      "file_type": "code",
+      "source_file": "components/continuousWeb/rollSpiralModel.ts",
+      "source_location": "L112",
+      "_origin": "ast",
+      "id": "continuousweb_rollspiralmodel_pt2",
+      "community": 42,
+      "norm_label": "pt2"
+    },
+    {
+      "label": "representativeSpiralPoints()",
+      "file_type": "code",
+      "source_file": "components/continuousWeb/rollSpiralModel.ts",
+      "source_location": "L126",
+      "_origin": "ast",
+      "id": "continuousweb_rollspiralmodel_representativespiralpoints",
+      "community": 42,
+      "norm_label": "representativespiralpoints()"
     },
     {
       "label": "webSvgPrimitives.tsx",
@@ -2614,6 +2744,26 @@
       "norm_label": "usedrawareasize()"
     },
     {
+      "label": "LabelOnBottle.tsx",
+      "file_type": "code",
+      "source_file": "components/roll/LabelOnBottle.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "roll_labelonbottle",
+      "community": 13,
+      "norm_label": "labelonbottle.tsx"
+    },
+    {
+      "label": "LabelOnBottle()",
+      "file_type": "code",
+      "source_file": "components/roll/LabelOnBottle.tsx",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "roll_labelonbottle_labelonbottle",
+      "community": 13,
+      "norm_label": "labelonbottle()"
+    },
+    {
       "label": "RollConfigurator.tsx",
       "file_type": "code",
       "source_file": "components/roll/RollConfigurator.tsx",
@@ -2627,7 +2777,7 @@
       "label": "RollConfigurator()",
       "file_type": "code",
       "source_file": "components/roll/RollConfigurator.tsx",
-      "source_location": "L25",
+      "source_location": "L26",
       "_origin": "ast",
       "id": "roll_rollconfigurator_rollconfigurator",
       "community": 13,
@@ -2684,6 +2834,56 @@
       "norm_label": "rollschematic()"
     },
     {
+      "label": "ContainerOnBottle.tsx",
+      "file_type": "code",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "shared_containeronbottle",
+      "community": 13,
+      "norm_label": "containeronbottle.tsx"
+    },
+    {
+      "label": "ContainerOnBottle()",
+      "file_type": "code",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "shared_containeronbottle_containeronbottle",
+      "community": 13,
+      "norm_label": "containeronbottle()"
+    },
+    {
+      "label": "DrawContainerOnBottle()",
+      "file_type": "code",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L57",
+      "_origin": "ast",
+      "id": "shared_containeronbottle_drawcontaineronbottle",
+      "community": 13,
+      "norm_label": "drawcontaineronbottle()"
+    },
+    {
+      "label": "SleeveBandPlacement.tsx",
+      "file_type": "code",
+      "source_file": "components/sleeve/SleeveBandPlacement.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "sleeve_sleevebandplacement",
+      "community": 13,
+      "norm_label": "sleevebandplacement.tsx"
+    },
+    {
+      "label": "SleeveBandPlacement()",
+      "file_type": "code",
+      "source_file": "components/sleeve/SleeveBandPlacement.tsx",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "sleeve_sleevebandplacement_sleevebandplacement",
+      "community": 13,
+      "norm_label": "sleevebandplacement()"
+    },
+    {
       "label": "SleeveConfigurator.tsx",
       "file_type": "code",
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
@@ -2697,41 +2897,61 @@
       "label": "SleeveConfigurator()",
       "file_type": "code",
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
-      "source_location": "L27",
+      "source_location": "L29",
       "_origin": "ast",
       "id": "sleeve_sleeveconfigurator_sleeveconfigurator",
       "community": 13,
       "norm_label": "sleeveconfigurator()"
     },
     {
-      "label": "SleeveFlatBlank.tsx",
+      "label": "SleeveOnBottle.tsx",
       "file_type": "code",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
+      "source_file": "components/sleeve/SleeveOnBottle.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "sleeve_sleeveflatblank",
+      "id": "sleeve_sleeveonbottle",
       "community": 13,
-      "norm_label": "sleeveflatblank.tsx"
+      "norm_label": "sleeveonbottle.tsx"
     },
     {
-      "label": "DrawSleeveFlat()",
+      "label": "SleeveOnBottle()",
       "file_type": "code",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
-      "source_location": "L8",
+      "source_file": "components/sleeve/SleeveOnBottle.tsx",
+      "source_location": "L7",
       "_origin": "ast",
-      "id": "sleeve_sleeveflatblank_drawsleeveflat",
+      "id": "sleeve_sleeveonbottle_sleeveonbottle",
       "community": 13,
-      "norm_label": "drawsleeveflat()"
+      "norm_label": "sleeveonbottle()"
     },
     {
-      "label": "SleeveFlatBlank()",
+      "label": "SleeveOpenWeb.tsx",
       "file_type": "code",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
-      "source_location": "L52",
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
+      "source_location": "L1",
       "_origin": "ast",
-      "id": "sleeve_sleeveflatblank_sleeveflatblank",
+      "id": "sleeve_sleeveopenweb",
       "community": 13,
-      "norm_label": "sleeveflatblank()"
+      "norm_label": "sleeveopenweb.tsx"
+    },
+    {
+      "label": "DrawSleeveOpenWeb()",
+      "file_type": "code",
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "sleeve_sleeveopenweb_drawsleeveopenweb",
+      "community": 13,
+      "norm_label": "drawsleeveopenweb()"
+    },
+    {
+      "label": "SleeveOpenWeb()",
+      "file_type": "code",
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
+      "source_location": "L53",
+      "_origin": "ast",
+      "id": "sleeve_sleeveopenweb_sleeveopenweb",
+      "community": 13,
+      "norm_label": "sleeveopenweb()"
     },
     {
       "label": "SleeveSchematic.tsx",
@@ -2760,7 +2980,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "contexts_authcontext",
-      "community": 16,
+      "community": 41,
       "norm_label": "authcontext.tsx"
     },
     {
@@ -2770,7 +2990,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "contexts_authcontext_authuser",
-      "community": 16,
+      "community": 41,
       "norm_label": "authuser"
     },
     {
@@ -2780,7 +3000,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "contexts_authcontext_authtenant",
-      "community": 16,
+      "community": 41,
       "norm_label": "authtenant"
     },
     {
@@ -2790,7 +3010,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "contexts_authcontext_authcontextvalue",
-      "community": 16,
+      "community": 41,
       "norm_label": "authcontextvalue"
     },
     {
@@ -2800,7 +3020,7 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "contexts_authcontext_authcontext",
-      "community": 16,
+      "community": 41,
       "norm_label": "authcontext"
     },
     {
@@ -2810,7 +3030,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "contexts_authcontext_establishsession",
-      "community": 16,
+      "community": 41,
       "norm_label": "establishsession()"
     },
     {
@@ -2820,7 +3040,7 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "contexts_authcontext_restoresession",
-      "community": 16,
+      "community": 41,
       "norm_label": "restoresession()"
     },
     {
@@ -2830,7 +3050,7 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "contexts_authcontext_authprovider",
-      "community": 16,
+      "community": 41,
       "norm_label": "authprovider()"
     },
     {
@@ -2910,7 +3130,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "contexts_materialscontext",
-      "community": 16,
+      "community": 45,
       "norm_label": "materialscontext.tsx"
     },
     {
@@ -2920,7 +3140,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "contexts_materialscontext_materiallistitem",
-      "community": 16,
+      "community": 45,
       "norm_label": "materiallistitem"
     },
     {
@@ -2930,7 +3150,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "contexts_materialscontext_materialscontextvalue",
-      "community": 16,
+      "community": 45,
       "norm_label": "materialscontextvalue"
     },
     {
@@ -2940,7 +3160,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "contexts_materialscontext_materialscontext",
-      "community": 16,
+      "community": 45,
       "norm_label": "materialscontext"
     },
     {
@@ -2960,7 +3180,7 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "contexts_materialscontext_usematerialscontext",
-      "community": 16,
+      "community": 45,
       "norm_label": "usematerialscontext()"
     },
     {
@@ -2970,7 +3190,7 @@
       "source_location": "L97",
       "_origin": "ast",
       "id": "contexts_materialscontext_usematerialscontextoptional",
-      "community": 6,
+      "community": 35,
       "norm_label": "usematerialscontextoptional()"
     },
     {
@@ -2980,7 +3200,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "hooks_useauth",
-      "community": 16,
+      "community": 41,
       "norm_label": "useauth.ts"
     },
     {
@@ -3020,7 +3240,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "hooks_usedensity_usedensity",
-      "community": 9,
+      "community": 25,
       "norm_label": "usedensity()"
     },
     {
@@ -3070,7 +3290,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "hooks_usehoverspring",
-      "community": 39,
+      "community": 2,
       "norm_label": "usehoverspring.ts"
     },
     {
@@ -3080,7 +3300,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "hooks_usehoverspring_usehoverspringoptions",
-      "community": 39,
+      "community": 2,
       "norm_label": "usehoverspringoptions"
     },
     {
@@ -3090,7 +3310,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "hooks_usehoverspring_hoverspringprops",
-      "community": 39,
+      "community": 2,
       "norm_label": "hoverspringprops"
     },
     {
@@ -3100,7 +3320,7 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "hooks_usehoverspring_usehoverspring",
-      "community": 39,
+      "community": 2,
       "norm_label": "usehoverspring()"
     },
     {
@@ -3260,7 +3480,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "hooks_usereducedmotion",
-      "community": 39,
+      "community": 2,
       "norm_label": "usereducedmotion.ts"
     },
     {
@@ -3270,7 +3490,7 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "hooks_usereducedmotion_getreducedmotionpreference",
-      "community": 39,
+      "community": 2,
       "norm_label": "getreducedmotionpreference()"
     },
     {
@@ -3280,7 +3500,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "hooks_usereducedmotion_syncreducedmotionattribute",
-      "community": 39,
+      "community": 2,
       "norm_label": "syncreducedmotionattribute()"
     },
     {
@@ -3290,7 +3510,7 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "hooks_usereducedmotion_usereducedmotion",
-      "community": 39,
+      "community": 2,
       "norm_label": "usereducedmotion()"
     },
     {
@@ -3300,7 +3520,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "hooks_usestagger",
-      "community": 43,
+      "community": 2,
       "norm_label": "usestagger.ts"
     },
     {
@@ -3310,7 +3530,7 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "hooks_usestagger_staggerstyle",
-      "community": 43,
+      "community": 2,
       "norm_label": "staggerstyle"
     },
     {
@@ -3320,7 +3540,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "hooks_usestagger_usestaggeroptions",
-      "community": 43,
+      "community": 2,
       "norm_label": "usestaggeroptions"
     },
     {
@@ -3330,7 +3550,7 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "hooks_usestagger_usestaggerresult",
-      "community": 43,
+      "community": 2,
       "norm_label": "usestaggerresult"
     },
     {
@@ -3340,7 +3560,7 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "hooks_usestagger_readstaggerstepms",
-      "community": 43,
+      "community": 2,
       "norm_label": "readstaggerstepms()"
     },
     {
@@ -3350,7 +3570,7 @@
       "source_location": "L118",
       "_origin": "ast",
       "id": "hooks_usestagger_usestagger",
-      "community": 43,
+      "community": 6,
       "norm_label": "usestagger()"
     },
     {
@@ -3360,7 +3580,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "hooks_useswipetodismiss",
-      "community": 41,
+      "community": 2,
       "norm_label": "useswipetodismiss.ts"
     },
     {
@@ -3370,7 +3590,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "hooks_useswipetodismiss_useswipetodismissoptions",
-      "community": 41,
+      "community": 2,
       "norm_label": "useswipetodismissoptions"
     },
     {
@@ -3380,7 +3600,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "hooks_useswipetodismiss_useswipetodismiss",
-      "community": 41,
+      "community": 2,
       "norm_label": "useswipetodismiss()"
     },
     {
@@ -3390,7 +3610,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "hooks_useviewtransition",
-      "community": 21,
+      "community": 43,
       "norm_label": "useviewtransition.ts"
     },
     {
@@ -3400,7 +3620,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "hooks_useviewtransition_documentwithviewtransition",
-      "community": 21,
+      "community": 43,
       "norm_label": "documentwithviewtransition"
     },
     {
@@ -3410,7 +3630,7 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "hooks_useviewtransition_useviewtransition",
-      "community": 21,
+      "community": 43,
       "norm_label": "useviewtransition()"
     },
     {
@@ -3510,7 +3730,7 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "lib_api_platformreferencecategory",
-      "community": 31,
+      "community": 15,
       "norm_label": "platformreferencecategory"
     },
     {
@@ -3560,7 +3780,7 @@
       "source_location": "L121",
       "_origin": "ast",
       "id": "lib_api_platformmastermaterialinput",
-      "community": 15,
+      "community": 31,
       "norm_label": "platformmastermaterialinput"
     },
     {
@@ -4724,6 +4944,136 @@
       "norm_label": "bagfaceareacm2()"
     },
     {
+      "label": "containerBandViz.ts",
+      "file_type": "code",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "lib_containerbandviz",
+      "community": 13,
+      "norm_label": "containerbandviz.ts"
+    },
+    {
+      "label": "ContainerBandPlacement",
+      "file_type": "code",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L2",
+      "_origin": "ast",
+      "id": "lib_containerbandviz_containerbandplacement",
+      "community": 13,
+      "norm_label": "containerbandplacement"
+    },
+    {
+      "label": "CONTAINER_BAND_PLACEMENTS",
+      "file_type": "code",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L4",
+      "_origin": "ast",
+      "id": "lib_containerbandviz_container_band_placements",
+      "community": 13,
+      "norm_label": "container_band_placements"
+    },
+    {
+      "label": "CONTAINER_BAND_PLACEMENT_LABELS",
+      "file_type": "code",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "lib_containerbandviz_container_band_placement_labels",
+      "community": 13,
+      "norm_label": "container_band_placement_labels"
+    },
+    {
+      "label": "CONTAINER_BAND_PLACEMENT_CODE",
+      "file_type": "code",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L13",
+      "_origin": "ast",
+      "id": "lib_containerbandviz_container_band_placement_code",
+      "community": 13,
+      "norm_label": "container_band_placement_code"
+    },
+    {
+      "label": "CODE_TO_PLACEMENT",
+      "file_type": "code",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "lib_containerbandviz_code_to_placement",
+      "community": 13,
+      "norm_label": "code_to_placement"
+    },
+    {
+      "label": "containerBandPlacementFromCode()",
+      "file_type": "code",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L21",
+      "_origin": "ast",
+      "id": "lib_containerbandviz_containerbandplacementfromcode",
+      "community": 13,
+      "norm_label": "containerbandplacementfromcode()"
+    },
+    {
+      "label": "containerBandPlacementCode()",
+      "file_type": "code",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L25",
+      "_origin": "ast",
+      "id": "lib_containerbandviz_containerbandplacementcode",
+      "community": 13,
+      "norm_label": "containerbandplacementcode()"
+    },
+    {
+      "label": "BottleLayoutMm",
+      "file_type": "code",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L29",
+      "_origin": "ast",
+      "id": "lib_containerbandviz_bottlelayoutmm",
+      "community": 13,
+      "norm_label": "bottlelayoutmm"
+    },
+    {
+      "label": "bottleLayoutForBand()",
+      "file_type": "code",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L45",
+      "_origin": "ast",
+      "id": "lib_containerbandviz_bottlelayoutforband",
+      "community": 13,
+      "norm_label": "bottlelayoutforband()"
+    },
+    {
+      "label": "bottleSilhouettePath()",
+      "file_type": "code",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L101",
+      "_origin": "ast",
+      "id": "lib_containerbandviz_bottlesilhouettepath",
+      "community": 13,
+      "norm_label": "bottlesilhouettepath()"
+    },
+    {
+      "label": "bottleNeckCapPath()",
+      "file_type": "code",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L136",
+      "_origin": "ast",
+      "id": "lib_containerbandviz_bottleneckcappath",
+      "community": 13,
+      "norm_label": "bottleneckcappath()"
+    },
+    {
+      "label": "bottleCapPath()",
+      "file_type": "code",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L160",
+      "_origin": "ast",
+      "id": "lib_containerbandviz_bottlecappath",
+      "community": 13,
+      "norm_label": "bottlecappath()"
+    },
+    {
       "label": "currency.ts",
       "file_type": "code",
       "source_file": "lib/currency.ts",
@@ -5150,7 +5500,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_estimatestatus",
-      "community": 21,
+      "community": 37,
       "norm_label": "estimatestatus.ts"
     },
     {
@@ -5160,7 +5510,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "lib_estimatestatus_estimatestatus",
-      "community": 21,
+      "community": 37,
       "norm_label": "estimatestatus"
     },
     {
@@ -5180,7 +5530,7 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "lib_estimatestatus_estimatestatuslabel",
-      "community": 21,
+      "community": 37,
       "norm_label": "estimatestatuslabel()"
     },
     {
@@ -5190,7 +5540,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "lib_estimatestatus_estimatestatusbadgeclass",
-      "community": 21,
+      "community": 37,
       "norm_label": "estimatestatusbadgeclass()"
     },
     {
@@ -5200,7 +5550,7 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "lib_estimatestatus_estimate_status_filters",
-      "community": 21,
+      "community": 37,
       "norm_label": "estimate_status_filters"
     },
     {
@@ -5210,7 +5560,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_formatmicron",
-      "community": 10,
+      "community": 35,
       "norm_label": "formatmicron.ts"
     },
     {
@@ -5220,7 +5570,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "lib_formatmicron_formatmicrondisplay",
-      "community": 10,
+      "community": 35,
       "norm_label": "formatmicrondisplay()"
     },
     {
@@ -5260,7 +5610,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_masterdatareference_producttypevalue",
-      "community": 34,
+      "community": 38,
       "norm_label": "producttypevalue"
     },
     {
@@ -5280,7 +5630,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "lib_masterdatareference_producttypeoption",
-      "community": 34,
+      "community": 38,
       "norm_label": "producttypeoption"
     },
     {
@@ -5300,7 +5650,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "lib_masterdatareference_unitoption",
-      "community": 34,
+      "community": 38,
       "norm_label": "unitoption"
     },
     {
@@ -5350,7 +5700,7 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "lib_masterdatareference_default_process_options",
-      "community": 34,
+      "community": 11,
       "norm_label": "default_process_options"
     },
     {
@@ -5422,6 +5772,36 @@
       "id": "lib_masterdatareference_normalizeunitvalue",
       "community": 7,
       "norm_label": "normalizeunitvalue()"
+    },
+    {
+      "label": "materialFamily.ts",
+      "file_type": "code",
+      "source_file": "lib/materialFamily.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "lib_materialfamily",
+      "community": 39,
+      "norm_label": "materialfamily.ts"
+    },
+    {
+      "label": "materialFamily",
+      "file_type": "code",
+      "source_file": "lib/materialFamily.ts",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "lib_materialfamily_materialfamily",
+      "community": 39,
+      "norm_label": "materialfamily"
+    },
+    {
+      "label": "materialFamilyColorVar()",
+      "file_type": "code",
+      "source_file": "lib/materialFamily.ts",
+      "source_location": "L45",
+      "_origin": "ast",
+      "id": "lib_materialfamily_materialfamilycolorvar",
+      "community": 39,
+      "norm_label": "materialfamilycolorvar()"
     },
     {
       "label": "materialTaxonomy.ts",
@@ -6170,7 +6550,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "lib_productcatalog_dimensionfielddef",
-      "community": 30,
+      "community": 38,
       "norm_label": "dimensionfielddef"
     },
     {
@@ -6190,7 +6570,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "lib_productcatalog_enginetypeforfamily",
-      "community": 11,
+      "community": 1,
       "norm_label": "enginetypeforfamily()"
     },
     {
@@ -6440,7 +6820,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_requote",
-      "community": 27,
+      "community": 37,
       "norm_label": "requote.ts"
     },
     {
@@ -6450,7 +6830,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_requote_requotepricechange",
-      "community": 27,
+      "community": 37,
       "norm_label": "requotepricechange"
     },
     {
@@ -6460,8 +6840,18 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "lib_requote_meaningfulrequotepricechanges",
-      "community": 27,
+      "community": 37,
       "norm_label": "meaningfulrequotepricechanges()"
+    },
+    {
+      "label": "rollConfiguratorCatalog.test.ts",
+      "file_type": "code",
+      "source_file": "lib/rollConfiguratorCatalog.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "lib_rollconfiguratorcatalog_test",
+      "community": 32,
+      "norm_label": "rollconfiguratorcatalog.test.ts"
     },
     {
       "label": "rollConfiguratorCatalog.ts",
@@ -6564,20 +6954,20 @@
       "norm_label": "rollconfiguratordefaults()"
     },
     {
-      "label": "isLabelsRollContext()",
+      "label": "defaultCutoffMm()",
       "file_type": "code",
       "source_file": "lib/rollConfiguratorCatalog.ts",
       "source_location": "L86",
       "_origin": "ast",
-      "id": "lib_rollconfiguratorcatalog_islabelsrollcontext",
+      "id": "lib_rollconfiguratorcatalog_defaultcutoffmm",
       "community": 32,
-      "norm_label": "islabelsrollcontext()"
+      "norm_label": "defaultcutoffmm()"
     },
     {
       "label": "rollFieldValuesFromDimensions()",
       "file_type": "code",
       "source_file": "lib/rollConfiguratorCatalog.ts",
-      "source_location": "L102",
+      "source_location": "L100",
       "_origin": "ast",
       "id": "lib_rollconfiguratorcatalog_rollfieldvaluesfromdimensions",
       "community": 32,
@@ -6587,7 +6977,7 @@
       "label": "seedRollDimensionPatch()",
       "file_type": "code",
       "source_file": "lib/rollConfiguratorCatalog.ts",
-      "source_location": "L124",
+      "source_location": "L131",
       "_origin": "ast",
       "id": "lib_rollconfiguratorcatalog_seedrolldimensionpatch",
       "community": 32,
@@ -6597,7 +6987,7 @@
       "label": "isContinuousWebCutoff()",
       "file_type": "code",
       "source_file": "lib/rollConfiguratorCatalog.ts",
-      "source_location": "L148",
+      "source_location": "L166",
       "_origin": "ast",
       "id": "lib_rollconfiguratorcatalog_iscontinuouswebcutoff",
       "community": 32,
@@ -6807,7 +7197,7 @@
       "label": "SleeveConfiguratorField",
       "file_type": "code",
       "source_file": "lib/sleeveConfiguratorCatalog.ts",
-      "source_location": "L6",
+      "source_location": "L12",
       "_origin": "ast",
       "id": "lib_sleeveconfiguratorcatalog_sleeveconfiguratorfield",
       "community": 13,
@@ -6817,17 +7207,27 @@
       "label": "SleeveConfiguratorConfig",
       "file_type": "code",
       "source_file": "lib/sleeveConfiguratorCatalog.ts",
-      "source_location": "L15",
+      "source_location": "L21",
       "_origin": "ast",
       "id": "lib_sleeveconfiguratorcatalog_sleeveconfiguratorconfig",
       "community": 13,
       "norm_label": "sleeveconfiguratorconfig"
     },
     {
+      "label": "SLEEVE_DEFAULTS",
+      "file_type": "code",
+      "source_file": "lib/sleeveConfiguratorCatalog.ts",
+      "source_location": "L25",
+      "_origin": "ast",
+      "id": "lib_sleeveconfiguratorcatalog_sleeve_defaults",
+      "community": 13,
+      "norm_label": "sleeve_defaults"
+    },
+    {
       "label": "SLEEVE_CONFIGURATOR_DIMENSION_KEYS",
       "file_type": "code",
       "source_file": "lib/sleeveConfiguratorCatalog.ts",
-      "source_location": "L19",
+      "source_location": "L27",
       "_origin": "ast",
       "id": "lib_sleeveconfiguratorcatalog_sleeve_configurator_dimension_keys",
       "community": 13,
@@ -6837,7 +7237,7 @@
       "label": "field()",
       "file_type": "code",
       "source_file": "lib/sleeveConfiguratorCatalog.ts",
-      "source_location": "L30",
+      "source_location": "L39",
       "_origin": "ast",
       "id": "lib_sleeveconfiguratorcatalog_field",
       "community": 13,
@@ -6847,17 +7247,27 @@
       "label": "SLEEVE_CONFIGURATOR",
       "file_type": "code",
       "source_file": "lib/sleeveConfiguratorCatalog.ts",
-      "source_location": "L38",
+      "source_location": "L47",
       "_origin": "ast",
       "id": "lib_sleeveconfiguratorcatalog_sleeve_configurator",
       "community": 13,
       "norm_label": "sleeve_configurator"
     },
     {
+      "label": "sleeveBandPlacementFromDimensions()",
+      "file_type": "code",
+      "source_file": "lib/sleeveConfiguratorCatalog.ts",
+      "source_location": "L54",
+      "_origin": "ast",
+      "id": "lib_sleeveconfiguratorcatalog_sleevebandplacementfromdimensions",
+      "community": 13,
+      "norm_label": "sleevebandplacementfromdimensions()"
+    },
+    {
       "label": "sleeveFieldValuesFromDimensions()",
       "file_type": "code",
       "source_file": "lib/sleeveConfiguratorCatalog.ts",
-      "source_location": "L45",
+      "source_location": "L60",
       "_origin": "ast",
       "id": "lib_sleeveconfiguratorcatalog_sleevefieldvaluesfromdimensions",
       "community": 13,
@@ -6867,7 +7277,7 @@
       "label": "seedSleeveDimensionPatch()",
       "file_type": "code",
       "source_file": "lib/sleeveConfiguratorCatalog.ts",
-      "source_location": "L57",
+      "source_location": "L73",
       "_origin": "ast",
       "id": "lib_sleeveconfiguratorcatalog_seedsleevedimensionpatch",
       "community": 13,
@@ -6877,7 +7287,7 @@
       "label": "sleeveDimensionsPatchFromFields()",
       "file_type": "code",
       "source_file": "lib/sleeveConfiguratorCatalog.ts",
-      "source_location": "L79",
+      "source_location": "L98",
       "_origin": "ast",
       "id": "lib_sleeveconfiguratorcatalog_sleevedimensionspatchfromfields",
       "community": 13,
@@ -6897,7 +7307,7 @@
       "label": "SleeveDrawDims",
       "file_type": "code",
       "source_file": "lib/sleeveDrawDims.ts",
-      "source_location": "L2",
+      "source_location": "L8",
       "_origin": "ast",
       "id": "lib_sleevedrawdims_sleevedrawdims",
       "community": 13,
@@ -6907,7 +7317,7 @@
       "label": "sleeveOpenWebWidthMm()",
       "file_type": "code",
       "source_file": "lib/sleeveDrawDims.ts",
-      "source_location": "L13",
+      "source_location": "L20",
       "_origin": "ast",
       "id": "lib_sleevedrawdims_sleeveopenwebwidthmm",
       "community": 13,
@@ -6917,7 +7327,7 @@
       "label": "sleeveDrawDimsFromFields()",
       "file_type": "code",
       "source_file": "lib/sleeveDrawDims.ts",
-      "source_location": "L17",
+      "source_location": "L24",
       "_origin": "ast",
       "id": "lib_sleevedrawdims_sleevedrawdimsfromfields",
       "community": 13,
@@ -6927,7 +7337,7 @@
       "label": "sleeveBlankAreaCm2()",
       "file_type": "code",
       "source_file": "lib/sleeveDrawDims.ts",
-      "source_location": "L26",
+      "source_location": "L34",
       "_origin": "ast",
       "id": "lib_sleevedrawdims_sleeveblankareacm2",
       "community": 13,
@@ -6937,7 +7347,7 @@
       "label": "sleeveFlatBlankLabel()",
       "file_type": "code",
       "source_file": "lib/sleeveDrawDims.ts",
-      "source_location": "L30",
+      "source_location": "L38",
       "_origin": "ast",
       "id": "lib_sleevedrawdims_sleeveflatblanklabel",
       "community": 13,
@@ -6947,7 +7357,7 @@
       "label": "sleeveFormedDiameterMm()",
       "file_type": "code",
       "source_file": "lib/sleeveDrawDims.ts",
-      "source_location": "L35",
+      "source_location": "L43",
       "_origin": "ast",
       "id": "lib_sleevedrawdims_sleeveformeddiametermm",
       "community": 13,
@@ -6957,7 +7367,7 @@
       "label": "sleeveFormedDiameterLabel()",
       "file_type": "code",
       "source_file": "lib/sleeveDrawDims.ts",
-      "source_location": "L39",
+      "source_location": "L47",
       "_origin": "ast",
       "id": "lib_sleevedrawdims_sleeveformeddiameterlabel",
       "community": 13,
@@ -7310,7 +7720,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_tooling",
-      "community": 7,
+      "community": 38,
       "norm_label": "tooling.ts"
     },
     {
@@ -7320,7 +7730,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "lib_tooling_toolingscenario",
-      "community": 7,
+      "community": 38,
       "norm_label": "toolingscenario"
     },
     {
@@ -7330,7 +7740,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "lib_tooling_normalizetoolingscenario",
-      "community": 7,
+      "community": 38,
       "norm_label": "normalizetoolingscenario()"
     },
     {
@@ -7340,7 +7750,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "lib_tooling_resolvebillablecolorcount",
-      "community": 7,
+      "community": 38,
       "norm_label": "resolvebillablecolorcount()"
     },
     {
@@ -7350,7 +7760,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "lib_tooling_toolingdevelopmenttotal",
-      "community": 7,
+      "community": 38,
       "norm_label": "toolingdevelopmenttotal()"
     },
     {
@@ -7490,7 +7900,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "pages_customerdetail_customerdetail",
-      "community": 21,
+      "community": 16,
       "norm_label": "customerdetail()"
     },
     {
@@ -7690,7 +8100,7 @@
       "source_location": "L144",
       "_origin": "ast",
       "id": "pages_customerexplorer_customerexplorer",
-      "community": 27,
+      "community": 37,
       "norm_label": "customerexplorer()"
     },
     {
@@ -7720,7 +8130,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "pages_customerslist_customerslist",
-      "community": 16,
+      "community": 43,
       "norm_label": "customerslist()"
     },
     {
@@ -7940,7 +8350,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "pages_estimatestart",
-      "community": 15,
+      "community": 44,
       "norm_label": "estimatestart.tsx"
     },
     {
@@ -7950,7 +8360,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "pages_estimatestart_estimatestart",
-      "community": 15,
+      "community": 44,
       "norm_label": "estimatestart()"
     },
     {
@@ -8020,7 +8430,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "pages_estimateslist",
-      "community": 21,
+      "community": 37,
       "norm_label": "estimateslist.tsx"
     },
     {
@@ -8030,7 +8440,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "pages_estimateslist_estimateopenpath",
-      "community": 21,
+      "community": 37,
       "norm_label": "estimateopenpath()"
     },
     {
@@ -8040,7 +8450,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "pages_estimateslist_estimateslist",
-      "community": 21,
+      "community": 43,
       "norm_label": "estimateslist()"
     },
     {
@@ -8597,7 +9007,7 @@
       "label": "TemplateLayer",
       "file_type": "code",
       "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L24",
+      "source_location": "L22",
       "_origin": "ast",
       "id": "pages_standardtemplates_templatelayer",
       "community": 6,
@@ -8607,7 +9017,7 @@
       "label": "StructureTemplate",
       "file_type": "code",
       "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L32",
+      "source_location": "L30",
       "_origin": "ast",
       "id": "pages_standardtemplates_structuretemplate",
       "community": 6,
@@ -8617,7 +9027,7 @@
       "label": "MaterialOption",
       "file_type": "code",
       "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L50",
+      "source_location": "L48",
       "_origin": "ast",
       "id": "pages_standardtemplates_materialoption",
       "community": 6,
@@ -8627,7 +9037,7 @@
       "label": "_MATERIAL_CLASS_OPTIONS",
       "file_type": "code",
       "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L60",
+      "source_location": "L58",
       "_origin": "ast",
       "id": "pages_standardtemplates_material_class_options",
       "community": 6,
@@ -8637,7 +9047,7 @@
       "label": "_PROCESS_KEYS",
       "file_type": "code",
       "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L62",
+      "source_location": "L60",
       "_origin": "ast",
       "id": "pages_standardtemplates_process_keys",
       "community": 6,
@@ -8647,7 +9057,7 @@
       "label": "productTypeLabel()",
       "file_type": "code",
       "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L65",
+      "source_location": "L63",
       "_origin": "ast",
       "id": "pages_standardtemplates_producttypelabel",
       "community": 6,
@@ -8657,7 +9067,7 @@
       "label": "syncStructureTypeFromLayers()",
       "file_type": "code",
       "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L72",
+      "source_location": "L70",
       "_origin": "ast",
       "id": "pages_standardtemplates_syncstructuretypefromlayers",
       "community": 6,
@@ -8667,7 +9077,7 @@
       "label": "classificationContext()",
       "file_type": "code",
       "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L77",
+      "source_location": "L75",
       "_origin": "ast",
       "id": "pages_standardtemplates_classificationcontext",
       "community": 6,
@@ -8677,7 +9087,7 @@
       "label": "pruneInvalidLayerMaterials()",
       "file_type": "code",
       "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L85",
+      "source_location": "L83",
       "_origin": "ast",
       "id": "pages_standardtemplates_pruneinvalidlayermaterials",
       "community": 6,
@@ -8687,7 +9097,7 @@
       "label": "catalogInput()",
       "file_type": "code",
       "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L101",
+      "source_location": "L99",
       "_origin": "ast",
       "id": "pages_standardtemplates_cataloginput",
       "community": 6,
@@ -8697,7 +9107,7 @@
       "label": "classificationTag()",
       "file_type": "code",
       "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L114",
+      "source_location": "L112",
       "_origin": "ast",
       "id": "pages_standardtemplates_classificationtag",
       "community": 6,
@@ -8707,7 +9117,7 @@
       "label": "cardMetaLine()",
       "file_type": "code",
       "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L123",
+      "source_location": "L121",
       "_origin": "ast",
       "id": "pages_standardtemplates_cardmetaline",
       "community": 6,
@@ -8717,27 +9127,17 @@
       "label": "visualizerLayers()",
       "file_type": "code",
       "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L131",
+      "source_location": "L129",
       "_origin": "ast",
       "id": "pages_standardtemplates_visualizerlayers",
       "community": 6,
       "norm_label": "visualizerlayers()"
     },
     {
-      "label": "TemplateGridCell()",
-      "file_type": "code",
-      "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L152",
-      "_origin": "ast",
-      "id": "pages_standardtemplates_templategridcell",
-      "community": 6,
-      "norm_label": "templategridcell()"
-    },
-    {
       "label": "StandardTemplates()",
       "file_type": "code",
       "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L161",
+      "source_location": "L141",
       "_origin": "ast",
       "id": "pages_standardtemplates_standardtemplates",
       "community": 6,
@@ -8840,7 +9240,7 @@
       "source_location": "L115",
       "_origin": "ast",
       "id": "preferences_preferencestore_createpreferencestore",
-      "community": 9,
+      "community": 4,
       "norm_label": "createpreferencestore()"
     },
     {
@@ -13133,6 +13533,91 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "components/LaminateStack3D.tsx",
+      "source_location": "L26",
+      "weight": 1.0,
+      "source": "components_laminatestack3d",
+      "target": "components_laminatestack3d_laminatestack3d",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/LaminateStack3D.tsx",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "components_laminatestack3d",
+      "target": "components_laminatestack3d_laminatestack3dlayer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/LaminateStack3D.tsx",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "components_laminatestack3d",
+      "target": "components_laminatestack3d_laminatestack3dprops",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/LaminateStack3D.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "components_laminatestack3d",
+      "target": "lib_materialfamily",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/LaminateStack3D.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "components_laminatestack3d",
+      "target": "lib_materialfamily_materialfamily",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/LaminateStack3D.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "components_laminatestack3d",
+      "target": "lib_materialfamily_materialfamilycolorvar",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/TemplateStructureCard.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "components_templatestructurecard",
+      "target": "components_laminatestack3d",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/TemplateStructureCard.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "components_templatestructurecard",
+      "target": "components_laminatestack3d_laminatestack3d",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "components/LaminateVisualizer.tsx",
       "source_location": "L34",
       "weight": 1.0,
@@ -15384,9 +15869,9 @@
       "source_file": "components/RollVisualizer.tsx",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_rollvisualizer",
-      "target": "continuousweb_rollvisualizer",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollvisualizer"
     },
     {
       "relation": "re_exports",
@@ -15395,9 +15880,9 @@
       "source_file": "components/RollVisualizer.tsx",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_rollvisualizer",
-      "target": "continuousweb_rollvisualizer_rollvisualizer",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollvisualizer_rollvisualizer"
     },
     {
       "relation": "contains",
@@ -16360,6 +16845,111 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "components/TemplateDeck.tsx",
+      "source_location": "L38",
+      "weight": 1.0,
+      "source": "components_templatedeck",
+      "target": "components_templatedeck_clamp",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/TemplateDeck.tsx",
+      "source_location": "L59",
+      "weight": 1.0,
+      "source": "components_templatedeck",
+      "target": "components_templatedeck_deckcard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/TemplateDeck.tsx",
+      "source_location": "L49",
+      "weight": 1.0,
+      "source": "components_templatedeck",
+      "target": "components_templatedeck_deckcardprops",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/TemplateDeck.tsx",
+      "source_location": "L109",
+      "weight": 1.0,
+      "source": "components_templatedeck",
+      "target": "components_templatedeck_templatedeck",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/TemplateDeck.tsx",
+      "source_location": "L40",
+      "weight": 1.0,
+      "source": "components_templatedeck",
+      "target": "components_templatedeck_templatedeckprops",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/TemplateDeck.tsx",
+      "source_location": "L26",
+      "weight": 1.0,
+      "source": "components_templatedeck",
+      "target": "hooks_usereducedmotion",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/TemplateDeck.tsx",
+      "source_location": "L26",
+      "weight": 1.0,
+      "source": "components_templatedeck",
+      "target": "hooks_usereducedmotion_usereducedmotion",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "pages/StandardTemplates.tsx",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "pages_standardtemplates",
+      "target": "components_templatedeck",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "components/TemplateDeck.tsx",
+      "source_location": "L117",
+      "weight": 1.0,
+      "source": "components_templatedeck_templatedeck",
+      "target": "hooks_usereducedmotion_usereducedmotion"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "pages/StandardTemplates.tsx",
+      "source_location": "L10",
+      "weight": 1.0,
+      "source": "pages_standardtemplates",
+      "target": "components_templatedeck_templatedeck",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "components/TemplateStructureCard.tsx",
       "source_location": "L4",
       "weight": 1.0,
@@ -16612,9 +17202,9 @@
       "source_file": "components/continuousWeb/RollSpecFields.tsx",
       "source_location": "L77",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_rollspecfields",
-      "target": "continuousweb_rollspecfields_calcfield",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollspecfields_calcfield"
     },
     {
       "relation": "contains",
@@ -16622,9 +17212,9 @@
       "source_file": "components/continuousWeb/RollSpecFields.tsx",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_rollspecfields",
-      "target": "continuousweb_rollspecfields_editablefield",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollspecfields_editablefield"
     },
     {
       "relation": "contains",
@@ -16632,9 +17222,9 @@
       "source_file": "components/continuousWeb/RollSpecFields.tsx",
       "source_location": "L95",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_rollspecfields",
-      "target": "continuousweb_rollspecfields_rollspecfields",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollspecfields_rollspecfields"
     },
     {
       "relation": "imports_from",
@@ -16643,9 +17233,9 @@
       "source_file": "components/continuousWeb/RollSpecFields.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_rollspecfields",
-      "target": "lib_inputs",
-      "confidence_score": 1.0
+      "target": "lib_inputs"
     },
     {
       "relation": "imports",
@@ -16654,9 +17244,9 @@
       "source_file": "components/continuousWeb/RollSpecFields.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_rollspecfields",
-      "target": "lib_inputs_selectonfocus",
-      "confidence_score": 1.0
+      "target": "lib_inputs_selectonfocus"
     },
     {
       "relation": "imports_from",
@@ -16665,9 +17255,9 @@
       "source_file": "components/continuousWeb/RollSpecFields.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_rollspecfields",
-      "target": "lib_rollspec",
-      "confidence_score": 1.0
+      "target": "lib_rollspec"
     },
     {
       "relation": "imports",
@@ -16676,9 +17266,9 @@
       "source_file": "components/continuousWeb/RollSpecFields.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_rollspecfields",
-      "target": "lib_rollspec_coreinchfrominsidemm",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_coreinchfrominsidemm"
     },
     {
       "relation": "imports_from",
@@ -16687,9 +17277,9 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "continuousweb_rollspecfields",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollspecfields"
     },
     {
       "relation": "imports_from",
@@ -16698,9 +17288,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "continuousweb_rollspecfields",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollspecfields"
     },
     {
       "relation": "calls",
@@ -16720,9 +17310,9 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "continuousweb_rollspecfields_rollspecfields",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollspecfields_rollspecfields"
     },
     {
       "relation": "imports",
@@ -16731,28 +17321,18 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "continuousweb_rollspecfields_rollspecfields",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollspecfields_rollspecfields"
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L83",
+      "source_location": "L27",
       "weight": 1.0,
       "source": "continuousweb_rollvisualizer",
-      "target": "continuousweb_rollvisualizer_ellipsearc",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L69",
-      "weight": 1.0,
-      "source": "continuousweb_rollvisualizer",
-      "target": "continuousweb_rollvisualizer_ellipsepoints",
+      "target": "continuousweb_rollvisualizer_ellipsepath",
       "confidence_score": 1.0
     },
     {
@@ -16761,19 +17341,9 @@
       "source_file": "components/continuousWeb/RollVisualizer.tsx",
       "source_location": "L106",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_rollvisualizer",
-      "target": "continuousweb_rollvisualizer_fmt",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L67",
-      "weight": 1.0,
-      "source": "continuousweb_rollvisualizer",
-      "target": "continuousweb_rollvisualizer_oblique_proj",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollvisualizer_fmt"
     },
     {
       "relation": "contains",
@@ -16781,29 +17351,9 @@
       "source_file": "components/continuousWeb/RollVisualizer.tsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_rollvisualizer",
-      "target": "continuousweb_rollvisualizer_props",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L42",
-      "weight": 1.0,
-      "source": "continuousweb_rollvisualizer",
-      "target": "continuousweb_rollvisualizer_pt",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L52",
-      "weight": 1.0,
-      "source": "continuousweb_rollvisualizer",
-      "target": "continuousweb_rollvisualizer_rollprojection",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollvisualizer_props"
     },
     {
       "relation": "contains",
@@ -16811,9 +17361,9 @@
       "source_file": "components/continuousWeb/RollVisualizer.tsx",
       "source_location": "L508",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_rollvisualizer",
-      "target": "continuousweb_rollvisualizer_rollvisualizer",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollvisualizer_rollvisualizer"
     },
     {
       "relation": "contains",
@@ -16821,19 +17371,9 @@
       "source_file": "components/continuousWeb/RollVisualizer.tsx",
       "source_location": "L108",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_rollvisualizer",
-      "target": "continuousweb_rollvisualizer_rollvisualizersvg",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L99",
-      "weight": 1.0,
-      "source": "continuousweb_rollvisualizer",
-      "target": "continuousweb_rollvisualizer_topath",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollvisualizer_rollvisualizersvg"
     },
     {
       "relation": "imports_from",
@@ -16842,9 +17382,9 @@
       "source_file": "components/continuousWeb/RollVisualizer.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_rollvisualizer",
-      "target": "continuousweb_websvgprimitives",
-      "confidence_score": 1.0
+      "target": "continuousweb_websvgprimitives"
     },
     {
       "relation": "imports",
@@ -16853,9 +17393,9 @@
       "source_file": "components/continuousWeb/RollVisualizer.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_rollvisualizer",
-      "target": "continuousweb_websvgprimitives_usedrawareasize",
-      "confidence_score": 1.0
+      "target": "continuousweb_websvgprimitives_usedrawareasize"
     },
     {
       "relation": "imports_from",
@@ -16864,9 +17404,9 @@
       "source_file": "components/roll/RollSchematic.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollschematic",
-      "target": "continuousweb_rollvisualizer",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollvisualizer"
     },
     {
       "relation": "imports_from",
@@ -16875,52 +17415,19 @@
       "source_file": "components/sleeve/SleeveSchematic.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveschematic",
-      "target": "continuousweb_rollvisualizer",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L130",
-      "weight": 1.0,
-      "source": "continuousweb_rollvisualizer_rollvisualizersvg",
-      "target": "continuousweb_rollvisualizer_rollprojection"
+      "target": "continuousweb_rollvisualizer"
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L142",
+      "source_location": "L92",
       "weight": 1.0,
       "source": "continuousweb_rollvisualizer_rollvisualizersvg",
-      "target": "continuousweb_rollvisualizer_ellipsepoints",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L185",
-      "weight": 1.0,
-      "source": "continuousweb_rollvisualizer_rollvisualizersvg",
-      "target": "continuousweb_rollvisualizer_ellipsearc",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "components/continuousWeb/RollVisualizer.tsx",
-      "source_location": "L285",
-      "weight": 1.0,
-      "source": "continuousweb_rollvisualizer_rollvisualizersvg",
-      "target": "continuousweb_rollvisualizer_topath",
+      "target": "continuousweb_rollvisualizer_ellipsepath",
       "confidence_score": 1.0
     },
     {
@@ -16930,9 +17437,9 @@
       "source_file": "components/continuousWeb/RollVisualizer.tsx",
       "source_location": "L304",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_rollvisualizer_rollvisualizersvg",
-      "target": "continuousweb_rollvisualizer_fmt",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollvisualizer_fmt"
     },
     {
       "relation": "calls",
@@ -16963,9 +17470,9 @@
       "source_file": "components/roll/RollSchematic.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollschematic",
-      "target": "continuousweb_rollvisualizer_rollvisualizer",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollvisualizer_rollvisualizer"
     },
     {
       "relation": "imports",
@@ -16974,9 +17481,9 @@
       "source_file": "components/sleeve/SleeveSchematic.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveschematic",
-      "target": "continuousweb_rollvisualizer_rollvisualizer",
-      "confidence_score": 1.0
+      "target": "continuousweb_rollvisualizer_rollvisualizer"
     },
     {
       "relation": "contains",
@@ -16984,9 +17491,9 @@
       "source_file": "components/continuousWeb/WebInputField.tsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_webinputfield",
-      "target": "continuousweb_webinputfield_webconfiguratorfield",
-      "confidence_score": 1.0
+      "target": "continuousweb_webinputfield_webconfiguratorfield"
     },
     {
       "relation": "contains",
@@ -16994,9 +17501,9 @@
       "source_file": "components/continuousWeb/WebInputField.tsx",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_webinputfield",
-      "target": "continuousweb_webinputfield_webinputfield",
-      "confidence_score": 1.0
+      "target": "continuousweb_webinputfield_webinputfield"
     },
     {
       "relation": "imports_from",
@@ -17005,9 +17512,9 @@
       "source_file": "components/continuousWeb/WebInputField.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_webinputfield",
-      "target": "lib_inputs",
-      "confidence_score": 1.0
+      "target": "lib_inputs"
     },
     {
       "relation": "imports",
@@ -17016,9 +17523,9 @@
       "source_file": "components/continuousWeb/WebInputField.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_webinputfield",
-      "target": "lib_inputs_selectonfocus",
-      "confidence_score": 1.0
+      "target": "lib_inputs_selectonfocus"
     },
     {
       "relation": "imports_from",
@@ -17027,9 +17534,9 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "continuousweb_webinputfield",
-      "confidence_score": 1.0
+      "target": "continuousweb_webinputfield"
     },
     {
       "relation": "imports_from",
@@ -17038,9 +17545,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "continuousweb_webinputfield",
-      "confidence_score": 1.0
+      "target": "continuousweb_webinputfield"
     },
     {
       "relation": "imports",
@@ -17049,9 +17556,9 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "continuousweb_webinputfield_webinputfield",
-      "confidence_score": 1.0
+      "target": "continuousweb_webinputfield_webinputfield"
     },
     {
       "relation": "imports",
@@ -17060,8 +17567,112 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "continuousweb_webinputfield_webinputfield",
+      "target": "continuousweb_webinputfield_webinputfield"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/continuousWeb/rollSpiralModel.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "continuousweb_rollspiralmodel_test",
+      "target": "continuousweb_rollspiralmodel",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/continuousWeb/rollSpiralModel.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "continuousweb_rollspiralmodel_test",
+      "target": "continuousweb_rollspiralmodel_buildspiralmodel",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/continuousWeb/rollSpiralModel.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "continuousweb_rollspiralmodel_test",
+      "target": "continuousweb_rollspiralmodel_filmthicknessmm",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/continuousWeb/rollSpiralModel.ts",
+      "source_location": "L75",
+      "weight": 1.0,
+      "source": "continuousweb_rollspiralmodel",
+      "target": "continuousweb_rollspiralmodel_buildspiralmodel",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/continuousWeb/rollSpiralModel.ts",
+      "source_location": "L65",
+      "weight": 1.0,
+      "source": "continuousweb_rollspiralmodel",
+      "target": "continuousweb_rollspiralmodel_filmthicknessmm",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/continuousWeb/rollSpiralModel.ts",
+      "source_location": "L112",
+      "weight": 1.0,
+      "source": "continuousweb_rollspiralmodel",
+      "target": "continuousweb_rollspiralmodel_pt2",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/continuousWeb/rollSpiralModel.ts",
+      "source_location": "L126",
+      "weight": 1.0,
+      "source": "continuousweb_rollspiralmodel",
+      "target": "continuousweb_rollspiralmodel_representativespiralpoints",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/continuousWeb/rollSpiralModel.ts",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "continuousweb_rollspiralmodel",
+      "target": "continuousweb_rollspiralmodel_spiralinput",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/continuousWeb/rollSpiralModel.ts",
+      "source_location": "L37",
+      "weight": 1.0,
+      "source": "continuousweb_rollspiralmodel",
+      "target": "continuousweb_rollspiralmodel_spiralmodel",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "components/continuousWeb/rollSpiralModel.ts",
+      "source_location": "L82",
+      "weight": 1.0,
+      "source": "continuousweb_rollspiralmodel_buildspiralmodel",
+      "target": "continuousweb_rollspiralmodel_filmthicknessmm",
       "confidence_score": 1.0
     },
     {
@@ -17070,9 +17681,9 @@
       "source_file": "components/continuousWeb/webSvgPrimitives.tsx",
       "source_location": "L35",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_websvgprimitives",
-      "target": "continuousweb_websvgprimitives_dimh",
-      "confidence_score": 1.0
+      "target": "continuousweb_websvgprimitives_dimh"
     },
     {
       "relation": "contains",
@@ -17080,9 +17691,9 @@
       "source_file": "components/continuousWeb/webSvgPrimitives.tsx",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_websvgprimitives",
-      "target": "continuousweb_websvgprimitives_dimlbl",
-      "confidence_score": 1.0
+      "target": "continuousweb_websvgprimitives_dimlbl"
     },
     {
       "relation": "contains",
@@ -17090,9 +17701,9 @@
       "source_file": "components/continuousWeb/webSvgPrimitives.tsx",
       "source_location": "L77",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_websvgprimitives",
-      "target": "continuousweb_websvgprimitives_dimv",
-      "confidence_score": 1.0
+      "target": "continuousweb_websvgprimitives_dimv"
     },
     {
       "relation": "contains",
@@ -17100,9 +17711,9 @@
       "source_file": "components/continuousWeb/webSvgPrimitives.tsx",
       "source_location": "L122",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_websvgprimitives",
-      "target": "continuousweb_websvgprimitives_grid",
-      "confidence_score": 1.0
+      "target": "continuousweb_websvgprimitives_grid"
     },
     {
       "relation": "contains",
@@ -17110,9 +17721,9 @@
       "source_file": "components/continuousWeb/webSvgPrimitives.tsx",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_websvgprimitives",
-      "target": "continuousweb_websvgprimitives_mkt",
-      "confidence_score": 1.0
+      "target": "continuousweb_websvgprimitives_mkt"
     },
     {
       "relation": "contains",
@@ -17120,9 +17731,9 @@
       "source_file": "components/continuousWeb/webSvgPrimitives.tsx",
       "source_location": "L135",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_websvgprimitives",
-      "target": "continuousweb_websvgprimitives_usedrawareasize",
-      "confidence_score": 1.0
+      "target": "continuousweb_websvgprimitives_usedrawareasize"
     },
     {
       "relation": "contains",
@@ -17130,8 +17741,19 @@
       "source_file": "components/continuousWeb/webSvgPrimitives.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "continuousweb_websvgprimitives",
-      "target": "continuousweb_websvgprimitives_w",
+      "target": "continuousweb_websvgprimitives_w"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/roll/LabelOnBottle.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "roll_labelonbottle",
+      "target": "continuousweb_websvgprimitives",
       "confidence_score": 1.0
     },
     {
@@ -17141,9 +17763,9 @@
       "source_file": "components/roll/RollFlatBlank.tsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollflatblank",
-      "target": "continuousweb_websvgprimitives",
-      "confidence_score": 1.0
+      "target": "continuousweb_websvgprimitives"
     },
     {
       "relation": "imports_from",
@@ -17152,7 +17774,18 @@
       "source_file": "components/roll/RollSchematic.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollschematic",
+      "target": "continuousweb_websvgprimitives"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "shared_containeronbottle",
       "target": "continuousweb_websvgprimitives",
       "confidence_score": 1.0
     },
@@ -17160,10 +17793,21 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
+      "source_file": "components/sleeve/SleeveOnBottle.tsx",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "sleeve_sleeveonbottle",
+      "target": "continuousweb_websvgprimitives",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
       "source_location": "L4",
       "weight": 1.0,
-      "source": "sleeve_sleeveflatblank",
+      "source": "sleeve_sleeveopenweb",
       "target": "continuousweb_websvgprimitives",
       "confidence_score": 1.0
     },
@@ -17174,9 +17818,9 @@
       "source_file": "components/sleeve/SleeveSchematic.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveschematic",
-      "target": "continuousweb_websvgprimitives",
-      "confidence_score": 1.0
+      "target": "continuousweb_websvgprimitives"
     },
     {
       "relation": "imports",
@@ -17185,7 +17829,18 @@
       "source_file": "components/roll/RollFlatBlank.tsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollflatblank",
+      "target": "continuousweb_websvgprimitives_w"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "shared_containeronbottle",
       "target": "continuousweb_websvgprimitives_w",
       "confidence_score": 1.0
     },
@@ -17193,10 +17848,10 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
       "source_location": "L4",
       "weight": 1.0,
-      "source": "sleeve_sleeveflatblank",
+      "source": "sleeve_sleeveopenweb",
       "target": "continuousweb_websvgprimitives_w",
       "confidence_score": 1.0
     },
@@ -17204,12 +17859,34 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "components/roll/RollFlatBlank.tsx",
+      "source_file": "components/roll/LabelOnBottle.tsx",
       "source_location": "L4",
       "weight": 1.0,
-      "source": "roll_rollflatblank",
+      "source": "roll_labelonbottle",
       "target": "continuousweb_websvgprimitives_dimlbl",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "components/roll/LabelOnBottle.tsx",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "roll_labelonbottle_labelonbottle",
+      "target": "continuousweb_websvgprimitives_dimlbl"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/roll/RollFlatBlank.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "roll_rollflatblank",
+      "target": "continuousweb_websvgprimitives_dimlbl"
     },
     {
       "relation": "calls",
@@ -17226,10 +17903,10 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
-      "source_location": "L4",
+      "source_file": "components/sleeve/SleeveOnBottle.tsx",
+      "source_location": "L5",
       "weight": 1.0,
-      "source": "sleeve_sleeveflatblank",
+      "source": "sleeve_sleeveonbottle",
       "target": "continuousweb_websvgprimitives_dimlbl",
       "confidence_score": 1.0
     },
@@ -17238,10 +17915,32 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
-      "source_location": "L45",
+      "source_file": "components/sleeve/SleeveOnBottle.tsx",
+      "source_location": "L19",
       "weight": 1.0,
-      "source": "sleeve_sleeveflatblank_drawsleeveflat",
+      "source": "sleeve_sleeveonbottle_sleeveonbottle",
+      "target": "continuousweb_websvgprimitives_dimlbl"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "sleeve_sleeveopenweb",
+      "target": "continuousweb_websvgprimitives_dimlbl",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
+      "source_location": "L43",
+      "weight": 1.0,
+      "source": "sleeve_sleeveopenweb_drawsleeveopenweb",
       "target": "continuousweb_websvgprimitives_dimlbl"
     },
     {
@@ -17251,9 +17950,9 @@
       "source_file": "components/roll/RollFlatBlank.tsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollflatblank",
-      "target": "continuousweb_websvgprimitives_mkt",
-      "confidence_score": 1.0
+      "target": "continuousweb_websvgprimitives_mkt"
     },
     {
       "relation": "calls",
@@ -17270,10 +17969,10 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
-      "source_location": "L4",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L9",
       "weight": 1.0,
-      "source": "sleeve_sleeveflatblank",
+      "source": "shared_containeronbottle",
       "target": "continuousweb_websvgprimitives_mkt",
       "confidence_score": 1.0
     },
@@ -17281,10 +17980,32 @@
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
+      "confidence_score": 1.0,
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L72",
+      "weight": 1.0,
+      "source": "shared_containeronbottle_drawcontaineronbottle",
+      "target": "continuousweb_websvgprimitives_mkt"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "sleeve_sleeveopenweb",
+      "target": "continuousweb_websvgprimitives_mkt",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
       "source_location": "L10",
       "weight": 1.0,
-      "source": "sleeve_sleeveflatblank_drawsleeveflat",
+      "source": "sleeve_sleeveopenweb_drawsleeveopenweb",
       "target": "continuousweb_websvgprimitives_mkt",
       "confidence_score": 1.0
     },
@@ -17295,7 +18016,18 @@
       "source_file": "components/roll/RollFlatBlank.tsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollflatblank",
+      "target": "continuousweb_websvgprimitives_dimh"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "shared_containeronbottle",
       "target": "continuousweb_websvgprimitives_dimh",
       "confidence_score": 1.0
     },
@@ -17303,10 +18035,10 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
       "source_location": "L4",
       "weight": 1.0,
-      "source": "sleeve_sleeveflatblank",
+      "source": "sleeve_sleeveopenweb",
       "target": "continuousweb_websvgprimitives_dimh",
       "confidence_score": 1.0
     },
@@ -17317,7 +18049,18 @@
       "source_file": "components/roll/RollFlatBlank.tsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollflatblank",
+      "target": "continuousweb_websvgprimitives_dimv"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "shared_containeronbottle",
       "target": "continuousweb_websvgprimitives_dimv",
       "confidence_score": 1.0
     },
@@ -17325,10 +18068,10 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
       "source_location": "L4",
       "weight": 1.0,
-      "source": "sleeve_sleeveflatblank",
+      "source": "sleeve_sleeveopenweb",
       "target": "continuousweb_websvgprimitives_dimv",
       "confidence_score": 1.0
     },
@@ -17339,9 +18082,9 @@
       "source_file": "components/roll/RollFlatBlank.tsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollflatblank",
-      "target": "continuousweb_websvgprimitives_grid",
-      "confidence_score": 1.0
+      "target": "continuousweb_websvgprimitives_grid"
     },
     {
       "relation": "imports",
@@ -17350,7 +18093,18 @@
       "source_file": "components/roll/RollSchematic.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollschematic",
+      "target": "continuousweb_websvgprimitives_grid"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "shared_containeronbottle",
       "target": "continuousweb_websvgprimitives_grid",
       "confidence_score": 1.0
     },
@@ -17358,10 +18112,10 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
       "source_location": "L4",
       "weight": 1.0,
-      "source": "sleeve_sleeveflatblank",
+      "source": "sleeve_sleeveopenweb",
       "target": "continuousweb_websvgprimitives_grid",
       "confidence_score": 1.0
     },
@@ -17372,9 +18126,9 @@
       "source_file": "components/sleeve/SleeveSchematic.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveschematic",
-      "target": "continuousweb_websvgprimitives_grid",
-      "confidence_score": 1.0
+      "target": "continuousweb_websvgprimitives_grid"
     },
     {
       "relation": "imports",
@@ -17383,9 +18137,9 @@
       "source_file": "components/roll/RollFlatBlank.tsx",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollflatblank",
-      "target": "continuousweb_websvgprimitives_usedrawareasize",
-      "confidence_score": 1.0
+      "target": "continuousweb_websvgprimitives_usedrawareasize"
     },
     {
       "relation": "calls",
@@ -17405,9 +18159,9 @@
       "source_file": "components/roll/RollSchematic.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollschematic",
-      "target": "continuousweb_websvgprimitives_usedrawareasize",
-      "confidence_score": 1.0
+      "target": "continuousweb_websvgprimitives_usedrawareasize"
     },
     {
       "relation": "calls",
@@ -17424,10 +18178,10 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
-      "source_location": "L4",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L9",
       "weight": 1.0,
-      "source": "sleeve_sleeveflatblank",
+      "source": "shared_containeronbottle",
       "target": "continuousweb_websvgprimitives_usedrawareasize",
       "confidence_score": 1.0
     },
@@ -17436,10 +18190,32 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
-      "source_location": "L53",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L28",
       "weight": 1.0,
-      "source": "sleeve_sleeveflatblank_sleeveflatblank",
+      "source": "shared_containeronbottle_containeronbottle",
+      "target": "continuousweb_websvgprimitives_usedrawareasize"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "sleeve_sleeveopenweb",
+      "target": "continuousweb_websvgprimitives_usedrawareasize",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
+      "source_location": "L54",
+      "weight": 1.0,
+      "source": "sleeve_sleeveopenweb_sleeveopenweb",
       "target": "continuousweb_websvgprimitives_usedrawareasize"
     },
     {
@@ -17449,9 +18225,9 @@
       "source_file": "components/sleeve/SleeveSchematic.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveschematic",
-      "target": "continuousweb_websvgprimitives_usedrawareasize",
-      "confidence_score": 1.0
+      "target": "continuousweb_websvgprimitives_usedrawareasize"
     },
     {
       "relation": "calls",
@@ -17468,54 +18244,10 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "pages/EstimateEditor.tsx",
-      "source_location": "L13",
+      "source_file": "components/roll/LabelOnBottle.tsx",
+      "source_location": "L2",
       "weight": 1.0,
-      "source": "pages_estimateeditor",
-      "target": "roll_rollconfigurator",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "components/roll/RollConfigurator.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "source": "roll_rollconfigurator",
-      "target": "lib_rollconfiguratorcatalog",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "components/roll/RollConfigurator.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "source": "roll_rollconfigurator",
-      "target": "lib_rollconfiguratorcatalog_roll_configurator",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "components/roll/RollConfigurator.tsx",
-      "source_location": "L6",
-      "weight": 1.0,
-      "source": "roll_rollconfigurator",
-      "target": "lib_rollconfiguratorcatalog_rollfieldvaluesfromdimensions",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "components/roll/RollConfigurator.tsx",
-      "source_location": "L10",
-      "weight": 1.0,
-      "source": "roll_rollconfigurator",
+      "source": "roll_labelonbottle",
       "target": "lib_rolldrawdims",
       "confidence_score": 1.0
     },
@@ -17523,12 +18255,121 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "components/roll/LabelOnBottle.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "roll_labelonbottle",
+      "target": "lib_rolldrawdims_rolldrawdims",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/roll/LabelOnBottle.tsx",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "roll_labelonbottle",
+      "target": "roll_labelonbottle_labelonbottle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/roll/LabelOnBottle.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "roll_labelonbottle",
+      "target": "shared_containeronbottle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/roll/LabelOnBottle.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "roll_labelonbottle",
+      "target": "shared_containeronbottle_containeronbottle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/roll/RollConfigurator.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "roll_rollconfigurator",
+      "target": "roll_labelonbottle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/roll/RollConfigurator.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "roll_rollconfigurator",
+      "target": "roll_labelonbottle_labelonbottle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "pages/EstimateEditor.tsx",
+      "source_location": "L13",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "pages_estimateeditor",
+      "target": "roll_rollconfigurator"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/roll/RollConfigurator.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "roll_rollconfigurator",
+      "target": "lib_rollconfiguratorcatalog"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/roll/RollConfigurator.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "roll_rollconfigurator",
+      "target": "lib_rollconfiguratorcatalog_roll_configurator"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/roll/RollConfigurator.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "roll_rollconfigurator",
+      "target": "lib_rollconfiguratorcatalog_rollfieldvaluesfromdimensions"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "lib_rolldrawdims_rolldrawdimsfromfields",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims"
     },
     {
       "relation": "imports",
@@ -17537,9 +18378,9 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "lib_rolldrawdims_rollflatweblabel",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_rolldrawdimsfromfields"
     },
     {
       "relation": "imports",
@@ -17548,9 +18389,9 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "lib_rolldrawdims_rollpieceareacm2",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_rollflatweblabel"
     },
     {
       "relation": "imports",
@@ -17559,9 +18400,20 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "lib_rolldrawdims_rollrepeatareacm2",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_rollpieceareacm2"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/roll/RollConfigurator.tsx",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "roll_rollconfigurator",
+      "target": "lib_rolldrawdims_rollrepeatareacm2"
     },
     {
       "relation": "imports_from",
@@ -17570,9 +18422,9 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "lib_rollspec",
-      "confidence_score": 1.0
+      "target": "lib_rollspec"
     },
     {
       "relation": "imports",
@@ -17581,9 +18433,9 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "lib_rollspec_patchnetfilmweightkg",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_patchnetfilmweightkg"
     },
     {
       "relation": "imports",
@@ -17592,9 +18444,9 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "lib_rollspec_patchrollodmm",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_patchrollodmm"
     },
     {
       "relation": "imports",
@@ -17603,9 +18455,9 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "lib_rollspec_rollspecfromdimensions",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_rollspecfromdimensions"
     },
     {
       "relation": "imports",
@@ -17614,9 +18466,9 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "lib_rollspec_seedrollspecpatch",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_seedrollspecpatch"
     },
     {
       "relation": "contains",
@@ -17624,9 +18476,9 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "roll_rollconfigurator_rollconfigurator",
-      "confidence_score": 1.0
+      "target": "roll_rollconfigurator_rollconfigurator"
     },
     {
       "relation": "imports_from",
@@ -17635,9 +18487,9 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "roll_rollflatblank",
-      "confidence_score": 1.0
+      "target": "roll_rollflatblank"
     },
     {
       "relation": "imports",
@@ -17646,9 +18498,9 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "roll_rollflatblank_rollflatblank",
-      "confidence_score": 1.0
+      "target": "roll_rollflatblank_rollflatblank"
     },
     {
       "relation": "imports_from",
@@ -17657,9 +18509,9 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "roll_rollschematic",
-      "confidence_score": 1.0
+      "target": "roll_rollschematic"
     },
     {
       "relation": "imports",
@@ -17668,9 +18520,9 @@
       "source_file": "components/roll/RollConfigurator.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollconfigurator",
-      "target": "roll_rollschematic_rollschematic",
-      "confidence_score": 1.0
+      "target": "roll_rollschematic_rollschematic"
     },
     {
       "relation": "imports",
@@ -17679,9 +18531,9 @@
       "source_file": "pages/EstimateEditor.tsx",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_estimateeditor",
-      "target": "roll_rollconfigurator_rollconfigurator",
-      "confidence_score": 1.0
+      "target": "roll_rollconfigurator_rollconfigurator"
     },
     {
       "relation": "calls",
@@ -17723,9 +18575,9 @@
       "source_file": "components/roll/RollFlatBlank.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollflatblank",
-      "target": "lib_rolldrawdims",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims"
     },
     {
       "relation": "imports",
@@ -17734,9 +18586,9 @@
       "source_file": "components/roll/RollFlatBlank.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollflatblank",
-      "target": "lib_rolldrawdims_iscontinuouswebroll",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_iscontinuouswebroll"
     },
     {
       "relation": "imports",
@@ -17745,9 +18597,9 @@
       "source_file": "components/roll/RollFlatBlank.tsx",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollflatblank",
-      "target": "lib_rolldrawdims_rolldrawdims",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_rolldrawdims"
     },
     {
       "relation": "imports",
@@ -17756,9 +18608,9 @@
       "source_file": "components/roll/RollFlatBlank.tsx",
       "source_location": "L3",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollflatblank",
-      "target": "lib_rolldrawdims_rolllanewidthmm",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_rolllanewidthmm"
     },
     {
       "relation": "contains",
@@ -17766,9 +18618,9 @@
       "source_file": "components/roll/RollFlatBlank.tsx",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollflatblank",
-      "target": "roll_rollflatblank_drawrollflat",
-      "confidence_score": 1.0
+      "target": "roll_rollflatblank_drawrollflat"
     },
     {
       "relation": "contains",
@@ -17776,9 +18628,9 @@
       "source_file": "components/roll/RollFlatBlank.tsx",
       "source_location": "L105",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollflatblank",
-      "target": "roll_rollflatblank_rollflatblank",
-      "confidence_score": 1.0
+      "target": "roll_rollflatblank_rollflatblank"
     },
     {
       "relation": "calls",
@@ -17809,9 +18661,9 @@
       "source_file": "components/roll/RollSchematic.tsx",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollschematic",
-      "target": "lib_rolldrawdims",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims"
     },
     {
       "relation": "imports",
@@ -17820,9 +18672,9 @@
       "source_file": "components/roll/RollSchematic.tsx",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollschematic",
-      "target": "lib_rolldrawdims_rolldrawdims",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_rolldrawdims"
     },
     {
       "relation": "contains",
@@ -17830,8 +18682,258 @@
       "source_file": "components/roll/RollSchematic.tsx",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "roll_rollschematic",
-      "target": "roll_rollschematic_rollschematic",
+      "target": "roll_rollschematic_rollschematic"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "shared_containeronbottle",
+      "target": "lib_containerbandviz",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "shared_containeronbottle",
+      "target": "lib_containerbandviz_bottlecappath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "shared_containeronbottle",
+      "target": "lib_containerbandviz_bottlelayoutforband",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "shared_containeronbottle",
+      "target": "lib_containerbandviz_bottleneckcappath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "shared_containeronbottle",
+      "target": "lib_containerbandviz_bottlesilhouettepath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "shared_containeronbottle",
+      "target": "lib_containerbandviz_containerbandplacement",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "shared_containeronbottle",
+      "target": "shared_containeronbottle_containeronbottle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L57",
+      "weight": 1.0,
+      "source": "shared_containeronbottle",
+      "target": "shared_containeronbottle_drawcontaineronbottle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveOnBottle.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "sleeve_sleeveonbottle",
+      "target": "shared_containeronbottle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveOnBottle.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "sleeve_sleeveonbottle",
+      "target": "shared_containeronbottle_containeronbottle",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L168",
+      "weight": 1.0,
+      "source": "shared_containeronbottle_drawcontaineronbottle",
+      "target": "lib_containerbandviz_bottlecappath"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L94",
+      "weight": 1.0,
+      "source": "shared_containeronbottle_drawcontaineronbottle",
+      "target": "lib_containerbandviz_bottleneckcappath"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "components/shared/ContainerOnBottle.tsx",
+      "source_location": "L77",
+      "weight": 1.0,
+      "source": "shared_containeronbottle_drawcontaineronbottle",
+      "target": "lib_containerbandviz_bottlesilhouettepath"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveBandPlacement.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "sleeve_sleevebandplacement",
+      "target": "lib_containerbandviz",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveBandPlacement.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "sleeve_sleevebandplacement",
+      "target": "lib_containerbandviz_container_band_placement_code",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveBandPlacement.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "sleeve_sleevebandplacement",
+      "target": "lib_containerbandviz_container_band_placement_labels",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveBandPlacement.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "sleeve_sleevebandplacement",
+      "target": "lib_containerbandviz_container_band_placements",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveBandPlacement.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "sleeve_sleevebandplacement",
+      "target": "lib_containerbandviz_containerbandplacement",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveBandPlacement.tsx",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "sleeve_sleevebandplacement",
+      "target": "lib_containerbandviz_containerbandplacementfromcode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveBandPlacement.tsx",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "sleeve_sleevebandplacement",
+      "target": "sleeve_sleevebandplacement_sleevebandplacement",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveConfigurator.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "sleeve_sleeveconfigurator",
+      "target": "sleeve_sleevebandplacement",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "components/sleeve/SleeveBandPlacement.tsx",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "sleeve_sleevebandplacement_sleevebandplacement",
+      "target": "lib_containerbandviz_containerbandplacementfromcode"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveConfigurator.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "sleeve_sleeveconfigurator",
+      "target": "sleeve_sleevebandplacement_sleevebandplacement",
       "confidence_score": 1.0
     },
     {
@@ -17841,9 +18943,9 @@
       "source_file": "pages/EstimateEditor.tsx",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_estimateeditor",
-      "target": "sleeve_sleeveconfigurator",
-      "confidence_score": 1.0
+      "target": "sleeve_sleeveconfigurator"
     },
     {
       "relation": "imports_from",
@@ -17852,9 +18954,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "lib_rollspec",
-      "confidence_score": 1.0
+      "target": "lib_rollspec"
     },
     {
       "relation": "imports",
@@ -17863,9 +18965,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "lib_rollspec_patchnetfilmweightkg",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_patchnetfilmweightkg"
     },
     {
       "relation": "imports",
@@ -17874,9 +18976,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "lib_rollspec_patchrollodmm",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_patchrollodmm"
     },
     {
       "relation": "imports",
@@ -17885,9 +18987,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "lib_rollspec_rollspecfromdimensions",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_rollspecfromdimensions"
     },
     {
       "relation": "imports",
@@ -17896,9 +18998,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "lib_rollspec_seedrollspecpatch",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_seedrollspecpatch"
     },
     {
       "relation": "imports_from",
@@ -17907,9 +19009,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "lib_sleeveconfiguratorcatalog",
-      "confidence_score": 1.0
+      "target": "lib_sleeveconfiguratorcatalog"
     },
     {
       "relation": "imports",
@@ -17918,9 +19020,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "lib_sleeveconfiguratorcatalog_sleeve_configurator",
-      "confidence_score": 1.0
+      "target": "lib_sleeveconfiguratorcatalog_sleeve_configurator"
     },
     {
       "relation": "imports",
@@ -17929,9 +19031,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "lib_sleeveconfiguratorcatalog_sleevedimensionspatchfromfields",
-      "confidence_score": 1.0
+      "target": "lib_sleeveconfiguratorcatalog_sleevedimensionspatchfromfields"
     },
     {
       "relation": "imports",
@@ -17940,9 +19042,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "lib_sleeveconfiguratorcatalog_sleevefieldvaluesfromdimensions",
-      "confidence_score": 1.0
+      "target": "lib_sleeveconfiguratorcatalog_sleevefieldvaluesfromdimensions"
     },
     {
       "relation": "imports_from",
@@ -17951,9 +19053,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "lib_sleevedrawdims",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims"
     },
     {
       "relation": "imports",
@@ -17962,9 +19064,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "lib_sleevedrawdims_sleeveblankareacm2",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims_sleeveblankareacm2"
     },
     {
       "relation": "imports",
@@ -17973,9 +19075,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "lib_sleevedrawdims_sleevedrawdimsfromfields",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims_sleevedrawdimsfromfields"
     },
     {
       "relation": "imports",
@@ -17984,9 +19086,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "lib_sleevedrawdims_sleeveflatblanklabel",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims_sleeveflatblanklabel"
     },
     {
       "relation": "imports",
@@ -17995,9 +19097,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "lib_sleevedrawdims_sleeveformeddiameterlabel",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims_sleeveformeddiameterlabel"
     },
     {
       "relation": "imports",
@@ -18006,9 +19108,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L11",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "lib_sleevedrawdims_sleeveopenwebwidthmm",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims_sleeveopenwebwidthmm"
     },
     {
       "relation": "contains",
@@ -18016,31 +19118,9 @@
       "source_file": "components/sleeve/SleeveConfigurator.tsx",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "sleeve_sleeveconfigurator_sleeveconfigurator",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveConfigurator.tsx",
-      "source_location": "L2",
-      "weight": 1.0,
-      "source": "sleeve_sleeveconfigurator",
-      "target": "sleeve_sleeveflatblank",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveConfigurator.tsx",
-      "source_location": "L2",
-      "weight": 1.0,
-      "source": "sleeve_sleeveconfigurator",
-      "target": "sleeve_sleeveflatblank_sleeveflatblank",
-      "confidence_score": 1.0
+      "target": "sleeve_sleeveconfigurator_sleeveconfigurator"
     },
     {
       "relation": "imports_from",
@@ -18050,7 +19130,7 @@
       "source_location": "L3",
       "weight": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "sleeve_sleeveschematic",
+      "target": "sleeve_sleeveonbottle",
       "confidence_score": 1.0
     },
     {
@@ -18061,8 +19141,52 @@
       "source_location": "L3",
       "weight": 1.0,
       "source": "sleeve_sleeveconfigurator",
-      "target": "sleeve_sleeveschematic_sleeveschematic",
+      "target": "sleeve_sleeveonbottle_sleeveonbottle",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveConfigurator.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "sleeve_sleeveconfigurator",
+      "target": "sleeve_sleeveopenweb",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveConfigurator.tsx",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "sleeve_sleeveconfigurator",
+      "target": "sleeve_sleeveopenweb_sleeveopenweb",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveConfigurator.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "sleeve_sleeveconfigurator",
+      "target": "sleeve_sleeveschematic"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveConfigurator.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "sleeve_sleeveconfigurator",
+      "target": "sleeve_sleeveschematic_sleeveschematic"
     },
     {
       "relation": "imports",
@@ -18071,9 +19195,9 @@
       "source_file": "pages/EstimateEditor.tsx",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_estimateeditor",
-      "target": "sleeve_sleeveconfigurator_sleeveconfigurator",
-      "confidence_score": 1.0
+      "target": "sleeve_sleeveconfigurator_sleeveconfigurator"
     },
     {
       "relation": "calls",
@@ -18123,10 +19247,10 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
+      "source_file": "components/sleeve/SleeveOnBottle.tsx",
       "source_location": "L3",
       "weight": 1.0,
-      "source": "sleeve_sleeveflatblank",
+      "source": "sleeve_sleeveonbottle",
       "target": "lib_sleevedrawdims",
       "confidence_score": 1.0
     },
@@ -18134,10 +19258,10 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
+      "source_file": "components/sleeve/SleeveOnBottle.tsx",
       "source_location": "L2",
       "weight": 1.0,
-      "source": "sleeve_sleeveflatblank",
+      "source": "sleeve_sleeveonbottle",
       "target": "lib_sleevedrawdims_sleevedrawdims",
       "confidence_score": 1.0
     },
@@ -18145,42 +19269,74 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
+      "source_file": "components/sleeve/SleeveOnBottle.tsx",
       "source_location": "L3",
       "weight": 1.0,
-      "source": "sleeve_sleeveflatblank",
+      "source": "sleeve_sleeveonbottle",
       "target": "lib_sleevedrawdims_sleeveformeddiametermm",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
-      "source_location": "L8",
+      "source_file": "components/sleeve/SleeveOnBottle.tsx",
+      "source_location": "L7",
       "weight": 1.0,
-      "source": "sleeve_sleeveflatblank",
-      "target": "sleeve_sleeveflatblank_drawsleeveflat",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
-      "source_location": "L52",
-      "weight": 1.0,
-      "source": "sleeve_sleeveflatblank",
-      "target": "sleeve_sleeveflatblank_sleeveflatblank",
+      "source": "sleeve_sleeveonbottle",
+      "target": "sleeve_sleeveonbottle_sleeveonbottle",
       "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
-      "source_file": "components/sleeve/SleeveFlatBlank.tsx",
-      "source_location": "L17",
+      "confidence_score": 1.0,
+      "source_file": "components/sleeve/SleeveOnBottle.tsx",
+      "source_location": "L8",
       "weight": 1.0,
-      "source": "sleeve_sleeveflatblank_drawsleeveflat",
-      "target": "lib_sleevedrawdims_sleeveformeddiametermm",
+      "source": "sleeve_sleeveonbottle_sleeveonbottle",
+      "target": "lib_sleevedrawdims_sleeveformeddiametermm"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
+      "source_location": "L3",
+      "weight": 1.0,
+      "source": "sleeve_sleeveopenweb",
+      "target": "lib_sleevedrawdims",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "sleeve_sleeveopenweb",
+      "target": "lib_sleevedrawdims_sleevedrawdims",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "sleeve_sleeveopenweb",
+      "target": "sleeve_sleeveopenweb_drawsleeveopenweb",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "components/sleeve/SleeveOpenWeb.tsx",
+      "source_location": "L53",
+      "weight": 1.0,
+      "source": "sleeve_sleeveopenweb",
+      "target": "sleeve_sleeveopenweb_sleeveopenweb",
       "confidence_score": 1.0
     },
     {
@@ -18190,9 +19346,9 @@
       "source_file": "components/sleeve/SleeveSchematic.tsx",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveschematic",
-      "target": "lib_sleevedrawdims",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims"
     },
     {
       "relation": "imports",
@@ -18201,9 +19357,9 @@
       "source_file": "components/sleeve/SleeveSchematic.tsx",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveschematic",
-      "target": "lib_sleevedrawdims_sleevedrawdims",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims_sleevedrawdims"
     },
     {
       "relation": "contains",
@@ -18211,9 +19367,9 @@
       "source_file": "components/sleeve/SleeveSchematic.tsx",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "sleeve_sleeveschematic",
-      "target": "sleeve_sleeveschematic_sleeveschematic",
-      "confidence_score": 1.0
+      "target": "sleeve_sleeveschematic_sleeveschematic"
     },
     {
       "relation": "contains",
@@ -19783,17 +20939,6 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "pages_standardtemplates",
-      "target": "hooks_useentrance_useentrance"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L155",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "pages_standardtemplates_templategridcell",
       "target": "hooks_useentrance_useentrance"
     },
     {
@@ -23848,6 +24993,258 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L160",
+      "weight": 1.0,
+      "source": "lib_containerbandviz",
+      "target": "lib_containerbandviz_bottlecappath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L45",
+      "weight": 1.0,
+      "source": "lib_containerbandviz",
+      "target": "lib_containerbandviz_bottlelayoutforband",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "lib_containerbandviz",
+      "target": "lib_containerbandviz_bottlelayoutmm",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L136",
+      "weight": 1.0,
+      "source": "lib_containerbandviz",
+      "target": "lib_containerbandviz_bottleneckcappath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L101",
+      "weight": 1.0,
+      "source": "lib_containerbandviz",
+      "target": "lib_containerbandviz_bottlesilhouettepath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "lib_containerbandviz",
+      "target": "lib_containerbandviz_code_to_placement",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "lib_containerbandviz",
+      "target": "lib_containerbandviz_container_band_placement_code",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "lib_containerbandviz",
+      "target": "lib_containerbandviz_container_band_placement_labels",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "source": "lib_containerbandviz",
+      "target": "lib_containerbandviz_container_band_placements",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "lib_containerbandviz",
+      "target": "lib_containerbandviz_containerbandplacement",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L25",
+      "weight": 1.0,
+      "source": "lib_containerbandviz",
+      "target": "lib_containerbandviz_containerbandplacementcode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/containerBandViz.ts",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "lib_containerbandviz",
+      "target": "lib_containerbandviz_containerbandplacementfromcode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/sleeveConfiguratorCatalog.ts",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "lib_sleeveconfiguratorcatalog",
+      "target": "lib_containerbandviz",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/sleeveDrawDims.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "lib_sleevedrawdims",
+      "target": "lib_containerbandviz",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/sleeveConfiguratorCatalog.ts",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "lib_sleeveconfiguratorcatalog",
+      "target": "lib_containerbandviz_containerbandplacement",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/sleeveDrawDims.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "lib_sleevedrawdims",
+      "target": "lib_containerbandviz_containerbandplacement",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/sleeveDrawDims.ts",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "lib_sleevedrawdims_sleevedrawdims",
+      "target": "lib_containerbandviz_containerbandplacement",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/sleeveConfiguratorCatalog.ts",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "lib_sleeveconfiguratorcatalog",
+      "target": "lib_containerbandviz_containerbandplacementfromcode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/sleeveConfiguratorCatalog.ts",
+      "source_location": "L57",
+      "weight": 1.0,
+      "source": "lib_sleeveconfiguratorcatalog_sleevebandplacementfromdimensions",
+      "target": "lib_containerbandviz_containerbandplacementfromcode"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/sleeveDrawDims.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "lib_sleevedrawdims",
+      "target": "lib_containerbandviz_containerbandplacementfromcode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/sleeveDrawDims.ts",
+      "source_location": "L30",
+      "weight": 1.0,
+      "source": "lib_sleevedrawdims_sleevedrawdimsfromfields",
+      "target": "lib_containerbandviz_containerbandplacementfromcode"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/sleeveConfiguratorCatalog.ts",
+      "source_location": "L6",
+      "weight": 1.0,
+      "source": "lib_sleeveconfiguratorcatalog",
+      "target": "lib_containerbandviz_containerbandplacementcode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/sleeveConfiguratorCatalog.ts",
+      "source_location": "L82",
+      "weight": 1.0,
+      "source": "lib_sleeveconfiguratorcatalog_seedsleevedimensionpatch",
+      "target": "lib_containerbandviz_containerbandplacementcode"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/sleeveConfiguratorCatalog.ts",
+      "source_location": "L69",
+      "weight": 1.0,
+      "source": "lib_sleeveconfiguratorcatalog_sleevefieldvaluesfromdimensions",
+      "target": "lib_containerbandviz_containerbandplacementcode"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "lib/currency.ts",
       "source_location": "L29",
       "weight": 1.0,
@@ -25773,6 +27170,26 @@
       "confidence_score": 1.0,
       "source": "pages_standardtemplates",
       "target": "lib_masterdatareference_normalizeunitvalue"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/materialFamily.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "lib_materialfamily",
+      "target": "lib_materialfamily_materialfamily",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/materialFamily.ts",
+      "source_location": "L45",
+      "weight": 1.0,
+      "source": "lib_materialfamily",
+      "target": "lib_materialfamily_materialfamilycolorvar",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -27727,23 +29144,47 @@
       "target": "lib_requote_meaningfulrequotepricechanges"
     },
     {
-      "relation": "contains",
+      "relation": "imports_from",
+      "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "lib/rollConfiguratorCatalog.ts",
-      "source_location": "L40",
+      "source_file": "lib/rollConfiguratorCatalog.test.ts",
+      "source_location": "L2",
       "weight": 1.0,
-      "source": "lib_rollconfiguratorcatalog",
-      "target": "lib_rollconfiguratorcatalog_field",
+      "source": "lib_rollconfiguratorcatalog_test",
+      "target": "lib_rollconfiguratorcatalog",
       "confidence_score": 1.0
     },
     {
-      "relation": "contains",
+      "relation": "imports",
+      "context": "import",
       "confidence": "EXTRACTED",
-      "source_file": "lib/rollConfiguratorCatalog.ts",
-      "source_location": "L148",
+      "source_file": "lib/rollConfiguratorCatalog.test.ts",
+      "source_location": "L2",
       "weight": 1.0,
-      "source": "lib_rollconfiguratorcatalog",
-      "target": "lib_rollconfiguratorcatalog_iscontinuouswebcutoff",
+      "source": "lib_rollconfiguratorcatalog_test",
+      "target": "lib_rollconfiguratorcatalog_defaultcutoffmm",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/rollConfiguratorCatalog.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "lib_rollconfiguratorcatalog_test",
+      "target": "lib_rollconfiguratorcatalog_rollfieldvaluesfromdimensions",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/rollConfiguratorCatalog.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "lib_rollconfiguratorcatalog_test",
+      "target": "lib_rollconfiguratorcatalog_seedrolldimensionpatch",
       "confidence_score": 1.0
     },
     {
@@ -27753,8 +29194,28 @@
       "source_location": "L86",
       "weight": 1.0,
       "source": "lib_rollconfiguratorcatalog",
-      "target": "lib_rollconfiguratorcatalog_islabelsrollcontext",
+      "target": "lib_rollconfiguratorcatalog_defaultcutoffmm",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/rollConfiguratorCatalog.ts",
+      "source_location": "L40",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_rollconfiguratorcatalog",
+      "target": "lib_rollconfiguratorcatalog_field"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/rollConfiguratorCatalog.ts",
+      "source_location": "L148",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "lib_rollconfiguratorcatalog",
+      "target": "lib_rollconfiguratorcatalog_iscontinuouswebcutoff"
     },
     {
       "relation": "contains",
@@ -27762,9 +29223,9 @@
       "source_file": "lib/rollConfiguratorCatalog.ts",
       "source_location": "L49",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollconfiguratorcatalog",
-      "target": "lib_rollconfiguratorcatalog_roll_configurator",
-      "confidence_score": 1.0
+      "target": "lib_rollconfiguratorcatalog_roll_configurator"
     },
     {
       "relation": "contains",
@@ -27772,9 +29233,9 @@
       "source_file": "lib/rollConfiguratorCatalog.ts",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollconfiguratorcatalog",
-      "target": "lib_rollconfiguratorcatalog_roll_configurator_dimension_keys",
-      "confidence_score": 1.0
+      "target": "lib_rollconfiguratorcatalog_roll_configurator_dimension_keys"
     },
     {
       "relation": "contains",
@@ -27782,9 +29243,9 @@
       "source_file": "lib/rollConfiguratorCatalog.ts",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollconfiguratorcatalog",
-      "target": "lib_rollconfiguratorcatalog_roll_defaults_continuous",
-      "confidence_score": 1.0
+      "target": "lib_rollconfiguratorcatalog_roll_defaults_continuous"
     },
     {
       "relation": "contains",
@@ -27792,9 +29253,9 @@
       "source_file": "lib/rollConfiguratorCatalog.ts",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollconfiguratorcatalog",
-      "target": "lib_rollconfiguratorcatalog_roll_defaults_general",
-      "confidence_score": 1.0
+      "target": "lib_rollconfiguratorcatalog_roll_defaults_general"
     },
     {
       "relation": "contains",
@@ -27802,9 +29263,9 @@
       "source_file": "lib/rollConfiguratorCatalog.ts",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollconfiguratorcatalog",
-      "target": "lib_rollconfiguratorcatalog_roll_defaults_labels",
-      "confidence_score": 1.0
+      "target": "lib_rollconfiguratorcatalog_roll_defaults_labels"
     },
     {
       "relation": "contains",
@@ -27812,9 +29273,9 @@
       "source_file": "lib/rollConfiguratorCatalog.ts",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollconfiguratorcatalog",
-      "target": "lib_rollconfiguratorcatalog_rollconfiguratorconfig",
-      "confidence_score": 1.0
+      "target": "lib_rollconfiguratorcatalog_rollconfiguratorconfig"
     },
     {
       "relation": "contains",
@@ -27822,9 +29283,9 @@
       "source_file": "lib/rollConfiguratorCatalog.ts",
       "source_location": "L76",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollconfiguratorcatalog",
-      "target": "lib_rollconfiguratorcatalog_rollconfiguratordefaults",
-      "confidence_score": 1.0
+      "target": "lib_rollconfiguratorcatalog_rollconfiguratordefaults"
     },
     {
       "relation": "contains",
@@ -27832,9 +29293,9 @@
       "source_file": "lib/rollConfiguratorCatalog.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollconfiguratorcatalog",
-      "target": "lib_rollconfiguratorcatalog_rollconfiguratorfield",
-      "confidence_score": 1.0
+      "target": "lib_rollconfiguratorcatalog_rollconfiguratorfield"
     },
     {
       "relation": "contains",
@@ -27842,9 +29303,9 @@
       "source_file": "lib/rollConfiguratorCatalog.ts",
       "source_location": "L102",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollconfiguratorcatalog",
-      "target": "lib_rollconfiguratorcatalog_rollfieldvaluesfromdimensions",
-      "confidence_score": 1.0
+      "target": "lib_rollconfiguratorcatalog_rollfieldvaluesfromdimensions"
     },
     {
       "relation": "contains",
@@ -27852,9 +29313,9 @@
       "source_file": "lib/rollConfiguratorCatalog.ts",
       "source_location": "L124",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollconfiguratorcatalog",
-      "target": "lib_rollconfiguratorcatalog_seedrolldimensionpatch",
-      "confidence_score": 1.0
+      "target": "lib_rollconfiguratorcatalog_seedrolldimensionpatch"
     },
     {
       "relation": "imports_from",
@@ -27863,8 +29324,19 @@
       "source_file": "pages/EstimateEditor.tsx",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_estimateeditor",
-      "target": "lib_rollconfiguratorcatalog",
+      "target": "lib_rollconfiguratorcatalog"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/rollConfiguratorCatalog.ts",
+      "source_location": "L91",
+      "weight": 1.0,
+      "source": "lib_rollconfiguratorcatalog_defaultcutoffmm",
+      "target": "lib_rollconfiguratorcatalog_rollconfiguratordefaults",
       "confidence_score": 1.0
     },
     {
@@ -27874,9 +29346,9 @@
       "source_file": "lib/rollConfiguratorCatalog.ts",
       "source_location": "L106",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollconfiguratorcatalog_rollfieldvaluesfromdimensions",
-      "target": "lib_rollconfiguratorcatalog_rollconfiguratordefaults",
-      "confidence_score": 1.0
+      "target": "lib_rollconfiguratorcatalog_rollconfiguratordefaults"
     },
     {
       "relation": "calls",
@@ -27885,8 +29357,30 @@
       "source_file": "lib/rollConfiguratorCatalog.ts",
       "source_location": "L128",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollconfiguratorcatalog_seedrolldimensionpatch",
-      "target": "lib_rollconfiguratorcatalog_rollconfiguratordefaults",
+      "target": "lib_rollconfiguratorcatalog_rollconfiguratordefaults"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/rollConfiguratorCatalog.ts",
+      "source_location": "L126",
+      "weight": 1.0,
+      "source": "lib_rollconfiguratorcatalog_rollfieldvaluesfromdimensions",
+      "target": "lib_rollconfiguratorcatalog_defaultcutoffmm",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/rollConfiguratorCatalog.ts",
+      "source_location": "L160",
+      "weight": 1.0,
+      "source": "lib_rollconfiguratorcatalog_seedrolldimensionpatch",
+      "target": "lib_rollconfiguratorcatalog_defaultcutoffmm",
       "confidence_score": 1.0
     },
     {
@@ -27896,20 +29390,9 @@
       "source_file": "pages/EstimateEditor.tsx",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_estimateeditor",
-      "target": "lib_rollconfiguratorcatalog_islabelsrollcontext",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports",
-      "context": "import",
-      "confidence": "EXTRACTED",
-      "source_file": "pages/EstimateEditor.tsx",
-      "source_location": "L26",
-      "weight": 1.0,
-      "source": "pages_estimateeditor",
-      "target": "lib_rollconfiguratorcatalog_seedrolldimensionpatch",
-      "confidence_score": 1.0
+      "target": "lib_rollconfiguratorcatalog_seedrolldimensionpatch"
     },
     {
       "relation": "contains",
@@ -27917,9 +29400,9 @@
       "source_file": "lib/rollDrawDims.ts",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rolldrawdims",
-      "target": "lib_rolldrawdims_iscontinuouswebroll",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_iscontinuouswebroll"
     },
     {
       "relation": "contains",
@@ -27927,9 +29410,9 @@
       "source_file": "lib/rollDrawDims.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rolldrawdims",
-      "target": "lib_rolldrawdims_rolldrawdims",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_rolldrawdims"
     },
     {
       "relation": "contains",
@@ -27937,9 +29420,9 @@
       "source_file": "lib/rollDrawDims.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rolldrawdims",
-      "target": "lib_rolldrawdims_rolldrawdimsfromfields",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_rolldrawdimsfromfields"
     },
     {
       "relation": "contains",
@@ -27947,9 +29430,9 @@
       "source_file": "lib/rollDrawDims.ts",
       "source_location": "L37",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rolldrawdims",
-      "target": "lib_rolldrawdims_rollflatweblabel",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_rollflatweblabel"
     },
     {
       "relation": "contains",
@@ -27957,9 +29440,9 @@
       "source_file": "lib/rollDrawDims.ts",
       "source_location": "L45",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rolldrawdims",
-      "target": "lib_rolldrawdims_rolllanewidthmm",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_rolllanewidthmm"
     },
     {
       "relation": "contains",
@@ -27967,9 +29450,9 @@
       "source_file": "lib/rollDrawDims.ts",
       "source_location": "L31",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rolldrawdims",
-      "target": "lib_rolldrawdims_rollpieceareacm2",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_rollpieceareacm2"
     },
     {
       "relation": "contains",
@@ -27977,9 +29460,9 @@
       "source_file": "lib/rollDrawDims.ts",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rolldrawdims",
-      "target": "lib_rolldrawdims_rollrepeatareacm2",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_rollrepeatareacm2"
     },
     {
       "relation": "contains",
@@ -27987,9 +29470,9 @@
       "source_file": "lib/rollDrawDims.ts",
       "source_location": "L50",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rolldrawdims",
-      "target": "lib_rolldrawdims_schematicouterdiametermm",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_schematicouterdiametermm"
     },
     {
       "relation": "calls",
@@ -27998,9 +29481,9 @@
       "source_file": "lib/rollDrawDims.ts",
       "source_location": "L38",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rolldrawdims_rollflatweblabel",
-      "target": "lib_rolldrawdims_iscontinuouswebroll",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_iscontinuouswebroll"
     },
     {
       "relation": "calls",
@@ -28009,9 +29492,9 @@
       "source_file": "lib/rollDrawDims.ts",
       "source_location": "L32",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rolldrawdims_rollpieceareacm2",
-      "target": "lib_rolldrawdims_iscontinuouswebroll",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_iscontinuouswebroll"
     },
     {
       "relation": "calls",
@@ -28020,9 +29503,9 @@
       "source_file": "lib/rollDrawDims.ts",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rolldrawdims_rollrepeatareacm2",
-      "target": "lib_rolldrawdims_iscontinuouswebroll",
-      "confidence_score": 1.0
+      "target": "lib_rolldrawdims_iscontinuouswebroll"
     },
     {
       "relation": "contains",
@@ -28030,9 +29513,9 @@
       "source_file": "lib/rollSpec.ts",
       "source_location": "L34",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollspec",
-      "target": "lib_rollspec_coreinchfrominsidemm",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_coreinchfrominsidemm"
     },
     {
       "relation": "contains",
@@ -28040,9 +29523,9 @@
       "source_file": "lib/rollSpec.ts",
       "source_location": "L146",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollspec",
-      "target": "lib_rollspec_formatrollspeclength",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_formatrollspeclength"
     },
     {
       "relation": "contains",
@@ -28050,9 +29533,9 @@
       "source_file": "lib/rollSpec.ts",
       "source_location": "L142",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollspec",
-      "target": "lib_rollspec_formatrollspecweight",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_formatrollspecweight"
     },
     {
       "relation": "contains",
@@ -28060,9 +29543,9 @@
       "source_file": "lib/rollSpec.ts",
       "source_location": "L131",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollspec",
-      "target": "lib_rollspec_patchnetfilmweightkg",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_patchnetfilmweightkg"
     },
     {
       "relation": "contains",
@@ -28070,9 +29553,9 @@
       "source_file": "lib/rollSpec.ts",
       "source_location": "L135",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollspec",
-      "target": "lib_rollspec_patchrollodmm",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_patchrollodmm"
     },
     {
       "relation": "contains",
@@ -28080,9 +29563,9 @@
       "source_file": "lib/rollSpec.ts",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollspec",
-      "target": "lib_rollspec_roll_spec_dimension_keys",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_roll_spec_dimension_keys"
     },
     {
       "relation": "contains",
@@ -28090,9 +29573,9 @@
       "source_file": "lib/rollSpec.ts",
       "source_location": "L48",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollspec",
-      "target": "lib_rollspec_rollspecdriverfromdimensions",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_rollspecdriverfromdimensions"
     },
     {
       "relation": "contains",
@@ -28100,9 +29583,9 @@
       "source_file": "lib/rollSpec.ts",
       "source_location": "L54",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollspec",
-      "target": "lib_rollspec_rollspecfromdimensions",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_rollspecfromdimensions"
     },
     {
       "relation": "contains",
@@ -28110,9 +29593,9 @@
       "source_file": "lib/rollSpec.ts",
       "source_location": "L100",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollspec",
-      "target": "lib_rollspec_seedrollspecpatch",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_seedrollspecpatch"
     },
     {
       "relation": "calls",
@@ -28121,9 +29604,9 @@
       "source_file": "lib/rollSpec.ts",
       "source_location": "L69",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_rollspec_rollspecfromdimensions",
-      "target": "lib_rollspec_rollspecdriverfromdimensions",
-      "confidence_score": 1.0
+      "target": "lib_rollspec_rollspecdriverfromdimensions"
     },
     {
       "relation": "contains",
@@ -28131,9 +29614,9 @@
       "source_file": "lib/sleeveConfiguratorCatalog.ts",
       "source_location": "L30",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleeveconfiguratorcatalog",
-      "target": "lib_sleeveconfiguratorcatalog_field",
-      "confidence_score": 1.0
+      "target": "lib_sleeveconfiguratorcatalog_field"
     },
     {
       "relation": "contains",
@@ -28141,9 +29624,9 @@
       "source_file": "lib/sleeveConfiguratorCatalog.ts",
       "source_location": "L57",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleeveconfiguratorcatalog",
-      "target": "lib_sleeveconfiguratorcatalog_seedsleevedimensionpatch",
-      "confidence_score": 1.0
+      "target": "lib_sleeveconfiguratorcatalog_seedsleevedimensionpatch"
     },
     {
       "relation": "contains",
@@ -28151,9 +29634,9 @@
       "source_file": "lib/sleeveConfiguratorCatalog.ts",
       "source_location": "L38",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleeveconfiguratorcatalog",
-      "target": "lib_sleeveconfiguratorcatalog_sleeve_configurator",
-      "confidence_score": 1.0
+      "target": "lib_sleeveconfiguratorcatalog_sleeve_configurator"
     },
     {
       "relation": "contains",
@@ -28161,8 +29644,28 @@
       "source_file": "lib/sleeveConfiguratorCatalog.ts",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleeveconfiguratorcatalog",
-      "target": "lib_sleeveconfiguratorcatalog_sleeve_configurator_dimension_keys",
+      "target": "lib_sleeveconfiguratorcatalog_sleeve_configurator_dimension_keys"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/sleeveConfiguratorCatalog.ts",
+      "source_location": "L25",
+      "weight": 1.0,
+      "source": "lib_sleeveconfiguratorcatalog",
+      "target": "lib_sleeveconfiguratorcatalog_sleeve_defaults",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/sleeveConfiguratorCatalog.ts",
+      "source_location": "L54",
+      "weight": 1.0,
+      "source": "lib_sleeveconfiguratorcatalog",
+      "target": "lib_sleeveconfiguratorcatalog_sleevebandplacementfromdimensions",
       "confidence_score": 1.0
     },
     {
@@ -28171,9 +29674,9 @@
       "source_file": "lib/sleeveConfiguratorCatalog.ts",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleeveconfiguratorcatalog",
-      "target": "lib_sleeveconfiguratorcatalog_sleeveconfiguratorconfig",
-      "confidence_score": 1.0
+      "target": "lib_sleeveconfiguratorcatalog_sleeveconfiguratorconfig"
     },
     {
       "relation": "contains",
@@ -28181,9 +29684,9 @@
       "source_file": "lib/sleeveConfiguratorCatalog.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleeveconfiguratorcatalog",
-      "target": "lib_sleeveconfiguratorcatalog_sleeveconfiguratorfield",
-      "confidence_score": 1.0
+      "target": "lib_sleeveconfiguratorcatalog_sleeveconfiguratorfield"
     },
     {
       "relation": "contains",
@@ -28191,9 +29694,9 @@
       "source_file": "lib/sleeveConfiguratorCatalog.ts",
       "source_location": "L79",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleeveconfiguratorcatalog",
-      "target": "lib_sleeveconfiguratorcatalog_sleevedimensionspatchfromfields",
-      "confidence_score": 1.0
+      "target": "lib_sleeveconfiguratorcatalog_sleevedimensionspatchfromfields"
     },
     {
       "relation": "contains",
@@ -28201,8 +29704,19 @@
       "source_file": "lib/sleeveConfiguratorCatalog.ts",
       "source_location": "L45",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleeveconfiguratorcatalog",
-      "target": "lib_sleeveconfiguratorcatalog_sleevefieldvaluesfromdimensions",
+      "target": "lib_sleeveconfiguratorcatalog_sleevefieldvaluesfromdimensions"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/sleeveDrawDims.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "lib_sleevedrawdims",
+      "target": "lib_sleeveconfiguratorcatalog",
       "confidence_score": 1.0
     },
     {
@@ -28212,8 +29726,30 @@
       "source_file": "pages/EstimateEditor.tsx",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_estimateeditor",
-      "target": "lib_sleeveconfiguratorcatalog",
+      "target": "lib_sleeveconfiguratorcatalog"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/sleeveDrawDims.ts",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "lib_sleevedrawdims",
+      "target": "lib_sleeveconfiguratorcatalog_sleeve_defaults",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/sleeveConfiguratorCatalog.ts",
+      "source_location": "L69",
+      "weight": 1.0,
+      "source": "lib_sleeveconfiguratorcatalog_sleevefieldvaluesfromdimensions",
+      "target": "lib_sleeveconfiguratorcatalog_sleevebandplacementfromdimensions",
       "confidence_score": 1.0
     },
     {
@@ -28223,9 +29759,9 @@
       "source_file": "pages/EstimateEditor.tsx",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pages_estimateeditor",
-      "target": "lib_sleeveconfiguratorcatalog_seedsleevedimensionpatch",
-      "confidence_score": 1.0
+      "target": "lib_sleeveconfiguratorcatalog_seedsleevedimensionpatch"
     },
     {
       "relation": "contains",
@@ -28233,9 +29769,9 @@
       "source_file": "lib/sleeveDrawDims.ts",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleevedrawdims",
-      "target": "lib_sleevedrawdims_sleeveblankareacm2",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims_sleeveblankareacm2"
     },
     {
       "relation": "contains",
@@ -28243,9 +29779,9 @@
       "source_file": "lib/sleeveDrawDims.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleevedrawdims",
-      "target": "lib_sleevedrawdims_sleevedrawdims",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims_sleevedrawdims"
     },
     {
       "relation": "contains",
@@ -28253,9 +29789,9 @@
       "source_file": "lib/sleeveDrawDims.ts",
       "source_location": "L17",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleevedrawdims",
-      "target": "lib_sleevedrawdims_sleevedrawdimsfromfields",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims_sleevedrawdimsfromfields"
     },
     {
       "relation": "contains",
@@ -28263,9 +29799,9 @@
       "source_file": "lib/sleeveDrawDims.ts",
       "source_location": "L30",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleevedrawdims",
-      "target": "lib_sleevedrawdims_sleeveflatblanklabel",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims_sleeveflatblanklabel"
     },
     {
       "relation": "contains",
@@ -28273,9 +29809,9 @@
       "source_file": "lib/sleeveDrawDims.ts",
       "source_location": "L39",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleevedrawdims",
-      "target": "lib_sleevedrawdims_sleeveformeddiameterlabel",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims_sleeveformeddiameterlabel"
     },
     {
       "relation": "contains",
@@ -28283,9 +29819,9 @@
       "source_file": "lib/sleeveDrawDims.ts",
       "source_location": "L35",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleevedrawdims",
-      "target": "lib_sleevedrawdims_sleeveformeddiametermm",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims_sleeveformeddiametermm"
     },
     {
       "relation": "contains",
@@ -28293,9 +29829,9 @@
       "source_file": "lib/sleeveDrawDims.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleevedrawdims",
-      "target": "lib_sleevedrawdims_sleeveopenwebwidthmm",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims_sleeveopenwebwidthmm"
     },
     {
       "relation": "calls",
@@ -28304,9 +29840,9 @@
       "source_file": "lib/sleeveDrawDims.ts",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleevedrawdims_sleevedrawdimsfromfields",
-      "target": "lib_sleevedrawdims_sleeveopenwebwidthmm",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims_sleeveopenwebwidthmm"
     },
     {
       "relation": "calls",
@@ -28315,9 +29851,9 @@
       "source_file": "lib/sleeveDrawDims.ts",
       "source_location": "L40",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lib_sleevedrawdims_sleeveformeddiameterlabel",
-      "target": "lib_sleevedrawdims_sleeveformeddiametermm",
-      "confidence_score": 1.0
+      "target": "lib_sleevedrawdims_sleeveformeddiametermm"
     },
     {
       "relation": "contains",
@@ -30424,16 +31960,6 @@
       "confidence_score": 1.0,
       "source": "pages_standardtemplates",
       "target": "pages_standardtemplates_syncstructuretypefromlayers"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "pages/StandardTemplates.tsx",
-      "source_location": "L154",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "pages_standardtemplates",
-      "target": "pages_standardtemplates_templategridcell"
     },
     {
       "relation": "contains",

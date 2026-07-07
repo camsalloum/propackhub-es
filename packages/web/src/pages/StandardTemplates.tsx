@@ -18,6 +18,7 @@ import {
   type ClassFilter,
   type TemplateStructureTier,
 } from '../lib/templateCatalog';
+import { isSubstrateLayerType, resolveLayerType } from '../lib/materialFamily';
 
 interface TemplateLayer {
   layer_order: number;
@@ -127,15 +128,19 @@ function cardMetaLine(
 }
 
 function visualizerLayers(template: StructureTemplate, materials: MaterialOption[]) {
-  return (template.defaultLayers || []).map((l, i) => {
-    const mat = materials.find((m) => m.id === l.materialId);
-    return {
-      id: String(i),
-      type: l.layer_type || 'substrate',
-      material: mat?.name || l.ref_material_key || 'Layer',
-      micron: l.default_micron || 1,
-    };
-  });
+  return (template.defaultLayers || [])
+    .map((l, i) => {
+      const mat = materials.find((m) => m.id === l.materialId);
+      const type = resolveLayerType(l.layer_type, mat?.type);
+      return {
+        id: String(i),
+        type,
+        material: mat?.name || l.ref_material_key || 'Layer',
+        micron: l.default_micron || 1,
+        family: mat?.substrateFamily ?? null,
+      };
+    })
+    .filter((l) => isSubstrateLayerType(l.type));
 }
 
 const StandardTemplates = () => {

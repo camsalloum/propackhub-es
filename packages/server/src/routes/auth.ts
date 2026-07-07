@@ -21,6 +21,7 @@ import { fetchExchangeRate } from '../utils/fx-rates';
 import { getEffectiveProfile } from '../utils/visibility';
 import { isUniqueViolation, sendCaughtError } from '../utils/errors';
 import { createSession, findActiveSession, touchSession, revokeSession } from '../utils/sessions';
+import { formatAuthTenant } from '../services/tenant-customer-access';
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -145,10 +146,7 @@ export async function registerRoute(
         displayName,
         role: user.role,
       },
-      tenant: {
-        id: tenant.id,
-        name: tenant.name,
-      },
+      tenant: formatAuthTenant(tenant),
     });
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
@@ -243,12 +241,7 @@ export async function loginRoute(
         displayName: user.displayName,
         role: user.role,
       },
-      tenant: {
-        id: tenant.id,
-        name: tenant.name,
-        displayCurrency: tenant.displayCurrency,
-        operatingCostMethod: tenant.operatingCostMethod,
-      },
+      tenant: formatAuthTenant(tenant),
     });
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
@@ -359,12 +352,7 @@ export async function meRoute(
         role: userData.role,
         visibilityProfile: getEffectiveProfile(userData.role, userData.visibilityProfile),
       },
-      tenant: {
-        id: tenantData.id,
-        name: tenantData.name,
-        displayCurrency: tenantData.displayCurrency,
-        operatingCostMethod: tenantData.operatingCostMethod,
-      },
+      tenant: formatAuthTenant(tenantData),
     });
   } catch (error) {
     request.log.error({ err: error }, 'Me route error');

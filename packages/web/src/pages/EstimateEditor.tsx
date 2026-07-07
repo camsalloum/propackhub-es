@@ -1355,8 +1355,16 @@ const EstimateEditor = ({
     const match = (customers || []).find(
       (c: { companyName?: string }) => c.companyName?.toLowerCase() === name.toLowerCase()
     ) as { id?: string } | undefined;
+    if (match?.id) {
+      setCustomerId(match.id);
+      setCustomerDraftName('');
+      return match.id;
+    }
+    if (!tenant?.customerAccess?.canCreate) {
+      throw new Error('Pick an existing customer — new customers are created in PEBI for this account.');
+    }
     const created = (await apiClient.createCustomer({ companyName: name })) as { id: string };
-    const id = match?.id ?? created.id;
+    const id = created.id;
     setCustomerId(id);
     setCustomerDraftName('');
     return id;

@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { apiClient } from '../lib/api';
+import type { TenantCustomerAccess } from '../lib/tenantCustomerAccess';
 
 export interface AuthUser {
   id: string;
@@ -23,6 +24,7 @@ export interface AuthTenant {
   type: 'individual' | 'company';
   displayCurrency: string;
   operatingCostMethod?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
+  customerAccess?: TenantCustomerAccess;
 }
 
 type AuthContextValue = {

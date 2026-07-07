@@ -1,11 +1,41 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-07 (PEBI customer sync + integration seam)
-**Session focus:** 1280 PEBI customers synced into Interplast ES tenant; integration API + MES intake stub for quote→order flow.
+**Last updated:** 2026-07-07 (PEBI RM sync spec + materials unification plan)
+**Session focus:** Deep PEBI→ES raw materials mapping spec (family, grade, crosswalk, price roll-up); catalog unification plan Phase 4 linked.
 
 ---
 
 ## Where we stopped (read this first next session)
+
+### **SPEC:** PEBI → ES raw materials sync (not implemented)
+
+**Docs:** [PEBI_ES_RM_SYNC_SPEC.md](./PEBI_ES_RM_SYNC_SPEC.md) · [MATERIALS_CATALOG_UNIFICATION_PLAN.md](./MATERIALS_CATALOG_UNIFICATION_PLAN.md)
+
+**Problem:** Naive `mainitem` → price sync fails — many Oracle SKUs map to one ES grade (`pet-transparent`).
+
+**Pipeline:** PEBI classify (reuse `tds.js` substrate profiles) → grade rules → `pebi_es_material_crosswalk` → `platform_master_key` → price roll-up → ES upsert (`external_source=pebi`).
+
+**Blocked on IP/FP workshop:** authoritative price field (`purchaseprice` vs `maincost`), currency, crosswalk owner.
+
+**Build order:** Catalog unification Phases 1–3 first; then PEBI sync Phases A–F in spec.
+
+---
+
+### **DONE:** Customer master by licensing
+
+| Tenant | ES customer CRUD | Source |
+|--------|------------------|--------|
+| Individual | Yes | Local `customers` |
+| Company, no `platform_company_code` | Yes | Local `customers` |
+| Company, PEBI-linked (e.g. Interplast) | **No** — search/pick only | PEBI sync (`fp_customer_unified`) |
+
+**Prospects:** PEBI `fp_prospects` only — not synced. Convert in PEBI → sync customers.
+
+**Verify:** Log in as Interplast → Customers page has no New/Edit/Delete; autocomplete cannot add. Individual tenant → full customer module.
+
+**Key paths:** `services/tenant-customer-access.ts`, `routes/customers.ts`, `hooks/useCustomerAccess.ts`.
+
+---
 
 ### **DONE:** PEBI ↔ ES customers + handoff seam
 

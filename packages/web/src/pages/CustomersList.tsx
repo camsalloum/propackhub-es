@@ -7,6 +7,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import CustomerFormDialog, { type CustomerFormValues } from '../components/CustomerFormDialog';
 import { SectionTitle } from '../components/SectionTitle';
 import { apiClient } from '../lib/api';
+import { useCustomerAccess } from '../hooks/useCustomerAccess';
 
 type CustomerRow = {
   id: string;
@@ -21,6 +22,7 @@ const PAGE_SIZE = 100;
 
 export default function CustomersList() {
   const navigate = useNavigate();
+  const customerAccess = useCustomerAccess();
   const { ref: entranceRef } = useEntrance<HTMLDivElement>();
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -159,10 +161,12 @@ export default function CustomersList() {
           </SectionTitle>
           <p className="text-sm text-text-secondary mt-1">{total} total</p>
         </div>
-        <button type="button" className="btn-primary inline-flex items-center gap-2" onClick={openCreate}>
-          <Plus className="w-4 h-4" />
-          New customer
-        </button>
+        {customerAccess.canCreate && (
+          <button type="button" className="btn-primary inline-flex items-center gap-2" onClick={openCreate}>
+            <Plus className="w-4 h-4" />
+            New customer
+          </button>
+        )}
       </div>
 
       <div className="relative mb-4">
@@ -182,14 +186,18 @@ export default function CustomersList() {
           title={customers.length === 0 ? 'No customers yet' : 'No matches'}
           body={
             customers.length === 0
-              ? 'Add a customer here or when starting a new quote.'
+              ? customerAccess.canCreate
+                ? 'Add a customer here or when starting a new quote.'
+                : 'Customers sync from PEBI for this account.'
               : 'Try a different search term.'
           }
           action={
             customers.length === 0 ? (
-              <button type="button" className="btn-primary" onClick={openCreate}>
-                New customer
-              </button>
+              customerAccess.canCreate ? (
+                <button type="button" className="btn-primary" onClick={openCreate}>
+                  New customer
+                </button>
+              ) : undefined
             ) : (
               <button type="button" className="btn-secondary" onClick={() => setSearch('')}>
                 Clear search
@@ -217,7 +225,7 @@ export default function CustomersList() {
                       Phone
                     </th>
                     <th className="text-right px-4 py-2.5 text-xs font-semibold text-text-secondary uppercase tracking-wider w-28">
-                      Actions
+                      {customerAccess.canEdit ? 'Actions' : ''}
                     </th>
                   </tr>
                 </thead>
@@ -243,24 +251,26 @@ export default function CustomersList() {
                         {c.phone || <span className="text-text-secondary">—</span>}
                       </td>
                       <td className="px-4 py-2.5">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            type="button"
-                            className="p-2 text-mist hover:text-accent-text rounded-lg"
-                            title="Edit"
-                            onClick={() => openEdit(c)}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            className="p-2 text-mist hover:text-danger rounded-lg"
-                            title="Delete"
-                            onClick={() => setPendingDelete(c)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                        {customerAccess.canEdit ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              type="button"
+                              className="p-2 text-mist hover:text-accent-text rounded-lg"
+                              title="Edit"
+                              onClick={() => openEdit(c)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              className="p-2 text-mist hover:text-danger rounded-lg"
+                              title="Delete"
+                              onClick={() => setPendingDelete(c)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : null}
                       </td>
                     </tr>
                   ))}

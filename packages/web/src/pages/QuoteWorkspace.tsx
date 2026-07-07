@@ -369,19 +369,6 @@ const QuoteWorkspace = () => {
         </div>
       </div>
 
-      {quoteId && !priceCheck && !priceListTab && (
-        <QuoteSummaryPanel
-          quoteId={quoteId}
-          locked={locked}
-          rfqNumber={quote.rfqNumber}
-          deliveryTerm={quote.deliveryTerm}
-          paymentTerms={quote.paymentTerms}
-          remarks={quote.remarks}
-          validUntil={quote.validUntil}
-          onUpdated={() => void load()}
-        />
-      )}
-
       <div className="flex flex-wrap items-center gap-2 border-b border-border pb-2">
         <button
           type="button"
@@ -415,18 +402,32 @@ const QuoteWorkspace = () => {
 
       {priceListTab ? (
         quoteId && (
-          <CombinedVariantPriceList
-            quoteId={quoteId}
-            quoteRef={quote.refNumber}
-            estimateIds={estimates.map((e) => e.id)}
-            activeEstimateId={activeId}
-            priceListDisplayPrefs={quote.priceListDisplayPrefs as QuotePriceListDisplayPrefs | null}
-            onPriceListPrefsSaved={handlePriceListPrefsSaved}
-            priceCheckMode={priceCheck}
-            rowLabels={priceListRowLabels}
-            structureSummaries={priceListStructureSummaries}
-            onSelectEstimate={(id) => navigate(`/quotes/${quoteId}/estimates/${id}`)}
-          />
+          <div className="space-y-3">
+            {!priceCheck && (
+              <QuoteSummaryPanel
+                quoteId={quoteId}
+                locked={locked}
+                rfqNumber={quote.rfqNumber}
+                deliveryTerm={quote.deliveryTerm}
+                paymentTerms={quote.paymentTerms}
+                remarks={quote.remarks}
+                validUntil={quote.validUntil}
+                onUpdated={() => void load()}
+              />
+            )}
+            <CombinedVariantPriceList
+              quoteId={quoteId}
+              quoteRef={quote.refNumber}
+              estimateIds={estimates.map((e) => e.id)}
+              activeEstimateId={activeId}
+              priceListDisplayPrefs={quote.priceListDisplayPrefs as QuotePriceListDisplayPrefs | null}
+              onPriceListPrefsSaved={handlePriceListPrefsSaved}
+              priceCheckMode={priceCheck}
+              rowLabels={priceListRowLabels}
+              structureSummaries={priceListStructureSummaries}
+              onSelectEstimate={(id) => navigate(`/quotes/${quoteId}/estimates/${id}`)}
+            />
+          </div>
         )
       ) : (
         <>

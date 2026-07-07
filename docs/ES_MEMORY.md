@@ -10,7 +10,8 @@
 
 | Doc | Role |
 |-----|------|
-| [LOCKED_DECISIONS.md](./LOCKED_DECISIONS.md) | Strategic locks #2–#23 |
+| [MATERIALS_CATALOG_UNIFICATION_PLAN.md](./MATERIALS_CATALOG_UNIFICATION_PLAN.md) | **Planned:** remove Raw Materials page; single Materials UX; PEBI RM sync for IP/FP |
+| [PEBI_ES_RM_SYNC_SPEC.md](./PEBI_ES_RM_SYNC_SPEC.md) | **Spec:** PEBI→ES RM mapping (family, grade, crosswalk, price roll-up) |
 | [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md) | Build PRD **v3.4** (V1 implemented — see Appendix A.1) |
 | [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) | **Phased build plan** (audit findings, P0–G, DoD) |
 | [MULTI_SKU_QUOTE_EXPLORER_PLAN.md](./MULTI_SKU_QUOTE_EXPLORER_PLAN.md) | **Planned:** multi-SKU quotes, customer folders, explorer, combined price list |
@@ -171,6 +172,12 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 ---
 
 ## Session log
+
+### 2026-07-07 — Customer master by tenant licensing (session)
+
+- **Rule:** PEBI-linked company (`platform_company_code`) → customers read-only in ES; individual / unlinked company → local customer DB with full CRUD.
+- **Prospects:** stay in PEBI (`fp_prospects`); not in sync scope until converted to `fp_customer_unified`.
+- **Files:** `tenant-customer-access.ts`, `customers.ts`, `auth.ts`, `useCustomerAccess`, `CustomerAutocomplete`, `CustomersList`, `CustomerDetail`, `EstimateEditor`.
 
 ### 2026-07-07 — Printed roll CO defaults (session closed)
 
@@ -1171,6 +1178,20 @@ Deleted tracked `localhost.har` (~9MB network capture) and `stitch.zip`. Scan fo
 - **Provisioned:** Interplast ES tenant (`platform_company_code=interplast`, AED, `process_per_kg`). Camille = `tenant_admin`. `admin@propackhub.com` = `platform_admin` (separate ProPackHub owner tenant).
 - **Script:** `npm run db:provision-interplast --workspace=packages/server` — idempotent.
 - **Future:** PEBI `app_subscriptions` for `es`, shared users/customers/prices via platform tenant record + service keys.
+
+### 2026-07-07 — Customer master by tenant licensing
+
+Not every company subscribes to both PEBI and ES. **IP/FP (Interplast) is linked today; linking is optional per company.**
+
+| Tenant | `platform_company_code` | Customer master | ES can create/edit/delete? |
+|--------|-------------------------|-----------------|----------------------------|
+| **Individual** (ES-only licence) | null | ES `customers` table | **Yes** — full local CRM |
+| **Company, no PEBI link** | null | ES `customers` table | **Yes** |
+| **Company, PEBI-linked** | set (e.g. `interplast`) | PEBI `fp_customer_unified` → ES mirror via sync | **No** — read-only in ES |
+
+**Prospects (`fp_prospects` in PEBI):** not synced to ES. Create and qualify prospects in PEBI; after conversion to `fp_customer_unified`, run customer sync. ES users on PEBI-linked tenants pick customers from the synced list only.
+
+**Implementation:** `tenant-customer-access.ts` → `tenant.customerAccess` on `/auth/me` + login/register. API returns **403** on POST/PATCH/DELETE `/customers` when `canCreate`/`canEdit`/`canDelete` false. UI: `useCustomerAccess()` hides New customer / inline create / edit / delete.
 
 ### 2026-07-07 — PEBI ↔ ES customer sync + MES handoff seam
 

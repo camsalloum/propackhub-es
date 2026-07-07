@@ -7,10 +7,12 @@ import { SkeletonTableRows } from '../components/Skeleton';
 import { useEntrance } from '../hooks/useEntrance';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import CustomerFormDialog, { type CustomerFormValues } from '../components/CustomerFormDialog';
+import { useCustomerAccess } from '../hooks/useCustomerAccess';
 
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const customerAccess = useCustomerAccess();
   const { ref: entranceRef } = useEntrance<HTMLDivElement>();
   const [customer, setCustomer] = useState<any>(null);
   const [estimates, setEstimates] = useState<any[]>([]);
@@ -148,22 +150,26 @@ export default function CustomerDetail() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
-          <button
-            type="button"
-            className="btn-secondary inline-flex items-center gap-2"
-            onClick={() => setFormOpen(true)}
-          >
-            <Pencil className="w-4 h-4" />
-            Edit
-          </button>
-          <button
-            type="button"
-            className="btn-secondary text-danger inline-flex items-center gap-2"
-            onClick={() => setPendingDelete(true)}
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete
-          </button>
+          {customerAccess.canEdit && (
+            <button
+              type="button"
+              className="btn-secondary inline-flex items-center gap-2"
+              onClick={() => setFormOpen(true)}
+            >
+              <Pencil className="w-4 h-4" />
+              Edit
+            </button>
+          )}
+          {customerAccess.canDelete && (
+            <button
+              type="button"
+              className="btn-secondary text-danger inline-flex items-center gap-2"
+              onClick={() => setPendingDelete(true)}
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </button>
+          )}
           <button
             type="button"
             className="btn-secondary"

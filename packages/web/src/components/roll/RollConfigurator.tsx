@@ -26,7 +26,6 @@ import {
 export function RollConfigurator({
   dimensions,
   onDimensionsChange,
-  disabled = false,
   totalGsm = 50,
   filmDensityGcm3 = 1,
   isLabels = false,
@@ -34,7 +33,6 @@ export function RollConfigurator({
 }: {
   dimensions: Record<string, number | undefined>;
   onDimensionsChange: (patch: Record<string, number>) => void;
-  disabled?: boolean;
   totalGsm?: number;
   filmDensityGcm3?: number;
   isLabels?: boolean;
@@ -104,11 +102,7 @@ export function RollConfigurator({
 
   return (
     <div className="w-full rounded-lg border border-border bg-surface-raised overflow-hidden shadow-sm">
-      <div className="px-4 pt-3 pb-2 text-center border-b border-border bg-surface-sunken">
-        <p className="text-xs font-medium text-text-secondary">
-          Adjust the highlighted dimensions (mm) — defaults are pre-filled
-        </p>
-      </div>
+      <div className="px-4 pt-2 pb-2 text-center border-b border-border bg-surface-sunken" />
 
       <div className="flex flex-wrap items-end justify-center gap-x-3 gap-y-3 px-4 py-3 border-b border-slate bg-slate/25">
         {ROLL_CONFIGURATOR.fields
@@ -120,7 +114,7 @@ export function RollConfigurator({
             field={f}
             value={fieldVals[f.id]}
             onChange={handleFieldChange}
-            disabled={disabled}
+            disabled={false}
           />
         ))}
         <RollSpecFields
@@ -131,7 +125,7 @@ export function RollConfigurator({
           netFilmWeightKg={rollSpec.filmOnRollWeightKg}
           rollSpec={rollSpec}
           hasCutoffRepeat={hasCutoffRepeat}
-          disabled={disabled}
+          disabled={false}
           onCoreInchChange={(inch: CoreInchPreset) =>
             onDimensionsChange({ coreInsideDiameterMm: CORE_INSIDE_MM_BY_INCH[inch] })
           }

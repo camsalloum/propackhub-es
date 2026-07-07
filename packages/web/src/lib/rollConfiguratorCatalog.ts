@@ -82,6 +82,18 @@ export function rollConfiguratorDefaults(
   return { ...ROLL_DEFAULTS_GENERAL };
 }
 
+/** Printed-roll CO scales with reel width; plain continuous web keeps CO = 0. */
+export function defaultCutoffMm(
+  reelWidthMm: number,
+  options?: { isLabels?: boolean; continuousWeb?: boolean }
+): number {
+  if (options?.continuousWeb) return 0;
+  const rw = Number.isFinite(reelWidthMm) && reelWidthMm > 0 ? reelWidthMm : rollConfiguratorDefaults(options?.isLabels).RW;
+  const base = rollConfiguratorDefaults(options?.isLabels);
+  const ratio = base.CO / base.RW;
+  return Math.max(20, Math.round(rw * ratio));
+}
+
 /** True when estimate/template context is the Labels parent PG. */
 export { isLabelsRollContext, defaultOrderQuantityUnit } from '@es/engine';
 
@@ -89,7 +101,8 @@ export function rollFieldValuesFromDimensions(
   dimensions: Record<string, number | undefined>,
   options?: { isLabels?: boolean; continuousWeb?: boolean }
 ): Record<string, number> {
-  const defs = rollConfiguratorDefaults(options?.isLabels ?? false, options?.continuousWeb ?? false);
+  const continuousWeb = options?.continuousWeb ?? false;
+  const defs = rollConfiguratorDefaults(options?.isLabels ?? false, continuousWeb);
   const vals: Record<string, number> = {};
   for (const f of ROLL_CONFIGURATOR.fields) {
     const stored = dimensions[f.dimensionKey];
@@ -100,9 +113,17 @@ export function rollFieldValuesFromDimensions(
       stored != null &&
       Number.isFinite(stored) &&
       (!isRw || stored > 0) &&
-      (!isCo || stored >= 0) &&
+      (!isCo || (continuousWeb ? stored >= 0 : stored > 0)) &&
       (!isPpc || stored >= 1);
     vals[f.id] = ok ? (stored as number) : defs[f.id as keyof typeof defs];
+  }
+  if (
+    !continuousWeb &&
+    (dimensions.cutoffMm == null ||
+      !Number.isFinite(dimensions.cutoffMm) ||
+      dimensions.cutoffMm <= 0)
+  ) {
+    vals.CO = defaultCutoffMm(vals.RW, options);
   }
   return vals;
 }
@@ -111,22 +132,33 @@ export function seedRollDimensionPatch(
   dimensions: Record<string, number | undefined>,
   options?: { isLabels?: boolean; continuousWeb?: boolean }
 ): Record<string, number> {
-  const defs = rollConfiguratorDefaults(options?.isLabels ?? false, options?.continuousWeb ?? false);
+  const continuousWeb = options?.continuousWeb ?? false;
+  const defs = rollConfiguratorDefaults(options?.isLabels ?? false, continuousWeb);
   const patch: Record<string, number> = {
     numberOfUps: 1,
     extraPrintingTrimMm: 0,
   };
+  const rwForCo =
+    dimensions.reelWidthMm != null && Number.isFinite(dimensions.reelWidthMm) && dimensions.reelWidthMm > 0
+      ? dimensions.reelWidthMm
+      : defs.RW;
   for (const f of ROLL_CONFIGURATOR.fields) {
     const prevVal = dimensions[f.dimensionKey];
     const shouldReplace =
       f.id === 'RW'
         ? prevVal == null || !Number.isFinite(prevVal) || prevVal <= 0
         : f.id === 'CO'
-          ? prevVal == null || !Number.isFinite(prevVal) || prevVal < 0
+          ? continuousWeb
+            ? prevVal == null || !Number.isFinite(prevVal) || prevVal < 0
+            : prevVal == null || !Number.isFinite(prevVal) || prevVal <= 0
           : f.id === 'PPC'
             ? prevVal == null || !Number.isFinite(prevVal) || prevVal < 1
             : prevVal == null || !Number.isFinite(prevVal);
-    if (shouldReplace) patch[f.dimensionKey] = defs[f.id as keyof typeof defs];
+    if (!shouldReplace) continue;
+    patch[f.dimensionKey] =
+      f.id === 'CO' && !continuousWeb
+        ? defaultCutoffMm(rwForCo, options)
+        : defs[f.id as keyof typeof defs];
   }
   return patch;
 }

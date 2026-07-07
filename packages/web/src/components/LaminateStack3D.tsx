@@ -79,7 +79,7 @@ export function LaminateStack3D({
       role={onToggle ? 'button' : undefined}
       tabIndex={onToggle ? 0 : undefined}
       aria-expanded={onToggle ? expanded : undefined}
-      aria-label={onToggle ? `Layer stack, ${expanded ? 'collapse' : 'expand'} layers` : undefined}
+      aria-label={onToggle ? `Layer stack, ${expanded ? 'collapse' : 'expand'}` : undefined}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -89,7 +89,7 @@ export function LaminateStack3D({
       <div className="lam3d__stack">
         {layers.map((layer, i) => {
           const family = materialFamily(layer.material, layer.type);
-          const z = (i - (n - 1) / 2) * 11;
+          const z = (i - (n - 1) / 2) * 18;
           const isAdhesive = layer.type === 'adhesive';
           const style = {
             '--slab-a': materialFamilyColorVar(family),
@@ -97,11 +97,7 @@ export function LaminateStack3D({
             zIndex: i + 1,
           } as CSSProperties;
           return (
-            <div key={layer.id} className={`lam3d__slab${isAdhesive ? ' is-adhesive' : ''}`} style={style}>
-              <span className="lam3d__tag">
-                {layer.material} · {layer.micron}µm
-              </span>
-            </div>
+            <div key={layer.id} className={`lam3d__slab${isAdhesive ? ' is-adhesive' : ''}`} style={style} />
           );
         })}
       </div>

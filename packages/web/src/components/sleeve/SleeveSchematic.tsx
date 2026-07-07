@@ -25,7 +25,7 @@ export function SleeveSchematic({ dims }: { dims: SleeveDrawDims }) {
         outerDiameterMm={outerDiameterMm}
         coreDiameterMm={coreDiameterMm}
         cutOffMm={dims.CO}
-        wrapCount={dims.rollSpec?.wrapsPerCircumference}
+        filmLengthM={dims.rollSpec?.filmOnRollLengthM}
         laneCount={1}
         showOuterDiameter={false}
         widthLabel="LF"

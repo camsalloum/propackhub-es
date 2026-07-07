@@ -525,9 +525,17 @@ const StandardTemplates = () => {
 
   return (
     <div className="w-full pb-24 lg:pb-8">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-        <div className="min-w-0">
-          <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand">Templates</h1>
+      <div className="flex flex-col gap-3 mb-6 lg:flex-row lg:items-center lg:gap-4">
+        <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand shrink-0">Templates</h1>
+        <div className="relative flex-1 min-w-0 order-last lg:order-none">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search templates..."
+            className="input w-full pl-12"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
         <div className="flex gap-2 shrink-0">
           <button
@@ -545,19 +553,6 @@ const StandardTemplates = () => {
             <Plus className="w-4 h-4" />
             New structure
           </button>
-        </div>
-      </div>
-
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
-          <input
-            type="text"
-            placeholder="Search templates..."
-            className="input w-full pl-12"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
         </div>
       </div>
 
@@ -664,6 +659,7 @@ const StandardTemplates = () => {
           items={activeTemplates}
           getKey={(template) => template.id}
           ariaLabel={showMyGrid ? 'My templates' : 'Standard templates'}
+          itemWidth={320}
           renderItem={(template) =>
             renderTemplateCard(template, {
               badge: showMyGrid ? 'My template' : undefined,

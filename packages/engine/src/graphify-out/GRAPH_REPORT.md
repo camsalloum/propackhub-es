@@ -1,11 +1,11 @@
 # Graph Report - apps\estimation-studio\packages\engine\src  (2026-07-06)
 
 ## Corpus Check
-- 37 files · ~26,733 words
+- 39 files · ~27,011 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 226 nodes · 482 edges · 10 communities
+- 230 nodes · 489 edges · 13 communities (12 shown, 1 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -20,6 +20,9 @@
 - [[_COMMUNITY_Community 7|Community 7]]
 - [[_COMMUNITY_Community 8|Community 8]]
 - [[_COMMUNITY_Community 9|Community 9]]
+- [[_COMMUNITY_Community 10|Community 10]]
+- [[_COMMUNITY_Community 11|Community 11]]
+- [[_COMMUNITY_Community 12|Community 12]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `Material` - 18 edges
@@ -40,43 +43,43 @@
   calculator.ts → solvent-costing.ts
 - `calculateEstimate()` --calls--> `convertOrderQuantityToKg()`  [EXTRACTED]
   calculator.ts → unit-conversion.ts
-- `GoldenScenario` --references--> `Estimate`  [EXTRACTED]
-  golden-fixtures.ts → types.ts
-- `Estimate` --references--> `InkPrintingProcess`  [EXTRACTED]
-  types.ts → ink-printing.ts
+- `calculateProductMetrics()` --calls--> `calculatePouchAccessories()`  [EXTRACTED]
+  calculator.ts → pouch-accessories.ts
+- `calculateProductMetrics()` --calls--> `calculatePouchFlatSheetAreaM2()`  [EXTRACTED]
+  calculator.ts → pouch-flat-sheet.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (10 total, 0 thin omitted)
+## Communities (13 total, 1 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.12
 Nodes (18): buildRules(), DerivedProcess, DerivedProcessKey, deriveProcessesFromStructure(), normalizeProcessQuantity(), parseFiniteNumber(), PROCESS_LABELS, ProcessCatalog (+10 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.11
-Nodes (29): calculateEstimate(), calculatePrintingWebWidth(), calculateProductMetrics(), computeMfgProcessCosts(), calculatePouchAccessories(), EMPTY, PouchAccessoryKind, PouchAccessoryResult (+21 more)
+Cohesion: 0.10
+Nodes (24): GOLDEN_SCENARIOS, GoldenScenario, hpBinder, LARAVEL_REFERENCE_MATERIALS, InkPrintingProcess, DEFAULT_LAMINATION_RECIPES, LaminationRecipe, calculatePouchAccessories() (+16 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.17
 Nodes (14): ClassifiableMaterial, inferMaterialClassFromSubstrateFamilies(), inferStructureTypeFromSubstrateCount(), materialAllowedForTemplateLayer(), MaterialClass, normFamily(), ProductTypeCode, resolveTemplateStoreClassification() (+6 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.12
-Nodes (19): GOLDEN_SCENARIOS, GoldenScenario, hpBinder, LARAVEL_REFERENCE_MATERIALS, binderComponents(), calculateLaminationCost(), DEFAULT_LAMINATION_RECIPES, deriveBinderConcentrateStats() (+11 more)
+Cohesion: 0.24
+Nodes (9): binderComponents(), calculateLaminationCost(), deriveBinderConcentrateStats(), LaminationComponentRole, LaminationCostResult, LaminationRecipeComponent, LaminationTier, solventComponents() (+1 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.17
-Nodes (13): BAG_SUBTYPE_TO_CONFIGURATOR, BAG_SUBTYPE_VALUES, BagConfiguratorType, BagFlatSheetResult, calculateBagFlatSheetAreaM2(), resolveBagConfiguratorType(), computeStructureSignature(), fnv1a32() (+5 more)
+Cohesion: 0.22
+Nodes (11): BAG_SUBTYPE_TO_CONFIGURATOR, BAG_SUBTYPE_VALUES, BagConfiguratorType, BagFlatSheetResult, calculateBagFlatSheetAreaM2(), resolveBagConfiguratorType(), stackNeedsSolventMix(), hasSolventBasedLayers() (+3 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.24
 Nodes (12): countLayersByType(), PrintMode, reconcileTierToSubstrateCount(), ScaffoldLayerDescriptor, scaffoldLayerDescriptors(), StructureTier, structureTypeToDefaultTier(), printModeArb (+4 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.10
-Nodes (25): calculateInkMakeupSolventCost(), defaultInkPrintingProcess(), InkPrintingProcess, inkSolventRatioForProcess(), PE_FAMILY_CODES, resolveInkPrintingProcess(), resolveInkSolventRatio(), sumSbInkDryGsm() (+17 more)
+Cohesion: 0.12
+Nodes (21): calculateInkMakeupSolventCost(), defaultInkPrintingProcess(), inkSolventRatioForProcess(), PE_FAMILY_CODES, resolveInkPrintingProcess(), resolveInkSolventRatio(), sumSbInkDryGsm(), materials (+13 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.23
@@ -87,27 +90,36 @@ Cohesion: 0.21
 Nodes (10): ConversionMetrics, convertOrderQuantityToKg(), LEGACY_UNIT_MAP, ORDER_QUANTITY_UNITS, OrderQuantityUnit, resolveUnitDef(), metrics, UNIT_BASES (+2 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.19
-Nodes (16): priceWithNewModel(), materials, DEFAULT_WASTE_BANDS, DEFAULT_WASTE_BANDS_BY_PRINT_MODE, DEFAULT_WASTE_BANDS_PLAIN, effectiveCormPerKg(), plainBandsFromPrinted(), plainCormFromPrinted() (+8 more)
+Cohesion: 0.12
+Nodes (27): calculateEstimate(), calculatePrintingWebWidth(), calculateProductMetrics(), computeMfgProcessCosts(), priceWithNewModel(), materials, calculateStructureDensity(), calculateSubstrateGaugeMicron() (+19 more)
+
+### Community 10 - "Community 10"
+Cohesion: 0.39
+Nodes (6): calculatePouchFlatSheetAreaM2(), POUCH_SUBTYPE_TO_CONFIGURATOR, POUCH_SUBTYPE_VALUES, PouchConfiguratorType, PouchFlatSheetResult, resolvePouchConfiguratorType()
+
+### Community 11 - "Community 11"
+Cohesion: 0.60
+Nodes (4): computeStructureSignature(), fnv1a32(), normalizeToken(), StructureSignatureLayer
 
 ## Knowledge Gaps
 - **67 isolated node(s):** `BagConfiguratorType`, `BagFlatSheetResult`, `BAG_SUBTYPE_VALUES`, `CATALOG`, `ProcessLayerType` (+62 more)
   These have ≤1 connection - possible missing edges or undocumented components.
+- **1 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Material` connect `Community 1` to `Community 9`, `Community 3`, `Community 4`, `Community 6`?**
-  _High betweenness centrality (0.032) - this node is a cross-community bridge._
-- **Why does `calculateEstimate()` connect `Community 1` to `Community 3`, `Community 4`, `Community 6`, `Community 8`, `Community 9`?**
+- **Why does `Material` connect `Community 1` to `Community 9`, `Community 4`, `Community 6`?**
+  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+- **Why does `calculateEstimate()` connect `Community 9` to `Community 8`, `Community 1`, `Community 6`?**
   _High betweenness centrality (0.023) - this node is a cross-community bridge._
-- **Why does `Estimate` connect `Community 3` to `Community 1`, `Community 4`, `Community 6`, `Community 8`, `Community 9`?**
-  _High betweenness centrality (0.017) - this node is a cross-community bridge._
+- **Why does `Estimate` connect `Community 1` to `Community 8`, `Community 9`, `Community 4`, `Community 6`?**
+  _High betweenness centrality (0.016) - this node is a cross-community bridge._
 - **What connects `BagConfiguratorType`, `BagFlatSheetResult`, `BAG_SUBTYPE_VALUES` to the rest of the system?**
   _67 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.12121212121212122 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.10853658536585366 - nodes in this community are weakly interconnected._
-- **Should `Community 3` be split into smaller, more focused modules?**
-  _Cohesion score 0.11576354679802955 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.10084033613445378 - nodes in this community are weakly interconnected._
+- **Should `Community 6` be split into smaller, more focused modules?**
+  _Cohesion score 0.11612903225806452 - nodes in this community are weakly interconnected._

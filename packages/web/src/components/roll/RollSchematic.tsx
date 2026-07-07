@@ -25,7 +25,7 @@ export function RollSchematic({ dims }: { dims: RollDrawDims }) {
         outerDiameterMm={outerDiameterMm}
         coreDiameterMm={coreDiameterMm}
         cutOffMm={dims.CO > 0 ? dims.CO : undefined}
-        wrapCount={dims.rollSpec?.wrapsPerCircumference}
+        filmLengthM={dims.rollSpec?.filmOnRollLengthM}
         laneCount={dims.PPC}
         showOuterDiameter={false}
         widthLabel="RW"

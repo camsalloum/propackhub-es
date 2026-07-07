@@ -4,7 +4,7 @@
  */
 import { Pool } from 'pg';
 import axios from 'axios';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, notInArray } from 'drizzle-orm';
 import { getDatabase, schema } from '../db/index.js';
 
 export const PEBI_CUSTOMER_SOURCE = 'pebi';
@@ -24,6 +24,7 @@ export type CustomerSyncResult = {
   inserted: number;
   updated: number;
   skipped: number;
+  pruned: number;
   total: number;
   source: 'pebi_api' | 'pebi_db';
 };
@@ -43,6 +44,18 @@ function buildNotes(row: {
   return parts.length > 0 ? parts.join(' · ') : null;
 }
 
+/** PEBI fp_customer_unified has legacy + budget-import dupes per display_name — pick one canonical row. */
+export const PEBI_CUSTOMER_CANONICAL_SQL = `
+  SELECT DISTINCT ON (lower(trim(display_name)))
+         customer_id, customer_code, display_name, primary_contact,
+         email, phone, mobile, city, primary_country, primary_sales_rep_name
+    FROM fp_customer_unified
+   WHERE COALESCE(is_merged, false) = false
+     AND COALESCE(is_active, true) = true
+   ORDER BY lower(trim(display_name)),
+            last_transaction_date DESC NULLS LAST,
+            customer_id ASC`;
+
 export async function fetchPebiCustomersFromDb(
   databaseUrl: string,
   companyCode: string
@@ -61,12 +74,7 @@ export async function fetchPebiCustomersFromDb(
       primary_country: string | null;
       primary_sales_rep_name: string | null;
     }>(
-      `SELECT customer_id, customer_code, display_name, primary_contact,
-              email, phone, mobile, city, primary_country, primary_sales_rep_name
-         FROM fp_customer_unified
-        WHERE COALESCE(is_merged, false) = false
-          AND COALESCE(is_active, true) = true
-        ORDER BY display_name`
+      PEBI_CUSTOMER_CANONICAL_SQL
     );
 
     if (rows.length === 0 && companyCode !== 'interplast') {
@@ -215,12 +223,16 @@ export async function syncCustomersFromPebiForTenant(tenantId: string): Promise<
     }
   }
 
+  const canonicalIds = rows.map((r) => r.customerId).filter(Boolean);
+  const pruned = await pruneDuplicatePebiCustomers(tenantId, canonicalIds);
+
   return {
     tenantId,
     platformCompanyCode: tenant.platformCompanyCode,
     inserted,
     updated,
     skipped,
+    pruned,
     total: rows.length,
     source,
   };
@@ -241,4 +253,71 @@ export async function syncCustomersForPlatformCompany(
   }
 
   return syncCustomersFromPebiForTenant(tenant.id);
+}
+
+/** Remove ES rows synced from non-canonical PEBI customer_ids (duplicate display_name imports). */
+export async function pruneDuplicatePebiCustomers(tenantId: string, canonicalIds: string[]): Promise<number> {
+  if (canonicalIds.length === 0) return 0;
+  const db = getDatabase();
+
+  const dupes = await db
+    .select({ id: schema.customers.id })
+    .from(schema.customers)
+    .where(
+      and(
+        eq(schema.customers.tenantId, tenantId),
+        eq(schema.customers.externalSource, PEBI_CUSTOMER_SOURCE),
+        notInArray(schema.customers.externalId, canonicalIds)
+      )
+    );
+
+  if (dupes.length === 0) return 0;
+
+  const dupeIds = dupes.map((d) => d.id);
+  const canonicalRows = await db
+    .select({ id: schema.customers.id, companyName: schema.customers.companyName })
+    .from(schema.customers)
+    .where(
+      and(
+        eq(schema.customers.tenantId, tenantId),
+        eq(schema.customers.externalSource, PEBI_CUSTOMER_SOURCE),
+        inArray(schema.customers.externalId, canonicalIds)
+      )
+    );
+
+  const canonicalByName = new Map<string, string>();
+  for (const row of canonicalRows) {
+    canonicalByName.set(row.companyName.trim().toLowerCase(), row.id);
+  }
+
+  for (const dupeId of dupeIds) {
+    const [dupe] = await db
+      .select({ companyName: schema.customers.companyName })
+      .from(schema.customers)
+      .where(eq(schema.customers.id, dupeId))
+      .limit(1);
+    const keeperId = dupe ? canonicalByName.get(dupe.companyName.trim().toLowerCase()) : undefined;
+    if (keeperId) {
+      await db
+        .update(schema.estimates)
+        .set({ customerId: keeperId, updatedAt: new Date() })
+        .where(eq(schema.estimates.customerId, dupeId));
+      await db
+        .update(schema.quotes)
+        .set({ customerId: keeperId, updatedAt: new Date() })
+        .where(eq(schema.quotes.customerId, dupeId));
+    }
+  }
+
+  await db
+    .delete(schema.customers)
+    .where(
+      and(
+        eq(schema.customers.tenantId, tenantId),
+        eq(schema.customers.externalSource, PEBI_CUSTOMER_SOURCE),
+        inArray(schema.customers.id, dupeIds)
+      )
+    );
+
+  return dupeIds.length;
 }

@@ -28,6 +28,10 @@ EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS operating_cost_method operating_cost_method NOT NULL DEFAULT 'markup_over_rm';
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS platform_company_code VARCHAR(64);
+CREATE UNIQUE INDEX IF NOT EXISTS tenants_platform_company_code_uq
+  ON tenants(platform_company_code)
+  WHERE platform_company_code IS NOT NULL;
 -- Do NOT mass-update company tenants here. That ran once as a backfill and must not
 -- re-run on every db:patch (RUN-ES / startup) — it overwrote Settings → M&O choices.
 -- New tenants get the method at registration (company → process_per_kg, individual → markup_over_rm).

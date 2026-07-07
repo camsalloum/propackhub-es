@@ -10,6 +10,7 @@
     "db:sync-materials": "tsx scripts/sync-materials.ts",
     "db:backfill-platform-keys": "tsx scripts/backfill-platform-master-keys.ts",
     "db:migrate-corm-display": "tsx scripts/migrate-corm-to-display-currency.ts",
+    "db:provision-interplast": "tsx scripts/provision-interplast-tenant.ts",
     "db:backfill-processes": "tsx scripts/backfill-processes.ts",
     "build": "tsup",
     "typecheck": "tsc --noEmit",

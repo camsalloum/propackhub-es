@@ -1164,3 +1164,10 @@ Deleted tracked `localhost.har` (~9MB network capture) and `stitch.zip`. Scan fo
 **Also shipped:** Predefined slab column headers in selected unit (`formatPredefinedSlabRange`); slab qty labels rounded (`formatSlabQty`); stable `estimateIds` / load deps in `QuoteWorkspace` + `CombinedVariantPriceList`.
 
 **Verify:** `npx tsx packages/server/scripts/check-price-list-prefs.ts`; Network filter `quotes` + Method PATCH; hard refresh after web bundle change.
+
+### 2026-07-07 — Interplast company tenant (IP/FP)
+
+- **Tenant model:** `individual` (self-register) vs `company` (multi-user, e.g. Interplast). PPH `platform_admin` governs platform catalog; company `tenant_admin` governs tenant team/settings.
+- **Provisioned:** Interplast ES tenant (`platform_company_code=interplast`, AED, `process_per_kg`). Camille = `tenant_admin`. `admin@propackhub.com` = `platform_admin` (separate ProPackHub owner tenant).
+- **Script:** `npm run db:provision-interplast --workspace=packages/server` — idempotent.
+- **Future:** PEBI `app_subscriptions` for `es`, shared users/customers/prices via platform tenant record + service keys.

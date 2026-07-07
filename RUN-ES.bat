@@ -124,7 +124,11 @@ echo   Web App:  http://localhost:5000
 
 echo   API:      http://localhost:5001/health
 
-echo   Login:    admin@propackhub.com / Pph654883!
+echo   Login (owner):  admin@propackhub.com / Pph654883!
+
+echo   Login (IP):     camille@interplast-uae.com / Admin@123
+
+echo   Provision IP:   npm run db:provision-interplast --workspace=packages/server
 
 echo   Master Data nav appears for platform_admin after login.
 

@@ -1,22 +1,21 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-07 (Roll CO defaults — session closed)
-**Session focus:** Printed roll form no longer defaults CO to 0. `defaultCutoffMm()` seeds CO from reel width; plain continuous web unchanged (CO=0). Prior sessions: template deck + laminate preview; roll wound-view spiral model.
+**Last updated:** 2026-07-07 (Interplast ES tenant provisioned)
+**Session focus:** Interplast company tenant + Camille `tenant_admin`; `platform_company_code` lineage column; provision script.
 
 ---
 
 ## Where we stopped (read this first next session)
 
-### **DONE (closed):** Printed roll CO defaults
+### **DONE:** Interplast ES tenant (IP/FP)
 
-- General printed roll: CO ≈ **0.6 × RW** (e.g. RW 250 → CO 150)
-- Labels roll: CO ≈ **5.14 × RW** (e.g. RW 35 → CO 180)
-- Plain continuous web (`continuousWeb`): CO **0**
-- Template `cutoffMm: 0` placeholder replaced on client seed when structure is printed
+- **Company tenant:** `Interplast` (`platform_company_code=interplast`, AED, `process_per_kg`)
+- **Tenant admin:** `camille@interplast-uae.com` / `Admin@123` (PEBI dev parity)
+- **Platform owner:** `admin@propackhub.com` / `Pph654883!` (`platform_admin`, separate tenant)
+- **Provision:** `npm run db:provision-interplast --workspace=packages/server` (idempotent)
+- **Schema:** `tenants.platform_company_code` — future PEBI ↔ ES link key
 
-**Verify:** New printed roll estimate → CO pre-filled. Plain roll → CO 0. Edit CO freely after seed.
-
-**Key paths:** `lib/rollConfiguratorCatalog.ts`, `pages/EstimateEditor.tsx` (`continuousWeb={!structureHasPrinting}`).
+**Verify:** Login as Camille → tenant Interplast, AED. Login as admin@ → Master Data / platform routes.
 
 ---
 

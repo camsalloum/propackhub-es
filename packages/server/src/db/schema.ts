@@ -161,6 +161,8 @@ export const platformServiceKeys = pgTable(
 export const tenants = pgTable('tenants', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: varchar('name', { length: 255 }).notNull(),
+  /** PEBI propackhub_platform companies.company_code — links ES tenant to platform tenant */
+  platformCompanyCode: varchar('platform_company_code', { length: 64 }),
   type: tenantTypeEnum('type').notNull().default('individual'),
   displayCurrency: varchar('display_currency', { length: 3 }).notNull().default('USD'),
   exchangeRateUsdToDisplay: decimal('exchange_rate_usd_to_display', { precision: 10, scale: 6 }).notNull().default('1.0'),

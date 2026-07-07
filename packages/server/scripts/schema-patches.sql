@@ -590,3 +590,16 @@ EXCEPTION
   WHEN duplicate_column THEN NULL;
 END $$;
 
+-- PEBI ↔ ES lineage (customers sync + estimate/quote MES handoff)
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS external_id VARCHAR(128);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS external_source VARCHAR(64);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS synced_at TIMESTAMPTZ;
+CREATE UNIQUE INDEX IF NOT EXISTS customers_tenant_external_uq
+  ON customers(tenant_id, external_source, external_id)
+  WHERE external_id IS NOT NULL AND external_source IS NOT NULL;
+
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS external_id VARCHAR(128);
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS external_source VARCHAR(64);
+
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS external_id VARCHAR(128);
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS external_source VARCHAR(64);

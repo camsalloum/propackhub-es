@@ -170,6 +170,8 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   registerCategoryRoutes(fastify);
   registerMasterDataRoutes(fastify);
   registerPlatformMasterDataRoutes(fastify);
+  const { registerIntegrationRoutes } = await import('./routes/integration');
+  registerIntegrationRoutes(fastify);
 
   // -------------------------------------------------------------------------
   // Central error handler — maps all errors to the standard envelope.

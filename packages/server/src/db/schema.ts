@@ -324,10 +324,19 @@ export const customers = pgTable('customers', {
   email: varchar('email', { length: 255 }),
   phone: varchar('phone', { length: 20 }),
   notes: text('notes'),
+  /** PEBI fp_customer_unified.customer_id when synced from CRM */
+  externalId: varchar('external_id', { length: 128 }),
+  externalSource: varchar('external_source', { length: 64 }),
+  syncedAt: timestamp('synced_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
   tenantIdIdx: index('customers_tenant_id_idx').on(table.tenantId),
+  tenantExternalIdx: index('customers_tenant_external_idx').on(
+    table.tenantId,
+    table.externalSource,
+    table.externalId
+  ),
 }));
 
 // Quotes (commercial container — multi-SKU package)
@@ -378,6 +387,10 @@ export const quotes = pgTable('quotes', {
 
   /** Combined price list UI: unit, currency, slab mode, selected bands (autosaved). */
   priceListDisplayPrefs: jsonb('price_list_display_prefs'),
+
+  /** PEBI MES quotation / order id after ES push */
+  externalId: varchar('external_id', { length: 128 }),
+  externalSource: varchar('external_source', { length: 64 }),
 
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
@@ -493,6 +506,10 @@ export const estimates = pgTable('estimates', {
   processesCustomized: boolean('processes_customized').notNull().default(false),
   /** Deterministic structure hash (layers + productType) for fork/snap-back checks. */
   structureSignature: varchar('structure_signature', { length: 128 }),
+
+  /** PEBI estimation request / inquiry id when originated in MES */
+  externalId: varchar('external_id', { length: 128 }),
+  externalSource: varchar('external_source', { length: 64 }),
 
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),

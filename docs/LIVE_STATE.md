@@ -1,11 +1,21 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-07 (Interplast ES tenant provisioned)
-**Session focus:** Interplast company tenant + Camille `tenant_admin`; `platform_company_code` lineage column; provision script.
+**Last updated:** 2026-07-07 (PEBI customer sync + integration seam)
+**Session focus:** 1280 PEBI customers synced into Interplast ES tenant; integration API + MES intake stub for quote→order flow.
 
 ---
 
 ## Where we stopped (read this first next session)
+
+### **DONE:** PEBI ↔ ES customers + handoff seam
+
+- **1280 customers** synced from `fp_customer_unified` → ES Interplast (`external_source=pebi`)
+- **Re-sync:** `npm run db:sync-customers-pebi --workspace=packages/server` or `POST /api/v1/integration/pebi/sync-customers` as Camille
+- **PEBI routes:** `GET /api/integration/es/customers`, `POST /api/integration/es/mes-intake` (stub)
+- **ES push quote:** `POST /api/v1/integration/pebi/push-quote/:id/mes` (needs PEBI running + shared secret)
+- **Env:** `PEBI_DATABASE_URL`, `PEBI_API_URL`, `PEBI_ES_INTEGRATION_SECRET` (same on both apps)
+
+**Next:** Wire PEBI estimation request → ES estimate (`estimates.external_id`); implement real MES job-card create on mes-intake.
 
 ### **DONE:** Interplast ES tenant (IP/FP)
 

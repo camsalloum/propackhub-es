@@ -1171,3 +1171,12 @@ Deleted tracked `localhost.har` (~9MB network capture) and `stitch.zip`. Scan fo
 - **Provisioned:** Interplast ES tenant (`platform_company_code=interplast`, AED, `process_per_kg`). Camille = `tenant_admin`. `admin@propackhub.com` = `platform_admin` (separate ProPackHub owner tenant).
 - **Script:** `npm run db:provision-interplast --workspace=packages/server` — idempotent.
 - **Future:** PEBI `app_subscriptions` for `es`, shared users/customers/prices via platform tenant record + service keys.
+
+### 2026-07-07 — PEBI ↔ ES customer sync + MES handoff seam
+
+- **Customers:** `customers.external_id` + `external_source=pebi` + `synced_at`; unique per tenant. **1280** Interplast CRM rows synced from `fp_customer_unified`.
+- **Sync:** `npm run db:sync-customers-pebi` (direct `PEBI_DATABASE_URL`) or `POST /api/v1/integration/pebi/sync-customers` (tenant_admin JWT).
+- **Lineage:** `estimates.external_*` (PEBI estimation request), `quotes.external_*` (MES order after push).
+- **PEBI API:** `GET /api/integration/es/customers`, `POST /api/integration/es/mes-intake` (stub 202). Header `X-PPH-Integration-Key` = `PEBI_ES_INTEGRATION_SECRET` (both apps).
+- **ES push:** `POST /api/v1/integration/pebi/push-quote/:id/mes` → PEBI mes-intake (full job-card creation = next phase).
+- **Flow target:** PEBI request → ES estimate/quote → approval → ES push → MES order.

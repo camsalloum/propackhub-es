@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { eq, and, ilike, inArray, isNull, asc, desc, count as drizzleCount } from 'drizzle-orm';
+import { eq, and, ilike, inArray, isNull, asc, desc, count as drizzleCount, or } from 'drizzle-orm';
 import { z } from 'zod';
 import * as schema from '../db/schema';
 import { getDatabase } from '../db';
@@ -11,6 +11,10 @@ import {
   buildStructureSummaries,
   developmentTotalDisplay,
 } from '../services/quote-helpers';
+import {
+  buildTenantCustomerAccess,
+  CUSTOMER_READ_ONLY_MESSAGE,
+} from '../services/tenant-customer-access';
 
 // ---------------------------------------------------------------------------
 // Validation schemas
@@ -32,6 +36,22 @@ const updateCustomerSchema = createCustomerSchema.partial();
 /** Escape Postgres LIKE wildcards in user-supplied search strings. BUG-13. */
 function escapeLike(s: string): string {
   return s.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+async function loadTenantCustomerAccess(tenantId: string) {
+  const db = getDatabase();
+  const [tenant] = await db
+    .select({
+      type: schema.tenants.type,
+      platformCompanyCode: schema.tenants.platformCompanyCode,
+    })
+    .from(schema.tenants)
+    .where(eq(schema.tenants.id, tenantId))
+    .limit(1);
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+  return buildTenantCustomerAccess(tenant);
 }
 
 // ---------------------------------------------------------------------------
@@ -90,10 +110,15 @@ async function autocompleteCustomersRoute(
       .where(
         and(
           eq(schema.customers.tenantId, tenantId),
-          ilike(schema.customers.companyName, `%${q}%`)
+          or(
+            ilike(schema.customers.companyName, `%${q}%`),
+            ilike(schema.customers.contactName, `%${q}%`),
+            ilike(schema.customers.email, `%${q}%`)
+          )
         )
       )
-      .limit(20);
+      .orderBy(schema.customers.companyName)
+      .limit(50);
 
     return reply.send(customers);
   } catch (error: unknown) {
@@ -111,6 +136,12 @@ async function createCustomerRoute(
     const db = getDatabase();
 
     const validated = createCustomerSchema.parse(request.body);
+    const access = await loadTenantCustomerAccess(tenantId);
+    if (!access.canCreate) {
+      return reply.status(403).send(
+        errorBody('FORBIDDEN', CUSTOMER_READ_ONLY_MESSAGE, { customerAccess: access })
+      );
+    }
 
     const [customer] = await db
       .insert(schema.customers)
@@ -169,6 +200,12 @@ async function updateCustomerRoute(
     const db = getDatabase();
 
     const validated = updateCustomerSchema.parse(request.body);
+    const access = await loadTenantCustomerAccess(tenantId);
+    if (!access.canEdit) {
+      return reply.status(403).send(
+        errorBody('FORBIDDEN', CUSTOMER_READ_ONLY_MESSAGE, { customerAccess: access })
+      );
+    }
 
     const [customer] = await db
       .update(schema.customers)
@@ -198,6 +235,12 @@ async function deleteCustomerRoute(
     const tenantId = extractTenantFromRequest(request);
     const { id } = request.params;
     const db = getDatabase();
+    const access = await loadTenantCustomerAccess(tenantId);
+    if (!access.canDelete) {
+      return reply.status(403).send(
+        errorBody('FORBIDDEN', CUSTOMER_READ_ONLY_MESSAGE, { customerAccess: access })
+      );
+    }
 
     // BUG-10: check FK (estimates.customer_id) before attempting delete
     const usage = await db

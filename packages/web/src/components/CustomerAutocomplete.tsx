@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useCustomerAccess } from '../hooks/useCustomerAccess';
 
 interface CustomerOption {
   id: string;
@@ -25,8 +26,11 @@ export default function CustomerAutocomplete({
   compact = false,
   allowCreate = true,
 }: CustomerAutocompleteProps) {
+  const customerAccess = useCustomerAccess();
+  const canCreateCustomers = allowCreate && customerAccess.canCreate;
   const [query, setQuery] = useState('');
   const [options, setOptions] = useState<CustomerOption[]>([]);
+  const [totalCustomers, setTotalCustomers] = useState<number | null>(null);
   const [selectedLabel, setSelectedLabel] = useState('');
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -50,24 +54,12 @@ export default function CustomerAutocomplete({
     });
   }, [value]);
 
-  const loadRecentCustomers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { apiClient } = await import('../lib/api');
-      const results = await apiClient.listCustomers(100);
-      setOptions(
-        (results || []).slice(0, 25).map((c: CustomerOption) => ({
-          id: c.id,
-          companyName: c.companyName,
-          contactName: c.contactName,
-        }))
-      );
-      setOpen(true);
-    } catch {
-      setOptions([]);
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    import('../lib/api').then(({ apiClient }) => {
+      apiClient.getCustomers({ limit: 1 }).then((res) => {
+        if (typeof res.total === 'number') setTotalCustomers(res.total);
+      }).catch(() => {});
+    });
   }, []);
 
   const pickCustomer = (c: CustomerOption) => {
@@ -115,12 +107,8 @@ export default function CustomerAutocomplete({
     if (!value) onDraftChange?.(q);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (q.length < 2) {
-      if (q.length === 0) {
-        void loadRecentCustomers();
-      } else {
-        setOptions([]);
-        setOpen(false);
-      }
+      setOptions([]);
+      setOpen(q.length === 0);
       return;
     }
     debounceRef.current = setTimeout(async () => {
@@ -140,7 +128,7 @@ export default function CustomerAutocomplete({
 
   const trimmedQuery = query.trim();
   const showCreateOption =
-    allowCreate &&
+    canCreateCustomers &&
     trimmedQuery.length >= 2 &&
     !options.some((c) => c.companyName.toLowerCase() === trimmedQuery.toLowerCase());
 
@@ -149,12 +137,17 @@ export default function CustomerAutocomplete({
       <input
         type="text"
         className={inputClass}
-        placeholder="Search or type new customer name…"
+        placeholder={
+          canCreateCustomers ? 'Search or type new customer name…' : 'Search customers…'
+        }
         value={open ? query : selectedLabel || query}
         onChange={(e) => search(e.target.value)}
         onFocus={() => {
           if (query.length >= 2) setOpen(true);
-          else void loadRecentCustomers();
+          else {
+            setOptions([]);
+            setOpen(true);
+          }
         }}
         onBlur={() => setTimeout(() => setOpen(false), 200)}
         onKeyDown={(e) => {
@@ -184,7 +177,13 @@ export default function CustomerAutocomplete({
           )}
           {!loading && options.length === 0 && !showCreateOption && (
             <li className="px-3 py-2 text-sm text-mist">
-              {query.length >= 2 ? 'No matching customer — use Add above' : 'Type 2+ letters to search or add'}
+              {query.length >= 2
+                ? canCreateCustomers
+                  ? 'No matching customer — use Add above'
+                  : 'No matching customer'
+                : totalCustomers != null
+                  ? `${totalCustomers} customers — type 2+ letters to search`
+                  : 'Type 2+ letters to search'}
             </li>
           )}
           {options.map((c) => (

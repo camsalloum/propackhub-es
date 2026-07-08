@@ -1,11 +1,39 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-07 (PEBI RM sync spec + materials unification plan)
-**Session focus:** Deep PEBI→ES raw materials mapping spec (family, grade, crosswalk, price roll-up); catalog unification plan Phase 4 linked.
+**Last updated:** 2026-07-08 (PET sync + white fallback rule)
+**Session focus:** Phase 4 PET family complete — live prices/density/solid from PEBI. **Next:** user validates PET in Master Data, then **BOPP**.
 
 ---
 
 ## Where we stopped (read this first next session)
+
+### **NEXT:** Validate PET sync, then BOPP
+
+- Spec: `docs/PEBI_ES_RM_SYNC_SPEC.md`
+- **PET live sync shipped** — ES follows PEBI Oracle cron markers (`rm_last_sync` → materials, `oracle_last_sync` → customers)
+- **Push:** PEBI notifies ES right after RM/Oracle cron; ES waits **15 min** then pulls (`PEBI_ES_SYNC_DELAY_MS`)
+- **Poll fallback:** same 15 min delay from `completedAt`; jobs queued so materials + customers never run together
+- **Check:** Master Data → Substrates → **PET** — `priceSource=pebi`, market/cost/density/solid from PEBI profiles + stock; white variants now fill from formula when PB price is missing.
+- **Pricing:** `costPerKgUsd` = PEBI stock/on-order combined weighted avg (AED→USD). `marketPriceUsd` is editable in ES for PEBI-linked rows and writes back to PEBI `market_ref_price` (USD→AED via tenant FX). Fallback only for `pet-white` + `pet-twist-white`: `pet-transparent + $0.40` until PB returns a live price.
+- Next family after PET confirmed: **BOPP** (same API pattern + crosswalk)
+
+---
+
+### **DONE:** Materials catalog Phases 1–5 (this session)
+
+| Phase | What |
+|-------|------|
+| **1** | `catalog_source` on tenants; `catalogAccess` on `/auth/me`; platform publish scoped; materials 403 for managed catalogs |
+| **2** | Single **Master Data** (`/master-data`) for all roles; `/library` redirect |
+| **3** | `GET /materials/meta`; `CatalogRefreshCoordinator` (60s + focus); publish toasts |
+| **4** | *(not started)* PEBI RM sync — see spec |
+| **5** | Deleted dead library pages; `POST /platform/master-data/publish`; API doc aligned |
+
+**Also:** USD price inputs always `x.xx` (`UsdPriceInput`). User verified Phases 1–3 manually.
+
+**Migration (if not applied):** `npm run db:patch --workspace=packages/server`
+
+---
 
 ### **SPEC:** PEBI → ES raw materials sync (not implemented)
 

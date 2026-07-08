@@ -154,6 +154,8 @@ function rowToMasterMaterial(row: typeof schema.platformMasterMaterials.$inferSe
     substrateGrade: row.substrateGrade,
     hoover: row.hoover,
     marketPriceUsd: row.marketPriceUsd != null ? Number(row.marketPriceUsd) : null,
+    externalId: row.externalId ?? null,
+    externalSource: row.externalSource ?? null,
     laminationRecipe: (row.laminationRecipe as MasterMaterial['laminationRecipe']) ?? null,
     accessoryKind: row.accessoryKind ?? null,
     costPerMeterUsd: row.costPerMeterUsd != null ? Number(row.costPerMeterUsd) : null,
@@ -720,15 +722,20 @@ export interface TenantSyncResult {
   templatesRelinked: number;
 }
 
-/** Push platform master materials to all tenant libraries (respects manual prices). */
+/** Push platform master materials to tenant libraries with catalog_source = platform (or all when forceAll). */
 export async function syncPlatformMasterToAllTenants(options?: {
   pruneOrphans?: boolean;
+  forceAll?: boolean;
 }): Promise<TenantSyncResult> {
   const db = getDatabase();
   const materials = await listPlatformMasterMaterials();
-  const tenantIds = (await db.select({ id: schema.tenants.id }).from(schema.tenants)).map(
-    (t: { id: string }) => t.id
-  );
+  const tenantRows = await db
+    .select({ id: schema.tenants.id, catalogSource: schema.tenants.catalogSource })
+    .from(schema.tenants);
+
+  const tenantIds = tenantRows
+    .filter((t) => options?.forceAll === true || t.catalogSource === 'platform')
+    .map((t) => t.id);
 
   let inserted = 0;
   let updated = 0;
@@ -1055,6 +1062,85 @@ export async function ensureLaminationAdhesivesSeeded(): Promise<{ upserted: num
   }
 
   return { upserted: inserted + retired + (monoChanged ? 1 : 0), retired };
+}
+
+const PET_SUBSTRATE_KEYS = [
+  'pet-transparent',
+  'pet-transparent-hr',
+  'pet-metalized',
+  'pet-metalized-hb',
+  'pet-metalized-hf',
+  'pet-white',
+  'pet-matte',
+  'pet-twist-transparent',
+  'pet-twist-white',
+  'pet-twist-metalized',
+  'pet-adhesive-film',
+] as const;
+
+const RETIRED_PET_SUBSTRATE_KEYS = [
+  'pet-twist-transparent-twist-transparent',
+  'pet-twist-transparent-twist-white',
+  'pet-twist-methalized',
+] as const;
+
+const LEGACY_PET_PLATFORM_KEYS: Record<string, string> = {
+  'pet-twist-transparent': 'pet-twist-transparent-twist-transparent',
+  'pet-twist-white': 'pet-twist-transparent-twist-white',
+  'pet-twist-metalized': 'pet-twist-methalized',
+};
+
+/** Idempotent — upserts PET substrates from seed JSON (PB cat_desc alignment, Phase 4 Family 1). */
+export async function ensurePetSubstratesFromSeed(): Promise<{ upserted: number; retired: number }> {
+  const db = getDatabase();
+  const seed = loadSeedMaterialsFromJson().filter(
+    (m) => m.type === 'substrate' && (PET_SUBSTRATE_KEYS as readonly string[]).includes(m.key)
+  );
+  const existing = await db.select().from(schema.platformMasterMaterials);
+  const byKey = new Map(existing.map((r) => [r.key, r]));
+
+  let inserted = 0;
+  let updated = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const m = seed[i]!;
+    const values = masterMaterialInputToDbValues({ ...m, sortOrder: 120 + i });
+    const legacyKey = LEGACY_PET_PLATFORM_KEYS[m.key];
+    const match = byKey.get(m.key) ?? (legacyKey ? byKey.get(legacyKey) : undefined);
+    if (match) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set({ ...values, key: m.key })
+        .where(eq(schema.platformMasterMaterials.id, match.id));
+      updated++;
+    } else {
+      await db.insert(schema.platformMasterMaterials).values(values);
+      inserted++;
+    }
+  }
+
+  let retired = 0;
+  for (const key of RETIRED_PET_SUBSTRATE_KEYS) {
+    const row = byKey.get(key);
+    if (row?.active) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set({ active: false, updatedAt: new Date() })
+        .where(eq(schema.platformMasterMaterials.id, row.id));
+      retired++;
+    }
+  }
+
+  if (inserted > 0 || updated > 0 || retired > 0) {
+    await incrementMasterDataVersion();
+    const materials = await listPlatformMasterMaterials();
+    const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);
+    for (const t of tenants) {
+      await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
+    }
+    log.info({ inserted, updated, retired }, 'PET substrates updated and tenants synced');
+  }
+
+  return { upserted: inserted + updated + retired, retired };
 }
 
 /** Persist platform default cleaning EA kg/job (Master Data → Solvent tab). */

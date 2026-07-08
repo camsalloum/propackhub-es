@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { apiClient } from '../lib/api';
 import type { TenantCustomerAccess } from '../lib/tenantCustomerAccess';
+import type { TenantCatalogAccess } from '../lib/tenantCatalogAccess';
 
 export interface AuthUser {
   id: string;
@@ -25,6 +26,7 @@ export interface AuthTenant {
   displayCurrency: string;
   operatingCostMethod?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
   customerAccess?: TenantCustomerAccess;
+  catalogAccess?: TenantCatalogAccess;
 }
 
 type AuthContextValue = {

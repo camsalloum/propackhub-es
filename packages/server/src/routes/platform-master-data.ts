@@ -343,6 +343,17 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
     }
   );
 
+  fastify.post('/api/v1/platform/master-data/publish', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+      if (!requirePlatformAdmin(request, reply)) return;
+      const sync = await syncPlatformMasterToAllTenants({ pruneOrphans: true });
+      return reply.send(sync);
+    } catch (error: unknown) {
+      return sendCaughtError(reply, error, 'Failed to publish master data', 'Publish master data error:');
+    }
+  });
+
   fastify.post('/api/v1/platform/master-data/sync-tenants', async (request, reply) => {
     try {
       await request.jwtVerify();

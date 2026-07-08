@@ -106,7 +106,17 @@ Maps Oracle `category` → PEBI `material_class` (`substrates`, `inks`, `adhesiv
 | `packing_materials` | `substrate` (`substrateFamily = Packaging`) or skip v1 |
 | `resins` | skip v1 (not in ES laminate editor) |
 
-### 3.4 Substrate profile routing (PEBI)
+### 3.5 PEBI substrate taxonomy (not a spreadsheet)
+
+| Layer | Location | Role |
+|-------|----------|------|
+| **Profiles (authoritative)** | `mes_material_profile_configs` — `material_class`, `cat_desc`, `appearance`, `mapped_material_keys[]` | Grades, prices, ES key mapping at runtime |
+| **Oracle lines** | `fp_actualrmdata.maindescription` | Stock SKU text |
+| **UI lookup** | `apps/pph/src/utils/substrateMapping.js` | Maps known `maindescription` → family + grade for Item Master filters/display |
+
+Phase 4 family-by-family crosswalk uses **live Item Master profiles** (`cat_desc` per family), validated with IP/FP — not any external Excel file.
+
+### 3.6 Substrate profile routing (PEBI)
 
 `tds.js` already routes substrates to profiles (`substrates_pet`, `substrates_bopp`, …) via regex on descriptions.
 
@@ -208,21 +218,26 @@ Bridge normalized grade → ES catalog key (`pet-transparent`, `bopp-transparent
 
 For each `pebi_grade_key` / `es_platform_master_key`:
 
-| Policy (config per tenant) | Formula |
-|----------------------------|---------|
-| `purchase_price` (default v1) | Latest non-zero `purchaseprice` among mapped items |
-| `weighted_avg` | `maincost` where `mainitemstock > 0` |
-| `max` / `min` | For sensitivity bounds (not default) |
+| Field | Source |
+|-------|--------|
+| `marketPriceUsd` | Always PEBI `market_ref_price` (profile MAP) |
+| `costPerKgUsd` | **No stock** on mapped Oracle items → `costPerKgUsd = marketPriceUsd` |
+| `costPerKgUsd` | **In stock** (attached items with qty) → combined weighted avg (stock + on-order) |
 
-**Currency:** PEBI costs in AED for IP/FP — convert to **USD** for ES engine using same FX service as ES tenant (`exchange_rate_usd_to_display` inverted or dedicated `aed_to_usd`).
+**Default in platform catalog:** seed and publish with `costPerKgUsd = marketPriceUsd` until PEBI sync sees stock.
 
-**Only sync price fields** when `catalog_source = pebi`:
+**ES-only grades:** add matching `cat_desc` profile in PEBI Item Master (same name as ES `substrateGrade`); no Oracle SKU required to start — market price drives costing until first purchase/stock.
 
-- `costPerKgUsd`, `marketPriceUsd`, `price_source = 'pebi'`, `platform_synced_at`
+**Currency:** PEBI costs in AED for IP/FP — convert to **USD** for ES engine using tenant FX.
 
-**Do not overwrite** from PEBI (unless spec row exists):
+**Synced from PEBI (PET live sync):**
 
-- `density`, `solidPercent` — seed from ES platform once; optional TDS enrichment phase 2
+- `marketPriceUsd` ← `market_ref_price`
+- `costPerKgUsd` ← rule above
+- `density`, `solidPercent` ← profile `density_g_cm3` / `solid_pct`, else item-master averages
+- `price_source = 'pebi'`, `platform_synced_at`
+
+**Not built yet (Phase 4 live sync):** ~~`GET /api/integration/es/materials`, `pebi-material-sync.ts`~~ **PET shipped 2026-07-08** — `GET /api/integration/es/materials?family=PET`, `pebi-material-sync.ts`, `POST /api/v1/integration/pebi/sync-materials`, CLI `npm run db:sync-materials-pebi`. Other families (BOPP, …) follow same pattern.
 
 ---
 
@@ -266,7 +281,18 @@ Query:  since_version? (optional)
 
 Implementation: **PEBI server** runs L1–L4; ES does not re-parse Oracle text.
 
-### 5.2 ES ingest (new)
+### 5.3 ES auto-sync (Oracle cron aligned)
+
+PEBI cron jobs write `company_settings.rm_last_sync` (RM, ~every 2h) and `oracle_last_sync` (sales/customers, nightly).
+
+| PEBI event | ES action |
+|------------|-----------|
+| RM sync complete | push `{ source: 'rm' }` → ES schedules material sync **15 min after** `rm_last_sync.completedAt` |
+| Oracle sync complete | push `{ source: 'oracle' }` → ES schedules customer sync **15 min after** `oracle_last_sync.completedAt` |
+
+Material and customer ES syncs run **one at a time** (queued). Poll fallback uses the same delay. Env: `PEBI_ES_SYNC_DELAY_MS=900000` (default 15 min).
+
+PEBI: `GET /api/integration/es/oracle-sync-status` — ES poll source.
 
 ```
 POST /api/v1/integration/pebi/sync-materials

@@ -1,6 +1,6 @@
 # Materials catalog unification — implementation plan
 
-**Status:** Planned — not started  
+**Status:** Phase 5 done (cleanup) — Phase 4 next (PEBI RM sync, blocked on workshop)  
 **Created:** 2026-07-07  
 **Product:** ProPackHub Estimation Studio (`apps/estimation-studio/`)  
 **Audience:** Agents and developers implementing catalog / master-data UX  
@@ -185,28 +185,29 @@ Platform admin **does not** use tenant Raw Materials for global price changes.
 
 **Goal:** Encode ownership; stop accidental global/tenant confusion.
 
-- [ ] Add `tenants.catalog_source` enum: `tenant` \| `platform` \| `pebi` (default `tenant`).
-- [ ] Migration + backfill: Interplast → `pebi` when ready, else `platform` temporarily.
-- [ ] Extend `tenant-customer-access` pattern → `tenant-catalog-access.ts` (`canEditMaterials`, `priceSourceLabel`).
-- [ ] Document in [ES_MEMORY.md](./ES_MEMORY.md) § Materials ownership.
-- [ ] Change `syncPlatformMasterToAllTenants`: only tenants with `catalog_source = platform` (unless admin passes `forceAll: true`).
+- [x] Add `tenants.catalog_source` enum: `tenant` \| `platform` \| `pebi` (default `tenant`).
+- [x] Migration + backfill: Interplast → `pebi` when ready, else `platform` temporarily.
+- [x] Extend `tenant-customer-access` pattern → `tenant-catalog-access.ts` (`canEditMaterials`, `priceSourceLabel`).
+- [x] Document in [ES_MEMORY.md](./ES_MEMORY.md) § Materials ownership.
+- [x] Change `syncPlatformMasterToAllTenants`: only tenants with `catalog_source = platform` (unless admin passes `forceAll: true`).
 
 **DoD:** Platform save does not overwrite individual tenant prices; flags queryable from `/auth/me`.
 
 ---
 
-### Phase 2 — Unify UI; remove Raw Materials page (P0)
+### Phase 2 — Unify UI; one Master Data page for all (P0) — **revised**
 
-**Goal:** One licensee-facing materials screen.
+**Goal:** Same Platform Master shell for everyone; scope + permissions control edit access.
 
-- [ ] Extract shared **MaterialsTable** from `RawMaterials.tsx` + platform material grid patterns.
-- [ ] New route: `/materials` (tenant-scoped) — or tab under Settings for individuals if preferred.
-- [ ] Redirect `/library` → `/materials`.
-- [ ] Remove Raw Materials from `Layout.tsx` navigation.
-- [ ] Gate edit controls via `catalog_source` + role (mirror customer licensing UX).
-- [ ] Platform admin keeps `/platform/master-data` for golden catalog (unchanged path OK).
+- [x] `MasterData.tsx` supports `platform` vs `tenant` scope (role-based)
+- [x] Route `/master-data` for all users; redirect `/library` and `/platform/master-data`
+- [x] Nav: single **Master Data** link (remove Raw Materials + Platform Master duplicate)
+- [x] Tenant materials via `/api/v1/materials`; catalog gating on synced rows
+- [x] Tenant custom reference via `TenantReferenceEditor` on RM Types / Units / Processes tabs
+- [x] Platform-only tabs (product types, waste bands, CoRM) read-only in tenant scope
+- [x] Delete `RawMaterials.tsx` (Phase 5 cleanup; route already redirects)
 
-**DoD:** No `/library` in app; individuals and company admins edit prices in one place; Interplast users see read-only when `catalog_source=pebi|platform`.
+**DoD:** Camille sees full Master Data UI; colleagues read-only; individual full tenant edit; admin platform scope.
 
 ---
 
@@ -214,10 +215,10 @@ Platform admin **does not** use tenant Raw Materials for global price changes.
 
 **Goal:** Camille sees admin/PEBI price changes without mystery.
 
-- [ ] Expose `master_data_version` (and per-tenant `materials_synced_at`) on `/auth/me` or lightweight `GET /materials/meta`.
-- [ ] `MaterialsContext`: poll or refetch on version bump + `window.focus` (same pattern as ES_MEMORY waste-band note).
-- [ ] Platform Master save: toast “Published to N tenants” vs “Seed updated (tenants unchanged)”.
-- [ ] Optional: `POST /api/v1/platform/master-data/publish` explicit action instead of implicit sync on every blur.
+- [x] Expose `master_data_version` (and per-tenant `materials_synced_at`) on `/auth/me` or lightweight `GET /materials/meta`.
+- [x] `MaterialsContext`: poll or refetch on version bump + `window.focus` (same pattern as ES_MEMORY waste-band note).
+- [x] Platform Master save: toast “Published to N tenants” vs “Seed updated (tenants unchanged)”.
+- [x] Optional: `POST /api/v1/platform/master-data/publish` explicit action instead of implicit sync on every blur.
 
 **DoD:** Two browsers — admin changes platform price → tenant user sees update after focus or ≤60s without full re-login.
 
@@ -247,10 +248,10 @@ Platform admin **does not** use tenant Raw Materials for global price changes.
 
 ### Phase 5 — Cleanup & deprecation (P2)
 
-- [ ] Delete `RawMaterials.tsx`, dead API copy, graph references.
-- [ ] Align [API_MASTER_DATA.md](./API_MASTER_DATA.md) § Tenant sync (remove “manual preserved” if still wrong).
-- [ ] Update `Library.tsx` if any references remain (file may already be unused).
-- [ ] Admin docs: when to use Platform Master vs PEBI vs tenant-only rows.
+- [x] Delete `RawMaterials.tsx`, dead API copy, graph references.
+- [x] Align [API_MASTER_DATA.md](./API_MASTER_DATA.md) § Tenant sync (remove “manual preserved” if still wrong).
+- [x] Update `Library.tsx` if any references remain (file may already be unused).
+- [x] Admin docs: when to use Platform Master vs PEBI vs tenant-only rows.
 
 **DoD:** `rg Raw Materials` / `/library` only hits redirects and changelog.
 
@@ -313,11 +314,11 @@ Platform admin **does not** use tenant Raw Materials for global price changes.
 
 ## 14. Acceptance checklist (release)
 
-- [ ] Individual licensee: register → seeded materials → edit price in **Materials** → new estimate uses new price.
-- [ ] Platform admin: edit **Platform Master** → publish → managed tenants updated; individuals unchanged.
+- [x] Individual licensee: register → seeded materials → edit price in **Materials** → new estimate uses new price.
+- [x] Platform admin: edit **Platform Master** → publish → managed tenants updated; individuals unchanged.
 - [ ] Interplast (`catalog_source=pebi`): Materials read-only; PEBI sync updates 12 PET price; Camille sees it after refresh policy.
-- [ ] `/library` redirects; no Raw Materials in nav.
-- [ ] ES_MEMORY + LIVE_STATE updated at phase completion.
+- [x] `/library` redirects; no Raw Materials in nav.
+- [x] ES_MEMORY + LIVE_STATE updated at phase completion.
 
 ---
 

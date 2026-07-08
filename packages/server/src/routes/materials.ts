@@ -7,7 +7,14 @@ import { getEffectiveProfile, stripMaterialRow } from '../utils/visibility';
 import { ensureMaterialsForTenant } from '../db/seed-materials';
 import { roundUsd } from '../utils/usd';
 import { parsePagination, paginate } from '../utils/pagination';
-import { sendCaughtError } from '../utils/errors';
+import { sendCaughtError, errorBody } from '../utils/errors';
+import {
+  buildTenantCatalogAccess,
+  canMutateMaterialRow,
+  CATALOG_READ_ONLY_MESSAGE,
+} from '../services/tenant-catalog-access';
+import { getMaterialsCatalogMeta } from '../services/materials-catalog-meta';
+import { syncMaterialMarketRefToPebi } from '../services/pebi-market-ref-sync';
 
 function isMaterialAdmin(role: string): boolean {
   return role === 'tenant_admin' || role === 'platform_admin';
@@ -40,6 +47,16 @@ const MASTER_DATA_FORBIDDEN = {
       'Only your group administrator can change master data. Contact your admin to add or edit materials.',
   },
 } as const;
+
+async function loadTenantCatalogAccess(tenantId: string) {
+  const db = getDatabase();
+  const [tenant] = await db
+    .select({ catalogSource: schema.tenants.catalogSource })
+    .from(schema.tenants)
+    .where(eq(schema.tenants.id, tenantId))
+    .limit(1);
+  return buildTenantCatalogAccess(tenant ?? {});
+}
 
 function normalizeMaterialPrices<T extends { costPerKgUsd?: number; marketPriceUsd?: number | null }>(
   data: T
@@ -188,12 +205,42 @@ export async function updateMaterialRoute(
     }
     const data = normalizeMaterialPrices(MaterialSchema.partial().parse(request.body));
 
+    const [existing] = await db
+      .select({
+        isTenantOnly: schema.materials.isTenantOnly,
+        externalSource: schema.materials.externalSource,
+      })
+      .from(schema.materials)
+      .where(and(eq(schema.materials.id, id), eq(schema.materials.tenantId, tenantId)))
+      .limit(1);
+
+    if (!existing) {
+      return reply.status(404).send({ error: 'Material not found' });
+    }
+
+    const catalogAccess = await loadTenantCatalogAccess(tenantId);
+    const definedPatchKeys = Object.entries(data)
+      .filter(([, v]) => v !== undefined)
+      .map(([k]) => k);
+    const isPebiMarketRefOnlyEdit =
+      catalogAccess.catalogSource === 'pebi' &&
+      !existing.isTenantOnly &&
+      existing.externalSource === 'pebi' &&
+      definedPatchKeys.length === 1 &&
+      definedPatchKeys[0] === 'marketPriceUsd';
+
+    if (!canMutateMaterialRow(catalogAccess, existing.isTenantOnly) && !isPebiMarketRefOnlyEdit) {
+      return reply
+        .status(403)
+        .send(errorBody('FORBIDDEN', CATALOG_READ_ONLY_MESSAGE, { catalogAccess }));
+    }
+
     const { marketPriceUsd, costPerKgUsd, costPerMeterUsd, costPerPieceUsd, weightGramPerMeter, weightGramPerPiece, ...rest } = data;
     const patch: Record<string, unknown> = { ...rest, updatedAt: new Date() };
     if (marketPriceUsd !== undefined) {
       patch.marketPriceUsd = marketPriceUsd;
     }
-    if (costPerKgUsd !== undefined || marketPriceUsd !== undefined) {
+    if (!isPebiMarketRefOnlyEdit && (costPerKgUsd !== undefined || marketPriceUsd !== undefined)) {
       patch.priceSource = 'manual';
     }
     if (costPerKgUsd !== undefined) {
@@ -211,8 +258,8 @@ export async function updateMaterialRoute(
       .where(and(eq(schema.materials.id, id), eq(schema.materials.tenantId, tenantId)))
       .returning();
 
-    if (!material) {
-      return reply.status(404).send({ error: 'Material not found' });
+    if (isPebiMarketRefOnlyEdit && marketPriceUsd != null) {
+      await syncMaterialMarketRefToPebi(tenantId, id, marketPriceUsd);
     }
 
     return reply.send(material);
@@ -238,6 +285,23 @@ export async function deleteMaterialRoute(
     const db = getDatabase();
     if (!(await canManageTenantMaterials(db, tenantId, user.role))) {
       return reply.status(403).send(MASTER_DATA_FORBIDDEN);
+    }
+
+    const [existing] = await db
+      .select({ isTenantOnly: schema.materials.isTenantOnly })
+      .from(schema.materials)
+      .where(and(eq(schema.materials.id, id), eq(schema.materials.tenantId, tenantId)))
+      .limit(1);
+
+    if (!existing) {
+      return reply.status(404).send({ error: 'Material not found' });
+    }
+
+    const catalogAccess = await loadTenantCatalogAccess(tenantId);
+    if (!canMutateMaterialRow(catalogAccess, existing.isTenantOnly)) {
+      return reply
+        .status(403)
+        .send(errorBody('FORBIDDEN', CATALOG_READ_ONLY_MESSAGE, { catalogAccess }));
     }
 
     const layerUsage = await db
@@ -283,7 +347,26 @@ export async function deleteMaterialRoute(
   }
 }
 
+export async function getMaterialsMetaRoute(
+  _fastify: FastifyInstance,
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  try {
+    await request.jwtVerify();
+    const tenantId = extractTenantFromRequest(request);
+    const meta = await getMaterialsCatalogMeta(tenantId);
+    return reply.send(meta);
+  } catch (error: unknown) {
+    return sendCaughtError(reply, error, 'Failed to load materials meta', 'Get materials meta error:');
+  }
+}
+
 export async function registerMaterialRoutes(fastify: FastifyInstance) {
+  fastify.get('/api/v1/materials/meta', async (request, reply) =>
+    getMaterialsMetaRoute(fastify, request, reply)
+  );
+
   fastify.get<{ Querystring: { limit?: string; offset?: string } }>(
     '/api/v1/materials',
     async (request, reply) => getMaterialsRoute(fastify, request, reply)
@@ -309,6 +392,13 @@ export async function registerMaterialRoutes(fastify: FastifyInstance) {
         const tenantId = extractTenantFromRequest(request);
         if (user.role !== 'tenant_admin' && user.role !== 'platform_admin') {
           return reply.status(403).send({ error: 'Admin only' });
+        }
+
+        const catalogAccess = await loadTenantCatalogAccess(tenantId);
+        if (user.role === 'tenant_admin' && catalogAccess.catalogSource === 'pebi') {
+          return reply
+            .status(403)
+            .send(errorBody('FORBIDDEN', CATALOG_READ_ONLY_MESSAGE, { catalogAccess }));
         }
 
         const pruneOrphans = request.body?.prune !== false;

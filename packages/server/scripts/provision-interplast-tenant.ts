@@ -103,6 +103,7 @@ async function main() {
         name: TENANT_NAME,
         type: 'company',
         platformCompanyCode: PLATFORM_COMPANY_CODE,
+        catalogSource: 'platform',
         displayCurrency: DISPLAY_CURRENCY,
         exchangeRateUsdToDisplay: fx,
         useAutoFx: true,
@@ -118,7 +119,16 @@ async function main() {
     if (!tenant.platformCompanyCode) {
       await db
         .update(schema.tenants)
-        .set({ platformCompanyCode: PLATFORM_COMPANY_CODE, updatedAt: new Date() })
+        .set({
+          platformCompanyCode: PLATFORM_COMPANY_CODE,
+          catalogSource: 'platform',
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.tenants.id, tenant.id));
+    } else if (tenant.catalogSource !== 'platform' && tenant.catalogSource !== 'pebi') {
+      await db
+        .update(schema.tenants)
+        .set({ catalogSource: 'platform', updatedAt: new Date() })
         .where(eq(schema.tenants.id, tenant.id));
     }
     console.log(`Tenant exists: ${tenant.name} (${tenant.id})`);

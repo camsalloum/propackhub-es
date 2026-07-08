@@ -12,6 +12,7 @@
     "db:migrate-corm-display": "tsx scripts/migrate-corm-to-display-currency.ts",
     "db:provision-interplast": "tsx scripts/provision-interplast-tenant.ts",
     "db:sync-customers-pebi": "tsx scripts/sync-customers-from-pebi.ts",
+    "db:sync-materials-pebi": "tsx scripts/sync-materials-from-pebi.ts",
     "db:backfill-processes": "tsx scripts/backfill-processes.ts",
     "build": "tsup",
     "typecheck": "tsc --noEmit",

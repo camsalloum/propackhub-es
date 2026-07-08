@@ -3,6 +3,7 @@ import { Plus, Save, Trash2, Database, GripVertical } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useEntrance } from '../hooks/useEntrance';
 import { useMasterDataContext } from '../contexts/MasterDataContext';
+import { useMaterialsContextOptional } from '../contexts/MaterialsContext';
 import {
   apiClient,
   type PlatformMasterMaterialRow,
@@ -13,8 +14,27 @@ import {
 import { DEFAULT_PRODUCT_SUBTYPE_OPTIONS } from '../lib/masterDataReference';
 import { PRODUCT_FAMILY_LABELS } from '../lib/productCatalog';
 import LaminationFormulaModal from '../components/LaminationFormulaModal';
+import { UsdPriceInput } from '../components/UsdPriceInput';
+import { roundUsd } from '../lib/currency';
 import { SectionTitle } from '../components/SectionTitle';
 import { deriveBinderConcentrateStats, type LaminationRecipe } from '@es/engine';
+import { useCatalogAccess } from '../hooks/useCatalogAccess';
+import {
+  canManageMasterData,
+  resolveMasterDataScope,
+} from '../features/master-data/masterDataScope';
+import {
+  buildTenantMaterialPayload,
+  canEditTenantMaterialRow,
+  tenantMaterialToPlatformRow,
+} from '../features/master-data/tenantMaterialBridge';
+import { SubstrateFamilyNav } from '../features/master-data/SubstrateFamilyNav';
+import {
+  ES_FAMILY_TO_PB,
+  filterSubstrateMaterialsByFamilyTab,
+  sortPetSubstrateRows,
+  SUBSTRATE_FAMILY_TABS,
+} from '../lib/substratePbTaxonomy';
 
 type MaterialTab = string; // now dynamic — any rm_type code can be a material tab
 type RefTab = 'product_type' | 'product_subtype' | 'unit' | 'rm_type' | 'process' | 'waste_bands' | 'templates';
@@ -85,6 +105,25 @@ function slugKey(name: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 64);
+}
+
+function normalizeUsdPrices(row: PlatformMasterMaterialRow): PlatformMasterMaterialRow {
+  return {
+    ...row,
+    costPerKgUsd: roundUsd(row.costPerKgUsd),
+    liquidCostUsd: row.liquidCostUsd != null ? roundUsd(row.liquidCostUsd) : row.liquidCostUsd,
+    marketPriceUsd: row.marketPriceUsd != null ? roundUsd(row.marketPriceUsd) : null,
+    costPerMeterUsd: row.costPerMeterUsd != null ? roundUsd(row.costPerMeterUsd) : null,
+    costPerPieceUsd: row.costPerPieceUsd != null ? roundUsd(row.costPerPieceUsd) : null,
+  };
+}
+
+function esFamilyForSubstrateTab(familyTabId: string): string {
+  if (familyTabId === 'SLEEVE' || familyTabId === 'SPECIALTY') return familyTabId;
+  const tab = SUBSTRATE_FAMILY_TABS.find((t) => t.id === familyTabId);
+  if (tab?.esFamilies[0]) return tab.esFamilies[0];
+  const fromPb = Object.entries(ES_FAMILY_TO_PB).find(([, pb]) => pb === familyTabId);
+  return fromPb?.[0] ?? familyTabId;
 }
 
 /** Filter materials for a given RM type tab (supports dynamic custom types) */
@@ -169,11 +208,16 @@ function newMaterialRow(tabCode: string, tabLabel: string): PlatformMasterMateri
 }
 
 const MasterData = () => {
-  const { user, isLoading } = useAuth();
-  const { invalidate } = useMasterDataContext();
+  const { user, tenant, isLoading } = useAuth();
+  const catalogAccess = useCatalogAccess();
+  const scope = resolveMasterDataScope(user?.role);
+  const canEditAdmin = canManageMasterData(user?.role, tenant?.type);
+  const { invalidate, version: catalogReloadToken } = useMasterDataContext();
+  const materialsCtx = useMaterialsContextOptional();
   // Single-play mount entrance for the library content; no-op under reduced motion (R22.3, R22.5).
   const { ref: entranceRef } = useEntrance<HTMLDivElement>();
   const [tab, setTab] = useState<Tab>('rm_type');
+  const [substrateFamilyTab, setSubstrateFamilyTab] = useState('PET');
   const [materials, setMaterials] = useState<PlatformMasterMaterialRow[]>([]);
   const [refItems, setRefItems] = useState<PlatformReferenceItemInput[]>([]);
   /** Subtypes (all parents) — edited nested under Product Types. */
@@ -208,6 +252,7 @@ const MasterData = () => {
   }>>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [savingTemplateId, setSavingTemplateId] = useState<string | null>(null);
   /** In-flight per-template CoRM PATCHes (blur auto-save) so Save does not double-fire. */
   const cormSaveInflight = useRef(new Map<string, Promise<void>>());
@@ -229,6 +274,11 @@ const MasterData = () => {
   const [rmTypeTabs, setRmTypeTabs] = useState<{ id: string; label: string }[]>(STANDARD_MATERIAL_TABS);
 
   const loadMaterials = useCallback(async () => {
+    if (scope === 'tenant') {
+      const rows = await apiClient.getMaterials();
+      setMaterials((rows as Parameters<typeof tenantMaterialToPlatformRow>[0][]).map((m) => normalizeUsdPrices(tenantMaterialToPlatformRow(m))));
+      return;
+    }
     const rows = await apiClient.getPlatformMasterDataMaterials();
     // Derive liquidCostUsd for ink/adhesive rows: liquidCostUsd = costPerKgUsd × (solidPercent/100)
     // (reverse of the computation — so when user opens the page they see the liquid price)
@@ -236,18 +286,24 @@ const MasterData = () => {
       // Use stored liquidCostUsd if available (avoids floating-point round-trip loss).
       // Fall back to reverse-calculation only for legacy rows that predate this column.
       if (row.liquidCostUsd != null) {
-        return { ...row, liquidCostUsd: Number(row.liquidCostUsd) };
+        return normalizeUsdPrices({ ...row, liquidCostUsd: Number(row.liquidCostUsd) });
       }
       if ((row.type === 'ink' || row.type === 'adhesive') && row.solidPercent > 0 && row.solidPercent < 100) {
-        return { ...row, liquidCostUsd: Math.round(row.costPerKgUsd * row.solidPercent) / 100 };
+        return normalizeUsdPrices({
+          ...row,
+          liquidCostUsd: roundUsd((row.costPerKgUsd * row.solidPercent) / 100),
+        });
       }
-      return { ...row, liquidCostUsd: row.costPerKgUsd };
+      return normalizeUsdPrices({ ...row, liquidCostUsd: row.costPerKgUsd });
     });
     setMaterials(withLiquid);
-  }, []);
+  }, [scope]);
 
   const loadReference = useCallback(async () => {
-    const ref = await apiClient.getPlatformMasterDataReference();
+    const ref =
+      scope === 'platform'
+        ? await apiClient.getPlatformMasterDataReference()
+        : await apiClient.getMasterDataReference();
     const map: Record<RefTab, PlatformReferenceItemInput[]> = {
       product_type: (() => {
         const rows = (ref.productTypeRows ?? []).map((r) => ({
@@ -324,11 +380,11 @@ const MasterData = () => {
         label: p.label,
         code: p.code,
         description: p.description ?? '',
-        costPerHour: p.costPerHour ?? 50,
+        costPerHour: roundUsd(p.costPerHour ?? 50),
         speedBasis: p.speedBasis ?? 'kg_per_hour',
         speedValue: p.speedValue ?? 100,
         setupHours: p.setupHours ?? 1,
-        costPerKgUsd: p.costPerKgUsd ?? 0,
+        costPerKgUsd: roundUsd(p.costPerKgUsd ?? 0),
       })));
     }
     // Always load platform waste bands (used by Waste Bands tab)
@@ -347,9 +403,31 @@ const MasterData = () => {
     });
     const scale = (ref as { cormScaleWithWaste?: number }).cormScaleWithWaste;
     setCormScaleWithWaste(typeof scale === 'number' && scale >= 0 ? scale : 1);
-  }, [tab]);
+  }, [tab, scope]);
 
-  const canEdit = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
+  const canEdit =
+    scope === 'platform' ? user?.role === 'platform_admin' : canEditAdmin && isMaterialTab(tab);
+
+  const showSaveButton =
+    scope === 'platform'
+      ? user?.role === 'platform_admin'
+      : canEditAdmin && isMaterialTab(tab);
+
+  const materialRowEditable = (row: PlatformMasterMaterialRow & { isTenantOnly?: boolean }) =>
+    scope === 'platform'
+      ? user?.role === 'platform_admin'
+      : canEditAdmin && canEditTenantMaterialRow(row, catalogAccess.canEditSyncedMaterials);
+
+  const materialMarketEditable = (row: PlatformMasterMaterialRow & { isTenantOnly?: boolean; externalSource?: string | null }) => {
+    if (materialRowEditable(row)) return true;
+    return (
+      scope !== 'platform' &&
+      canEditAdmin &&
+      catalogAccess.catalogSource === 'pebi' &&
+      !row.isTenantOnly &&
+      row.externalSource === 'pebi'
+    );
+  };
 
   const normalizeCorm = useCallback((value: string | null | undefined) => {
     const raw = value?.trim() ?? '';
@@ -379,6 +457,11 @@ const MasterData = () => {
       }
     })();
   }, [loadMaterials, loadReference]);
+
+  useEffect(() => {
+    if (catalogReloadToken === 0) return;
+    void Promise.all([loadMaterials(), loadReference()]);
+  }, [catalogReloadToken, loadMaterials, loadReference]);
 
   useEffect(() => {
     if (!isMaterialTab(tab)) {
@@ -480,7 +563,16 @@ const MasterData = () => {
         printed === tpl.savedCormPrinted &&
         plain === tpl.savedCormPlain &&
         moq === tpl.savedMoq;
-      if (unchanged) return;
+      if (unchanged) {
+        setPlatformTemplates((prev) =>
+          prev.map((row) =>
+            row.id === templateId
+              ? { ...row, cormPrintedDisplay: printed, cormPlainDisplay: plain }
+              : row
+          )
+        );
+        return;
+      }
       if (cormClaimed.current.get(templateId) === claimKey) return;
       if (cormSaveInflight.current.has(templateId)) return;
 
@@ -543,11 +635,27 @@ const MasterData = () => {
     [invalidate, normalizeCorm, platformTemplates]
   );
 
+  const substrateFamilyCounts = useMemo(() => {
+    const allSubstrates = filterMaterialsForTab('substrate', 'Substrates', materials, rmTypeTabs);
+    const counts: Record<string, number> = {};
+    for (const familyTab of SUBSTRATE_FAMILY_TABS) {
+      counts[familyTab.id] = filterSubstrateMaterialsByFamilyTab(allSubstrates, familyTab.id).length;
+    }
+    return counts;
+  }, [materials, rmTypeTabs]);
+
   const visibleMaterials = useMemo(() => {
     if (!isMaterialTab(tab)) return [];
     const currentTab = rmTypeTabs.find((t) => t.id === tab);
-    return filterMaterialsForTab(tab, currentTab?.label ?? tab, materials, rmTypeTabs);
-  }, [tab, materials, rmTypeTabs]);
+    let rows = filterMaterialsForTab(tab, currentTab?.label ?? tab, materials, rmTypeTabs);
+    if (tab === 'substrate') {
+      rows = filterSubstrateMaterialsByFamilyTab(rows, substrateFamilyTab);
+      if (substrateFamilyTab === 'PET') {
+        rows = sortPetSubstrateRows(rows);
+      }
+    }
+    return rows;
+  }, [tab, materials, rmTypeTabs, substrateFamilyTab]);
 
   // Drag-and-drop reordering state — hoisted above the early returns below so
   // the hook order stays identical on every render (Rules of Hooks).
@@ -575,10 +683,29 @@ const MasterData = () => {
   }
 
   const syncToast = (sync: { tenantsSynced: number; updated: number; inserted: number }) => {
-    setStatus(
-      `Synced ${sync.tenantsSynced} tenant(s) — ${sync.inserted} inserted, ${sync.updated} updated`
-    );
+    if (sync.tenantsSynced > 0) {
+      setStatus(
+        `Published to ${sync.tenantsSynced} tenant(s) — ${sync.inserted} inserted, ${sync.updated} updated`
+      );
+    } else {
+      setStatus('Catalog saved — no managed tenants to publish');
+    }
     invalidate();
+    materialsCtx?.invalidate();
+  };
+
+  const handlePublishToTenants = async () => {
+    if (scope !== 'platform' || user?.role !== 'platform_admin') return;
+    setPublishing(true);
+    setError(null);
+    try {
+      const sync = await apiClient.publishPlatformMasterData();
+      syncToast(sync);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Publish failed');
+    } finally {
+      setPublishing(false);
+    }
   };
 
   const handleSaveMaterials = async () => {
@@ -586,6 +713,27 @@ const MasterData = () => {
     setSaving(true);
     setError(null);
     try {
+      if (scope === 'tenant') {
+        let created = 0;
+        let updated = 0;
+        for (const row of visibleMaterials) {
+          if (!row.id.startsWith('new-') && !materialRowEditable(row)) continue;
+          const payload = buildTenantMaterialPayload(row);
+          if (row.id.startsWith('new-')) {
+            await apiClient.createMaterial(payload);
+            created++;
+          } else {
+            await apiClient.updateMaterial(row.id, payload);
+            updated++;
+          }
+        }
+        await loadMaterials();
+        invalidate();
+        materialsCtx?.invalidate();
+        setStatus(`Saved — ${created} added, ${updated} updated.`);
+        return;
+      }
+
       const tabRows = visibleMaterials.map((row, i) => {
         const key = row.key || slugKey(row.name || `item-${i}`);
         const name = row.name.trim() || key;
@@ -920,15 +1068,32 @@ const MasterData = () => {
   };
 
   const updateMaterialRow = (id: string, patch: Partial<PlatformMasterMaterialRow>) => {
+    const usdKeys = [
+      'costPerKgUsd',
+      'liquidCostUsd',
+      'marketPriceUsd',
+      'costPerMeterUsd',
+      'costPerPieceUsd',
+    ] as const;
+    const roundedPatch = { ...patch };
+    for (const key of usdKeys) {
+      if (key in roundedPatch && roundedPatch[key] != null) {
+        roundedPatch[key] = roundUsd(Number(roundedPatch[key])) as never;
+      }
+    }
+
     setMaterials((prev) => prev.map((m) => {
       if (m.id !== id) return m;
-      const updated = { ...m, ...patch };
+      const updated = { ...m, ...roundedPatch };
       // Auto-compute costPerKgUsd when liquidCostUsd or solidPercent changes (ink/adhesive only)
       if ((updated.type === 'ink' || updated.type === 'adhesive') &&
-          ('liquidCostUsd' in patch || 'solidPercent' in patch)) {
+          ('liquidCostUsd' in roundedPatch || 'solidPercent' in roundedPatch)) {
         const liquid = updated.liquidCostUsd ?? updated.costPerKgUsd;
         const solid = Math.max(1, updated.solidPercent || 100);
-        updated.costPerKgUsd = parseFloat((liquid / (solid / 100)).toFixed(4));
+        updated.costPerKgUsd = roundUsd(liquid / (solid / 100));
+        if (updated.liquidCostUsd != null) {
+          updated.liquidCostUsd = roundUsd(updated.liquidCostUsd);
+        }
       }
       return updated;
     }));
@@ -937,17 +1102,30 @@ const MasterData = () => {
   const addMaterialRow = () => {
     if (!isMaterialTab(tab)) return;
     const currentTab = rmTypeTabs.find((t) => t.id === tab);
-    setMaterials((prev) => [...prev, newMaterialRow(tab, currentTab?.label ?? tab)]);
+    const row = newMaterialRow(tab, currentTab?.label ?? tab);
+    if (tab === 'substrate') {
+      row.substrateFamily = esFamilyForSubstrateTab(substrateFamilyTab);
+    }
+    setMaterials((prev) => [...prev, row]);
   };
 
-  const removeMaterialRow = async (row: PlatformMasterMaterialRow) => {
+  const removeMaterialRow = async (row: PlatformMasterMaterialRow & { isTenantOnly?: boolean }) => {
     if (row.id.startsWith('new-')) {
       setMaterials((prev) => prev.filter((m) => m.id !== row.id));
       return;
     }
-    if (!confirm(`Remove "${row.name}" from platform master?`)) return;
+    if (!materialRowEditable(row) && scope === 'tenant') return;
+    const label = scope === 'platform' ? 'platform master' : 'your materials';
+    if (!confirm(`Remove "${row.name}" from ${label}?`)) return;
     setSaving(true);
     try {
+      if (scope === 'tenant') {
+        await apiClient.deleteMaterial(row.id);
+        setMaterials((prev) => prev.filter((m) => m.id !== row.id));
+        invalidate();
+        setStatus('Material removed.');
+        return;
+      }
       const result = await apiClient.deletePlatformMasterMaterial(row.id);
       setMaterials((prev) => prev.filter((m) => m.id !== row.id));
       syncToast(result.sync);
@@ -969,8 +1147,8 @@ const MasterData = () => {
       );
 
     const warning = isStandard
-      ? `⚠️ "${item.label}" is a standard material type.\n\nRemoving it will hide all materials of this type from the Raw Materials filters. The materials themselves are NOT deleted.\n\nContinue?`
-      : `Remove RM type "${item.label}"?\n\nAny materials of this type (family = "${item.label}") will no longer appear in the Raw Materials filters. The materials are NOT deleted.\n\nContinue?`;
+      ? `⚠️ "${item.label}" is a standard material type.\n\nRemoving it will hide all materials of this type from Master Data filters. The materials themselves are NOT deleted.\n\nContinue?`
+      : `Remove RM type "${item.label}"?\n\nAny materials of this type (family = "${item.label}") will no longer appear in Master Data filters. The materials are NOT deleted.\n\nContinue?`;
 
     if (!confirm(warning)) return;
     setRefItems((prev) => prev.filter((_, j) => j !== i));
@@ -990,26 +1168,39 @@ const MasterData = () => {
         <div className="min-w-0">
           <h1 className="text-2xl font-display font-bold text-navy flex items-center gap-2">
             <Database className="w-7 h-7 text-gold shrink-0" />
-            Platform Variables
+            {scope === 'platform' ? 'Platform Variables' : 'Master Data'}
           </h1>
           <p className="text-mist mt-1 text-sm">
-            Platform variables — materials, units, processes, product types, CoRM and
-            waste bands (Printed / Plain): the single source of truth for all estimates.
-            {canEdit && ' Changes sync to all users automatically.'}
-            {!canEdit && ' Contact an admin to update prices or add materials.'}
+            {scope === 'platform'
+              ? 'Platform variables — materials, units, processes, product types, CoRM and waste bands (Printed / Plain): the golden catalog for all tenants.'
+              : `Master data for ${tenant?.name ?? 'your account'} — materials, units, processes, CoRM and waste bands. ${catalogAccess.priceSourceLabel}.`}
+            {scope === 'platform' && canEdit && ' Changes sync to managed tenants automatically.'}
+            {!canEditAdmin && ' Contact your group administrator to update master data.'}
           </p>
         </div>
-        {canEdit && (
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {scope === 'platform' && user?.role === 'platform_admin' && (
+            <button
+              type="button"
+              className="btn-secondary flex items-center gap-2"
+              disabled={publishing || saving}
+              onClick={() => void handlePublishToTenants()}
+            >
+              {publishing ? 'Publishing…' : 'Publish to tenants'}
+            </button>
+          )}
+          {showSaveButton && (
           <button
             type="button"
-            className="btn-primary flex items-center gap-2 shrink-0"
-            disabled={saving}
+            className="btn-primary flex items-center gap-2"
+            disabled={saving || publishing}
             onClick={isMaterialTab(tab) ? handleSaveMaterials : handleSaveReference}
           >
             <Save className="w-4 h-4" />
             {saving ? 'Saving…' : 'Save tab'}
           </button>
-        )}
+          )}
+        </div>
       </div>
 
       {error && (
@@ -1036,7 +1227,7 @@ const MasterData = () => {
 
       {isMaterialTab(tab) ? (
         <div className="card overflow-hidden">
-          {tab === 'solvent' && canEdit && (
+          {tab === 'solvent' && canEdit && scope === 'platform' && (
             <div className="px-3 py-3 border-b border-border bg-warning/10 grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-medium text-mist mb-1">
@@ -1054,9 +1245,16 @@ const MasterData = () => {
               </div>
             </div>
           )}
+          {tab === 'substrate' && (
+            <SubstrateFamilyNav
+              activeId={substrateFamilyTab}
+              onChange={setSubstrateFamilyTab}
+              countsByFamily={substrateFamilyCounts}
+            />
+          )}
           <div className="flex justify-between items-center px-3 py-2 border-b border-border bg-slate/30">
             <span className="text-sm text-mist">{visibleMaterials.length} row(s)</span>
-            {canEdit && (
+            {canEditAdmin && (
               <button type="button" className="btn-secondary text-sm flex items-center gap-1 py-1.5" onClick={addMaterialRow}>
                 <Plus className="w-4 h-4" /> Add row
               </button>
@@ -1085,7 +1283,7 @@ const MasterData = () => {
                           <input
                             className="cell-input w-full min-w-0"
                             value={row.name}
-                            disabled={!canEdit}
+                            disabled={!materialRowEditable(row)}
                             onChange={(e) => updateMaterialRow(row.id, { name: e.target.value })}
                           />
                         </td>
@@ -1093,7 +1291,7 @@ const MasterData = () => {
                           <select
                             className="cell-input w-full"
                             value={row.accessoryKind ?? 'zipper'}
-                            disabled={!canEdit}
+                            disabled={!materialRowEditable(row)}
                             onChange={(e) =>
                               updateMaterialRow(row.id, {
                                 accessoryKind: e.target.value as PlatformMasterMaterialRow['accessoryKind'],
@@ -1107,10 +1305,11 @@ const MasterData = () => {
                         </td>
                         <td>
                           {basis === 'per_meter' ? (
-                            <input
-                              type="number" step="0.001" className="cell-input cell-num w-[80px]"
-                              value={row.costPerMeterUsd ?? 0} disabled={!canEdit}
-                              onChange={(e) => updateMaterialRow(row.id, { costPerMeterUsd: Number(e.target.value) })}
+                            <UsdPriceInput
+                              className="cell-input cell-num w-[80px]"
+                              value={row.costPerMeterUsd ?? 0}
+                              disabled={!materialRowEditable(row)}
+                              onChange={(v) => updateMaterialRow(row.id, { costPerMeterUsd: v })}
                             />
                           ) : <span className="text-mist">—</span>}
                         </td>
@@ -1118,17 +1317,18 @@ const MasterData = () => {
                           {basis === 'per_meter' ? (
                             <input
                               type="number" step="0.01" className="cell-input cell-num w-[80px]"
-                              value={row.weightGramPerMeter ?? 0} disabled={!canEdit}
+                              value={row.weightGramPerMeter ?? 0} disabled={!materialRowEditable(row)}
                               onChange={(e) => updateMaterialRow(row.id, { weightGramPerMeter: Number(e.target.value) })}
                             />
                           ) : <span className="text-mist">—</span>}
                         </td>
                         <td>
                           {basis === 'per_piece' ? (
-                            <input
-                              type="number" step="0.001" className="cell-input cell-num w-[80px]"
-                              value={row.costPerPieceUsd ?? 0} disabled={!canEdit}
-                              onChange={(e) => updateMaterialRow(row.id, { costPerPieceUsd: Number(e.target.value) })}
+                            <UsdPriceInput
+                              className="cell-input cell-num w-[80px]"
+                              value={row.costPerPieceUsd ?? 0}
+                              disabled={!materialRowEditable(row)}
+                              onChange={(v) => updateMaterialRow(row.id, { costPerPieceUsd: v })}
                             />
                           ) : <span className="text-mist">—</span>}
                         </td>
@@ -1136,13 +1336,13 @@ const MasterData = () => {
                           {basis === 'per_piece' ? (
                             <input
                               type="number" step="0.01" className="cell-input cell-num w-[80px]"
-                              value={row.weightGramPerPiece ?? 0} disabled={!canEdit}
+                              value={row.weightGramPerPiece ?? 0} disabled={!materialRowEditable(row)}
                               onChange={(e) => updateMaterialRow(row.id, { weightGramPerPiece: Number(e.target.value) })}
                             />
                           ) : <span className="text-mist">—</span>}
                         </td>
                         <td className="text-center">
-                          {canEdit && (
+                          {materialRowEditable(row) && (
                             <button
                               type="button"
                               className="p-1.5 text-danger hover:bg-danger/10 rounded transition-colors duration-micro ease-micro"
@@ -1167,9 +1367,9 @@ const MasterData = () => {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Family</th>
+                  {tab !== 'substrate' && <th>Family</th>}
                   <th>Name</th>
-                  <th>Grade</th>
+                  <th>{tab === 'substrate' ? 'PB grade' : 'Grade'}</th>
                   <th className="text-right">Density</th>
                   <th className="text-right">Solid %</th>
                   {(tab === 'ink' || tab === 'adhesive') && (
@@ -1180,28 +1380,34 @@ const MasterData = () => {
                       <>Cost/kg<br/><span className="font-normal text-[10px]">dry equiv (auto)</span></>
                     ) : 'Cost/kg'}
                   </th>
-                  <th className="text-right">Market</th>
+                  <th className="text-right">
+                    {tab === 'substrate' ? (
+                      <>Market<br/><span className="font-normal text-[10px]">PB market_ref</span></>
+                    ) : 'Market'}
+                  </th>
                   <th />
                 </tr>
               </thead>
               <tbody>
                 {visibleMaterials.map((row) => (
                   <tr key={row.id}>
+                    {tab !== 'substrate' && (
                     <td>
                       <input
                         className="cell-input w-full min-w-0"
                         value={row.substrateFamily ?? ''}
                         title={row.substrateFamily ?? ''}
-                        disabled={!canEdit}
+                        disabled={!materialRowEditable(row)}
                         onChange={(e) => updateMaterialRow(row.id, { substrateFamily: e.target.value })}
                       />
                     </td>
+                    )}
                     <td>
                       <input
                         className="cell-input w-full min-w-0"
                         value={row.name}
                         title={row.name}
-                        disabled={!canEdit}
+                        disabled={!materialRowEditable(row)}
                         onChange={(e) => updateMaterialRow(row.id, { name: e.target.value })}
                         onDoubleClick={() => {
                           if (tab === 'adhesive' && row.isSolventBased) setFormulaMaterialId(row.id);
@@ -1213,7 +1419,7 @@ const MasterData = () => {
                         className="cell-input w-full min-w-0"
                         value={row.substrateGrade ?? ''}
                         title={row.substrateGrade ?? ''}
-                        disabled={!canEdit}
+                        disabled={!materialRowEditable(row)}
                         onChange={(e) => updateMaterialRow(row.id, { substrateGrade: e.target.value })}
                       />
                     </td>
@@ -1223,7 +1429,7 @@ const MasterData = () => {
                         step="0.01"
                         className="cell-input cell-num w-[72px]"
                         value={row.density}
-                        disabled={!canEdit}
+                        disabled={!materialRowEditable(row)}
                         onChange={(e) => updateMaterialRow(row.id, { density: Number(e.target.value) })}
                       />
                     </td>
@@ -1232,7 +1438,7 @@ const MasterData = () => {
                         type="number"
                         className="cell-input cell-num w-[64px]"
                         value={row.solidPercent}
-                        disabled={!canEdit}
+                        disabled={!materialRowEditable(row)}
                         onChange={(e) =>
                           updateMaterialRow(row.id, { solidPercent: Number(e.target.value) })
                         }
@@ -1241,16 +1447,12 @@ const MasterData = () => {
                     {/* Liquid Cost — editable for ink/adhesive; derives costPerKgUsd automatically */}
                     {(tab === 'ink' || tab === 'adhesive') && (
                       <td>
-                        <input
-                          type="number"
-                          step="0.01"
+                        <UsdPriceInput
                           className="cell-input cell-num w-[72px]"
                           value={row.liquidCostUsd ?? row.costPerKgUsd}
                           title="Price you pay per kg of liquid ink/adhesive"
-                          disabled={!canEdit}
-                          onChange={(e) =>
-                            updateMaterialRow(row.id, { liquidCostUsd: Number(e.target.value) })
-                          }
+                          disabled={!materialRowEditable(row)}
+                          onChange={(v) => updateMaterialRow(row.id, { liquidCostUsd: v })}
                         />
                       </td>
                     )}
@@ -1263,28 +1465,20 @@ const MasterData = () => {
                           {row.costPerKgUsd.toFixed(2)}
                         </span>
                       ) : (
-                        <input
-                          type="number"
-                          step="0.01"
+                        <UsdPriceInput
                           className="cell-input cell-num w-[72px]"
                           value={row.costPerKgUsd}
-                          disabled={!canEdit}
-                          onChange={(e) =>
-                            updateMaterialRow(row.id, { costPerKgUsd: Number(e.target.value) })
-                          }
+                          disabled={!materialRowEditable(row)}
+                          onChange={(v) => updateMaterialRow(row.id, { costPerKgUsd: v })}
                         />
                       )}
                     </td>
                     <td>
-                      <input
-                        type="number"
-                        step="0.01"
+                      <UsdPriceInput
                         className="cell-input cell-num w-[72px]"
                         value={row.marketPriceUsd ?? row.costPerKgUsd}
-                        disabled={!canEdit}
-                        onChange={(e) =>
-                          updateMaterialRow(row.id, { marketPriceUsd: Number(e.target.value) })
-                        }
+                        disabled={!materialMarketEditable(row)}
+                        onChange={(v) => updateMaterialRow(row.id, { marketPriceUsd: v })}
                       />
                     </td>
                     <td className="text-center">
@@ -1325,7 +1519,7 @@ const MasterData = () => {
             >
               {refItems.length} product type(s)
             </SectionTitle>
-            <button type="button" className="btn-secondary text-sm flex items-center gap-1 py-1.5" onClick={addProductType}>
+            <button type="button" className="btn-secondary text-sm flex items-center gap-1 py-1.5" onClick={addProductType} disabled={!canEdit}>
               <Plus className="w-4 h-4" /> Add product type
             </button>
           </div>
@@ -1526,7 +1720,15 @@ const MasterData = () => {
                     </div>
                     <div>
                       <label className="block text-xs text-mist mb-0.5">$/hr</label>
-                      <input type="number" className="input !min-h-[30px] !py-0.5 !px-2 text-xs w-full" value={proc.costPerHour} onChange={(e) => setProcessRows((prev) => prev.map((p, j) => j === i ? { ...p, costPerHour: Number(e.target.value) } : p))} />
+                      <UsdPriceInput
+                        className="input !min-h-[30px] !py-0.5 !px-2 text-xs w-full"
+                        value={proc.costPerHour}
+                        onChange={(v) =>
+                          setProcessRows((prev) =>
+                            prev.map((p, j) => (j === i ? { ...p, costPerHour: v } : p))
+                          )
+                        }
+                      />
                     </div>
                     <div>
                       <label className="block text-xs text-mist mb-0.5">Setup hrs</label>
@@ -1546,7 +1748,15 @@ const MasterData = () => {
                     </div>
                     <div>
                       <label className="block text-xs text-mist mb-0.5">Cost $/kg</label>
-                      <input type="number" step="0.01" className="input !min-h-[30px] !py-0.5 !px-2 text-xs w-full" value={proc.costPerKgUsd} onChange={(e) => setProcessRows((prev) => prev.map((p, j) => j === i ? { ...p, costPerKgUsd: Number(e.target.value) } : p))} />
+                      <UsdPriceInput
+                        className="input !min-h-[30px] !py-0.5 !px-2 text-xs w-full"
+                        value={proc.costPerKgUsd}
+                        onChange={(v) =>
+                          setProcessRows((prev) =>
+                            prev.map((p, j) => (j === i ? { ...p, costPerKgUsd: v } : p))
+                          )
+                        }
+                      />
                     </div>
                   </div>
                 </div>
@@ -1835,6 +2045,7 @@ const MasterData = () => {
         <div className="card p-3">
           <div className="flex justify-between items-center mb-3">
             <span className="text-sm text-mist">{refItems.length} item(s)</span>
+            {canEdit && (
             <button
               type="button"
               className="btn-secondary text-sm flex items-center gap-1 py-1.5"
@@ -1849,6 +2060,7 @@ const MasterData = () => {
             >
               <Plus className="w-4 h-4" /> Add
             </button>
+            )}
           </div>
           {tab === 'unit' && (
             <p className="text-xs text-mist mb-2">
@@ -1897,6 +2109,7 @@ const MasterData = () => {
                         className="cell-input w-full min-w-[160px]"
                         placeholder="Label"
                         value={item.label}
+                        disabled={!canEdit}
                         onChange={(e) => {
                           const next = [...refItems];
                           next[i] = { ...next[i], label: e.target.value };
@@ -1910,6 +2123,7 @@ const MasterData = () => {
                           className="cell-input w-full min-w-[120px] font-mono"
                           placeholder={tab === 'rm_type' ? 'e.g. substrate, ink, plate' : 'code'}
                           value={item.code ?? ''}
+                          disabled={!canEdit}
                           onChange={(e) => {
                             const next = [...refItems];
                             next[i] = { ...next[i], code: e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '') };
@@ -1924,6 +2138,7 @@ const MasterData = () => {
                           <select
                             className="cell-input w-full min-w-[150px]"
                             value={(item.metadata?.basis as string) ?? 'kg'}
+                            disabled={!canEdit}
                             onChange={(e) => {
                               const next = [...refItems];
                               next[i] = {

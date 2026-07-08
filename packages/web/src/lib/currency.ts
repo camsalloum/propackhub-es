@@ -22,6 +22,19 @@ export function roundUsd(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+/** Display string for USD price inputs (always x.xx). */
+export function formatUsdInput(value: number | null | undefined): string {
+  return roundUsd(value ?? 0).toFixed(2);
+}
+
+/** Parse a USD price field and round to 2 decimals. */
+export function parseUsdInput(raw: string): number {
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === '.') return 0;
+  const n = parseFloat(trimmed);
+  return roundUsd(Number.isFinite(n) ? n : 0);
+}
+
 /**
  * CoRM is stored in display currency per kg (legacy DB/API field `cormPerKgUsd`).
  * Engine price build-up runs in USD — convert at the boundary using the estimate FX snapshot.

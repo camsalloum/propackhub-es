@@ -127,7 +127,7 @@
   },
   {
     "key": "pet-transparent",
-    "name": "PET Transparent",
+    "name": "PET Transparent NF NB",
     "type": "substrate",
     "solidPercent": 100,
     "density": 1.4,
@@ -135,9 +135,11 @@
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "PET",
-    "substrateGrade": "PET Transparent",
+    "substrateGrade": "PET Transparent  NF NB ChemTr.",
     "hoover": "Normal Chemical Treated",
-    "marketPriceUsd": 2.15
+    "marketPriceUsd": 2.15,
+    "externalSource": "pebi",
+    "externalId": "PET|PET Transparent  NF NB ChemTr."
   },
   {
     "key": "pet-transparent-hr",
@@ -149,13 +151,15 @@
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "PET",
-    "substrateGrade": "PET Transparent HR",
-    "hoover": "Heat resistanr Chemical Treated",
-    "marketPriceUsd": 2.25
+    "substrateGrade": "PET Transparent  HF NB",
+    "hoover": "Heat resistant Chemical Treated",
+    "marketPriceUsd": 2.25,
+    "externalSource": "pebi",
+    "externalId": "PET|PET Transparent  HF NB"
   },
   {
     "key": "pet-metalized",
-    "name": "PET Metalized",
+    "name": "PET Metalized NF NB",
     "type": "substrate",
     "solidPercent": 100,
     "density": 1.4,
@@ -163,13 +167,15 @@
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "PET",
-    "substrateGrade": "PET Metalized",
+    "substrateGrade": "PET Metalized  NF NB",
     "hoover": "Normal",
-    "marketPriceUsd": 2.5
+    "marketPriceUsd": 2.5,
+    "externalSource": "pebi",
+    "externalId": "PET|PET Metalized  NF NB"
   },
   {
     "key": "pet-metalized-hb",
-    "name": "PET Metalized HB",
+    "name": "PET Metalized HF HB",
     "type": "substrate",
     "solidPercent": 100,
     "density": 1.4,
@@ -177,9 +183,27 @@
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "PET",
-    "substrateGrade": "PET Metalized HB",
-    "hoover": "High Barrier",
-    "marketPriceUsd": 2.6
+    "substrateGrade": "PET Metalized HF HB",
+    "hoover": "Heat resistant High Barrier",
+    "marketPriceUsd": 2.6,
+    "externalSource": "pebi",
+    "externalId": "PET|PET Metalized HF HB"
+  },
+  {
+    "key": "pet-metalized-hf",
+    "name": "PET Metalized HF NB",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 1.4,
+    "costPerKgUsd": 2.55,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "PET",
+    "substrateGrade": "PET Metalized  HF NB",
+    "hoover": "Heat sealable Normal Barrier",
+    "marketPriceUsd": 2.55,
+    "externalSource": "pebi",
+    "externalId": "PET|PET Metalized  HF NB"
   },
   {
     "key": "pet-white",
@@ -193,11 +217,13 @@
     "substrateFamily": "PET",
     "substrateGrade": "PET White",
     "hoover": "Opaque White",
-    "marketPriceUsd": 2.7
+    "marketPriceUsd": 2.7,
+    "externalSource": "pebi",
+    "externalId": "PET|PET White"
   },
   {
     "key": "pet-matte",
-    "name": "PET Matte",
+    "name": "PET Matt NF",
     "type": "substrate",
     "solidPercent": 100,
     "density": 1.4,
@@ -205,13 +231,15 @@
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "PET",
-    "substrateGrade": "PET Matte",
+    "substrateGrade": "PET Matt NF ChemTr.",
     "hoover": "Matt",
-    "marketPriceUsd": 2.9
+    "marketPriceUsd": 2.9,
+    "externalSource": "pebi",
+    "externalId": "PET|PET Matt NF ChemTr."
   },
   {
-    "key": "pet-twist-transparent-twist-transparent",
-    "name": "PET Twist Transparent — Twist Transparent",
+    "key": "pet-twist-transparent",
+    "name": "PET Twist Transparent",
     "type": "substrate",
     "solidPercent": 100,
     "density": 1.4,
@@ -219,13 +247,15 @@
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "PET",
-    "substrateGrade": "PET Twist Transparent",
+    "substrateGrade": "PET Transparent  Twist",
     "hoover": "Twist Transparent",
-    "marketPriceUsd": 2.3
+    "marketPriceUsd": 2.3,
+    "externalSource": "pebi",
+    "externalId": "PET|PET Transparent  Twist"
   },
   {
-    "key": "pet-twist-transparent-twist-white",
-    "name": "PET Twist Transparent — Twist White",
+    "key": "pet-twist-white",
+    "name": "PET Twist White",
     "type": "substrate",
     "solidPercent": 100,
     "density": 1.4,
@@ -233,23 +263,43 @@
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "PET",
-    "substrateGrade": "PET Twist Transparent",
+    "substrateGrade": "PET Twist White",
     "hoover": "Twist White",
-    "marketPriceUsd": 2.8
+    "marketPriceUsd": 2.8,
+    "externalSource": "pebi",
+    "externalId": "PET|PET Twist White"
   },
   {
-    "key": "pet-twist-methalized",
-    "name": "PET Twist Methalized",
+    "key": "pet-twist-metalized",
+    "name": "PET Twist Metalized",
     "type": "substrate",
     "solidPercent": 100,
-    "density": 2.4,
+    "density": 1.4,
     "costPerKgUsd": 2.8,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "PET",
-    "substrateGrade": "PET Twist Methalized",
-    "hoover": "Twist Metalazied",
-    "marketPriceUsd": 2.8
+    "substrateGrade": "PET Twist Metalized",
+    "hoover": "Twist Metalized",
+    "marketPriceUsd": 2.8,
+    "externalSource": "pebi",
+    "externalId": "PET|PET Twist Metalized"
+  },
+  {
+    "key": "pet-adhesive-film",
+    "name": "PET Adhesive Film",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 1.4,
+    "costPerKgUsd": 3.1,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "PET",
+    "substrateGrade": "PET Adhesive Film",
+    "hoover": "Adhesive",
+    "marketPriceUsd": 3.1,
+    "externalSource": "pebi",
+    "externalId": "PET|PET Adhesive Film"
   },
   {
     "key": "ldpe-natural",

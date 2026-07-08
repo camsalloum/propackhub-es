@@ -130,12 +130,30 @@ Use for future PEBI/Oracle/MES item mapping.
 
 ## Tenant sync semantics
 
-On platform master save:
+**Who receives a publish:** only tenants with `catalog_source = platform` (not individuals on `tenant`, not PEBI-linked `pebi` until Phase 4).
+
+**Automatic push** — on platform material save (create / update / delete / bulk replace) and on selected reference saves (`product_type`, `printing_web`, `rm_type`):
 
 1. Bump `master_data_version`
 2. Append audit log entries
-3. `syncPlatformMasterToAllTenants()` — match tenant rows by `platform_master_key`
-4. Manual tenant prices (`price_source = manual`) preserved
+3. `syncPlatformMasterToAllTenants()` — upsert tenant rows matched by `platform_master_key`
+
+**Explicit push** — re-send the current golden catalog without a new catalog mutation:
+
+```
+POST /api/v1/platform/master-data/publish
+Authorization: Bearer <platform_admin-jwt>
+```
+
+Returns `{ tenantsSynced, inserted, updated, orphans, pruned, templatesRelinked }`.
+
+Alias (legacy): `POST /api/v1/platform/master-data/sync-tenants`.
+
+**Row rules:**
+
+- Platform-keyed rows (`platform_master_key` set): prices and metadata overwritten from platform master
+- `is_tenant_only = true`: never pruned or overwritten
+- Estimate layer snapshots are not retroactively updated; re-quote to pick up new library prices
 
 ---
 

@@ -24,6 +24,8 @@ export interface MasterMaterial {
   substrateGrade: string | null;
   hoover: string | null;
   marketPriceUsd: number | null;
+  externalId?: string | null;
+  externalSource?: string | null;
   /** GP/MP/HP lamination formula (binder + hardener + EA parts). */
   laminationRecipe?: Record<string, unknown> | null;
   // Accessory pricing (type='accessory' rows only).

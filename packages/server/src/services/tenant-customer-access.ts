@@ -1,3 +1,5 @@
+import { buildTenantCatalogAccess, type CatalogSource } from './tenant-catalog-access';
+
 /**
  * Customer master ownership by tenant licensing.
  *
@@ -44,6 +46,7 @@ export function formatAuthTenant(tenant: {
   displayCurrency: string;
   operatingCostMethod: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group' | null;
   platformCompanyCode?: string | null;
+  catalogSource?: CatalogSource | string | null;
 }) {
   return {
     id: tenant.id,
@@ -52,5 +55,6 @@ export function formatAuthTenant(tenant: {
     displayCurrency: tenant.displayCurrency,
     operatingCostMethod: tenant.operatingCostMethod,
     customerAccess: buildTenantCustomerAccess(tenant),
+    catalogAccess: buildTenantCatalogAccess(tenant),
   };
 }

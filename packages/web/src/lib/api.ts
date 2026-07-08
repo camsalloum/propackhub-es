@@ -40,6 +40,12 @@ export type TenantSyncResult = {
   templatesRelinked: number;
 };
 
+export type MaterialsCatalogMeta = {
+  masterDataVersion: number;
+  catalogSource: 'tenant' | 'platform' | 'pebi';
+  materialsSyncedAt: string | null;
+};
+
 export type PlatformReferenceCategory =
   | 'product_type'
   | 'unit'
@@ -516,6 +522,10 @@ export class ApiClient {
     );
   }
 
+  publishPlatformMasterData() {
+    return this.request<TenantSyncResult>('POST', '/api/v1/platform/master-data/publish', {});
+  }
+
   syncMaterialsFromPlatform() {
     return this.request<TenantSyncResult & { totalMaterials?: number }>(
       'POST',
@@ -525,6 +535,10 @@ export class ApiClient {
   }
 
   // Materials
+  getMaterialsMeta() {
+    return this.request<MaterialsCatalogMeta>('GET', '/api/v1/materials/meta');
+  }
+
   getMaterials() {
     // Request a high limit to get all materials in one shot — a tenant library
     // realistically won't exceed a few hundred rows.

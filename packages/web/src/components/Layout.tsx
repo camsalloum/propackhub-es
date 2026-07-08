@@ -4,7 +4,6 @@ import {
   Home,
   FileText,
   Users,
-  FolderOpen,
   Settings as SettingsIcon,
   Menu,
   X,
@@ -33,11 +32,7 @@ const Layout = () => {
     { name: 'Estimates', href: '/estimates', icon: FileText },
     { name: 'Templates', href: '/templates', icon: LayoutTemplate },
     { name: 'Customers', href: '/customers', icon: Users },
-    { name: 'Raw Materials', href: '/library', icon: FolderOpen },
-    // Platform owner only — curates the global master catalog that seeds every tenant.
-    ...(user?.role === 'platform_admin'
-      ? [{ name: 'Platform Master', href: '/platform/master-data', icon: Database }]
-      : []),
+    { name: 'Master Data', href: '/master-data', icon: Database },
     { name: 'Settings', href: '/settings', icon: SettingsIcon },
   ];
 

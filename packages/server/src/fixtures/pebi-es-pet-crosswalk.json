@@ -1,0 +1,16 @@
+{
+  "family": "PET",
+  "pbLinked": [
+    { "platformMasterKey": "pet-transparent", "pbGrade": "PET Transparent  NF NB ChemTr.", "pbGradeKey": "PET|PET Transparent  NF NB ChemTr." },
+    { "platformMasterKey": "pet-transparent-hr", "pbGrade": "PET Transparent  HF NB", "pbGradeKey": "PET|PET Transparent  HF NB" },
+    { "platformMasterKey": "pet-metalized", "pbGrade": "PET Metalized  NF NB", "pbGradeKey": "PET|PET Metalized  NF NB" },
+    { "platformMasterKey": "pet-metalized-hb", "pbGrade": "PET Metalized HF HB", "pbGradeKey": "PET|PET Metalized HF HB" },
+    { "platformMasterKey": "pet-metalized-hf", "pbGrade": "PET Metalized  HF NB", "pbGradeKey": "PET|PET Metalized  HF NB" },
+    { "platformMasterKey": "pet-white", "pbGrade": "PET White", "pbGradeKey": "PET|PET White" },
+    { "platformMasterKey": "pet-matte", "pbGrade": "PET Matt NF ChemTr.", "pbGradeKey": "PET|PET Matt NF ChemTr." },
+    { "platformMasterKey": "pet-twist-transparent", "pbGrade": "PET Transparent  Twist", "pbGradeKey": "PET|PET Transparent  Twist" },
+    { "platformMasterKey": "pet-twist-white", "pbGrade": "PET Twist White", "pbGradeKey": "PET|PET Twist White" },
+    { "platformMasterKey": "pet-twist-metalized", "pbGrade": "PET Twist Metalized", "pbGradeKey": "PET|PET Twist Metalized" },
+    { "platformMasterKey": "pet-adhesive-film", "pbGrade": "PET Adhesive Film", "pbGradeKey": "PET|PET Adhesive Film" }
+  ]
+}

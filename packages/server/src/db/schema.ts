@@ -22,7 +22,13 @@ export const productTypeEnum = pgEnum('product_type', ['roll', 'sleeve', 'pouch'
 export const tenantTypeEnum = pgEnum('tenant_type', ['individual', 'company']);
 export const operatingCostMethodEnum = pgEnum('operating_cost_method', ['process_per_kg', 'markup_over_rm', 'fixed_per_group']);
 export const printingWebClassEnum = pgEnum('printing_web_class', ['wide_web', 'narrow_web']);
-export const materialPriceSourceEnum = pgEnum('material_price_source', ['excel', 'manual', 'platform']);
+export const materialPriceSourceEnum = pgEnum('material_price_source', [
+  'excel',
+  'manual',
+  'platform',
+  'pebi',
+]);
+export const catalogSourceEnum = pgEnum('catalog_source', ['tenant', 'platform', 'pebi']);
 export const platformReferenceCategoryEnum = pgEnum('platform_reference_category', [
   'product_type',
   'unit',
@@ -163,6 +169,8 @@ export const tenants = pgTable('tenants', {
   name: varchar('name', { length: 255 }).notNull(),
   /** PEBI propackhub_platform companies.company_code — links ES tenant to platform tenant */
   platformCompanyCode: varchar('platform_company_code', { length: 64 }),
+  /** Who owns RM catalog prices: tenant edit, platform publish, or PEBI sync */
+  catalogSource: catalogSourceEnum('catalog_source').notNull().default('tenant'),
   type: tenantTypeEnum('type').notNull().default('individual'),
   displayCurrency: varchar('display_currency', { length: 3 }).notNull().default('USD'),
   exchangeRateUsdToDisplay: decimal('exchange_rate_usd_to_display', { precision: 10, scale: 6 }).notNull().default('1.0'),

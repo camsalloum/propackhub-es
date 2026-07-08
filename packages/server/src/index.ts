@@ -1,10 +1,14 @@
 import 'dotenv/config';
 import { initializeDatabase, closeDatabase } from './db';
 import { seedDefaultAdmin } from './db/seed-admin';
-import { ensurePlatformMasterSeeded, ensureProcessesSeeded, ensureSolventCatalogSeeded, ensureLaminationAdhesivesSeeded } from './db/platform-master-data';
+import { ensurePlatformMasterSeeded, ensureProcessesSeeded, ensureSolventCatalogSeeded, ensureLaminationAdhesivesSeeded, ensurePetSubstratesFromSeed } from './db/platform-master-data';
 import { bootstrapPlatformStandardCatalog } from './db/seed-platform-templates';
 import { buildApp } from './app';
 import { log } from './utils/logger';
+import {
+  startPebiOracleSyncCoordinator,
+  stopPebiOracleSyncCoordinator,
+} from './services/pebi-oracle-sync-coordinator';
 
 const PORT = parseInt(process.env.PORT || '5001');
 const HOST = process.env.HOST || '0.0.0.0';
@@ -18,6 +22,7 @@ async function start() {
     await ensureProcessesSeeded();
     await ensureSolventCatalogSeeded();
     await ensureLaminationAdhesivesSeeded();
+    await ensurePetSubstratesFromSeed();
     await seedDefaultAdmin();
     try {
       await bootstrapPlatformStandardCatalog();
@@ -27,6 +32,8 @@ async function start() {
       log.warn({ err }, 'bootstrapPlatformStandardCatalog skipped');
     }
     await fastify.listen({ port: PORT, host: HOST });
+
+    startPebiOracleSyncCoordinator();
 
     log.info(
       { host: HOST, port: PORT },
@@ -44,6 +51,7 @@ async function shutdown(signal: string) {
   if (shuttingDown) return;
   shuttingDown = true;
   log.info({ signal }, 'shutting down');
+  stopPebiOracleSyncCoordinator();
   try {
     await fastify.close();
   } catch (err) {

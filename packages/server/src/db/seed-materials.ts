@@ -55,6 +55,13 @@ const LEGACY_INK_NAMES: Record<string, string[]> = {
   'ink-uv': ['Ink UV'],
 };
 
+/** Renamed platform_master_key → previous key (tenant upsert). */
+const LEGACY_PLATFORM_KEYS: Record<string, string> = {
+  'pet-twist-transparent': 'pet-twist-transparent-twist-transparent',
+  'pet-twist-white': 'pet-twist-transparent-twist-white',
+  'pet-twist-metalized': 'pet-twist-methalized',
+};
+
 function rmMatchKey(m: {
   substrateFamily?: string | null;
   substrateGrade?: string | null;
@@ -98,6 +105,14 @@ export function findExistingMatch(existing: DbMaterial[], material: MasterMateri
     (row) => !row.isTenantOnly && row.platformMasterKey === material.key
   );
   if (byPlatformKey) return byPlatformKey;
+
+  const legacyKey = LEGACY_PLATFORM_KEYS[material.key];
+  if (legacyKey) {
+    const byLegacyKey = existing.find(
+      (row) => !row.isTenantOnly && row.platformMasterKey === legacyKey
+    );
+    if (byLegacyKey) return byLegacyKey;
+  }
 
   const expectedCostingKey = costingKeyForMasterKey(material.key);
   const byCostingKey = existing.find(
@@ -156,7 +171,7 @@ export function findExistingMatch(existing: DbMaterial[], material: MasterMateri
  * Source of truth:
  * - **Platform:** `platform_master_materials` table (admin Master Data page)
  * - **Tenant DB:** copy of platform master on register; licensed users may add/edit rows (tenant-only)
- * - **Sync:** automatic on platform master save; respects `priceSource: manual`
+ * - **Sync:** automatic on platform master save to `catalog_source = platform` tenants only
  */
 async function loadPlatformMasterMaterials(): Promise<MasterMaterial[]> {
   try {

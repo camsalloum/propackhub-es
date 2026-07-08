@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useAuth, AuthProvider } from './hooks/useAuth';
 import { MasterDataProvider } from './contexts/MasterDataContext';
 import { MaterialsProvider } from './contexts/MaterialsContext';
+import { CatalogRefreshCoordinator } from './components/CatalogRefreshCoordinator';
 import { ThemeProvider } from './theme/ThemeProvider';
 import { ThemeStatusToast } from './theme/ThemeStatusToast';
 import Layout from './components/Layout';
@@ -17,7 +18,6 @@ import CustomersList from './pages/CustomersList';
 import Settings from './pages/Settings';
 import StandardTemplates from './pages/StandardTemplates';
 import MasterData from './pages/MasterData';
-import RawMaterials from './pages/RawMaterials';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
@@ -53,16 +53,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-/** Restricts a route to the platform owner (app admin). Others go to /library. */
-function PlatformAdminRoute({ children }: { children: React.ReactNode }) {
-  const { isLoading, user } = useAuth();
-  if (isLoading) return null;
-  if (user?.role !== 'platform_admin') {
-    return <Navigate to="/library" replace />;
-  }
-  return <>{children}</>;
-}
-
 function App() {
   return (
     <ThemeProvider>
@@ -78,6 +68,7 @@ function App() {
             <ProtectedRoute>
               <MaterialsProvider>
               <MasterDataProvider>
+                <CatalogRefreshCoordinator />
                 <Layout />
               </MasterDataProvider>
               </MaterialsProvider>
@@ -103,17 +94,14 @@ function App() {
           <Route path="quotes/:quoteId/estimates/:estimateId" element={<QuoteWorkspace />} />
           <Route path="customers" element={<CustomersList />} />
           <Route path="customers/:id" element={<CustomerDetail />} />
-          <Route path="library" element={<RawMaterials />} />
+          <Route path="library" element={<Navigate to="/master-data" replace />} />
+          <Route path="master-data" element={<MasterData />} />
           <Route path="settings" element={<Settings />} />
           <Route
             path="platform/master-data"
-            element={
-              <PlatformAdminRoute>
-                <MasterData />
-              </PlatformAdminRoute>
-            }
+            element={<Navigate to="/master-data" replace />}
           />
-          <Route path="platform/master-library" element={<Navigate to="/platform/master-data" replace />} />
+          <Route path="platform/master-library" element={<Navigate to="/master-data" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>

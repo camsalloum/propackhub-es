@@ -1193,6 +1193,72 @@ Not every company subscribes to both PEBI and ES. **IP/FP (Interplast) is linked
 
 **Implementation:** `tenant-customer-access.ts` → `tenant.customerAccess` on `/auth/me` + login/register. API returns **403** on POST/PATCH/DELETE `/customers` when `canCreate`/`canEdit`/`canDelete` false. UI: `useCustomerAccess()` hides New customer / inline create / edit / delete.
 
+### 2026-07-07 — Materials catalog ownership (Phase 1)
+
+| `tenants.catalog_source` | Price authority | ES edit synced rows? |
+|--------------------------|-----------------|----------------------|
+| `tenant` (default) | Licensee | **Yes** |
+| `platform` | ProPackHub Platform Master publish | **No** |
+| `pebi` (Phase 4) | PEBI MES RM sync | **No** |
+
+**Backfill:** PEBI-linked tenants (`platform_company_code` set) → `catalog_source = platform` until PEBI RM sync ships; then Interplast → `pebi`.
+
+**Platform publish:** `syncPlatformMasterToAllTenants()` only updates tenants with `catalog_source = platform` (not individuals). Optional `forceAll: true` for admin scripts.
+
+**Implementation:** `tenant-catalog-access.ts` → `tenant.catalogAccess` on `/auth/me`. API **403** on PATCH/DELETE synced materials when `canEditSyncedMaterials` false. `is_tenant_only` custom rows stay editable.
+
+**UI gates:** Phase 2 (`useCatalogAccess`, unified Master Data page).
+
+### 2026-07-07 — Materials catalog UI (Phase 2)
+
+- Single **Master Data** route (`/master-data`) for all roles; `/library` redirects.
+- `platform_admin` edits platform catalog; tenants see their `materials` + merged reference (same tables, read-only reference tabs for non-admins).
+- `useCatalogAccess()` gates synced-row edits when `catalog_source=platform|pebi`.
+
+### 2026-07-07 — Materials catalog cleanup (Phase 5)
+
+- Removed dead pages: `RawMaterials.tsx`, `Library.tsx`, `MasterLibrary.tsx`, `TenantReferenceEditor.tsx`.
+- Routes `/library`, `/platform/master-data`, `/platform/master-library` → `/master-data`.
+- **`POST /api/v1/platform/master-data/publish`** — explicit push to `catalog_source=platform` tenants; UI button on platform Master Data.
+- **`API_MASTER_DATA.md`** — tenant sync no longer claims manual prices preserved on platform-keyed rows.
+
+**Catalog ownership recap:**
+
+| Who | Where to edit prices |
+|-----|---------------------|
+| `platform_admin` | Master Data (platform scope) → auto-publish on save or **Publish to tenants** |
+| Individual / self-managed tenant | Master Data (tenant scope) |
+| PEBI-linked company (Phase 4) | PEBI MES — ES read-only for synced rows |
+| Custom tenant-only rows | Always editable in tenant Master Data (`is_tenant_only`) |
+
+### 2026-07-08 — PET live PEBI sync (Phase 4 step 2)
+
+- **PEBI:** `GET /api/integration/es/materials?family=PET` — `pebi-es-pet-catalog.js` aggregates profiles (`market_ref_price`, density, solid) + `fp_actualrmdata` combined WA.
+- **ES:** `pebi-material-sync.ts`, `POST /api/v1/integration/pebi/sync-materials`, `npm run db:sync-materials-pebi`.
+- **Interplast test:** 11 PET grades updated (`priceSource=pebi`, AED→USD via tenant FX).
+- **White fallback:** if PB has no live price for `pet-white` or `pet-twist-white`, ES derives both as `pet-transparent + $0.40`; any later PB market/cost price overrides that formula on the next sync.
+- Syncs: `marketPriceUsd`, `costPerKgUsd`, `density`, `solidPercent`, `platformSyncedAt`.
+
+### 2026-07-08 — PET substrate family (Phase 4 step 1)
+
+- **Master Data → Substrates:** PB-style family sub-tabs (`SubstrateFamilyNav`); default **PET**.
+- **PET:** 11 grades, all PB-linked (`externalSource=pebi`); incl. White, Twist White, Twist Metalized.
+- **PB catalog:** extra PET grades in `apps/pph/src/utils/substrateMapping.js` for Item Master filters (no Oracle SKU required yet).
+- **Pricing:** `marketPriceUsd` = PEBI `market_ref_price`; `costPerKgUsd` = market when no stock, combined avg when in stock.
+- **Boot seed:** `ensurePetSubstratesFromSeed()` on API start + `scripts/run-data-seeds.ts`.
+- Fixture: `platform/fixtures/pebi-es-pet-crosswalk.json`.
+
+### 2026-07-08 — PEBI substrate taxonomy (naming cleanup)
+
+- Renamed `src/utils/substrateExcelMapping.js` → **`substrateMapping.js`**.
+- **Authoritative grades:** `mes_material_profile_configs.cat_desc` in PEBI DB.
+- **ES Phase 4:** family-by-family crosswalk — `PEBI_ES_RM_SYNC_SPEC.md` §3.5.
+
+### 2026-07-07 — Materials catalog live refresh (Phase 3)
+- **`CatalogRefreshCoordinator`:** polls every 60s + `window.focus` / `visibilitychange`; bumps `MaterialsContext` + `MasterDataContext` when version or sync time changes.
+- **Master Data:** silent reload of materials/reference on catalog bump; platform save toast — “Published to N tenants” vs “Catalog saved — no managed tenants to publish”.
+- Estimates already refetch master reference on focus (`EstimateEditor`); materials now follow the same policy globally.
+
 ### 2026-07-07 — PEBI ↔ ES customer sync + MES handoff seam
 
 - **Customers:** `customers.external_id` + `external_source=pebi` + `synced_at`; unique per tenant. **1280** Interplast CRM rows synced from `fp_customer_unified`.

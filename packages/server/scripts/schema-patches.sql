@@ -603,3 +603,23 @@ ALTER TABLE estimates ADD COLUMN IF NOT EXISTS external_source VARCHAR(64);
 
 ALTER TABLE quotes ADD COLUMN IF NOT EXISTS external_id VARCHAR(128);
 ALTER TABLE quotes ADD COLUMN IF NOT EXISTS external_source VARCHAR(64);
+
+-- Materials catalog ownership (Phase 1 — catalog unification)
+DO $$ BEGIN
+  CREATE TYPE catalog_source AS ENUM ('tenant', 'platform', 'pebi');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS catalog_source catalog_source NOT NULL DEFAULT 'tenant';
+
+UPDATE tenants
+   SET catalog_source = 'platform'
+ WHERE platform_company_code IS NOT NULL
+   AND catalog_source = 'tenant';
+
+DO $$ BEGIN
+  ALTER TYPE material_price_source ADD VALUE IF NOT EXISTS 'pebi';
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;

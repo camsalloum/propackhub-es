@@ -87,6 +87,66 @@ export const PET_PB_CROSSWALK: PetGradeCrosswalk[] = [
   { platformMasterKey: 'pet-adhesive-film', pbGrade: 'PET Adhesive Film' },
 ];
 
+/** ALU micron grades — PB subgroups under Plain Aluminium Foil. */
+export const ALU_PB_CROSSWALK = [
+  { platformMasterKey: 'alu-foil-7', pbGrade: 'Plain Aluminium Foil — 7 µm' },
+  { platformMasterKey: 'alu-foil-8', pbGrade: 'Plain Aluminium Foil — 8 µm' },
+  { platformMasterKey: 'alu-foil-9', pbGrade: 'Plain Aluminium Foil — 9 µm' },
+  { platformMasterKey: 'alu-foil-12', pbGrade: 'Plain Aluminium Foil — 12 µm' },
+] as const;
+
+/** BOPP grades — PB cat_desc; HS Glossy + Low SIT share one ES key. */
+export const BOPP_PB_CROSSWALK = [
+  { platformMasterKey: 'bopp-transparent-hs', pbGrade: 'BOPP Transparent HS Glossy' },
+  { platformMasterKey: 'bopp-transparent-hs', pbGrade: 'BOPP Transparent HS Low SIT' },
+  { platformMasterKey: 'bopp-transparent-nhs', pbGrade: 'BOPP Transparent NHS Regular' },
+  { platformMasterKey: 'bopp-transparent-hr', pbGrade: 'BOPP Transparent NHS-HR' },
+  { platformMasterKey: 'bopp-transparent-lg', pbGrade: 'BOPP Transparent Label Grade' },
+  { platformMasterKey: 'bopp-white-lg', pbGrade: 'BOPP White Label Grade' },
+  { platformMasterKey: 'bopp-matte-transparent', pbGrade: 'BOPP Transparent HS Matt' },
+  { platformMasterKey: 'bopp-metalized', pbGrade: 'BOPP Metalized HS Regular' },
+  { platformMasterKey: 'bopp-metalized-hb', pbGrade: 'BOPP Metalized HS High Barrier' },
+  { platformMasterKey: 'bopp-pearlized', pbGrade: 'BOPP White Pearlised' },
+] as const;
+
+/** CPP grades — PB cat_desc alignment. */
+export const CPP_PB_CROSSWALK = [
+  { platformMasterKey: 'cpp-transparent', pbGrade: 'CPP Transparent HS' },
+  { platformMasterKey: 'cpp-metalized', pbGrade: 'CPP Metalized HS' },
+  { platformMasterKey: 'cpp-white', pbGrade: 'CPP White' },
+  { platformMasterKey: 'cpp-retort', pbGrade: 'CPP Retort' },
+  { platformMasterKey: 'cpp-high-seal-strength', pbGrade: 'CPP High Seal Strength' },
+] as const;
+
+/** PA (BOPA) grades — PB cat_desc alignment. */
+export const PA_PB_CROSSWALK = [
+  { platformMasterKey: 'bopa-transparent', pbGrade: 'BOPA Transparent' },
+  { platformMasterKey: 'bopa-transparent-hb', pbGrade: 'BOPA Transparent HB' },
+  { platformMasterKey: 'pa-pe', pbGrade: 'PA/PE' },
+] as const;
+
+/** PAP grades — PB cat_desc alignment (ES substrateFamily PAPER). */
+export const PAP_PB_CROSSWALK = [
+  { platformMasterKey: 'gp-paper', pbGrade: 'Greaseproof Paper' },
+  { platformMasterKey: 'kraft-paper-white', pbGrade: 'Kraft Paper' },
+  { platformMasterKey: 'c1s-paper', pbGrade: 'Coated Paper' },
+  { platformMasterKey: 'coated-paper-pe', pbGrade: 'Coated Paper-PE' },
+  { platformMasterKey: 'paper-white-coated', pbGrade: 'Paper White Coated' },
+  { platformMasterKey: 'twist-wrap-paper', pbGrade: 'Twist Wrap Paper' },
+  { platformMasterKey: 'kraft-paper-brown', pbGrade: 'Kraft Paper Brown' },
+  { platformMasterKey: 'mg-paper', pbGrade: 'MG Paper' },
+] as const;
+
+/** Master Data substrate tab id → PEBI sync family for review panel. */
+export const PEBI_REVIEW_FAMILY_BY_TAB: Record<string, string> = {
+  PET: 'PET',
+  'Aluminium Foil': 'ALU',
+  BOPP: 'BOPP',
+  CPP: 'CPP',
+  PA: 'PA',
+  PAP: 'PAP',
+};
+
 export function pbGradeKey(family: string, grade: string): string {
   return `${family}|${grade}`;
 }
@@ -111,8 +171,45 @@ export function filterSubstrateMaterialsByFamilyTab<T extends { substrateFamily?
 export function sortPetSubstrateRows<T extends { key?: string; substrateGrade?: string | null }>(
   rows: T[]
 ): T[] {
+  return sortPbCrosswalkRows(rows, PET_PB_CROSSWALK);
+}
+
+export function sortAluSubstrateRows<T extends { key?: string; substrateGrade?: string | null }>(
+  rows: T[]
+): T[] {
+  return sortPbCrosswalkRows(rows, ALU_PB_CROSSWALK);
+}
+
+export function sortBoppSubstrateRows<T extends { key?: string; substrateGrade?: string | null }>(
+  rows: T[]
+): T[] {
+  return sortPbCrosswalkRows(rows, BOPP_PB_CROSSWALK);
+}
+
+export function sortCppSubstrateRows<T extends { key?: string; substrateGrade?: string | null }>(
+  rows: T[]
+): T[] {
+  return sortPbCrosswalkRows(rows, CPP_PB_CROSSWALK);
+}
+
+export function sortPaSubstrateRows<T extends { key?: string; substrateGrade?: string | null }>(
+  rows: T[]
+): T[] {
+  return sortPbCrosswalkRows(rows, PA_PB_CROSSWALK);
+}
+
+export function sortPapSubstrateRows<T extends { key?: string; substrateGrade?: string | null }>(
+  rows: T[]
+): T[] {
+  return sortPbCrosswalkRows(rows, PAP_PB_CROSSWALK);
+}
+
+function sortPbCrosswalkRows<T extends { key?: string; substrateGrade?: string | null }>(
+  rows: T[],
+  crosswalk: ReadonlyArray<{ platformMasterKey: string }>
+): T[] {
   const pbOrder = new Map<string, number>();
-  PET_PB_CROSSWALK.forEach((row, i) => pbOrder.set(row.platformMasterKey, i));
+  crosswalk.forEach((row, i) => pbOrder.set(row.platformMasterKey, i));
 
   return [...rows].sort((a, b) => {
     const aKey = a.key ?? '';

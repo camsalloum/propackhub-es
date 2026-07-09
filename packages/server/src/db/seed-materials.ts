@@ -57,6 +57,7 @@ const LEGACY_INK_NAMES: Record<string, string[]> = {
 
 /** Renamed platform_master_key → previous key (tenant upsert). */
 const LEGACY_PLATFORM_KEYS: Record<string, string> = {
+  'bopp-transparent-hs': 'bopp-transparent',
   'pet-twist-transparent': 'pet-twist-transparent-twist-transparent',
   'pet-twist-white': 'pet-twist-transparent-twist-white',
   'pet-twist-metalized': 'pet-twist-methalized',
@@ -335,6 +336,45 @@ export async function pruneOrphanSubstratesForTenant(
       .where(and(eq(schema.materials.id, row.id), eq(schema.materials.tenantId, tenantId)));
   }
   return orphans.length;
+}
+
+/**
+ * Drop synced substrate rows outside the current platform key allowlist
+ * (retired keys like `bopp-transparent`, `bopp-white-opaque`).
+ */
+export async function pruneTenantSubstratesByPlatformKeyAllowlist(
+  tenantId: string,
+  substrateFamily: string,
+  allowedKeys: readonly string[]
+): Promise<number> {
+  const db = getDatabase();
+  const allowed = new Set(allowedKeys);
+  const rows = await db
+    .select({
+      id: schema.materials.id,
+      platformMasterKey: schema.materials.platformMasterKey,
+    })
+    .from(schema.materials)
+    .where(
+      and(
+        eq(schema.materials.tenantId, tenantId),
+        eq(schema.materials.type, 'substrate'),
+        eq(schema.materials.substrateFamily, substrateFamily),
+        eq(schema.materials.isTenantOnly, false)
+      )
+    );
+
+  let pruned = 0;
+  for (const row of rows) {
+    const key = row.platformMasterKey?.trim() || '';
+    if (!key || !allowed.has(key)) {
+      await db
+        .delete(schema.materials)
+        .where(and(eq(schema.materials.id, row.id), eq(schema.materials.tenantId, tenantId)));
+      pruned++;
+    }
+  }
+  return pruned;
 }
 
 /**

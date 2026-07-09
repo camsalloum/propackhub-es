@@ -1,21 +1,44 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-08 (PET sync + white fallback rule)
-**Session focus:** Phase 4 PET family complete — live prices/density/solid from PEBI. **Next:** user validates PET in Master Data, then **BOPP**.
+**Last updated:** 2026-07-09 (PAP sync wired — PET + ALU + BOPP + CPP + PA + PAP)
+**Session focus:** Phase 4 **PAP** finalized: 17 Oracle SKUs → 7 ES paper grades; 5 live PB prices + kraft brown/MG platform hold. Interplast **7/7** linked. **PE last** (in-house).
 
 ---
 
 ## Where we stopped (read this first next session)
 
-### **NEXT:** Validate PET sync, then BOPP
+### **NEXT:** PE (deferred — in-house extrusion; sync last)
 
-- Spec: `docs/PEBI_ES_RM_SYNC_SPEC.md`
-- **PET live sync shipped** — ES follows PEBI Oracle cron markers (`rm_last_sync` → materials, `oracle_last_sync` → customers)
-- **Push:** PEBI notifies ES right after RM/Oracle cron; ES waits **15 min** then pulls (`PEBI_ES_SYNC_DELAY_MS`)
-- **Poll fallback:** same 15 min delay from `completedAt`; jobs queued so materials + customers never run together
-- **Check:** Master Data → Substrates → **PET** — `priceSource=pebi`, market/cost/density/solid from PEBI profiles + stock; white variants now fill from formula when PB price is missing.
-- **Pricing:** `costPerKgUsd` = PEBI stock/on-order combined weighted avg (AED→USD). `marketPriceUsd` is editable in ES for PEBI-linked rows and writes back to PEBI `market_ref_price` (USD→AED via tenant FX). Fallback only for `pet-white` + `pet-twist-white`: `pet-transparent + $0.40` until PB returns a live price.
-- Next family after PET confirmed: **BOPP** (same API pattern + crosswalk)
+### **DONE:** PAP (2026-07-09)
+
+- Crosswalk: `pebi-es-pap-crosswalk.json` · audit: `pap-pb-audit.json`
+- PB: `pebi-es-pap-catalog.js`, `family=PAP`, `seed-pap-profiles.js` (7 profiles)
+- ES: `PEBI_SYNC_FAMILIES` + PAP review panel + `sortPapSubstrateRows`
+- Oracle: **17** PAP SKUs; Interplast sync: **8/8** — coated PE (`coated-paper-pe`), twist wrap separate; `c2s-paper` retired
+
+### **DONE:** PA (2026-07-09)
+
+- Crosswalk: `pebi-es-pa-crosswalk.json` · audit: `pa-pb-audit.json`
+- PB: `pebi-es-pa-catalog.js`, `family=PA`, `seed-pa-profiles.js` (3 profiles)
+- ES: `PEBI_SYNC_FAMILIES` + PA review panel + `sortPaSubstrateRows`
+- Oracle: **1** BOPA SKU (`FXXFLBOPA151200`); Interplast sync: **3/3** linked — transparent live PB price; HB ($6) + PA/PE ($2.50) hold platform price until PB stock
+
+### **DONE:** CPP (2026-07-09)
+
+- Crosswalk: `pebi-es-cpp-crosswalk.json` · workshop: `cpp-pb-review-workshop.md`
+- PB: `pebi-es-cpp-catalog.js`, `family=CPP`, `seed-cpp-profiles.js` (5 profiles)
+- ES: `PEBI_SYNC_FAMILIES` + CPP review panel + `sortCppSubstrateRows`
+- Interplast sync: **5/5** updated (transparent + metalized live; white/retort/HSS via formula when no PB price)
+
+### **DONE:** BOPP + PET + ALU
+
+- Workshop: `apps/pph/server/fixtures/bopp-pb-review-workshop.md` — 60/60 Oracle SKUs
+- Crosswalk: `apps/pph/server/fixtures/pebi-es-bopp-crosswalk.json`
+- **PB:** `pebi-es-bopp-catalog.js`, `GET /api/integration/es/materials?family=BOPP`, `seed-bopp-profiles.js`
+- **ES:** BOPP in `PEBI_SYNC_FAMILIES`; Master Data → Substrates → BOPP review panel; `sortBoppSubstrateRows`
+- **HS rollup:** Glossy + Low SIT → one ES price (`bopp-transparent-hs`); NHS vs NHS-HR split by Oracle SKU
+- **IML/Speciality (4 SKUs):** PB-only — no ES sync v1
+- **ALU/PET:** unchanged; validated earlier
 
 ---
 

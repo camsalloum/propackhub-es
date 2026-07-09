@@ -46,6 +46,19 @@ export type MaterialsCatalogMeta = {
   materialsSyncedAt: string | null;
 };
 
+export type PebiMissingMaterial = {
+  pbGradeKey: string;
+  pbGrade: string;
+  reason: string;
+};
+
+export type PebiMissingMaterialsResult = {
+  family: string;
+  total: number;
+  missing: PebiMissingMaterial[];
+  source: string;
+};
+
 export type PlatformReferenceCategory =
   | 'product_type'
   | 'unit'
@@ -666,6 +679,16 @@ export class ApiClient {
 
   pruneOrphanSubstrates() {
     return this.request<{ pruned: number }>('POST', '/api/v1/materials/prune-orphans');
+  }
+
+  // PEBI review queue (admin-only): show materials/crosswalk rows missing live price.
+  getPebiMissingMaterials(params: { family: string }) {
+    const qs = new URLSearchParams();
+    qs.set('family', params.family);
+    return this.request<PebiMissingMaterialsResult>(
+      'GET',
+      `/api/v1/integration/pebi/missing-materials?${qs.toString()}`
+    );
   }
 
   // Estimates

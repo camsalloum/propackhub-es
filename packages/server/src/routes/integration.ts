@@ -5,7 +5,13 @@ import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth'
 import { sendCaughtError } from '../utils/errors';
 import { verifyPebiIntegrationRequest } from '../utils/pebi-integration-auth';
 import { syncCustomersFromPebiForTenant } from '../services/pebi-customer-sync';
-import { syncPetMaterialsFromPebiForTenant } from '../services/pebi-material-sync';
+import {
+  getMaterialsMissingForTenant,
+  syncAllPebiMaterialsFromPebiForTenant,
+  syncFamilyMaterialsFromPebiForTenant,
+  PEBI_SYNC_FAMILIES,
+  type PebiSyncFamily,
+} from '../services/pebi-material-sync';
 import {
   handlePebiOraclePush,
   type PebiOraclePushSource,
@@ -82,8 +88,24 @@ async function syncPebiMaterialsRoute(request: FastifyRequest, reply: FastifyRep
       });
     }
 
-    const result = await syncPetMaterialsFromPebiForTenant(tenantId);
-    return reply.send(result);
+    const familyParam = String((request.query as { family?: string })?.family ?? '').trim().toUpperCase();
+
+    if (familyParam && !PEBI_SYNC_FAMILIES.includes(familyParam as PebiSyncFamily)) {
+      return reply.status(400).send({
+        error: `Unsupported family ${familyParam} — use ${PEBI_SYNC_FAMILIES.join(', ')} or omit for all`,
+      });
+    }
+
+    if (familyParam) {
+      const result = await syncFamilyMaterialsFromPebiForTenant(
+        tenantId,
+        familyParam as PebiSyncFamily
+      );
+      return reply.send(result);
+    }
+
+    const results = await syncAllPebiMaterialsFromPebiForTenant(tenantId);
+    return reply.send({ families: results });
   } catch (error: unknown) {
     return sendCaughtError(reply, error, 'Material sync failed', 'PEBI material sync:');
   }
@@ -114,6 +136,28 @@ async function pebiOraclePushRoute(
 export async function registerIntegrationRoutes(fastify: FastifyInstance) {
   fastify.post('/api/v1/integration/pebi/sync-customers', syncPebiCustomersRoute);
   fastify.post('/api/v1/integration/pebi/sync-materials', syncPebiMaterialsRoute);
+  fastify.get('/api/v1/integration/pebi/missing-materials', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+      const requester = extractUserFromRequest(request);
+      if (requester.role !== 'tenant_admin' && requester.role !== 'platform_admin') {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+
+      const family = String((request.query as { family?: string })?.family ?? 'PET').toUpperCase();
+      if (!PEBI_SYNC_FAMILIES.includes(family as PebiSyncFamily)) {
+        return reply.status(400).send({
+          error: `missing-materials supports ${PEBI_SYNC_FAMILIES.join(', ')} (got ${family})`,
+        });
+      }
+
+      const tenantId = extractTenantFromRequest(request);
+      const result = await getMaterialsMissingForTenant(tenantId, family as PebiSyncFamily);
+      return reply.send(result);
+    } catch (error: unknown) {
+      return sendCaughtError(reply, error, 'Failed to load PEBI missing materials', 'PEBI missing materials:');
+    }
+  });
   fastify.post('/api/v1/integration/pebi/oracle-push', pebiOraclePushRoute);
   fastify.post('/api/v1/integration/pebi/push-quote/:id/mes', pushQuoteToMesRoute);
 }

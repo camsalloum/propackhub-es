@@ -10,6 +10,7 @@ import {
   type PlatformReferenceCategory,
   type PlatformReferenceItemInput,
   type PlatformMasterMaterialInput,
+  type PebiMissingMaterialsResult,
 } from '../lib/api';
 import { DEFAULT_PRODUCT_SUBTYPE_OPTIONS } from '../lib/masterDataReference';
 import { PRODUCT_FAMILY_LABELS } from '../lib/productCatalog';
@@ -19,6 +20,7 @@ import { roundUsd } from '../lib/currency';
 import { SectionTitle } from '../components/SectionTitle';
 import { deriveBinderConcentrateStats, type LaminationRecipe } from '@es/engine';
 import { useCatalogAccess } from '../hooks/useCatalogAccess';
+import { useCustomerAccess } from '../hooks/useCustomerAccess';
 import {
   canManageMasterData,
   resolveMasterDataScope,
@@ -32,6 +34,12 @@ import { SubstrateFamilyNav } from '../features/master-data/SubstrateFamilyNav';
 import {
   ES_FAMILY_TO_PB,
   filterSubstrateMaterialsByFamilyTab,
+  PEBI_REVIEW_FAMILY_BY_TAB,
+  sortAluSubstrateRows,
+  sortBoppSubstrateRows,
+  sortCppSubstrateRows,
+  sortPaSubstrateRows,
+  sortPapSubstrateRows,
   sortPetSubstrateRows,
   SUBSTRATE_FAMILY_TABS,
 } from '../lib/substratePbTaxonomy';
@@ -211,6 +219,8 @@ const MasterData = () => {
   const { user, tenant, isLoading } = useAuth();
   const catalogAccess = useCatalogAccess();
   const scope = resolveMasterDataScope(user?.role);
+  const customerAccess = useCustomerAccess();
+  const pebiReviewEligible = scope === 'tenant' && customerAccess.pebiLinked;
   const canEditAdmin = canManageMasterData(user?.role, tenant?.type);
   const { invalidate, version: catalogReloadToken } = useMasterDataContext();
   const materialsCtx = useMaterialsContextOptional();
@@ -263,6 +273,9 @@ const MasterData = () => {
   const [formulaMaterialId, setFormulaMaterialId] = useState<string | null>(null);
   const [cleaningDefaultKg, setCleaningDefaultKg] = useState(20);
   const [tenantSettings, setTenantSettings] = useState<{ displayCurrency: string, exchangeRateUsdToDisplay: number } | null>(null);
+  const [pebiMissing, setPebiMissing] = useState<PebiMissingMaterialsResult | null>(null);
+  const [pebiMissingLoading, setPebiMissingLoading] = useState(false);
+  const [pebiMissingError, setPebiMissingError] = useState<string | null>(null);
 
   const formulaMaterial = materials.find((m) => m.id === formulaMaterialId) ?? null;
   const formulaRecipe = (formulaMaterial?.laminationRecipe as LaminationRecipe | null) ?? null;
@@ -469,6 +482,32 @@ const MasterData = () => {
     }
   }, [tab, loadReference]);
 
+  useEffect(() => {
+    const pebiFamily = PEBI_REVIEW_FAMILY_BY_TAB[substrateFamilyTab];
+    const shouldLoad = tab === 'substrate' && Boolean(pebiFamily) && pebiReviewEligible;
+
+    if (!shouldLoad) {
+      setPebiMissing(null);
+      setPebiMissingError(null);
+      return;
+    }
+
+    setPebiMissingLoading(true);
+    setPebiMissingError(null);
+
+    apiClient
+      .getPebiMissingMaterials({ family: pebiFamily })
+      .then((res) => {
+        setPebiMissing(res);
+      })
+      .catch((err) => {
+        setPebiMissingError(err instanceof Error ? err.message : 'Failed to load PEBI missing list');
+      })
+      .finally(() => {
+        setPebiMissingLoading(false);
+      });
+  }, [tab, substrateFamilyTab, pebiReviewEligible]);
+
   const loadPlatformTemplates = useCallback(async () => {
     try {
       const rows = await apiClient.listPlatformTemplates();
@@ -652,6 +691,16 @@ const MasterData = () => {
       rows = filterSubstrateMaterialsByFamilyTab(rows, substrateFamilyTab);
       if (substrateFamilyTab === 'PET') {
         rows = sortPetSubstrateRows(rows);
+      } else if (substrateFamilyTab === 'Aluminium Foil') {
+        rows = sortAluSubstrateRows(rows);
+      } else if (substrateFamilyTab === 'BOPP') {
+        rows = sortBoppSubstrateRows(rows);
+      } else if (substrateFamilyTab === 'CPP') {
+        rows = sortCppSubstrateRows(rows);
+      } else if (substrateFamilyTab === 'PA') {
+        rows = sortPaSubstrateRows(rows);
+      } else if (substrateFamilyTab === 'PAP') {
+        rows = sortPapSubstrateRows(rows);
       }
     }
     return rows;
@@ -1251,6 +1300,35 @@ const MasterData = () => {
               onChange={setSubstrateFamilyTab}
               countsByFamily={substrateFamilyCounts}
             />
+          )}
+          {tab === 'substrate' && PEBI_REVIEW_FAMILY_BY_TAB[substrateFamilyTab] && pebiReviewEligible && (
+            <div className="px-3 py-2 border-b border-border bg-slate/15">
+              <div className="text-sm font-medium text-mist">
+                PEBI review ({PEBI_REVIEW_FAMILY_BY_TAB[substrateFamilyTab]})
+              </div>
+              {pebiMissingLoading && <div className="text-xs text-mist mt-1">Loading…</div>}
+              {pebiMissingError && <div className="text-xs text-danger mt-1">{pebiMissingError}</div>}
+              {!pebiMissingLoading && !pebiMissingError && pebiMissing && (
+                <>
+                  {pebiMissing.missing.length === 0 ? (
+                    <div className="text-xs text-mist mt-1">
+                      No {PEBI_REVIEW_FAMILY_BY_TAB[substrateFamilyTab]} grades missing live price after fallback rules.
+                    </div>
+                  ) : (
+                    <div className="text-xs text-mist mt-1">
+                      {pebiMissing.missing.length} {PEBI_REVIEW_FAMILY_BY_TAB[substrateFamilyTab]} grade(s) need review:
+                      <ul className="list-disc ml-5 mt-1">
+                        {pebiMissing.missing.map((m) => (
+                          <li key={m.pbGradeKey}>
+                            <span className="font-mono">{m.pbGrade}</span> — {m.reason}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           )}
           <div className="flex justify-between items-center px-3 py-2 border-b border-border bg-slate/30">
             <span className="text-sm text-mist">{visibleMaterials.length} row(s)</span>

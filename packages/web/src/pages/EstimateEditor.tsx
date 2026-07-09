@@ -30,6 +30,7 @@ import { useAuth } from '../hooks/useAuth';
 import { runClientCalculation } from '../lib/estimateCalc';
 import { usdToDisplay, usdToDisplayPrecise } from '../lib/currency';
 import { formatMicronDisplay } from '../lib/formatMicron';
+import { layerFieldsFromMaterial } from '../lib/materialNominalMicron';
 import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
 import {
   buildProcessCostCatalogFromReference,
@@ -3050,10 +3051,8 @@ const EstimateEditor = ({
                                       );
                                       if (firstInFamily) {
                                         setLayers(prev => prev.map(l => l.id === layer.id ? {
-                                          ...l, materialId: firstInFamily.id, materialName: firstInFamily.name,
-                                          costPerKgUsd: parseFloat(firstInFamily.costPerKgUsd) || 0,
-                                          isSolventBased: firstInFamily.isSolventBased || false,
-                                          hoover: firstInFamily.hoover ?? null,
+                                          ...l,
+                                          ...layerFieldsFromMaterial(layer.materialType, l.micron, firstInFamily),
                                         } : l));
                                       }
                                     }}
@@ -3086,11 +3085,8 @@ const EstimateEditor = ({
                                     );
                                     if (firstInFamily) {
                                       setLayers(prev => prev.map(l => l.id === layer.id ? {
-                                        ...l, materialId: firstInFamily.id, materialName: firstInFamily.name,
-                                        costPerKgUsd: parseFloat(firstInFamily.costPerKgUsd) || 0,
-                                        isSolventBased: firstInFamily.isSolventBased || false,
-                                        gsm: l.micron * (parseFloat(firstInFamily.density) || 0.9),
-                                        hoover: firstInFamily.hoover ?? null,
+                                        ...l,
+                                        ...layerFieldsFromMaterial(layer.materialType, l.micron, firstInFamily),
                                       } : l));
                                     }
                                   }}
@@ -3140,15 +3136,7 @@ const EstimateEditor = ({
                                         l.id === layer.id
                                           ? {
                                               ...l,
-                                              materialId: mat.id,
-                                              materialName: mat.name,
-                                              costPerKgUsd: parseFloat(mat.costPerKgUsd) || 0,
-                                              isSolventBased: mat.isSolventBased || false,
-                                              gsm:
-                                                l.materialType === 'substrate'
-                                                  ? l.micron * (parseFloat(mat.density) || 0.9)
-                                                  : l.micron,
-                                              hoover: mat.hoover ?? null,
+                                              ...layerFieldsFromMaterial(layer.materialType, l.micron, mat),
                                             }
                                           : l
                                       )
@@ -3852,14 +3840,7 @@ const EstimateEditor = ({
                   if (!mat) return;
                   setLayers((prev) => prev.map((l) => l.id === editingLayer.id ? {
                     ...l,
-                    materialId: mat.id,
-                    materialName: mat.name,
-                    materialType: editingLayer.materialType,
-                    costPerKgUsd: parseFloat(mat.costPerKgUsd) || 0,
-                    isSolventBased: mat.isSolventBased || false,
-                    gsm: editingLayer.materialType === 'substrate'
-                      ? l.micron * (parseFloat(mat.density) || 0.9)
-                      : l.micron,
+                    ...layerFieldsFromMaterial(editingLayer.materialType, l.micron, mat),
                   } : l));
                 }}
                 className="input w-full min-h-[48px]"

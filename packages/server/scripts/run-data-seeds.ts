@@ -8,6 +8,10 @@ import {
   ensureSolventCatalogSeeded,
   ensureLaminationAdhesivesSeeded,
   ensurePetSubstratesFromSeed,
+  ensureBoppSubstratesFromSeed,
+  ensureCppSubstratesFromSeed,
+  ensurePaSubstratesFromSeed,
+  ensurePapSubstratesFromSeed,
 } from '../src/db/platform-master-data.js';
 
 try {
@@ -15,7 +19,11 @@ try {
   const solvent = await ensureSolventCatalogSeeded();
   const lamination = await ensureLaminationAdhesivesSeeded();
   const pet = await ensurePetSubstratesFromSeed();
-  console.log('✓ Data seeds complete', { solvent, lamination, pet });
+  const bopp = await ensureBoppSubstratesFromSeed();
+  const cpp = await ensureCppSubstratesFromSeed();
+  const pa = await ensurePaSubstratesFromSeed();
+  const pap = await ensurePapSubstratesFromSeed();
+  console.log('✓ Data seeds complete', { solvent, lamination, pet, bopp, cpp, pa, pap });
 } catch (err) {
   console.error('✗ Data seed failed:', err);
   process.exit(1);

@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { initializeDatabase, closeDatabase } from './db';
 import { seedDefaultAdmin } from './db/seed-admin';
-import { ensurePlatformMasterSeeded, ensureProcessesSeeded, ensureSolventCatalogSeeded, ensureLaminationAdhesivesSeeded, ensurePetSubstratesFromSeed } from './db/platform-master-data';
+import { ensurePlatformMasterSeeded, ensureProcessesSeeded, ensureSolventCatalogSeeded, ensureLaminationAdhesivesSeeded, ensurePetSubstratesFromSeed, ensureBoppSubstratesFromSeed, ensureCppSubstratesFromSeed, ensurePaSubstratesFromSeed, ensurePapSubstratesFromSeed } from './db/platform-master-data';
 import { bootstrapPlatformStandardCatalog } from './db/seed-platform-templates';
 import { buildApp } from './app';
 import { log } from './utils/logger';
@@ -23,6 +23,10 @@ async function start() {
     await ensureSolventCatalogSeeded();
     await ensureLaminationAdhesivesSeeded();
     await ensurePetSubstratesFromSeed();
+    await ensureBoppSubstratesFromSeed();
+    await ensureCppSubstratesFromSeed();
+    await ensurePaSubstratesFromSeed();
+    await ensurePapSubstratesFromSeed();
     await seedDefaultAdmin();
     try {
       await bootstrapPlatformStandardCatalog();

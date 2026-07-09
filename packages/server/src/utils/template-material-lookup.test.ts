@@ -24,10 +24,10 @@ const fixtureMaterials = [
   },
   {
     id: 'uuid-bopp',
-    name: 'BOPP Transparent',
+    name: 'BOPP Transparent HS Glossy',
     type: 'substrate',
     substrateFamily: 'BOPP',
-    substrateGrade: 'BOPP Transparent',
+    substrateGrade: 'BOPP Transparent HS Glossy',
     costingKey: 'bopp',
   },
   {

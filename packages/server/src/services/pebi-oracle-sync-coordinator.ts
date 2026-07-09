@@ -9,7 +9,7 @@ import axios from 'axios';
 import { isNotNull } from 'drizzle-orm';
 import { getDatabase, schema } from '../db/index.js';
 import { syncCustomersFromPebiForTenant } from './pebi-customer-sync.js';
-import { syncPetMaterialsFromPebiForTenant } from './pebi-material-sync.js';
+import { syncAllPebiMaterialsFromPebiForTenant } from './pebi-material-sync.js';
 import { log } from '../utils/logger.js';
 
 export type PebiOracleSyncStatus = {
@@ -165,9 +165,9 @@ async function syncMaterialsForAllLinkedTenants(): Promise<void> {
 
   for (const tenant of tenants) {
     try {
-      await syncPetMaterialsFromPebiForTenant(tenant.id);
+      await syncAllPebiMaterialsFromPebiForTenant(tenant.id);
     } catch (err) {
-      log.warn({ err, tenantId: tenant.id }, 'PEBI PET material sync failed');
+      log.warn({ err, tenantId: tenant.id }, 'PEBI material sync failed');
     }
   }
 }

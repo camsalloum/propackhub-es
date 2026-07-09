@@ -16,6 +16,8 @@ type TenantMaterialRow = {
   marketPriceUsd?: string | number | null;
   platformMasterKey?: string | null;
   costingKey?: string | null;
+  externalId?: string | null;
+  externalSource?: string | null;
   isTenantOnly?: boolean;
   accessoryKind?: string | null;
   costPerMeterUsd?: string | number | null;
@@ -60,8 +62,8 @@ export function tenantMaterialToPlatformRow(m: TenantMaterialRow): PlatformMaste
     substrateGrade: m.substrateGrade ?? null,
     hoover: m.hoover ?? null,
     marketPriceUsd: m.marketPriceUsd != null ? usd(m.marketPriceUsd) : null,
-    externalId: null,
-    externalSource: null,
+    externalId: m.externalId ?? null,
+    externalSource: m.externalSource ?? null,
     accessoryKind: (m.accessoryKind as PlatformMasterMaterialRow['accessoryKind']) ?? null,
     costPerMeterUsd: m.costPerMeterUsd != null ? usd(m.costPerMeterUsd) : null,
     costPerPieceUsd: m.costPerPieceUsd != null ? usd(m.costPerPieceUsd) : null,

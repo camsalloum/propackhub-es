@@ -21,7 +21,7 @@ import {
   type WasteBand,
   type WasteBandsByPrintMode,
 } from '@es/engine';
-import { syncMaterialsForTenant } from './seed-materials';
+import { syncMaterialsForTenant, pruneTenantSubstratesByPlatformKeyAllowlist } from './seed-materials';
 import { relinkTemplatesForTenant } from './seed-templates';
 import { syncCustomRmTypeCategories } from './seed-categories';
 import { applySolventCommonAverage, SOLVENT_COMMON_KEY, computeSolventCommonAverage } from '../utils/solvent-common';
@@ -1141,6 +1141,287 @@ export async function ensurePetSubstratesFromSeed(): Promise<{ upserted: number;
   }
 
   return { upserted: inserted + updated + retired, retired };
+}
+
+const BOPP_SUBSTRATE_KEYS = [
+  'bopp-transparent-hs',
+  'bopp-transparent-nhs',
+  'bopp-transparent-hr',
+  'bopp-transparent-lg',
+  'bopp-white-lg',
+  'bopp-matte-transparent',
+  'bopp-metalized',
+  'bopp-metalized-hb',
+  'bopp-pearlized',
+] as const;
+
+const RETIRED_BOPP_SUBSTRATE_KEYS = ['bopp-white-opaque', 'bopp-transparent'] as const;
+
+/** Idempotent — upserts BOPP substrates from seed JSON (Phase 4 Family 4). */
+export async function ensureBoppSubstratesFromSeed(): Promise<{
+  upserted: number;
+  retired: number;
+  pruned: number;
+}> {
+  const db = getDatabase();
+  const seed = loadSeedMaterialsFromJson().filter(
+    (m) => m.type === 'substrate' && (BOPP_SUBSTRATE_KEYS as readonly string[]).includes(m.key)
+  );
+  const existing = await db.select().from(schema.platformMasterMaterials);
+  const byKey = new Map(existing.map((r) => [r.key, r]));
+
+  let inserted = 0;
+  let updated = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const m = seed[i]!;
+    const values = masterMaterialInputToDbValues({ ...m, sortOrder: 200 + i });
+    const match = byKey.get(m.key);
+    if (match) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set(values)
+        .where(eq(schema.platformMasterMaterials.id, match.id));
+      updated++;
+    } else {
+      await db.insert(schema.platformMasterMaterials).values(values);
+      inserted++;
+    }
+  }
+
+  let retired = 0;
+  for (const key of RETIRED_BOPP_SUBSTRATE_KEYS) {
+    const row = byKey.get(key);
+    if (row?.active) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set({ active: false, updatedAt: new Date() })
+        .where(eq(schema.platformMasterMaterials.id, row.id));
+      retired++;
+    }
+  }
+
+  const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);
+  let pruned = 0;
+
+  if (inserted > 0 || updated > 0 || retired > 0) {
+    await incrementMasterDataVersion();
+    const materials = await listPlatformMasterMaterials();
+    for (const t of tenants) {
+      await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
+    }
+    log.info({ inserted, updated, retired }, 'BOPP substrates updated and tenants synced');
+  }
+
+  for (const t of tenants) {
+    pruned += await pruneTenantSubstratesByPlatformKeyAllowlist(
+      t.id,
+      'BOPP',
+      BOPP_SUBSTRATE_KEYS
+    );
+  }
+  if (pruned > 0) {
+    log.info({ pruned }, 'Retired BOPP substrate rows removed from tenant libraries');
+  }
+
+  return { upserted: inserted + updated + retired, retired, pruned };
+}
+
+const CPP_SUBSTRATE_KEYS = [
+  'cpp-transparent',
+  'cpp-metalized',
+  'cpp-white',
+  'cpp-retort',
+  'cpp-high-seal-strength',
+] as const;
+
+/** Idempotent — upserts CPP substrates from seed JSON (Phase 4 Family 5). */
+export async function ensureCppSubstratesFromSeed(): Promise<{
+  upserted: number;
+  retired: number;
+  pruned: number;
+}> {
+  const db = getDatabase();
+  const seed = loadSeedMaterialsFromJson().filter(
+    (m) => m.type === 'substrate' && (CPP_SUBSTRATE_KEYS as readonly string[]).includes(m.key)
+  );
+  const existing = await db.select().from(schema.platformMasterMaterials);
+  const byKey = new Map(existing.map((r) => [r.key, r]));
+
+  let inserted = 0;
+  let updated = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const m = seed[i]!;
+    const values = masterMaterialInputToDbValues({ ...m, sortOrder: 210 + i });
+    const match = byKey.get(m.key);
+    if (match) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set(values)
+        .where(eq(schema.platformMasterMaterials.id, match.id));
+      updated++;
+    } else {
+      await db.insert(schema.platformMasterMaterials).values(values);
+      inserted++;
+    }
+  }
+
+  const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);
+  let pruned = 0;
+
+  if (inserted > 0 || updated > 0) {
+    await incrementMasterDataVersion();
+    const materials = await listPlatformMasterMaterials();
+    for (const t of tenants) {
+      await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
+    }
+    log.info({ inserted, updated }, 'CPP substrates updated and tenants synced');
+  }
+
+  for (const t of tenants) {
+    pruned += await pruneTenantSubstratesByPlatformKeyAllowlist(
+      t.id,
+      'CPP',
+      CPP_SUBSTRATE_KEYS
+    );
+  }
+  if (pruned > 0) {
+    log.info({ pruned }, 'Stale CPP substrate rows removed from tenant libraries');
+  }
+
+  return { upserted: inserted + updated, retired: 0, pruned };
+}
+
+const PA_SUBSTRATE_KEYS = ['bopa-transparent', 'bopa-transparent-hb', 'pa-pe'] as const;
+
+/** Idempotent — upserts PA substrates from seed JSON (Phase 4 Family 6). */
+export async function ensurePaSubstratesFromSeed(): Promise<{
+  upserted: number;
+  retired: number;
+  pruned: number;
+}> {
+  const db = getDatabase();
+  const seed = loadSeedMaterialsFromJson().filter(
+    (m) => m.type === 'substrate' && (PA_SUBSTRATE_KEYS as readonly string[]).includes(m.key)
+  );
+  const existing = await db.select().from(schema.platformMasterMaterials);
+  const byKey = new Map(existing.map((r) => [r.key, r]));
+
+  let inserted = 0;
+  let updated = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const m = seed[i]!;
+    const values = masterMaterialInputToDbValues({ ...m, sortOrder: 220 + i });
+    const match = byKey.get(m.key);
+    if (match) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set(values)
+        .where(eq(schema.platformMasterMaterials.id, match.id));
+      updated++;
+    } else {
+      await db.insert(schema.platformMasterMaterials).values(values);
+      inserted++;
+    }
+  }
+
+  const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);
+  let pruned = 0;
+
+  if (inserted > 0 || updated > 0) {
+    await incrementMasterDataVersion();
+    const materials = await listPlatformMasterMaterials();
+    for (const t of tenants) {
+      await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
+    }
+    log.info({ inserted, updated }, 'PA substrates updated and tenants synced');
+  }
+
+  for (const t of tenants) {
+    pruned += await pruneTenantSubstratesByPlatformKeyAllowlist(t.id, 'PA', PA_SUBSTRATE_KEYS);
+  }
+  if (pruned > 0) {
+    log.info({ pruned }, 'Stale PA substrate rows removed from tenant libraries');
+  }
+
+  return { upserted: inserted + updated, retired: 0, pruned };
+}
+
+const PAP_SUBSTRATE_KEYS = [
+  'paper-white-coated',
+  'kraft-paper-brown',
+  'kraft-paper-white',
+  'mg-paper',
+  'gp-paper',
+  'c1s-paper',
+  'coated-paper-pe',
+  'twist-wrap-paper',
+] as const;
+
+const RETIRED_PAP_SUBSTRATE_KEYS = ['c2s-paper'] as const;
+
+/** Idempotent — upserts PAP/PAPER substrates from seed JSON (Phase 4 Family 7). */
+export async function ensurePapSubstratesFromSeed(): Promise<{
+  upserted: number;
+  retired: number;
+  pruned: number;
+}> {
+  const db = getDatabase();
+  const seed = loadSeedMaterialsFromJson().filter(
+    (m) => m.type === 'substrate' && (PAP_SUBSTRATE_KEYS as readonly string[]).includes(m.key)
+  );
+  const existing = await db.select().from(schema.platformMasterMaterials);
+  const byKey = new Map(existing.map((r) => [r.key, r]));
+
+  let inserted = 0;
+  let updated = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const m = seed[i]!;
+    const values = masterMaterialInputToDbValues({ ...m, sortOrder: 230 + i });
+    const match = byKey.get(m.key);
+    if (match) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set(values)
+        .where(eq(schema.platformMasterMaterials.id, match.id));
+      updated++;
+    } else {
+      await db.insert(schema.platformMasterMaterials).values(values);
+      inserted++;
+    }
+  }
+
+  let retired = 0;
+  for (const key of RETIRED_PAP_SUBSTRATE_KEYS) {
+    const row = byKey.get(key);
+    if (row?.active) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set({ active: false, updatedAt: new Date() })
+        .where(eq(schema.platformMasterMaterials.id, row.id));
+      retired++;
+    }
+  }
+
+  const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);
+  let pruned = 0;
+
+  if (inserted > 0 || updated > 0 || retired > 0) {
+    await incrementMasterDataVersion();
+    const materials = await listPlatformMasterMaterials();
+    for (const t of tenants) {
+      await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
+    }
+    log.info({ inserted, updated, retired }, 'PAP substrates updated and tenants synced');
+  }
+
+  for (const t of tenants) {
+    pruned += await pruneTenantSubstratesByPlatformKeyAllowlist(t.id, 'PAPER', PAP_SUBSTRATE_KEYS);
+  }
+  if (pruned > 0) {
+    log.info({ pruned }, 'Stale PAPER substrate rows removed from tenant libraries');
+  }
+
+  return { upserted: inserted + updated + retired, retired, pruned };
 }
 
 /** Persist platform default cleaning EA kg/job (Master Data → Solvent tab). */

@@ -1,7 +1,7 @@
 [
   {
-    "key": "bopp-transparent",
-    "name": "BOPP Transparent",
+    "key": "bopp-transparent-hs",
+    "name": "BOPP Transparent HS Glossy",
     "type": "substrate",
     "solidPercent": 100,
     "density": 0.91,
@@ -9,9 +9,23 @@
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "BOPP",
-    "substrateGrade": "BOPP Transparent",
-    "hoover": "BOPP Transparent",
+    "substrateGrade": "BOPP Transparent HS Glossy",
+    "hoover": "Heat Sealable Glossy",
     "marketPriceUsd": 3
+  },
+  {
+    "key": "bopp-transparent-nhs",
+    "name": "BOPP Transparent NHS",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 0.91,
+    "costPerKgUsd": 2.5,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "BOPP",
+    "substrateGrade": "BOPP Transparent NHS",
+    "hoover": "Non Heat Sealable",
+    "marketPriceUsd": 2.5
   },
   {
     "key": "bopp-transparent-hr",
@@ -24,22 +38,8 @@
     "isSolventBased": false,
     "substrateFamily": "BOPP",
     "substrateGrade": "BOPP Transparent HR",
-    "hoover": "Heat Resitant",
+    "hoover": "NHS Heat Resistant",
     "marketPriceUsd": 2.5
-  },
-  {
-    "key": "bopp-white-opaque",
-    "name": "BOPP White Opaque",
-    "type": "substrate",
-    "solidPercent": 100,
-    "density": 0.95,
-    "costPerKgUsd": 2.6,
-    "wastePercent": 0,
-    "isSolventBased": false,
-    "substrateFamily": "BOPP",
-    "substrateGrade": "BOPP White Opaque",
-    "hoover": "Opaque White",
-    "marketPriceUsd": 2.6
   },
   {
     "key": "bopp-pearlized",
@@ -113,7 +113,7 @@
   },
   {
     "key": "bopp-matte-transparent",
-    "name": "BOPP Matte Transparent",
+    "name": "BOPP Transparent HS Matt",
     "type": "substrate",
     "solidPercent": 100,
     "density": 0.91,
@@ -121,8 +121,8 @@
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "BOPP",
-    "substrateGrade": "BOPP Matte Transparent",
-    "hoover": "Matt",
+    "substrateGrade": "BOPP Transparent HS Matt",
+    "hoover": "Heat Sealable Matt",
     "marketPriceUsd": 2.8
   },
   {
@@ -498,6 +498,62 @@
     "marketPriceUsd": 4.5
   },
   {
+    "key": "alu-foil-7",
+    "name": "Aluminium Foil 7 µm",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 2.7,
+    "costPerKgUsd": 4.5,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "ALU",
+    "substrateGrade": "Plain Aluminium Foil — 7 µm",
+    "hoover": "Alloy 1235 for Flexible Packaging",
+    "marketPriceUsd": 4.5
+  },
+  {
+    "key": "alu-foil-8",
+    "name": "Aluminium Foil 8 µm",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 2.7,
+    "costPerKgUsd": 4.5,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "ALU",
+    "substrateGrade": "Plain Aluminium Foil — 8 µm",
+    "hoover": "Alloy 1235 for Flexible Packaging",
+    "marketPriceUsd": 4.5
+  },
+  {
+    "key": "alu-foil-9",
+    "name": "Aluminium Foil 9 µm",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 2.7,
+    "costPerKgUsd": 4.5,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "ALU",
+    "substrateGrade": "Plain Aluminium Foil — 9 µm",
+    "hoover": "Alloy 1235 for Flexible Packaging",
+    "marketPriceUsd": 4.5
+  },
+  {
+    "key": "alu-foil-12",
+    "name": "Aluminium Foil 12 µm",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 2.7,
+    "costPerKgUsd": 4.5,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "ALU",
+    "substrateGrade": "Plain Aluminium Foil — 12 µm",
+    "hoover": "Alloy 1235 for Flexible Packaging",
+    "marketPriceUsd": 4.5
+  },
+  {
     "key": "paper-white-coated",
     "name": "Paper White Coated",
     "type": "substrate",
@@ -582,8 +638,8 @@
     "marketPriceUsd": 1.5
   },
   {
-    "key": "c2s-paper",
-    "name": "C2S Paper",
+    "key": "coated-paper-pe",
+    "name": "Paper Coated PE",
     "type": "substrate",
     "solidPercent": 100,
     "density": 1,
@@ -591,9 +647,23 @@
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "PAPER",
-    "substrateGrade": "C2S Paper",
+    "substrateGrade": "Paper Coated PE",
     "hoover": null,
     "marketPriceUsd": 1.4
+  },
+  {
+    "key": "twist-wrap-paper",
+    "name": "Twist Wrap Paper",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 0.95,
+    "costPerKgUsd": 1.83,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "PAPER",
+    "substrateGrade": "Twist Wrap Paper",
+    "hoover": null,
+    "marketPriceUsd": 1.83
   },
   {
     "key": "pvc-shrink-normal-shrink-blown",

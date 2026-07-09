@@ -12,14 +12,14 @@
  */
 import 'dotenv/config';
 import { initializeDatabase, closeDatabase } from '../src/db/index.js';
-import { syncPetMaterialsForPlatformCompany } from '../src/services/pebi-material-sync.js';
+import { syncAllPebiMaterialsForPlatformCompany } from '../src/services/pebi-material-sync.js';
 
 const COMPANY_CODE = process.env.INTERPLAST_PLATFORM_COMPANY_CODE?.trim() || 'interplast';
 
 async function main() {
   await initializeDatabase();
-  const result = await syncPetMaterialsForPlatformCompany(COMPANY_CODE);
-  console.log(JSON.stringify(result, null, 2));
+  const results = await syncAllPebiMaterialsForPlatformCompany(COMPANY_CODE);
+  console.log(JSON.stringify(results, null, 2));
   await closeDatabase();
 }
 

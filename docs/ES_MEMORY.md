@@ -1231,12 +1231,65 @@ Not every company subscribes to both PEBI and ES. **IP/FP (Interplast) is linked
 | PEBI-linked company (Phase 4) | PEBI MES — ES read-only for synced rows |
 | Custom tenant-only rows | Always editable in tenant Master Data (`is_tenant_only`) |
 
+### 2026-07-09 — PAP sync wired (Phase 4 step 7 — code complete)
+
+- **17** Oracle PAP SKUs; crosswalk `pebi-es-pap-crosswalk.json` (7 ES PAPER keys).
+- **PB:** `pebi-es-pap-catalog.js` — greaseproof, kraft white, C1S, C2S, twist wrap live; kraft brown + MG platform hold.
+- **ES sync:** `PAP` in `PEBI_SYNC_FAMILIES`; Master Data → PAP review panel; `sortPapSubstrateRows`.
+- **Twist wrap** → `twist-wrap-paper` (separate from `paper-white-coated`).
+- **Coated PE** → `coated-paper-pe` (replaces retired `c2s-paper`).
+- **Interplast:** sync **7/7** updated locally.
+- **Next:** PE (in-house, last).
+
+### 2026-07-09 — PA sync wired (Phase 4 step 6 — code complete)
+
+- **1** Oracle BOPA SKU (`FXXFLBOPA151200`); crosswalk `pebi-es-pa-crosswalk.json` (3 ES keys).
+- **PB:** `pebi-es-pa-catalog.js` — `bopa-transparent` live from stock (~$3.10/kg); HB + PA/PE `needs_review` in PB but **ES keeps platform price** until live PB price.
+- **ES sync:** `PA` in `PEBI_SYNC_FAMILIES`; Master Data → PA review panel; `sortPaSubstrateRows`.
+- **Interplast:** sync **1/3** updated locally.
+- **Next family:** PAP; **PE last** (in-house).
+
+### 2026-07-09 — CPP sync wired (Phase 4 step 5 — code complete)
+
+- **7** Oracle SKUs; crosswalk `pebi-es-cpp-crosswalk.json` (5 ES keys).
+- **PB:** `pebi-es-cpp-catalog.js` — transparent + metalized live PB prices; white/retort/HSS `needs_review` in catalog.
+- **ES formula fallbacks** (when no PB price): `cpp-white` = transparent + $0.30; `cpp-retort` / `cpp-high-seal-strength` = transparent + $0.10.
+- **ES sync:** `CPP` in `PEBI_SYNC_FAMILIES`; Master Data → CPP review panel; `sortCppSubstrateRows`.
+- **Interplast:** sync **5/5** updated locally.
+- **Next family:** PA (or PAP); **PE last** (in-house).
+
+### 2026-07-09 — BOPP sync wired (Phase 4 step 4 — code complete)
+
+- **60/60** Oracle SKUs classified; crosswalk `pebi-es-bopp-crosswalk.json`.
+- **ES:** 9 BOPP substrate keys; IML/Speciality PB-only (no ES v1).
+- **PB:** `pebi-es-bopp-catalog.js` — Oracle SKU + mapping pricing; HS Glossy + Low SIT roll up to `bopp-transparent-hs`; NHS vs NHS-HR split by SKU.
+- **ES sync:** `BOPP` in `PEBI_SYNC_FAMILIES`; coordinator all-families pull includes BOPP; Master Data → BOPP review panel.
+- **PB profiles:** `node server/scripts/seed-bopp-profiles.js` (12 cat_desc rows incl. IML).
+- **Ops next:** publish platform master → run seed on VPS → `sync-materials?family=BOPP` on Interplast → validate prices → flip `catalog_source=pebi`.
+
+### 2026-07-08 — BOPP workshop (Phase 4 step 4 — in progress)
+
+- **Oracle:** 60 BOPP SKUs (all `catlinedesc=BOPP`); PB Item Master profiles still empty for BOPP.
+- **Workshop lines 1–8 confirmed:** HS (1–6) → `bopp-transparent-hs`; NHS F/WRAP (7) → `bopp-transparent-nhs`; NHS-HR (8) → `bopp-transparent-hr`.
+- **ES seed:** 10 BOPP grades (was 9); legacy `bopp-transparent` aliases to HS for templates.
+- **Artifacts:** `pph/server/fixtures/bopp-pb-audit.json`, `bopp-pb-review-workshop.md`, `pebi-es-bopp-crosswalk.json` (partial).
+- **Next:** confirm lines 9–60; create PB profiles; implement `pebi-es-bopp-catalog.js` + ES sync.
+
+### 2026-07-08 — ALU micron subgroups (Phase 4 step 3)
+
+- **Design:** Option A — PB subgroups under `Aluminium Foil` / `Plain Aluminium Foil`, one ES material per micron band.
+- **PEBI:** `pebi-es-alu-catalog.js` + `pebi-es-alu-crosswalk.json`; pricing from subgroup item members in `fp_actualrmdata` (MIC regex fallback until members seeded).
+- **Seed:** `node server/scripts/seed-alu-foil-subgroups.js` creates `7 µm` / `8 µm` / `9 µm` / `12 µm` subgroups and assigns RM lines.
+- **ES keys:** `alu-foil-7`, `alu-foil-8`, `alu-foil-9`, `alu-foil-12`; legacy `aluminium-foil` retained; templates map `alu-foil` → `alu-foil-9`.
+- **Sync:** `PEBI_SYNC_FAMILIES = PET, ALU`; coordinator + CLI sync both; `missing-materials?family=ALU` + Master Data → Aluminium Foil review.
+
 ### 2026-07-08 — PET live PEBI sync (Phase 4 step 2)
 
 - **PEBI:** `GET /api/integration/es/materials?family=PET` — `pebi-es-pet-catalog.js` aggregates profiles (`market_ref_price`, density, solid) + `fp_actualrmdata` combined WA.
 - **ES:** `pebi-material-sync.ts`, `POST /api/v1/integration/pebi/sync-materials`, `npm run db:sync-materials-pebi`.
 - **Interplast test:** 11 PET grades updated (`priceSource=pebi`, AED→USD via tenant FX).
 - **White fallback:** if PB has no live price for `pet-white` or `pet-twist-white`, ES derives both as `pet-transparent + $0.40`; any later PB market/cost price overrides that formula on the next sync.
+- **PEBI review list:** admin-only endpoint + Master Data → Substrates → PET section to show PET grades missing live price after fallback rules (`platform_admin` + `tenant_admin`).
 - Syncs: `marketPriceUsd`, `costPerKgUsd`, `density`, `solidPercent`, `platformSyncedAt`.
 
 ### 2026-07-08 — PET substrate family (Phase 4 step 1)

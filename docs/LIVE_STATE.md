@@ -1,13 +1,65 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-09 (PAP sync wired — PET + ALU + BOPP + CPP + PA + PAP)
-**Session focus:** Phase 4 **PAP** finalized: 17 Oracle SKUs → 7 ES paper grades; 5 live PB prices + kraft brown/MG platform hold. Interplast **7/7** linked. **PE last** (in-house).
+**Last updated:** 2026-07-09 (SPECIALTY per-SKU recipes from Item Master — PB + ES)
+**Session focus:** Phase 4 purchased-RM sync **complete except PE**. Butter foil layer recipes verified per SKU; 95µ = **6.3Alu** (not 7Alu).
 
 ---
 
 ## Where we stopped (read this first next session)
 
-### **NEXT:** PE (deferred — in-house extrusion; sync last)
+### **NEXT:** PE (Family 10 — deferred in-house extrusion; sync last)
+
+Then **sign-off checklist** before `catalog_source=pebi` on Interplast:
+1. Owner validates live prices in ES Master Data per family tab
+2. Run seeds on VPS (`seed-*-profiles.js`, `seed-pap-subgroups.js`, `seed-specialty-subgroups.js`, `seed-specialty-butter-specs.js`, `seed-alu-foil-subgroups.js`)
+3. Full `npm run db:sync-materials-pebi` (or coordinator after Oracle sync)
+4. Publish platform master if needed; flip `catalog_source`
+
+### **AUDIT — SPECIALTY (priority if reviewing this session)**
+
+| PB subgroup | Oracle SKU(s) | ES `platformMasterKey` | Recipe (Item Master) | Live $/kg |
+|-------------|---------------|------------------------|----------------------|-----------|
+| **75** | MAT 75×1045, MAT 75×1050, PAPRGLOS 75×1105 | `7alu-10pe-35paper-12pe` | 7Alu / 10PE / 35Paper / 12PE | 4.32 |
+| **80** | PAPR GLOS **60**×1060 | `7alu-10pe-30-gp-paper` | 7Alu / 10PE / 30 GP Paper | 4.70 |
+| **80** | PPR GLOS **80**×1260 | `7alu-10pe-40paper-12pe` | 7Alu / 10PE / 40Paper / 12PE | 3.20 |
+| **95** | PPR GLOS **95**×1260 | `6.3alu-10pe-50paper-12pe` | **6.3Alu** / 10PE / 50Paper / 12PE | 3.11 |
+
+**PB specs:** `seed-specialty-butter-specs.js` → `mes_non_resin_material_specs` per SKU (all 6 Specs=Yes). Retired `7ALu/10PE/50Paper/12PE` profile.
+
+**Density:** GSM Direct hoover from `alu-pap-pe-composition.js` (same model as Coated Paper-PE: layer GSM → effective g/cm³).
+
+**PB:** `catlinedesc=Alu/Pap`, `itemgroup=Alu Foil Paper`; subgroups seeded via `seed-specialty-subgroups.js`. `substrateMapping.js` uses **Alu Foil Paper** (not Butter Foil).
+
+### **Phase 4 family status (purchased RM → ES)**
+
+| # | Family | ES sync key | Interplast | Notes |
+|---|--------|-------------|------------|-------|
+| 1 | PET | ✓ | 11/11 | White fallback +$0.40 |
+| 2 | ALU | ✓ | 4/4 | Micron subgroups 7/8/9/12 |
+| 3 | BOPP | ✓ | 9/9 | IML/Speciality 4 SKUs **PB-only** |
+| 4 | CPP | ✓ | 5/5 | Formula fallbacks vs transparent |
+| 5 | PA | ✓ | 3/3 | HB + PA/PE platform hold |
+| 6 | PAP | ✓ | 7/7 | Coated Paper-PE composition parser; 2 platform hold |
+| 7 | SLEEVE | ✓ | 4/4 | PETC/PETG/PVC; PVC cast = blow + $0.80 |
+| 8 | SPECIALTY | ✓ | **4/4** | Alu/Pap butter foil (this session) |
+| 9 | **PE** | ✗ | — | **LAST** — in-house extrusion |
+
+`PEBI_SYNC_FAMILIES` = above 8 families (not PE yet).
+
+### **DONE:** SPECIALTY (2026-07-09)
+
+- Crosswalk: `apps/pph/server/fixtures/pebi-es-specialty-crosswalk.json`
+- PB: `pebi-es-specialty-catalog.js`, `GET /api/integration/es/materials?family=SPECIALTY`, `seed-specialty-subgroups.js`, `ensureSpecialtyProfilesSeeded` (startup)
+- Utils: `apps/pph/server/utils/alu-pap-pe-composition.js` (+ tests)
+- ES: `SPECIALTY` in sync; `ensureSpecialtySubstratesFromSeed`; `SPECIALTY_PB_CROSSWALK`; `sortSpecialtySubstrateRows`; review panel on SPECIALTY tab
+- Retired seed row `test`
+- Interplast sync: **4/4** updated
+
+### **DONE:** SLEEVE (2026-07-09)
+
+- Crosswalk: `pebi-es-sleeve-crosswalk.json` — 33 Oracle SKUs (PETC/PETG/PVC)
+- **PVC High Shrink Cast:** formula `pvc-shrink-normal-shrink-blown + $0.80` (removed platform hold)
+- Interplast sync: **4/4** updated
 
 ### **DONE:** PAP (2026-07-09)
 

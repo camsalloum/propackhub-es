@@ -37,7 +37,7 @@ export const ES_FAMILY_TO_PB: Record<string, string | null> = {
   ALU: 'Aluminium Foil',
   PAPER: 'PAP',
   SLEEVE: null,
-  SPECIALTY: null,
+  SPECIALTY: 'Alu/Pap',
 };
 
 /** Sub-tabs under Master Data → Substrates. */
@@ -131,10 +131,25 @@ export const PAP_PB_CROSSWALK = [
   { platformMasterKey: 'kraft-paper-white', pbGrade: 'Kraft Paper' },
   { platformMasterKey: 'c1s-paper', pbGrade: 'Coated Paper' },
   { platformMasterKey: 'coated-paper-pe', pbGrade: 'Coated Paper-PE' },
-  { platformMasterKey: 'paper-white-coated', pbGrade: 'Paper White Coated' },
   { platformMasterKey: 'twist-wrap-paper', pbGrade: 'Twist Wrap Paper' },
   { platformMasterKey: 'kraft-paper-brown', pbGrade: 'Kraft Paper Brown' },
   { platformMasterKey: 'mg-paper', pbGrade: 'MG Paper' },
+] as const;
+
+/** SLEEVE shrink grades — ES substrateFamily SLEEVE (PB: PETC, PETG, PVC). */
+export const SLEEVE_PB_CROSSWALK = [
+  { platformMasterKey: 'pvc-shrink-normal-shrink-blown', pbGrade: 'PVC Blow Shrink' },
+  { platformMasterKey: 'pvc-shrink-high-shrink-cast', pbGrade: 'PVC High Shrink Cast' },
+  { platformMasterKey: 'pet-shrink', pbGrade: 'PET-G Shrink' },
+  { platformMasterKey: 'c-pet-shrink', pbGrade: 'PET-C Shrink' },
+] as const;
+
+/** SPECIALTY (Alu/Pap butter laminates) — ES substrateFamily SPECIALTY. */
+export const SPECIALTY_PB_CROSSWALK = [
+  { platformMasterKey: '7alu-10pe-30-gp-paper', pbGrade: 'Alu Foil Paper · 80 (60µ)' },
+  { platformMasterKey: '7alu-10pe-35paper-12pe', pbGrade: 'Alu Foil Paper · 75' },
+  { platformMasterKey: '7alu-10pe-40paper-12pe', pbGrade: 'Alu Foil Paper · 80' },
+  { platformMasterKey: '6.3alu-10pe-50paper-12pe', pbGrade: 'Alu Foil Paper · 95' },
 ] as const;
 
 /** Master Data substrate tab id → PEBI sync family for review panel. */
@@ -145,6 +160,8 @@ export const PEBI_REVIEW_FAMILY_BY_TAB: Record<string, string> = {
   CPP: 'CPP',
   PA: 'PA',
   PAP: 'PAP',
+  SLEEVE: 'SLEEVE',
+  SPECIALTY: 'SPECIALTY',
 };
 
 export function pbGradeKey(family: string, grade: string): string {
@@ -202,6 +219,18 @@ export function sortPapSubstrateRows<T extends { key?: string; substrateGrade?: 
   rows: T[]
 ): T[] {
   return sortPbCrosswalkRows(rows, PAP_PB_CROSSWALK);
+}
+
+export function sortSleeveSubstrateRows<T extends { key?: string; substrateGrade?: string | null }>(
+  rows: T[]
+): T[] {
+  return sortPbCrosswalkRows(rows, SLEEVE_PB_CROSSWALK);
+}
+
+export function sortSpecialtySubstrateRows<T extends { key?: string; substrateGrade?: string | null }>(
+  rows: T[]
+): T[] {
+  return sortPbCrosswalkRows(rows, SPECIALTY_PB_CROSSWALK);
 }
 
 function sortPbCrosswalkRows<T extends { key?: string; substrateGrade?: string | null }>(

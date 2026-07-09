@@ -226,13 +226,17 @@ export function calculateEstimate(
 /**
  * Calculate layer GSM and cost/m² based on Laravel formulas
  */
+function isGsmDirectSubstrate(material: Material): boolean {
+  return /gsm\s*direct/i.test(material.hoover ?? '');
+}
+
 function calculateLayer(layer: Layer, material: Material): Layer {
   let gsm: number;
   let costPerM2: number;
 
   if (material.type === 'substrate') {
-    // Substrate: user enters micron; gsm = micron × density
-    gsm = layer.micron * material.density;
+    // Paper GSM-direct grades: micron field holds grammage (g/m²), not caliper.
+    gsm = isGsmDirectSubstrate(material) ? layer.micron : layer.micron * material.density;
     // cost/m² = (gsm / 1000) × cost_per_kg
     costPerM2 = (gsm / 1000) * material.costPerKgUsd;
   } else {

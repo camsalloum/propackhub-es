@@ -12,6 +12,8 @@ import {
   ensureCppSubstratesFromSeed,
   ensurePaSubstratesFromSeed,
   ensurePapSubstratesFromSeed,
+  ensureSleeveSubstratesFromSeed,
+  ensureSpecialtySubstratesFromSeed,
 } from '../src/db/platform-master-data.js';
 
 try {
@@ -23,7 +25,9 @@ try {
   const cpp = await ensureCppSubstratesFromSeed();
   const pa = await ensurePaSubstratesFromSeed();
   const pap = await ensurePapSubstratesFromSeed();
-  console.log('✓ Data seeds complete', { solvent, lamination, pet, bopp, cpp, pa, pap });
+  const sleeve = await ensureSleeveSubstratesFromSeed();
+  const specialty = await ensureSpecialtySubstratesFromSeed();
+  console.log('✓ Data seeds complete', { solvent, lamination, pet, bopp, cpp, pa, pap, sleeve, specialty });
 } catch (err) {
   console.error('✗ Data seed failed:', err);
   process.exit(1);

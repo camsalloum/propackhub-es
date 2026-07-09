@@ -11,7 +11,7 @@ import { and, eq } from 'drizzle-orm';
 import { getDatabase, schema } from '../db/index.js';
 
 export const PEBI_MATERIAL_SOURCE = 'pebi';
-export const PEBI_SYNC_FAMILIES = ['PET', 'ALU', 'BOPP', 'CPP', 'PA', 'PAP'] as const;
+export const PEBI_SYNC_FAMILIES = ['PET', 'ALU', 'BOPP', 'CPP', 'PA', 'PAP', 'SLEEVE', 'SPECIALTY'] as const;
 export type PebiSyncFamily = (typeof PEBI_SYNC_FAMILIES)[number];
 
 const require = createRequire(import.meta.url);
@@ -55,6 +55,18 @@ const { buildPapMaterialsCatalog } = require(`${pphServicesPath}/pebi-es-pap-cat
     options?: { aedPerUsd?: number }
   ) => Promise<PebiMaterialsCatalog>;
 };
+const { buildSleeveMaterialsCatalog } = require(`${pphServicesPath}/pebi-es-sleeve-catalog.js`) as {
+  buildSleeveMaterialsCatalog: (
+    pool: Pool,
+    options?: { aedPerUsd?: number }
+  ) => Promise<PebiMaterialsCatalog>;
+};
+const { buildSpecialtyMaterialsCatalog } = require(`${pphServicesPath}/pebi-es-specialty-catalog.js`) as {
+  buildSpecialtyMaterialsCatalog: (
+    pool: Pool,
+    options?: { aedPerUsd?: number }
+  ) => Promise<PebiMaterialsCatalog>;
+};
 
 export type PebiMaterialRow = {
   pebiGradeKey: string;
@@ -69,6 +81,9 @@ export type PebiMaterialRow = {
   hasStock: boolean;
   pricePolicy: string;
   mappingStatus: string;
+  substrateHoover?: string | null;
+  nominalGsm?: number | null;
+  compositionUnparsedDescriptions?: string[] | null;
 };
 
 type PebiMaterialsCatalog = {
@@ -119,6 +134,8 @@ async function buildMaterialsCatalog(
   if (family === 'CPP') return buildCppMaterialsCatalog(pool, { aedPerUsd });
   if (family === 'PA') return buildPaMaterialsCatalog(pool, { aedPerUsd });
   if (family === 'PAP') return buildPapMaterialsCatalog(pool, { aedPerUsd });
+  if (family === 'SLEEVE') return buildSleeveMaterialsCatalog(pool, { aedPerUsd });
+  if (family === 'SPECIALTY') return buildSpecialtyMaterialsCatalog(pool, { aedPerUsd });
   return buildPetMaterialsCatalog(pool, { aedPerUsd });
 }
 
@@ -247,10 +264,13 @@ const CPP_FALLBACK_DELTA_USD: Record<string, number> = {
   'cpp-retort': 0.1,
   'cpp-high-seal-strength': 0.1,
 };
+const PVC_BLOW_SLEEVE_KEY = 'pvc-shrink-normal-shrink-blown';
+const PVC_CAST_SLEEVE_KEY = 'pvc-shrink-high-shrink-cast';
+const PVC_CAST_FORMULA_DELTA_USD = 0.8;
 /** Grades without PB stock — keep tenant/platform price until PEBI has a live price. */
 const PLATFORM_PRICE_HOLD_KEYS_BY_FAMILY: Partial<Record<PebiSyncFamily, ReadonlySet<string>>> = {
   PA: new Set(['bopa-transparent-hb', 'pa-pe']),
-  PAP: new Set(['kraft-paper-brown', 'mg-paper', 'paper-white-coated']),
+  PAP: new Set(['kraft-paper-brown', 'mg-paper']),
 };
 
 function shouldHoldPlatformPrice(family: PebiSyncFamily, platformMasterKey: string): boolean {
@@ -367,6 +387,27 @@ function deriveAlu12FallbackPrice(
   };
 }
 
+function deriveSleevePvcCastFallbackPrice(
+  row: PebiMaterialRow,
+  catalogRows: PebiMaterialRow[]
+): { marketUsd: number; costUsd: number } | null {
+  if (row.esPlatformMasterKey !== PVC_CAST_SLEEVE_KEY) return null;
+
+  const blow = catalogRows.find((candidate) => candidate.esPlatformMasterKey === PVC_BLOW_SLEEVE_KEY);
+  if (!blow) return null;
+
+  const blowMarket = positivePriceOrNull(blow.marketPriceUsd);
+  const blowCost = positivePriceOrNull(blow.costPerKgUsd);
+  const blowBase = blowMarket ?? blowCost;
+  if (blowBase == null) return null;
+
+  const fallback = roundUsd(blowBase + PVC_CAST_FORMULA_DELTA_USD);
+  return {
+    marketUsd: fallback,
+    costUsd: fallback,
+  };
+}
+
 function deriveFormulaFallbackPrice(
   row: PebiMaterialRow,
   catalogRows: PebiMaterialRow[],
@@ -381,6 +422,9 @@ function deriveFormulaFallbackPrice(
   }
   if (family === 'CPP') {
     return deriveCppTransparentFallbackPrice(row, catalogRows);
+  }
+  if (family === 'SLEEVE') {
+    return deriveSleevePvcCastFallbackPrice(row, catalogRows);
   }
   return null;
 }
@@ -491,7 +535,11 @@ async function applyCatalogToTenant(
               ? 1.15
               : family === 'PAP'
                 ? 1.0
-                : 1.4;
+                : family === 'SLEEVE'
+                  ? 1.32
+                  : family === 'SPECIALTY'
+                    ? 0.85
+                    : 1.4;
     const density =
       row.densityGCm3 != null && row.densityGCm3 > 0
         ? row.densityGCm3
@@ -513,6 +561,7 @@ async function applyCatalogToTenant(
       platformSyncedAt: now,
       externalId: row.pebiGradeKey,
       externalSource: PEBI_MATERIAL_SOURCE,
+      ...(row.substrateHoover ? { hoover: row.substrateHoover } : {}),
       updatedAt: now,
     };
 
@@ -590,6 +639,14 @@ export async function syncPapMaterialsFromPebiForTenant(tenantId: string): Promi
   return syncFamilyMaterialsFromPebiForTenant(tenantId, 'PAP');
 }
 
+export async function syncSleeveMaterialsFromPebiForTenant(tenantId: string): Promise<MaterialSyncResult> {
+  return syncFamilyMaterialsFromPebiForTenant(tenantId, 'SLEEVE');
+}
+
+export async function syncSpecialtyMaterialsFromPebiForTenant(tenantId: string): Promise<MaterialSyncResult> {
+  return syncFamilyMaterialsFromPebiForTenant(tenantId, 'SPECIALTY');
+}
+
 /**
  * Review queue for a PEBI-linked family (no DB writes).
  */
@@ -609,6 +666,15 @@ export async function getMaterialsMissingForTenant(
         pbGradeKey: row.pebiGradeKey,
         pbGrade: pbGradeFromKey(row.pebiGradeKey),
         reason: 'no_es_platform_master_key',
+      });
+      continue;
+    }
+
+    if (row.compositionUnparsedDescriptions?.length) {
+      missing.push({
+        pbGradeKey: row.pebiGradeKey,
+        pbGrade: pbGradeFromKey(row.pebiGradeKey),
+        reason: 'unparsed_composition',
       });
       continue;
     }
@@ -677,6 +743,14 @@ export async function getPaMaterialsMissingForTenant(tenantId: string): Promise<
 
 export async function getPapMaterialsMissingForTenant(tenantId: string): Promise<PebiMissingMaterialsResult> {
   return getMaterialsMissingForTenant(tenantId, 'PAP');
+}
+
+export async function getSleeveMaterialsMissingForTenant(tenantId: string): Promise<PebiMissingMaterialsResult> {
+  return getMaterialsMissingForTenant(tenantId, 'SLEEVE');
+}
+
+export async function getSpecialtyMaterialsMissingForTenant(tenantId: string): Promise<PebiMissingMaterialsResult> {
+  return getMaterialsMissingForTenant(tenantId, 'SPECIALTY');
 }
 
 export async function syncPetMaterialsForPlatformCompany(

@@ -1347,7 +1347,6 @@ export async function ensurePaSubstratesFromSeed(): Promise<{
 }
 
 const PAP_SUBSTRATE_KEYS = [
-  'paper-white-coated',
   'kraft-paper-brown',
   'kraft-paper-white',
   'mg-paper',
@@ -1357,7 +1356,7 @@ const PAP_SUBSTRATE_KEYS = [
   'twist-wrap-paper',
 ] as const;
 
-const RETIRED_PAP_SUBSTRATE_KEYS = ['c2s-paper'] as const;
+const RETIRED_PAP_SUBSTRATE_KEYS = ['c2s-paper', 'paper-white-coated'] as const;
 
 /** Idempotent — upserts PAP/PAPER substrates from seed JSON (Phase 4 Family 7). */
 export async function ensurePapSubstratesFromSeed(): Promise<{
@@ -1419,6 +1418,144 @@ export async function ensurePapSubstratesFromSeed(): Promise<{
   }
   if (pruned > 0) {
     log.info({ pruned }, 'Stale PAPER substrate rows removed from tenant libraries');
+  }
+
+  return { upserted: inserted + updated + retired, retired, pruned };
+}
+
+const SLEEVE_SUBSTRATE_KEYS = [
+  'pvc-shrink-normal-shrink-blown',
+  'pvc-shrink-high-shrink-cast',
+  'pet-shrink',
+  'c-pet-shrink',
+] as const;
+
+/** Idempotent — upserts SLEEVE substrates from seed JSON (Phase 4 Family 8). */
+export async function ensureSleeveSubstratesFromSeed(): Promise<{
+  upserted: number;
+  retired: number;
+  pruned: number;
+}> {
+  const db = getDatabase();
+  const seed = loadSeedMaterialsFromJson().filter(
+    (m) => m.type === 'substrate' && (SLEEVE_SUBSTRATE_KEYS as readonly string[]).includes(m.key)
+  );
+  const existing = await db.select().from(schema.platformMasterMaterials);
+  const byKey = new Map(existing.map((r) => [r.key, r]));
+
+  let inserted = 0;
+  let updated = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const m = seed[i]!;
+    const values = masterMaterialInputToDbValues({ ...m, sortOrder: 240 + i });
+    const match = byKey.get(m.key);
+    if (match) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set(values)
+        .where(eq(schema.platformMasterMaterials.id, match.id));
+      updated++;
+    } else {
+      await db.insert(schema.platformMasterMaterials).values(values);
+      inserted++;
+    }
+  }
+
+  const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);
+  let pruned = 0;
+
+  if (inserted > 0 || updated > 0) {
+    await incrementMasterDataVersion();
+    const materials = await listPlatformMasterMaterials();
+    for (const t of tenants) {
+      await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
+    }
+    log.info({ inserted, updated }, 'SLEEVE substrates updated and tenants synced');
+  }
+
+  for (const t of tenants) {
+    pruned += await pruneTenantSubstratesByPlatformKeyAllowlist(t.id, 'SLEEVE', SLEEVE_SUBSTRATE_KEYS);
+  }
+  if (pruned > 0) {
+    log.info({ pruned }, 'Stale SLEEVE substrate rows removed from tenant libraries');
+  }
+
+  return { upserted: inserted + updated, retired: 0, pruned };
+}
+
+const SPECIALTY_SUBSTRATE_KEYS = [
+  '7alu-10pe-30-gp-paper',
+  '7alu-10pe-35paper-12pe',
+  '7alu-10pe-40paper-12pe',
+  '6.3alu-10pe-50paper-12pe',
+] as const;
+
+const RETIRED_SPECIALTY_SUBSTRATE_KEYS = ['test', '7alu-10pe-50paper-12pe'] as const;
+
+/** Idempotent — upserts SPECIALTY (Alu/Pap laminate) substrates from seed JSON. */
+export async function ensureSpecialtySubstratesFromSeed(): Promise<{
+  upserted: number;
+  retired: number;
+  pruned: number;
+}> {
+  const db = getDatabase();
+  const seed = loadSeedMaterialsFromJson().filter(
+    (m) => m.type === 'substrate' && (SPECIALTY_SUBSTRATE_KEYS as readonly string[]).includes(m.key)
+  );
+  const existing = await db.select().from(schema.platformMasterMaterials);
+  const byKey = new Map(existing.map((r) => [r.key, r]));
+
+  let inserted = 0;
+  let updated = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const m = seed[i]!;
+    const values = masterMaterialInputToDbValues({ ...m, sortOrder: 250 + i });
+    const match = byKey.get(m.key);
+    if (match) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set(values)
+        .where(eq(schema.platformMasterMaterials.id, match.id));
+      updated++;
+    } else {
+      await db.insert(schema.platformMasterMaterials).values(values);
+      inserted++;
+    }
+  }
+
+  let retired = 0;
+  for (const key of RETIRED_SPECIALTY_SUBSTRATE_KEYS) {
+    const row = byKey.get(key);
+    if (row?.active) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set({ active: false, updatedAt: new Date() })
+        .where(eq(schema.platformMasterMaterials.id, row.id));
+      retired++;
+    }
+  }
+
+  const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);
+  let pruned = 0;
+
+  if (inserted > 0 || updated > 0 || retired > 0) {
+    await incrementMasterDataVersion();
+    const materials = await listPlatformMasterMaterials();
+    for (const t of tenants) {
+      await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
+    }
+    log.info({ inserted, updated, retired }, 'SPECIALTY substrates updated and tenants synced');
+  }
+
+  for (const t of tenants) {
+    pruned += await pruneTenantSubstratesByPlatformKeyAllowlist(
+      t.id,
+      'SPECIALTY',
+      SPECIALTY_SUBSTRATE_KEYS
+    );
+  }
+  if (pruned > 0) {
+    log.info({ pruned }, 'Stale SPECIALTY substrate rows removed from tenant libraries');
   }
 
   return { upserted: inserted + updated + retired, retired, pruned };

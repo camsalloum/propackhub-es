@@ -1231,6 +1231,47 @@ Not every company subscribes to both PEBI and ES. **IP/FP (Interplast) is linked
 | PEBI-linked company (Phase 4) | PEBI MES — ES read-only for synced rows |
 | Custom tenant-only rows | Always editable in tenant Master Data (`is_tenant_only`) |
 
+### 2026-07-09 — SLEEVE PVC cast formula + SPECIALTY sync (Phase 4 steps 8–9)
+
+**SLEEVE (Family 8) — PVC High Shrink Cast pricing**
+- Was platform hold $2.50; now **formula:** `pvc-shrink-high-shrink-cast` = `pvc-shrink-normal-shrink-blown + $0.80`.
+- Implemented in **both** `pebi-es-sleeve-catalog.js` (`applySleeveFormulaFallbacks`) and `pebi-material-sync.ts` (`deriveSleevePvcCastFallbackPrice`).
+- Crosswalk: `priceFallbackUsd` in `pebi-es-sleeve-crosswalk.json`; removed from `PLATFORM_PRICE_HOLD_KEYS_BY_FAMILY`.
+- Live example: blow ~$1.42 → cast ~$2.22/kg. Interplast **4/4**.
+
+**SPECIALTY (Family 9) — Alu/Pap butter laminates**
+- **6** Oracle SKUs (`catlinedesc=Alu/Pap`, `itemgroup=Alu Foil Paper`).
+- **4** ES grades (not 3 — 80×1260 split out after owner review):
+
+| ES key | PB subgroup | SKUs |
+|--------|-------------|------|
+| `7alu-10pe-30-gp-paper` | 80 (60µ) | `fxxpdbfpprgl601060` |
+| `7alu-10pe-35paper-12pe` | 75 | 3× 75µ MAT/GLOS |
+| `7alu-10pe-40paper-12pe` | 80 (80µ) | `fxxpdbfpprgl801260` |
+| `6.3alu-10pe-50paper-12pe` | 95 | `fxxpdbfpprgl951260` |
+
+- **PB subgroups:** `seed-specialty-subgroups.js` → 75 / 80 / 95 item-level members (same pattern as PAP/ALU).
+- **Density:** `alu-pap-pe-composition.js` parses layer stack from platform key → `GSM Direct · {gsm} gsm nominal` hoover + effective density (Coated Paper-PE model).
+- **Retired:** ES seed `test` substrate; `ensureSpecialtySubstratesFromSeed` + `RETIRED_SPECIALTY_SUBSTRATE_KEYS`.
+- **ES sync:** `SPECIALTY` in `PEBI_SYNC_FAMILIES`; `sortSpecialtySubstrateRows`; review panel on SPECIALTY tab. Interplast **4/4** (~$4.70 / $4.32 / $3.20 / $3.11 per kg).
+- **Fix applied:** initial 3-grade crosswalk wrongly rolled 80×1260 + 95×1260 into one price — corrected to separate grades.
+
+**Artifacts (PEBI):**
+- `fixtures/pebi-es-specialty-crosswalk.json`
+- `services/pebi-es-specialty-catalog.js`
+- `scripts/seed-specialty-subgroups.js`
+- `utils/alu-pap-pe-composition.js` (+ `.test.js`)
+- `routes/integration/es.js` — `family=SPECIALTY`
+- `src/utils/substrateMapping.js` — `Alu Foil Paper` cat_desc + all 6 descriptions
+
+**Artifacts (ES):**
+- `pebi-material-sync.ts` — SPECIALTY builder + sync
+- `platform-master-data.ts` — `ensureSpecialtySubstratesFromSeed` (4 keys)
+- `master-materials-seed.json` — 4 SPECIALTY rows
+- `substratePbTaxonomy.ts` — `SPECIALTY_PB_CROSSWALK`, `ES_FAMILY_TO_PB.SPECIALTY → Alu/Pap`
+
+**Next:** PE (in-house, last). Then Interplast `catalog_source=pebi` sign-off.
+
 ### 2026-07-09 — PAP sync wired (Phase 4 step 7 — code complete)
 
 - **17** Oracle PAP SKUs; crosswalk `pebi-es-pap-crosswalk.json` (7 ES PAPER keys).

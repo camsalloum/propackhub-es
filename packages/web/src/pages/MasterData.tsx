@@ -40,6 +40,8 @@ import {
   sortCppSubstrateRows,
   sortPaSubstrateRows,
   sortPapSubstrateRows,
+  sortSleeveSubstrateRows,
+  sortSpecialtySubstrateRows,
   sortPetSubstrateRows,
   SUBSTRATE_FAMILY_TABS,
 } from '../lib/substratePbTaxonomy';
@@ -701,6 +703,10 @@ const MasterData = () => {
         rows = sortPaSubstrateRows(rows);
       } else if (substrateFamilyTab === 'PAP') {
         rows = sortPapSubstrateRows(rows);
+      } else if (substrateFamilyTab === 'SLEEVE') {
+        rows = sortSleeveSubstrateRows(rows);
+      } else if (substrateFamilyTab === 'SPECIALTY') {
+        rows = sortSpecialtySubstrateRows(rows);
       }
     }
     return rows;

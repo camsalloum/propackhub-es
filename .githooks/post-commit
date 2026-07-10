@@ -1,13 +1,12 @@
 #!/bin/sh
-# graphify knowledge-graph auto-refresh (IDE-agnostic: fires on every commit).
-# Runs in the background so it never blocks the commit. Code-only, no API key.
+[ "${SKIP_GRAPHIFY_SYNC:-}" = "1" ] && exit 0
 APP="es"
 REPO="$(git rev-parse --show-toplevel)"
 SYNC="$REPO/../../scripts/sync-graphs.ps1"
 [ -f "$SYNC" ] || exit 0
-# Convert to a Windows absolute path without relying on cygpath (not always present).
-WSYNC="$(cd "$(dirname "$SYNC")" && pwd -W)/$(basename "$SYNC")"
+WSYNC="$(cd "$(dirname "$SYNC")" && pwd -W 2>/dev/null)/$(basename "$SYNC")"
+[ -f "$WSYNC" ] || WSYNC="$SYNC"
 if command -v powershell.exe >/dev/null 2>&1; then
-  powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "$WSYNC" -App "$APP" >/dev/null 2>&1 &
+  powershell.exe -NoProfile -Command "Start-Process -FilePath powershell.exe -ArgumentList @('-NoProfile','-WindowStyle','Hidden','-ExecutionPolicy','Bypass','-File','$WSYNC','-App','$APP') -WindowStyle Hidden" >/dev/null 2>&1 || true
 fi
 exit 0

@@ -68,3 +68,9 @@ packages/server/uploads/
 # UI UX Pro Max auto-update markers (local only)
 scripts/.ui-ux-pro-max-last-update
 scripts/.ui-ux-pro-max-cli-last-update
+# Generated knowledge graphs + duplicated IDE skill mirrors (local only)
+graphify-out/
+**/graphify-out/
+.codex/skills/
+.cursor/skills/
+.github/prompts/

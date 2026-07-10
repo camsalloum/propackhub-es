@@ -6,7 +6,7 @@ import { eq, and, desc, sql, isNull, asc, count as drizzleCount } from 'drizzle-
 import { type VisibilityProfile, derivePrintingWebClass, defaultOrderQuantityUnit } from '@es/engine';
 import { getEffectiveProfile, stripEstimateRow, stripCalculationResult } from '../utils/visibility';
 import { calculateAndPersistEstimate, buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
-import { loadTenantMaterialsByIds } from '../utils/material-map';
+import { loadTenantMaterialsForEstimate } from '../utils/material-map';
 import { getMasterDataVersion } from '../db/platform-master-data';
 import { buildLayerInsertValues, toMaterialLineageSource } from '../utils/layer-lineage';
 import {
@@ -159,6 +159,7 @@ const EstimateCreateSchema = z.object({
   solventRatio: z.coerce.number().positive().optional(),
   laminationRecipeOverrides: z.record(z.string(), LaminationRecipeSchema).optional(),
   cleaningSolventKgPerJob: z.coerce.number().nonnegative().optional(),
+  sleeveSeamingSolventGsm: z.coerce.number().nonnegative().optional(),
   inkPrintingProcess: z.enum(['flexo', 'rotogravure']).optional().nullable(),
   status: z.enum(['draft', 'sent', 'won', 'lost']).optional(),
   notes: z.string().optional(),
@@ -357,7 +358,7 @@ export async function createEstimateRoute(
       exchangeRateUsdToDisplay,
     });
 
-    const tenantMaterials = await loadTenantMaterialsByIds(tenantId, [
+    const tenantMaterials = await loadTenantMaterialsForEstimate(tenantId, [
       ...data.layers.map((l) => l.materialId),
       data.solventMaterialId,
     ]);
@@ -451,6 +452,8 @@ export async function createEstimateRoute(
         laminationRecipeOverrides: data.laminationRecipeOverrides ?? undefined,
         cleaningSolventKgPerJob:
           data.cleaningSolventKgPerJob != null ? String(data.cleaningSolventKgPerJob) : undefined,
+        sleeveSeamingSolventGsm:
+          data.sleeveSeamingSolventGsm != null ? String(data.sleeveSeamingSolventGsm) : undefined,
         inkPrintingProcess: data.inkPrintingProcess ?? undefined,
       })
       .returning()) as EstimateRow[];
@@ -645,7 +648,7 @@ async function getEstimateRoute(
     const profile = await getUserVisibilityProfile(db, requestUser.userId);
 
     const layerMaterialIds = layers.map((l) => l.materialId);
-    const tenantMaterials = await loadTenantMaterialsByIds(tenantId, [
+    const tenantMaterials = await loadTenantMaterialsForEstimate(tenantId, [
       ...layerMaterialIds,
       estimate.solventMaterialId,
     ]);
@@ -828,6 +831,9 @@ async function updateEstimateRoute(
     if (data.cleaningSolventKgPerJob !== undefined) {
       updates.cleaningSolventKgPerJob = String(data.cleaningSolventKgPerJob);
     }
+    if (data.sleeveSeamingSolventGsm !== undefined) {
+      updates.sleeveSeamingSolventGsm = String(data.sleeveSeamingSolventGsm);
+    }
     if (data.inkPrintingProcess !== undefined) {
       updates.inkPrintingProcess = data.inkPrintingProcess;
     }
@@ -929,7 +935,7 @@ async function updateEstimateRoute(
 
       // 2. Layers (delete + re-insert)
       if (data.layers !== undefined) {
-        const tenantMaterials = await loadTenantMaterialsByIds(tenantId, [
+        const tenantMaterials = await loadTenantMaterialsForEstimate(tenantId, [
           ...data.layers.map((l) => l.materialId),
           data.solventMaterialId ?? existing.solventMaterialId,
         ]);
@@ -1315,7 +1321,7 @@ async function requoteEstimateRoute(
       exchangeRateUsdToDisplay,
     });
 
-    const tenantMaterials = await loadTenantMaterialsByIds(
+    const tenantMaterials = await loadTenantMaterialsForEstimate(
       tenantId,
       sourceLayers.map((layer: LayerRow) => layer.materialId)
     );

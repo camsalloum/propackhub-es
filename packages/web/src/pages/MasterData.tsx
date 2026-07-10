@@ -28,6 +28,8 @@ import {
 import {
   buildTenantMaterialPayload,
   canEditTenantMaterialRow,
+  canEditInkPhysicalProps,
+  canEditAdhesivePhysicalProps,
   tenantMaterialToPlatformRow,
 } from '../features/master-data/tenantMaterialBridge';
 import { SubstrateFamilyNav } from '../features/master-data/SubstrateFamilyNav';
@@ -42,6 +44,7 @@ import {
   sortPapSubstrateRows,
   sortSleeveSubstrateRows,
   sortSpecialtySubstrateRows,
+  sortPeSubstrateRows,
   sortPetSubstrateRows,
   SUBSTRATE_FAMILY_TABS,
 } from '../lib/substratePbTaxonomy';
@@ -428,10 +431,25 @@ const MasterData = () => {
       ? user?.role === 'platform_admin'
       : canEditAdmin && isMaterialTab(tab);
 
-  const materialRowEditable = (row: PlatformMasterMaterialRow & { isTenantOnly?: boolean }) =>
+  const materialRowEditable = (row: PlatformMasterMaterialRow & { isTenantOnly?: boolean; priceSource?: string | null }) =>
     scope === 'platform'
       ? user?.role === 'platform_admin'
-      : canEditAdmin && canEditTenantMaterialRow(row, catalogAccess.canEditSyncedMaterials);
+      : canEditAdmin &&
+        canEditTenantMaterialRow(row, catalogAccess.canEditSyncedMaterials, catalogAccess.catalogSource);
+
+  const materialInkPhysicalEditable = (
+    row: PlatformMasterMaterialRow & { isTenantOnly?: boolean }
+  ) =>
+    scope === 'platform'
+      ? user?.role === 'platform_admin'
+      : canEditAdmin && canEditInkPhysicalProps(row, catalogAccess.canEditSyncedMaterials);
+
+  const materialAdhesivePhysicalEditable = (
+    row: PlatformMasterMaterialRow & { isTenantOnly?: boolean }
+  ) =>
+    scope === 'platform'
+      ? user?.role === 'platform_admin'
+      : canEditAdmin && canEditAdhesivePhysicalProps(row, catalogAccess.canEditSyncedMaterials);
 
   const materialMarketEditable = (row: PlatformMasterMaterialRow & { isTenantOnly?: boolean; externalSource?: string | null }) => {
     if (materialRowEditable(row)) return true;
@@ -707,6 +725,8 @@ const MasterData = () => {
         rows = sortSleeveSubstrateRows(rows);
       } else if (substrateFamilyTab === 'SPECIALTY') {
         rows = sortSpecialtySubstrateRows(rows);
+      } else if (substrateFamilyTab === 'PE') {
+        rows = sortPeSubstrateRows(rows);
       }
     }
     return rows;
@@ -772,8 +792,19 @@ const MasterData = () => {
         let created = 0;
         let updated = 0;
         for (const row of visibleMaterials) {
-          if (!row.id.startsWith('new-') && !materialRowEditable(row)) continue;
-          const payload = buildTenantMaterialPayload(row);
+          const canFullEdit = materialRowEditable(row);
+          const canPhysicalOnly =
+            !canFullEdit &&
+            !row.id.startsWith('new-') &&
+            ((tab === 'ink' && materialInkPhysicalEditable(row)) ||
+              (tab === 'adhesive' && materialAdhesivePhysicalEditable(row)));
+          if (!row.id.startsWith('new-') && !canFullEdit && !canPhysicalOnly) continue;
+          const payload = canPhysicalOnly
+            ? {
+                solidPercent: Math.round(row.solidPercent),
+                density: Number(row.density) || 0.9,
+              }
+            : buildTenantMaterialPayload(row);
           if (row.id.startsWith('new-')) {
             await apiClient.createMaterial(payload);
             created++;
@@ -1494,7 +1525,7 @@ const MasterData = () => {
                         disabled={!materialRowEditable(row)}
                         onChange={(e) => updateMaterialRow(row.id, { name: e.target.value })}
                         onDoubleClick={() => {
-                          if (tab === 'adhesive' && row.isSolventBased) setFormulaMaterialId(row.id);
+                          if (tab === 'adhesive' && row.laminationRecipe) setFormulaMaterialId(row.id);
                         }}
                       />
                     </td>
@@ -1512,9 +1543,19 @@ const MasterData = () => {
                         type="number"
                         step="0.01"
                         className="cell-input cell-num w-[72px]"
-                        value={row.density}
-                        disabled={!materialRowEditable(row)}
-                        onChange={(e) => updateMaterialRow(row.id, { density: Number(e.target.value) })}
+                        value={Number(row.density).toFixed(2)}
+                        disabled={
+                          tab === 'ink'
+                            ? !materialInkPhysicalEditable(row)
+                            : tab === 'adhesive'
+                              ? !materialAdhesivePhysicalEditable(row)
+                              : !materialRowEditable(row)
+                        }
+                        onChange={(e) =>
+                          updateMaterialRow(row.id, {
+                            density: Math.round(Number(e.target.value) * 100) / 100,
+                          })
+                        }
                       />
                     </td>
                     <td>
@@ -1522,7 +1563,13 @@ const MasterData = () => {
                         type="number"
                         className="cell-input cell-num w-[64px]"
                         value={row.solidPercent}
-                        disabled={!materialRowEditable(row)}
+                        disabled={
+                          tab === 'ink'
+                            ? !materialInkPhysicalEditable(row)
+                            : tab === 'adhesive'
+                              ? !materialAdhesivePhysicalEditable(row)
+                              : !materialRowEditable(row)
+                        }
                         onChange={(e) =>
                           updateMaterialRow(row.id, { solidPercent: Number(e.target.value) })
                         }
@@ -1566,7 +1613,13 @@ const MasterData = () => {
                       />
                     </td>
                     <td className="text-center">
-                      {tab === 'adhesive' && row.isSolventBased && canEdit && (
+                      {((tab === 'adhesive' && row.laminationRecipe) ||
+                        (tab === 'solvent' &&
+                          (row.key === 'solvent-sleeve-seaming' ||
+                            (row as { platformMasterKey?: string }).platformMasterKey ===
+                              'solvent-sleeve-seaming') &&
+                          row.laminationRecipe)) &&
+                        canEdit && (
                         <button
                           type="button"
                           className="text-xs text-accent-text hover:text-accent mr-1 transition-colors duration-micro ease-micro"

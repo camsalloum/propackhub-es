@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pouch Selector — ProPackHub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#EFF1EE; --paper:#FFFFFF; --ink:#1C2024; --muted:#787F7C; --line:#DBDCD7;
+    --accent:#E2562B; --teal:#136C66;
+    --front-fill:#136C660D; --gusset-fill:#E2562B14;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:'IBM Plex Sans',sans-serif; padding:0 0 60px; }
+  header { max-width:1180px; margin:0 auto; padding:34px 24px 0; }
+  .eyebrow { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:600; }
+  h1 { font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:28px; margin:8px 0 6px; }
+  header p { font-size:13px; color:var(--muted); max-width:680px; line-height:1.5; margin:0 0 18px; }
+  .laminate-strip { height:6px; border-radius:4px; overflow:hidden; display:flex; margin-bottom:24px; }
+  .laminate-strip span { flex:1; }
+  .laminate-strip span:nth-child(1){background:#136C66} .laminate-strip span:nth-child(2){background:#1C2024}
+  .laminate-strip span:nth-child(3){background:#E2562B} .laminate-strip span:nth-child(4){background:#DBDCD7}
+  .laminate-strip span:nth-child(5){background:#136C66} .laminate-strip span:nth-child(6){background:#E2562B}
+
+  /* ---- family chip selector (replaces hidden dropdown) ---- */
+  .family-bar { max-width:1180px; margin:0 auto 20px; padding:0 24px; display:flex; gap:8px; flex-wrap:wrap; }
+  .chip {
+    font-family:'IBM Plex Sans',sans-serif; font-size:12.5px; font-weight:500;
+    padding:9px 14px; border-radius:8px; border:1px solid var(--line); background:var(--paper);
+    color:var(--ink); cursor:pointer; transition:.12s; white-space:nowrap;
+  }
+  .chip:hover { border-color:var(--accent); }
+  .chip.active { background:var(--ink); border-color:var(--ink); color:#fff; }
+  .chip .count {
+    display:inline-block; margin-left:6px; font-family:'IBM Plex Mono',monospace; font-size:9.5px;
+    padding:1px 5px; border-radius:8px; background:rgba(255,255,255,0.15);
+  }
+  .chip:not(.active) .count { background:var(--bg); color:var(--muted); }
+
+  .layout { max-width:1180px; margin:0 auto; padding:0 24px; display:grid; grid-template-columns:360px 1fr; gap:20px; align-items:start; }
+  @media (max-width:880px){ .layout{ grid-template-columns:1fr; } }
+  .card { background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:18px 20px;
+    box-shadow:0 1px 2px rgba(20,20,15,.04), 0 10px 28px -16px rgba(20,20,15,.18); }
+  .card + .card { margin-top:18px; }
+  .card-head { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .card-head .tab { width:6px; height:16px; border-radius:3px; background:var(--accent); }
+  .card-head h3 { font-family:'Space Grotesk',sans-serif; font-size:12px; letter-spacing:.06em; text-transform:uppercase; margin:0; font-weight:600; }
+  .card-head .hint { margin-left:auto; font-size:9.5px; font-family:'IBM Plex Mono',monospace; color:var(--muted); }
+
+  select#variantSelect {
+    width:100%; padding:11px 12px; font-family:'IBM Plex Sans',sans-serif; font-size:13.5px;
+    border:1px solid var(--line); border-radius:7px; background:var(--paper); color:var(--ink);
+    appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0L5 6L10 0' fill='%23787F7C'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 14px center;
+  }
+  .family-desc { font-size:11px; color:var(--muted); margin-top:10px; line-height:1.5; padding:9px 10px; background:var(--bg); border-radius:7px; }
+  .family-desc b { color:var(--ink); }
+
+  /* ---- number-only dimension fields, no sliders ---- */
+  .field { margin:14px 0; }
+  .field label { display:flex; justify-content:space-between; align-items:baseline; font-size:12px; margin-bottom:6px; }
+  .field label .range { font-family:'IBM Plex Mono',monospace; color:var(--muted); font-size:10px; }
+  .field .input-wrap { position:relative; }
+  .field input[type=number] {
+    width:100%; padding:9px 34px 9px 10px; font-family:'IBM Plex Mono',monospace; font-size:13px;
+    border:1px solid var(--line); border-radius:7px; color:var(--ink);
+  }
+  .field input[type=number]:focus { outline:none; border-color:var(--accent); }
+  .field .unit-suffix {
+    position:absolute; right:10px; top:50%; transform:translateY(-50%);
+    font-size:10.5px; color:var(--muted); font-family:'IBM Plex Mono',monospace; pointer-events:none;
+  }
+  .field .help { font-size:10.5px; color:var(--muted); margin-top:5px; line-height:1.4; }
+
+  /* ---- corner style ---- */
+  .corner-style-row { display:flex; gap:8px; }
+  .cs-btn {
+    flex:1; padding:9px 10px; border:1px solid var(--line); border-radius:7px; background:var(--paper);
+    font-size:12.5px; font-family:'IBM Plex Sans',sans-serif; color:var(--ink); cursor:pointer; transition:.12s;
+  }
+  .cs-btn:hover { border-color:var(--accent); }
+  .cs-btn.active { background:var(--ink); border-color:var(--ink); color:#fff; }
+  .corner-na { font-size:11px; color:var(--accent); margin-top:9px; line-height:1.4; }
+
+  /* ---- accessories checklist — selection only, never a new pouch type ---- */
+  .acc-item {
+    display:flex; align-items:center; gap:10px; padding:10px 4px; border-top:1px solid var(--line); cursor:pointer;
+  }
+  .acc-item:first-child { border-top:none; }
+  .acc-item.disabled { cursor:not-allowed; opacity:.42; }
+  .acc-check {
+    width:20px; height:20px; border-radius:5px; border:1.5px solid var(--line); flex:none;
+    display:flex; align-items:center; justify-content:center; background:var(--paper); transition:.12s;
+  }
+  .acc-item.checked .acc-check { background:var(--accent); border-color:var(--accent); }
+  .acc-check svg { width:12px; height:12px; opacity:0; transition:.12s; }
+  .acc-item.checked .acc-check svg { opacity:1; }
+  .acc-label { font-size:12.5px; flex:1; }
+  .acc-na { font-size:9.5px; color:#B6BAB6; font-family:'IBM Plex Mono',monospace; }
+  .locate-btn {
+    display:none; flex:none; width:22px; height:22px; border-radius:6px; border:1px solid var(--line);
+    background:var(--paper); color:var(--muted); font-size:12px; cursor:pointer; align-items:center; justify-content:center;
+  }
+  .locate-btn:hover { color:var(--accent); border-color:var(--accent); }
+  .acc-item.checked .locate-btn { display:flex; }
+  .acc-sub { padding:0 0 10px 30px; display:none; }
+  .acc-item.checked + .acc-sub { display:block; }
+  .acc-field { margin-top:6px; }
+  .acc-sub select, .acc-sub input[type=number] {
+    width:100%; padding:7px 8px; font-size:11.5px; border:1px solid var(--line); border-radius:6px; margin-top:4px;
+  }
+  .acc-machine-note { font-size:10px; color:var(--muted); font-style:italic; margin-top:8px; line-height:1.4; }
+
+  .stage-card { padding:20px; }
+  .canvas-wrap { position:relative; background:radial-gradient(circle, var(--line) 1px, transparent 1px) 0 0/18px 18px, #FCFCFB;
+    border:1px solid var(--line); border-radius:8px; padding:10px; }
+  .canvas-wrap svg { width:100%; height:auto; display:block; }
+
+  /* ---- SVG interactivity ---- */
+  #diagram .hit-area { cursor:pointer; }
+  #diagram .seal-line, #diagram .fold-line, #diagram .solid-fold-line { transition:stroke .12s, stroke-width .12s; }
+  #diagram .hit-area:hover + .seal-line { stroke:var(--accent) !important; stroke-width:4 !important; }
+  #diagram .hit-area:hover + .fold-line { stroke:var(--accent) !important; stroke-width:3 !important; }
+  #diagram .hit-area:hover + .solid-fold-line { stroke:var(--accent) !important; }
+  #diagram .gusset-region.hoverable, #diagram .bottom-panel.hoverable { cursor:pointer; transition:fill .12s, stroke .12s; }
+  #diagram .gusset-region.hoverable:hover, #diagram .bottom-panel.hoverable:hover { fill:#E2562B2E !important; stroke:var(--accent) !important; }
+  #diagram .accessory-mark.hoverable { cursor:pointer; }
+  #diagram .accessory-mark.hoverable:hover { filter:drop-shadow(0 0 3px rgba(226,86,43,.65)); }
+  @keyframes pulseHighlight { 0%{ filter:drop-shadow(0 0 0 rgba(226,86,43,0)); } 35%{ filter:drop-shadow(0 0 7px rgba(226,86,43,.95)); } 100%{ filter:drop-shadow(0 0 0 rgba(226,86,43,0)); } }
+  #diagram .pulse-anim { animation:pulseHighlight 850ms ease-out 2; }
+
+  .svg-tooltip {
+    position:absolute; pointer-events:none; background:var(--ink); color:#fff; font-family:'IBM Plex Mono',monospace;
+    font-size:11px; padding:8px 10px; border-radius:6px; max-width:220px; line-height:1.5;
+    box-shadow:0 8px 24px rgba(0,0,0,.28); opacity:0; transform:translateY(4px); transition:opacity .1s, transform .1s;
+    z-index:30;
+  }
+  .svg-tooltip.show { opacity:1; transform:translateY(0); }
+  .svg-tooltip .tip-title { font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:11.5px; color:#fff; display:block; margin-bottom:4px; }
+  .svg-tooltip .tip-line { color:#C9CDC9; font-size:10.5px; }
+
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); gap:10px; margin-top:18px; }
+  .stat { background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+  .stat .label { font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:6px; }
+  .stat .value { font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:600; }
+
+  .legend { display:flex; gap:16px; flex-wrap:wrap; font-size:10.5px; color:var(--muted); margin-top:14px; }
+  .legend span { display:inline-flex; align-items:center; gap:6px; }
+  .sw { width:16px; height:0; border-top:3px solid; display:inline-block; border-radius:2px; }
+  .sw.dash { border-top-style:dashed; }
+
+  /* ---- validation ---- */
+  .warn-box, .info-box, .ok-box {
+    border-radius:7px; padding:9px 11px; font-size:11.5px; line-height:1.5; display:flex; gap:8px; margin-bottom:8px;
+  }
+  .warn-box { background:#FCEBE3; border:1px solid #E2562B4D; color:#7A2F14; }
+  .info-box { background:#E9F3F1; border:1px solid #136C664D; color:#0D4642; }
+  .ok-box { background:var(--bg); border:1px solid var(--line); color:var(--muted); }
+  .warn-box .ic, .info-box .ic, .ok-box .ic { flex:none; font-weight:700; }
+  .machine-notes { margin-top:4px; display:flex; flex-direction:column; gap:6px; }
+  .note-chip { font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--muted); background:var(--bg); border-radius:6px; padding:7px 9px; }
+  .validation-subhead { font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:14px 0 8px; }
+  .validation-subhead:first-child { margin-top:0; }
+
+  /* ---- manufacturing summary ---- */
+  .mfg-summary .row { display:flex; justify-content:space-between; gap:14px; padding:8px 0; border-top:1px solid var(--line); font-size:12px; }
+  .mfg-summary .row:first-child { border-top:none; }
+  .mfg-summary .row .k { color:var(--muted); flex:none; }
+  .mfg-summary .row .v { font-family:'IBM Plex Mono',monospace; text-align:right; }
+  .mfg-summary .acc-tags { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+  .mfg-summary .acc-tag { font-family:'IBM Plex Mono',monospace; font-size:10px; background:var(--bg); border-radius:5px; padding:3px 7px; }
+  .mfg-summary .none { color:var(--muted); font-style:italic; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">ProPackHub · costing reference</div>
+  <h1>Pouch Selector</h1>
+  <p>Pick a type, pick a variant, enter dimensions. Add accessories from the checklist — they mark themselves on the diagram, they never create a new pouch type. Hover the diagram for seal/fold detail, click a checked accessory's locate icon to find it on the drawing.</p>
+  <div class="laminate-strip"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+</header>
+
+<div class="family-bar" id="familyBar"></div>
+
+<div class="layout">
+  <div class="controls">
+    <div class="card">
+      <div class="card-head"><span class="tab"></span><h3>Variant</h3></div>
+      <select id="variantSelect"></select>
+      <div class="family-desc" id="familyDesc"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="tab"></span><h3>Dimensions</h3></div>
+      <div id="dimFields"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="tab"></span><h3>Corner Style</h3><span class="hint">visual + tooling</span></div>
+      <div class="corner-style-row" id="cornerStyleRow">
+        <button type="button" class="cs-btn active" data-corner="Square">Square</button>
+        <button type="button" class="cs-btn" data-corner="Rounded">Rounded</button>
+      </div>
+      <div class="field" id="cornerRadiusField" style="display:none;">
+        <label>Corner radius (R) <span class="range">0–25mm</span></label>
+        <div class="input-wrap">
+          <input type="number" id="cornerRadiusInput" min="0" max="25" value="6">
+          <span class="unit-suffix">mm</span>
+        </div>
+        <div class="help">Visualization + tooling reference only — never changes flat-area, web-count, or the family/variant classification.</div>
+      </div>
+      <div class="corner-na" id="cornerNaNote" style="display:none;">Not applicable to oblique-cut profiles — the angled trim already defines the corner geometry.</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="tab"></span><h3>Accessories</h3></div>
+      <div id="accFields"></div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="card stage-card">
+      <div class="card-head"><span class="tab"></span><h3>Live Diagram</h3></div>
+      <div class="canvas-wrap"><svg id="diagram" viewBox="0 0 320 380" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="legend">
+        <span><span class="sw dash" style="border-color:#9aa19e"></span>seal</span>
+        <span><span class="sw dash" style="border-color:#E2562B"></span>primary seal</span>
+        <span><span class="sw dash" style="border-color:#136C66"></span>fold/back-seam</span>
+        <span><span class="sw" style="border-color:#1C2024"></span>solid fold (no seal)</span>
+      </div>
+      <div class="stats" id="statsRow"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="tab"></span><h3>Validation &amp; Machine Notes</h3></div>
+      <div id="validationList"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><span class="tab"></span><h3>Manufacturing Summary</h3><span class="hint">informational · no costing</span></div>
+      <div id="mfgSummary" class="mfg-summary"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// Classification data — Family / Variant axes are unchanged from the
+// reference (calcFlatArea, dims, separateBottomWeb, webCount are untouched).
+// ---------------------------------------------------------------------------
+
+const FAMILIES = {
+  ThreeSideSeal: {
+    label: 'Three-Side-Seal',
+    desc: 'Two separate webs, sealed on 3 sides, top open for fill.',
+    variants: {
+      Flat: { label:'Flat (open-top fill)', dims:[
+        { key:'width',  label:'Width (W)',  def:150, min:75,  max:600 },
+        { key:'height', label:'Height (L)', def:200, min:60,  max:500 },
+      ]},
+      Standing: { label:'Standing (bottom gusset)', separateBottomWeb:true, dims:[
+        { key:'width',  label:'Width (W)',  def:110, min:60,  max:250 },
+        { key:'height', label:'Height (L)', def:220, min:120, max:540 },
+        { key:'gusset', label:'Bottom gusset depth (G)', def:45, min:20, max:70, help:'Carved from base of L.' },
+      ]},
+    },
+  },
+  CenterFoldSeal: {
+    label: 'Center-Fold-Seal (Quad-Seal)',
+    desc: 'One web folded from both edges to a center back seam. Quad-seal look from a single web, not two.',
+    variants: {
+      Flat: { label:'Flat — Quad-Seal (no gusset)', dims:[
+        { key:'width',  label:'Width (W)',  def:140, min:35, max:350 },
+        { key:'height', label:'Height (L)', def:180, min:60, max:500 },
+        { key:'bottomSealWidth', label:'Bottom seal width (S1)', def:12, min:5, max:50 },
+      ]},
+      SideGusset: { label:'Side Gusset (1 web)', dims:[
+        { key:'width',  label:'Width (W)',  def:150, min:55, max:350 },
+        { key:'height', label:'Height (L)', def:200, min:60, max:500 },
+        { key:'gusset', label:'Side gusset fold width (G)', def:35, min:10, max:80 },
+        { key:'bottomSealWidth', label:'Bottom seal width (S1)', def:12, min:5, max:50 },
+      ]},
+      Standing: { label:'Standing (bottom gusset)', dims:[
+        { key:'width',  label:'Width (W)',  def:130, min:60,  max:250 },
+        { key:'height', label:'Height (L)', def:200, min:120, max:270 },
+        { key:'gusset', label:'Bottom gusset depth (G)', def:40, min:20, max:70 },
+      ]},
+    },
+  },
+  HalfFoldFusion: {
+    label: 'Half-Fold-Fusion',
+    desc: 'One web V-folded in half; the fold is one full side. Standing variant can take a separately printed bottom web.',
+    variants: {
+      Flat: { label:'Flat + Zipper (no gusset)', dims:[
+        { key:'width',  label:'Width (W)',  def:150, min:60,  max:450 },
+        { key:'height', label:'Height (L)', def:280, min:200, max:600 },
+      ]},
+      Standing: { label:'Standing (bottom gusset)', separateBottomWeb:true, dims:[
+        { key:'width',  label:'Width (W)',  def:150, min:60,  max:450 },
+        { key:'height', label:'Height (L)', def:300, min:200, max:600, help:'Effective max is 600mm minus G.' },
+        { key:'gusset', label:'Bottom gusset depth (G)', def:55, min:25, max:100 },
+      ]},
+    },
+  },
+  SideWeld: {
+    label: 'Side-Weld',
+    desc: 'Flat or tube film, heat-sealed and cut, no fold shaping. Lowest cost route.',
+    variants: {
+      Flat: { label:'Flat', dims:[
+        { key:'width',  label:'Width (W)',  def:180, min:70,  max:500 },
+        { key:'height', label:'Height (L)', def:220, min:100, max:400 },
+      ]},
+      SideGusset: { label:'Side Gusset', dims:[
+        { key:'width',  label:'Width (W)',  def:180, min:70,  max:500 },
+        { key:'height', label:'Height (L)', def:220, min:100, max:400, help:'Effective max is 400mm minus G.' },
+        { key:'gusset', label:'Gusset depth (G)', def:45, min:30, max:70 },
+      ]},
+    },
+  },
+  ObliqueSideWeld: {
+    label: 'Oblique-Side-Weld',
+    desc: 'Angled seal-and-cut producing trapezoid/triangle profiles. Produce, flowers, sandwiches.',
+    variants: {
+      Trapezoid: { label:'Trapezoid', dims:[
+        { key:'width',  label:'Top width (W)', def:450, min:300, max:700 },
+        { key:'height', label:'Height (L)',     def:400, min:200, max:650 },
+        { key:'cutAngle', label:'Cut angle (deg)', def:10, min:0, max:20 },
+      ]},
+      Triangle: { label:'Triangle', dims:[
+        { key:'width',  label:'Base width (W)', def:450, min:300, max:700 },
+        { key:'height', label:'Height (L)',      def:400, min:200, max:650 },
+      ]},
+    },
+  },
+  FlatBottomBox: {
+    label: 'Flat-Bottom Box',
+    desc: 'Front + back + a separate flat bottom insert panel. Most complex forming, highest panel count.',
+    variants: {
+      Standing: { label:'Standing (flat bottom)', separateBottomWeb:true, dims:[
+        { key:'width',  label:'Width (W)',  def:130, min:90,  max:194 },
+        { key:'depth',  label:'Bottom depth (D)', def:90, min:74, max:114 },
+        { key:'height', label:'Height (H)', def:280, min:200, max:600 },
+      ]},
+    },
+  },
+};
+
+// Relative cost/complexity per family — mirrors the reference doc's
+// Section 2 summary table verbatim. Informational only, no cost figures.
+const FAMILY_COMPLEXITY = {
+  ThreeSideSeal:    'Moderate',
+  CenterFoldSeal:   'Moderate-low (film-efficient)',
+  HalfFoldFusion:   'Low-moderate',
+  SideWeld:         'Lowest cost, lowest complexity',
+  ObliqueSideWeld:  'Low (niche shapes)',
+  FlatBottomBox:    'Highest — most complex forming',
+};
+
+// ---------------------------------------------------------------------------
+// Accessories — optional add-ons layered onto a Family + Variant.
+// Never their own pouch type. Expanded per refinement notes:
+//  - Zipper: + zip width, optional easy-open flange
+//  - Spout: position now Left Corner / Right Corner / Center
+//  - Tear Notch / Laser Score / Easy Peel are independent accessories
+//  - Euro Slot generalized to Hanging Hole with shape options
+//  - Window generalized to Rectangle / Oval / Circle / Custom Shape
+// ---------------------------------------------------------------------------
+
+const ACCESSORIES = {
+  Zipper: {
+    label:'Zipper / Reclosable Seal',
+    validOn:['ThreeSideSeal','CenterFoldSeal','HalfFoldFusion'],
+    machineNote:'Requires zipper insertion station; can shorten max usable length on the same machine.',
+    fields:[
+      { key:'positionFromTop', label:'Position from top (mm)', type:'number', def:40 },
+      { key:'zipType', label:'Type', type:'select', options:['Push-Pull','Slider'], def:'Push-Pull' },
+      { key:'zipWidth', label:'Zip width (mm)', type:'number', def:9 },
+      { key:'easyOpenFlange', label:'Easy-open flange', type:'select', options:['None','Add flange'], def:'None' },
+    ],
+  },
+  Spout: {
+    label:'Spout + Cap',
+    validOn:['CenterFoldSeal','HalfFoldFusion','FlatBottomBox'],
+    machineNote:'Requires spout-fitment station + cycle-time penalty.',
+    fields:[
+      { key:'neckDiameter', label:'Neck diameter', type:'select', options:['6mm','8.6mm','10mm'], def:'8.6mm' },
+      { key:'position', label:'Position', type:'select', options:['Left Corner','Right Corner','Center'], def:'Right Corner' },
+    ],
+  },
+  DegassingValve: {
+    label:'Degassing Valve',
+    validOn:['HalfFoldFusion','FlatBottomBox'],
+    machineNote:'Requires valve applicator (die-cut + placement, mainly coffee).',
+    fields:[
+      { key:'diameter', label:'Diameter', type:'select', options:['8mm','10mm','12mm'], def:'10mm' },
+    ],
+  },
+  TearNotch: {
+    label:'Tear Notch',
+    validOn:['ThreeSideSeal','CenterFoldSeal','HalfFoldFusion','SideWeld','ObliqueSideWeld','FlatBottomBox'],
+    machineNote:'Near-zero material — small tooling/process cost.',
+    fields:[
+      { key:'position', label:'Position', type:'select', options:['Left','Right'], def:'Right' },
+    ],
+  },
+  LaserScore: {
+    label:'Laser Score (easy-tear line)',
+    validOn:['ThreeSideSeal','CenterFoldSeal','HalfFoldFusion','SideWeld','ObliqueSideWeld','FlatBottomBox'],
+    machineNote:'Requires laser-scoring station — partial-depth film cut, independent of Tear Notch.',
+    fields:[
+      { key:'offsetY', label:'Offset from top (mm)', type:'number', def:60 },
+    ],
+  },
+  EasyPeel: {
+    label:'Easy Peel Seal',
+    validOn:['ThreeSideSeal','CenterFoldSeal','HalfFoldFusion','SideWeld','ObliqueSideWeld','FlatBottomBox'],
+    machineNote:'Peelable sealant layer at the seal itself — no notch or score tooling required.',
+    fields:[
+      { key:'seal', label:'Peelable seal(s)', type:'select', options:['Top seal','All seals'], def:'Top seal' },
+    ],
+  },
+  HangingHole: {
+    label:'Hanging Hole',
+    validOn:['ThreeSideSeal','CenterFoldSeal','HalfFoldFusion'],
+    machineNote:'Die-cut step — negligible material, must sit within the header seal area.',
+    fields:[
+      { key:'shape', label:'Shape', type:'select', options:['Euro Slot','Round Hole','Oblong','Butterfly','Custom'], def:'Euro Slot' },
+      { key:'offsetY', label:'Offset from top (mm)', type:'number', def:8 },
+    ],
+  },
+  Window: {
+    label:'Window / Patch',
+    validOn:['ThreeSideSeal','CenterFoldSeal','HalfFoldFusion','FlatBottomBox'],
+    machineNote:'Separate small material + register-accuracy requirement (scrap-risk factor).',
+    fields:[
+      { key:'shape', label:'Shape', type:'select', options:['Rectangle','Oval','Circle','Custom Shape'], def:'Rectangle' },
+      { key:'width', label:'Width (mm)', type:'number', def:50 },
+      { key:'height', label:'Height (mm)', type:'number', def:50 },
+      { key:'offsetY', label:'Offset from top (mm)', type:'number', def:50 },
+    ],
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Flat-area calc — untouched. Same formulas as the reference doc.
+// ---------------------------------------------------------------------------
+
+function calcFlatArea(family, variant, d) {
+  switch (family) {
+    case 'ThreeSideSeal':
+      return variant==='Flat'
+        ? { flatWidth:d.width, flatHeight:d.height, webCount:2 }
+        : { flatWidth:d.width, flatHeight:d.height, webCount:2, extra:d.width*d.gusset };
+    case 'CenterFoldSeal':
+      if (variant==='Flat') return { flatWidth:d.width, flatHeight:d.height+d.bottomSealWidth, webCount:1 };
+      if (variant==='SideGusset') return { flatWidth:d.width+2*d.gusset, flatHeight:d.height+d.bottomSealWidth, webCount:1 };
+      return { flatWidth:d.width, flatHeight:d.height+d.gusset/2, webCount:1 };
+    case 'HalfFoldFusion':
+      return variant==='Flat'
+        ? { flatWidth:d.width*2, flatHeight:d.height, webCount:1 }
+        : { flatWidth:d.width*2, flatHeight:d.height-d.gusset, webCount:1, extra:d.width*d.gusset };
+    case 'SideWeld':
+      return variant==='Flat'
+        ? { flatWidth:d.width, flatHeight:d.height, webCount:1 }
+        : { flatWidth:d.width+2*d.gusset, flatHeight:d.height-d.gusset, webCount:1 };
+    case 'ObliqueSideWeld':
+      return { flatWidth:d.width, flatHeight:d.height, webCount:1 };
+    case 'FlatBottomBox':
+      return { flatWidth:d.width+d.depth, flatHeight:d.height, webCount:3, extra:d.width*d.depth };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Drawing helpers — each draw fn returns { svg, frontX0, frontX1, topY, bottomY, scale }
+// so accessory overlays / validation can be positioned onto the actual front panel.
+// ---------------------------------------------------------------------------
+
+const CANVAS_W = 320, MARGIN_TOP = 36, AVAIL_W = 250, AVAIL_H = 300;
+const CX = CANVAS_W/2;
+const INK='#1C2024', SEAL='#E2562B', FOLD='#136C66', GREY='#9aa19e';
+const FRONT_FILL='#136C660D', GUSSET_FILL='#E2562B14';
+const SEAL_MM = 5; // default seal allowance used for annotation lines/tooltips
+
+function el(tag, attrs){ return `<${tag} ${Object.entries(attrs).map(([k,v])=>`${k}="${v}"`).join(' ')}/>`; }
+function txt(x,y,size,anchor,content,extra=''){ return `<text x="${x}" y="${y}" font-size="${size}" text-anchor="${anchor}" font-family="IBM Plex Mono, monospace" fill="${INK}" ${extra}>${content}</text>`; }
+function fitScale(w,h){ return Math.min(AVAIL_W/w, AVAIL_H/h); }
+function sealPx(scale){ return Math.max(3, SEAL_MM*scale); }
+
+// invisible fat hit-line placed immediately before a thin visible line so the
+// hover target is generous even though the drawn stroke is 1.5–2.5px.
+function hitLine(x1,y1,x2,y2, color, width, dash, cls, tipTitle, tipLines){
+  const dashAttr = dash ? `stroke-dasharray="${dash}"` : '';
+  const hit = `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="transparent" stroke-width="12" class="hit-area" data-tip-title="${tipTitle}" data-tip-lines="${tipLines}"/>`;
+  const vis = `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${width}" ${dashAttr} stroke-linecap="${cls==='solid-fold-line'?'round':'butt'}" class="${cls}"/>`;
+  return hit+vis;
+}
+function hitRect(x,y,w,h){ return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="transparent"/>`; }
+
+// corner-style radius in px for the current diagram scale (0 unless Rounded)
+let cornerState = { style:'Square', radius:6 };
+function cornerRadiusPx(scale){
+  if (cornerState.style !== 'Rounded') return 0;
+  return Math.max(0, cornerState.radius||0) * scale;
+}
+
+// flat rectangular panel outline (all 4 corners), optionally rounded
+function panelPath(x0, y0, w, h, radius){
+  const bottomY = y0+h;
+  const r = Math.min(radius||0, w/2-0.5, h/2-0.5, 30);
+  if (r<=0.5) return `M${x0},${y0} L${x0+w},${y0} L${x0+w},${bottomY} L${x0},${bottomY} Z`;
+  return `M${x0+r},${y0} L${x0+w-r},${y0} A${r},${r} 0 0 1 ${x0+w},${y0+r} L${x0+w},${bottomY-r} A${r},${r} 0 0 1 ${x0+w-r},${bottomY} L${x0+r},${bottomY} A${r},${r} 0 0 1 ${x0},${bottomY-r} L${x0},${y0+r} A${r},${r} 0 0 1 ${x0+r},${y0} Z`;
+}
+
+// gusseted-bottom panel: rounded top corners, existing fold-curve silhouette at
+// the bottom left untouched (that curvature already represents the gusset fold,
+// a different geometric feature from corner-style tooling).
+function gussetPanelPath(x0, y0, w, h, g, radius){
+  const bottomY=y0+h, gStart=bottomY-g, bow=w*0.18;
+  const r = Math.min(radius||0, w/2-0.5, Math.max(0,(h-g)-0.5), 30);
+  let d;
+  if (r<=0.5) {
+    d = `M${x0},${y0} L${x0+w},${y0} L${x0+w},${gStart} Q${x0+w},${bottomY} ${x0+w/2+bow},${bottomY} L${x0+w/2-bow},${bottomY} Q${x0},${bottomY} ${x0},${gStart} Z`;
+  } else {
+    d = `M${x0+r},${y0} L${x0+w-r},${y0} A${r},${r} 0 0 1 ${x0+w},${y0+r} L${x0+w},${gStart} Q${x0+w},${bottomY} ${x0+w/2+bow},${bottomY} L${x0+w/2-bow},${bottomY} Q${x0},${bottomY} ${x0},${gStart} L${x0},${y0+r} A${r},${r} 0 0 1 ${x0+r},${y0} Z`;
+  }
+  return { d, gStart };
+}
+
+// ---------------------------------------------------------------------------
+// Draw functions — one per Family.Variant (same 12 keys as the reference impl)
+// ---------------------------------------------------------------------------
+
+function drawThreeSideFlat(d){
+  const scale = fitScale(d.width,d.height);
+  const w=d.width*scale, h=d.height*scale, x0=CX-w/2, y0=MARGIN_TOP, seal=sealPx(scale), r=cornerRadiusPx(scale);
+  let s='';
+  s+=`<path d="${panelPath(x0,y0,w,h,r)}" fill="${FRONT_FILL}" stroke="${INK}" stroke-width="2"/>`;
+  s+=hitLine(x0+seal,y0,x0+seal,y0+h, GREY,2,'4 3','seal-line','Side Seal (Left)',`Width: ${SEAL_MM}mm|Type: seal (2-web edge)`);
+  s+=hitLine(x0+w-seal,y0,x0+w-seal,y0+h, GREY,2,'4 3','seal-line','Side Seal (Right)',`Width: ${SEAL_MM}mm|Type: seal (2-web edge)`);
+  s+=hitLine(x0,y0+h-seal,x0+w,y0+h-seal, SEAL,2.5,'4 3','seal-line','Bottom Seal',`Width: ${SEAL_MM}mm|Type: primary seal`);
+  s+=txt(CX,y0-10,10.5,'middle','TOP · open for fill');
+  s+=txt(CX,y0+h+20,11,'middle',`W ${d.width}`);
+  s+=txt(x0-18,y0+h/2,11,'middle',`L ${d.height}`,`transform="rotate(-90 ${x0-18} ${y0+h/2})"`);
+  return { svg:s, frontX0:x0+seal, frontX1:x0+w-seal, topY:y0, bottomY:y0+h-seal, scale };
+}
+
+function drawThreeSideStanding(d){
+  const scale = fitScale(d.width,d.height);
+  const w=d.width*scale, h=d.height*scale, g=d.gusset*scale, x0=CX-w/2, y0=MARGIN_TOP, seal=sealPx(scale), r=cornerRadiusPx(scale);
+  const { d:pathD, gStart } = gussetPanelPath(x0,y0,w,h,g,r);
+  const bottomY = y0+h;
+  let s='';
+  s+=`<path d="${pathD}" fill="${FRONT_FILL}" stroke="${INK}" stroke-width="2"/>`;
+  s+=`<path d="M${x0},${gStart} L${x0+w},${gStart} L${x0+w},${bottomY-1} L${x0},${bottomY-1} Z" fill="${GUSSET_FILL}" class="bottom-panel hoverable" data-tip-title="Bottom Gusset Panel" data-tip-lines="Depth: ${d.gusset}mm (G)|Separate bottom web — its own laminate spec"/>`;
+  s+=hitLine(x0+seal,y0,x0+seal,gStart, GREY,2,'4 3','seal-line','Side Seal (Left)',`Width: ${SEAL_MM}mm|Type: seal (2-web edge)`);
+  s+=hitLine(x0+w-seal,y0,x0+w-seal,gStart, GREY,2,'4 3','seal-line','Side Seal (Right)',`Width: ${SEAL_MM}mm|Type: seal (2-web edge)`);
+  s+=hitLine(x0,y0+seal,x0+w,y0+seal, SEAL,2.5,'4 3','seal-line','Top Seal',`Width: ${SEAL_MM}mm|Type: primary seal`);
+  s+=hitLine(x0+w*0.15,gStart,x0+w*0.85,gStart, FOLD,2,'3 3','fold-line','Seam — Separate Bottom Web','Type: seam, not a plain fold|Separate bottom web joins here');
+  s+=txt(CX,y0-10,10.5,'middle','TOP SEAL');
+  s+=txt(CX,bottomY+20,11,'middle',`G ${d.gusset} · sep. web`);
+  s+=txt(x0-18,y0+h/2,11,'middle',`L ${d.height}`,`transform="rotate(-90 ${x0-18} ${y0+h/2})"`);
+  s+=txt(CX,y0+h*0.4,11,'middle',`W ${d.width}`);
+  return { svg:s, frontX0:x0+seal, frontX1:x0+w-seal, topY:y0, bottomY:gStart, scale };
+}
+
+function drawCenterFoldFlat(d){
+  const scale = fitScale(d.width,d.height);
+  const w=d.width*scale, h=d.height*scale, x0=CX-w/2, y0=MARGIN_TOP, seal=sealPx(scale), r=cornerRadiusPx(scale);
+  let s='';
+  s+=`<path d="${panelPath(x0,y0,w,h,r)}" fill="${FRONT_FILL}" stroke="${INK}" stroke-width="2"/>`;
+  s+=hitLine(x0+w/2,y0,x0+w/2,y0+h, FOLD,2,'3 3','fold-line','Back Seam (center)','Type: seal — 1 web, edges joined at center|Not a plain fold: film is sealed here');
+  s+=hitLine(x0,y0+seal,x0+w,y0+seal, SEAL,2.5,'4 3','seal-line','Top Seal',`Width: ${SEAL_MM}mm|Type: primary seal`);
+  s+=hitLine(x0,y0+h-seal,x0+w,y0+h-seal, SEAL,2.5,'4 3','seal-line','Bottom Seal',`Width: ${d.bottomSealWidth}mm (S1)|Type: primary seal`);
+  s+=txt(CX,y0-10,10.5,'middle','QUAD SEAL · 1 web');
+  s+=txt(CX,y0+h/2+3,8.5,'middle','center back-seam');
+  s+=txt(CX,y0+h+20,11,'middle',`W ${d.width}`);
+  s+=txt(x0-18,y0+h/2,11,'middle',`L ${d.height}`,`transform="rotate(-90 ${x0-18} ${y0+h/2})"`);
+  return { svg:s, frontX0:x0, frontX1:x0+w, topY:y0+seal, bottomY:y0+h-seal, scale };
+}
+
+function drawCenterFoldSideGusset(d){
+  const total=d.width+2*d.gusset, scale=fitScale(total,d.height);
+  const w=d.width*scale, h=d.height*scale, g=d.gusset*scale, totalPx=w+2*g, x0=CX-totalPx/2, y0=MARGIN_TOP, bottomY=y0+h, seal=sealPx(scale), r=cornerRadiusPx(scale);
+  let s='';
+  s+=el('rect',{x:x0,y:y0,width:g,height:h,fill:GUSSET_FILL,class:'gusset-region hoverable','data-tip-title':'Side Gusset Fold (Left)','data-tip-lines':`Fold width: ${d.gusset}mm (G)|1 web — folds inward, adds 2×G to flat width`});
+  s+=el('rect',{x:x0+g+w,y:y0,width:g,height:h,fill:GUSSET_FILL,class:'gusset-region hoverable','data-tip-title':'Side Gusset Fold (Right)','data-tip-lines':`Fold width: ${d.gusset}mm (G)|1 web — folds inward, adds 2×G to flat width`});
+  s+=el('rect',{x:x0+g,y:y0,width:w,height:h,fill:FRONT_FILL});
+  s+=hitLine(x0+g/2,y0,x0+g/2,bottomY, FOLD,1.5,'2 2','fold-line','Fold Line (Left Gusset)','Type: fold, no seal|Divides left gusset panel in half');
+  s+=hitLine(x0+g+w+g/2,y0,x0+g+w+g/2,bottomY, FOLD,1.5,'2 2','fold-line','Fold Line (Right Gusset)','Type: fold, no seal|Divides right gusset panel in half');
+  s+=hitLine(x0,y0+seal,x0+totalPx,y0+seal, SEAL,2.5,'4 3','seal-line','Top Seal',`Width: ${SEAL_MM}mm|Type: primary seal`);
+  s+=hitLine(x0,bottomY-seal,x0+totalPx,bottomY-seal, SEAL,2.5,'4 3','seal-line','Bottom Seal',`Width: ${d.bottomSealWidth}mm (S1)|Type: primary seal`);
+  s+=`<path d="${panelPath(x0,y0,totalPx,h,r)}" fill="none" stroke="${INK}" stroke-width="2"/>`;
+  s+=txt(CX,y0-10,10.5,'middle','1 web, folded both sides');
+  s+=txt(CX,bottomY+20,11,'middle',`W ${d.width} · G ${d.gusset}×2`);
+  s+=txt(x0-18,y0+h/2,11,'middle',`L ${d.height}`,`transform="rotate(-90 ${x0-18} ${y0+h/2})"`);
+  return { svg:s, frontX0:x0+g, frontX1:x0+g+w, topY:y0+seal, bottomY:bottomY-seal, scale };
+}
+
+function drawCenterFoldStanding(d){
+  const scale=fitScale(d.width,d.height);
+  const w=d.width*scale, h=d.height*scale, g=d.gusset*scale, x0=CX-w/2, y0=MARGIN_TOP, seal=sealPx(scale), r=cornerRadiusPx(scale);
+  const { d:pathD, gStart } = gussetPanelPath(x0,y0,w,h,g,r);
+  const bottomY = y0+h;
+  let s='';
+  s+=`<path d="${pathD}" fill="${FRONT_FILL}" stroke="${INK}" stroke-width="2"/>`;
+  s+=hitLine(x0+w/2,y0,x0+w/2,gStart, FOLD,1.5,'3 3','fold-line','Back Seam (center)','Type: seal — 1 web, edges joined at center|Not a plain fold: film is sealed here');
+  s+=hitLine(x0,y0+seal,x0+w,y0+seal, SEAL,2.5,'4 3','seal-line','Top Seal',`Width: ${SEAL_MM}mm|Type: primary seal`);
+  s+=hitLine(x0+w*0.15,gStart,x0+w*0.85,gStart, FOLD,1.5,'3 3','fold-line','Fold — Bottom Gusset','Type: fold, no seal|Same single web forms this gusset (no separate web)');
+  s+=txt(CX,y0-10,10.5,'middle','1 web · center seam + base');
+  s+=txt(CX,bottomY+20,11,'middle',`G ${d.gusset}`);
+  s+=txt(x0-18,y0+h/2,11,'middle',`L ${d.height}`,`transform="rotate(-90 ${x0-18} ${y0+h/2})"`);
+  s+=txt(CX,y0+h*0.4,11,'middle',`W ${d.width}`);
+  return { svg:s, frontX0:x0, frontX1:x0+w, topY:y0+seal, bottomY:gStart, scale };
+}
+
+function drawHalfFoldFlat(d){
+  const scale=fitScale(d.width,d.height);
+  const w=d.width*scale, h=d.height*scale, x0=CX-w/2, y0=MARGIN_TOP, seal=sealPx(scale), r=cornerRadiusPx(scale);
+  let s='';
+  s+=`<path d="${panelPath(x0,y0,w,h,r)}" fill="${FRONT_FILL}" stroke="${INK}" stroke-width="2"/>`;
+  s+=hitLine(x0,y0,x0,y0+h, INK,4,'','solid-fold-line','V-Fold (no seal)','Type: solid fold|Film is continuous here — this becomes one full side');
+  s+=hitLine(x0+w-seal,y0,x0+w-seal,y0+h, GREY,2,'4 3','seal-line','Side Seal (Right)',`Width: ${SEAL_MM}mm|Type: seal`);
+  s+=hitLine(x0,y0+seal,x0+w,y0+seal, SEAL,2.5,'4 3','seal-line','Top Seal',`Width: ${SEAL_MM}mm|Type: primary seal`);
+  s+=hitLine(x0,y0+h-seal,x0+w,y0+h-seal, SEAL,2.5,'4 3','seal-line','Bottom Seal',`Width: ${SEAL_MM}mm|Type: primary seal`);
+  s+=txt(x0-8,y0+h/2,8.5,'middle','FOLD',`transform="rotate(-90 ${x0-8} ${y0+h/2})"`);
+  s+=txt(CX,y0+h+20,11,'middle',`W ${d.width} · V-folded`);
+  s+=txt(x0-30,y0+h/2,11,'middle',`L ${d.height}`,`transform="rotate(-90 ${x0-30} ${y0+h/2})"`);
+  return { svg:s, frontX0:x0, frontX1:x0+w-seal, topY:y0+seal, bottomY:y0+h-seal, scale };
+}
+
+function drawHalfFoldStanding(d){
+  const scale=fitScale(d.width,d.height);
+  const w=d.width*scale, h=d.height*scale, g=d.gusset*scale, x0=CX-w/2, y0=MARGIN_TOP, seal=sealPx(scale), r=cornerRadiusPx(scale);
+  const { d:pathD, gStart } = gussetPanelPath(x0,y0,w,h,g,r);
+  const bottomY = y0+h;
+  let s='';
+  s+=`<path d="${pathD}" fill="${FRONT_FILL}" stroke="${INK}" stroke-width="2"/>`;
+  s+=`<path d="M${x0},${gStart} L${x0+w},${gStart} L${x0+w},${bottomY-1} L${x0},${bottomY-1} Z" fill="${GUSSET_FILL}" class="bottom-panel hoverable" data-tip-title="Bottom Gusset Panel" data-tip-lines="Depth: ${d.gusset}mm (G)|Named machine capability: independently printed bottom web"/>`;
+  s+=hitLine(x0,y0,x0,gStart, INK,4,'','solid-fold-line','V-Fold (no seal)','Type: solid fold|Film is continuous here — this becomes one full side');
+  s+=hitLine(x0+w-seal,y0,x0+w-seal,gStart, GREY,2,'4 3','seal-line','Side Seal (Right)',`Width: ${SEAL_MM}mm|Type: seal`);
+  s+=hitLine(x0,y0+seal,x0+w,y0+seal, SEAL,2.5,'4 3','seal-line','Top Seal',`Width: ${SEAL_MM}mm|Type: primary seal`);
+  s+=hitLine(x0+w*0.15,gStart,x0+w*0.85,gStart, FOLD,2,'3 3','fold-line','Seam — Separate Bottom Web','Type: seam, not a plain fold|Independently printed bottom web joins here');
+  s+=txt(CX,y0-10,10.5,'middle','V-fold + top seal');
+  s+=txt(CX,bottomY+20,11,'middle',`G ${d.gusset} · sep. printed web`);
+  s+=txt(x0-18,y0+h/2,11,'middle',`L ${d.height}`,`transform="rotate(-90 ${x0-18} ${y0+h/2})"`);
+  return { svg:s, frontX0:x0, frontX1:x0+w-seal, topY:y0+seal, bottomY:gStart, scale };
+}
+
+function drawSideWeldFlat(d){
+  const scale=fitScale(d.width,d.height);
+  const w=d.width*scale, h=d.height*scale, x0=CX-w/2, y0=MARGIN_TOP, seal=sealPx(scale), r=cornerRadiusPx(scale);
+  let s='';
+  s+=`<path d="${panelPath(x0,y0,w,h,r)}" fill="${FRONT_FILL}" stroke="${INK}" stroke-width="2"/>`;
+  s+=hitLine(x0+seal,y0,x0+seal,y0+h, SEAL,2.5,'4 3','seal-line','Side Weld (Left)',`Width: ${SEAL_MM}mm|Type: primary seal (heat-seal + cut)`);
+  s+=hitLine(x0+w-seal,y0,x0+w-seal,y0+h, SEAL,2.5,'4 3','seal-line','Side Weld (Right)',`Width: ${SEAL_MM}mm|Type: primary seal (heat-seal + cut)`);
+  s+=txt(CX,y0-10,10.5,'middle','TUBE/FLAT FILM · heat-seal + cut');
+  s+=txt(CX,y0+h+20,11,'middle',`W ${d.width}`);
+  s+=txt(x0-18,y0+h/2,11,'middle',`L ${d.height}`,`transform="rotate(-90 ${x0-18} ${y0+h/2})"`);
+  return { svg:s, frontX0:x0+seal, frontX1:x0+w-seal, topY:y0, bottomY:y0+h, scale };
+}
+
+function drawSideWeldGusset(d){
+  const total=d.width+2*d.gusset, scale=fitScale(total,d.height);
+  const w=d.width*scale, h=d.height*scale, g=d.gusset*scale, totalPx=w+2*g, x0=CX-totalPx/2, y0=MARGIN_TOP, seal=sealPx(scale), r=cornerRadiusPx(scale);
+  let s='';
+  s+=el('rect',{x:x0,y:y0,width:g,height:h,fill:GUSSET_FILL,class:'gusset-region hoverable','data-tip-title':'Fold-In Gusset (Left)','data-tip-lines':`Fold depth: ${d.gusset}mm (G)|1 web — folds inward, adds 2×G to flat width`});
+  s+=el('rect',{x:x0+g+w,y:y0,width:g,height:h,fill:GUSSET_FILL,class:'gusset-region hoverable','data-tip-title':'Fold-In Gusset (Right)','data-tip-lines':`Fold depth: ${d.gusset}mm (G)|1 web — folds inward, adds 2×G to flat width`});
+  s+=el('rect',{x:x0+g,y:y0,width:w,height:h,fill:FRONT_FILL});
+  s+=hitLine(x0+g/2,y0,x0+g/2,y0+h, FOLD,1.5,'2 2','fold-line','Fold Line (Left Gusset)','Type: fold, no seal|Divides left gusset panel in half');
+  s+=hitLine(x0+g+w+g/2,y0,x0+g+w+g/2,y0+h, FOLD,1.5,'2 2','fold-line','Fold Line (Right Gusset)','Type: fold, no seal|Divides right gusset panel in half');
+  s+=hitLine(x0+seal,y0,x0+seal,y0+h, SEAL,2.5,'4 3','seal-line','Side Weld (Left)',`Width: ${SEAL_MM}mm|Type: primary seal (heat-seal + cut)`);
+  s+=hitLine(x0+totalPx-seal,y0,x0+totalPx-seal,y0+h, SEAL,2.5,'4 3','seal-line','Side Weld (Right)',`Width: ${SEAL_MM}mm|Type: primary seal (heat-seal + cut)`);
+  s+=`<path d="${panelPath(x0,y0,totalPx,h,r)}" fill="none" stroke="${INK}" stroke-width="2"/>`;
+  s+=txt(CX,y0-10,10.5,'middle','Side-weld · gusset fold');
+  s+=txt(CX,y0+h+20,11,'middle',`W ${d.width} · G ${d.gusset}×2`);
+  s+=txt(x0-18,y0+h/2,11,'middle',`L ${d.height}`,`transform="rotate(-90 ${x0-18} ${y0+h/2})"`);
+  return { svg:s, frontX0:x0+g, frontX1:x0+g+w, topY:y0, bottomY:y0+h, scale };
+}
+
+function drawTrapezoid(d){
+  const scale=fitScale(d.width,d.height);
+  const w=d.width*scale, h=d.height*scale, x0=CX-w/2, y0=MARGIN_TOP;
+  const shrink = Math.min(w*0.35, (d.cutAngle/20)*w*0.35);
+  let s='';
+  s+=`<path d="M${x0},${y0} L${x0+w},${y0} L${x0+w-shrink},${y0+h} L${x0+shrink},${y0+h} Z" fill="${FRONT_FILL}" stroke="${INK}" stroke-width="2"/>`;
+  s+=hitLine(x0,y0,x0+shrink,y0+h, SEAL,2.5,'4 3','seal-line','Oblique Seal (Left)',`Cut angle: ${d.cutAngle}°|Type: angled seal + trim (scrap factor applied separately)`);
+  s+=hitLine(x0+w,y0,x0+w-shrink,y0+h, SEAL,2.5,'4 3','seal-line','Oblique Seal (Right)',`Cut angle: ${d.cutAngle}°|Type: angled seal + trim (scrap factor applied separately)`);
+  s+=txt(CX,y0-10,10.5,'middle',`Oblique cut · ${d.cutAngle} deg`);
+  s+=txt(CX,y0+h+20,11,'middle',`W(top) ${d.width}`);
+  s+=txt(x0-18,y0+h/2,11,'middle',`L ${d.height}`,`transform="rotate(-90 ${x0-18} ${y0+h/2})"`);
+  return { svg:s, frontX0:x0+shrink*0.5, frontX1:x0+w-shrink*0.5, topY:y0, bottomY:y0+h, scale };
+}
+
+function drawTriangle(d){
+  const scale=fitScale(d.width,d.height);
+  const w=d.width*scale, h=d.height*scale, x0=CX-w/2, y0=MARGIN_TOP;
+  let s='';
+  s+=`<path d="M${x0},${y0+h} L${x0+w},${y0+h} L${CX},${y0} Z" fill="${FRONT_FILL}" stroke="${INK}" stroke-width="2"/>`;
+  s+=hitLine(x0,y0+h,CX,y0, SEAL,2.5,'4 3','seal-line','Oblique Seal (Left)','Type: angled seal + trim (scrap factor applied separately)');
+  s+=hitLine(x0+w,y0+h,CX,y0, SEAL,2.5,'4 3','seal-line','Oblique Seal (Right)','Type: angled seal + trim (scrap factor applied separately)');
+  s+=txt(CX,y0-10,10.5,'middle','Extreme oblique cut');
+  s+=txt(CX,y0+h+20,11,'middle',`W(base) ${d.width}`);
+  s+=txt(x0-18,y0+h/2,11,'middle',`L ${d.height}`,`transform="rotate(-90 ${x0-18} ${y0+h/2})"`);
+  return { svg:s, frontX0:x0+w*0.25, frontX1:x0+w*0.75, topY:y0+h*0.35, bottomY:y0+h, scale };
+}
+
+function drawFlatBottomBox(d){
+  const total=d.width+d.depth, totalH=d.height+d.depth*0.7, scale=fitScale(total,totalH);
+  const w=d.width*scale, h=d.height*scale, dep=d.depth*scale, x0=CX-w/2-dep*0.3, y0=MARGIN_TOP, bottomY=y0+h, seal=sealPx(scale), r=cornerRadiusPx(scale);
+  let s='';
+  s+=el('rect',{x:x0,y:y0,width:dep*0.6,height:h,fill:GUSSET_FILL,class:'gusset-region hoverable','data-tip-title':'Side/Bottom Wrap Allowance (D)','data-tip-lines':`Depth: ${d.depth}mm (D)|Contributes once to flat width (W + D)`});
+  s+=`<path d="${panelPath(x0+dep*0.6,y0,w,h,r)}" fill="${FRONT_FILL}" stroke="${INK}" stroke-width="2"/>`;
+  s+=`<path d="${panelPath(x0+dep*0.6,bottomY,w,dep*0.7,r)}" fill="${GUSSET_FILL}" stroke="${FOLD}" stroke-width="1.5" stroke-dasharray="3 2" class="bottom-panel hoverable" data-tip-title="Separate Bottom Panel" data-tip-lines="Bottom depth: ${d.depth}mm (D)|Independently specced/printed laminate — highest panel count of any family"/>`;
+  s+=hitLine(x0,y0+seal,x0+dep*0.6+w,y0+seal, SEAL,2.5,'4 3','seal-line','Top Seal',`Width: ${SEAL_MM}mm|Type: primary seal`);
+  s+=txt(CX,y0-10,10.5,'middle','3+ panels · flat base');
+  s+=txt(CX,bottomY+dep*0.7+18,11,'middle',`D ${d.depth} · sep. printed web`);
+  s+=txt(CX,y0+h*0.5,11,'middle',`W ${d.width}`);
+  s+=txt(x0-14,y0+h/2,11,'middle',`H ${d.height}`,`transform="rotate(-90 ${x0-14} ${y0+h/2})"`);
+  return { svg:s, frontX0:x0+dep*0.6, frontX1:x0+dep*0.6+w, topY:y0+seal, bottomY:bottomY, scale };
+}
+
+const DRAW_FNS = {
+  'ThreeSideSeal.Flat': drawThreeSideFlat,
+  'ThreeSideSeal.Standing': drawThreeSideStanding,
+  'CenterFoldSeal.Flat': drawCenterFoldFlat,
+  'CenterFoldSeal.SideGusset': drawCenterFoldSideGusset,
+  'CenterFoldSeal.Standing': drawCenterFoldStanding,
+  'HalfFoldFusion.Flat': drawHalfFoldFlat,
+  'HalfFoldFusion.Standing': drawHalfFoldStanding,
+  'SideWeld.Flat': drawSideWeldFlat,
+  'SideWeld.SideGusset': drawSideWeldGusset,
+  'ObliqueSideWeld.Trapezoid': drawTrapezoid,
+  'ObliqueSideWeld.Triangle': drawTriangle,
+  'FlatBottomBox.Standing': drawFlatBottomBox,
+};
+
+// ---------------------------------------------------------------------------
+// Accessory overlay — draws a marker on the diagram; never a new pouch type.
+// Each accessory is wrapped in a single <g data-acc-key="..."> so hover and
+// the checklist's "locate" button can target it as one unit.
+// ---------------------------------------------------------------------------
+
+function overlayAccessories(layout, accState) {
+  let s = '';
+  const { frontX0:fx0, frontX1:fx1, topY, bottomY, scale } = layout;
+  const midX = (fx0+fx1)/2;
+  const mm = v => (v||0)*scale;
+
+  if (accState.Zipper?.checked) {
+    const f = accState.Zipper.fields;
+    const y = topY + mm(f.positionFromTop);
+    const zw = Math.max(3, mm(f.zipWidth||9));
+    s += `<g class="accessory-mark hoverable" data-acc-key="Zipper" data-tip-title="Zipper — ${f.zipType}" data-tip-lines="Position: ${f.positionFromTop}mm from top|Width: ${f.zipWidth||9}mm|Flange: ${f.easyOpenFlange}">`;
+    s += el('rect', {x:fx0, y:y-zw/2, width:fx1-fx0, height:zw, fill:'#7AA34A22', stroke:'#7AA34A', 'stroke-width':1.5});
+    s += el('line', {x1:fx0, y1:y, x2:fx1, y2:y, stroke:'#5C8236', 'stroke-width':1, 'stroke-dasharray':'2 2'});
+    if (f.easyOpenFlange === 'Add flange') {
+      s += el('rect', {x:fx1-2, y:y-zw/2-4, width:10, height:zw+8, fill:'#fff', stroke:'#7AA34A', 'stroke-width':1.5, rx:2});
+    }
+    s += txt(fx1+8, y+3, 8.5, 'start', 'ZIP');
+    s += '</g>';
+  }
+
+  if (accState.Spout?.checked) {
+    const f = accState.Spout.fields;
+    const pos = f.position;
+    const cx = pos==='Center' ? midX : (pos==='Right Corner' ? fx1-14 : fx0+14);
+    s += `<g class="accessory-mark hoverable" data-acc-key="Spout" data-tip-title="Spout + Cap" data-tip-lines="Neck: ${f.neckDiameter}|Position: ${pos}">`;
+    s += `<path d="M${cx-9},${topY+3} L${cx-4},${topY-5} L${cx+4},${topY-5} L${cx+9},${topY+3} Z" fill="#fff" stroke="${INK}" stroke-width="1.5"/>`;
+    s += el('circle', {cx:cx, cy:topY+9, r:6, fill:'#fff', stroke:INK, 'stroke-width':2});
+    s += txt(cx, topY-9, 8, 'middle', 'SPOUT');
+    s += '</g>';
+  }
+
+  if (accState.DegassingValve?.checked) {
+    const f = accState.DegassingValve.fields;
+    const vy = (topY+bottomY)/2;
+    s += `<g class="accessory-mark hoverable" data-acc-key="DegassingValve" data-tip-title="Degassing Valve" data-tip-lines="Diameter: ${f.diameter}|Use: one-way pressure release (mainly coffee)">`;
+    s += el('circle', {cx:midX, cy:vy, r:7, fill:'#fff', stroke:'#7A4A1F', 'stroke-width':2});
+    s += `<path d="M${midX-3},${vy+2} L${midX},${vy-3} L${midX+3},${vy+2} Z" fill="#7A4A1F"/>`;
+    s += el('circle', {cx:midX, cy:vy, r:1.6, fill:'#7A4A1F'});
+    s += txt(midX, vy+18, 8.5, 'middle', 'VALVE');
+    s += '</g>';
+  }
+
+  if (accState.TearNotch?.checked) {
+    const f = accState.TearNotch.fields;
+    const side = f.position;
+    const nx = side==='Left' ? fx0 : fx1;
+    const dir = side==='Left' ? 1 : -1;
+    s += `<g class="accessory-mark hoverable" data-acc-key="TearNotch" data-tip-title="Tear Notch" data-tip-lines="Position: ${side}|Material impact: near-zero">`;
+    s += `<polygon points="${nx},${topY+14} ${nx+dir*7},${topY+19} ${nx},${topY+24}" fill="${INK}"/>`;
+    s += '</g>';
+  }
+
+  if (accState.LaserScore?.checked) {
+    const f = accState.LaserScore.fields;
+    const y = topY + mm(f.offsetY);
+    s += `<g class="accessory-mark hoverable" data-acc-key="LaserScore" data-tip-title="Laser Score" data-tip-lines="Offset from top: ${f.offsetY}mm|Function: partial-depth easy-tear line">`;
+    s += hitRect(fx0, y-6, fx1-fx0, 12);
+    s += el('line', {x1:fx0, y1:y, x2:fx1, y2:y, stroke:'#B8511F', 'stroke-width':1.2, 'stroke-dasharray':'1 2'});
+    s += txt(fx1+8, y+3, 8, 'start', 'SCORE');
+    s += '</g>';
+  }
+
+  if (accState.EasyPeel?.checked) {
+    const f = accState.EasyPeel.fields;
+    s += `<g class="accessory-mark hoverable" data-acc-key="EasyPeel" data-tip-title="Easy Peel Seal" data-tip-lines="Seal(s): ${f.seal}|Function: peelable sealant layer (no notch needed)">`;
+    s += hitRect(fx0, topY-4, fx1-fx0, 8);
+    s += el('line', {x1:fx0, y1:topY, x2:fx1, y2:topY, stroke:'#3E7FB0', 'stroke-width':4, 'stroke-dasharray':'1 3', opacity:0.55});
+    if (f.seal === 'All seals') {
+      s += el('line', {x1:fx0, y1:topY, x2:fx0, y2:bottomY, stroke:'#3E7FB0', 'stroke-width':4, 'stroke-dasharray':'1 3', opacity:0.4});
+      s += el('line', {x1:fx1, y1:topY, x2:fx1, y2:bottomY, stroke:'#3E7FB0', 'stroke-width':4, 'stroke-dasharray':'1 3', opacity:0.4});
+      s += el('line', {x1:fx0, y1:bottomY, x2:fx1, y2:bottomY, stroke:'#3E7FB0', 'stroke-width':4, 'stroke-dasharray':'1 3', opacity:0.4});
+    }
+    s += txt(midX, topY-8, 8, 'middle', 'PEEL');
+    s += '</g>';
+  }
+
+  if (accState.HangingHole?.checked) {
+    const f = accState.HangingHole.fields;
+    const y = topY + mm(f.offsetY);
+    s += `<g class="accessory-mark hoverable" data-acc-key="HangingHole" data-tip-title="Hanging Hole — ${f.shape}" data-tip-lines="Offset from top: ${f.offsetY}mm">`;
+    if (f.shape==='Round Hole') {
+      s += el('circle', {cx:midX, cy:y, r:4.5, fill:'#fff', stroke:INK, 'stroke-width':1.5});
+    } else if (f.shape==='Oblong') {
+      s += el('rect', {x:midX-8, y:y-3.5, width:16, height:7, rx:3.5, fill:'#fff', stroke:INK, 'stroke-width':1.5});
+    } else if (f.shape==='Butterfly') {
+      s += `<path d="M${midX-8},${y-5} L${midX},${y} L${midX-8},${y+5} Z" fill="#fff" stroke="${INK}" stroke-width="1.2"/>`;
+      s += `<path d="M${midX+8},${y-5} L${midX},${y} L${midX+8},${y+5} Z" fill="#fff" stroke="${INK}" stroke-width="1.2"/>`;
+    } else if (f.shape==='Custom') {
+      s += el('rect', {x:midX-7, y:y-7, width:14, height:14, fill:'none', stroke:INK, 'stroke-width':1.2, 'stroke-dasharray':'2 2', rx:3});
+    } else {
+      s += el('rect', {x:midX-3, y:y-6, width:6, height:12, rx:3, fill:'#fff', stroke:INK, 'stroke-width':1.5});
+    }
+    s += '</g>';
+  }
+
+  if (accState.Window?.checked) {
+    const f = accState.Window.fields;
+    const wW = mm(f.width);
+    const wH = f.shape==='Circle' ? wW : mm(f.height);
+    const wY = topY + mm(f.offsetY);
+    const cxw = midX, cyw = wY + wH/2;
+    const sizeLabel = f.shape==='Circle' ? `${f.width}mm dia.` : `${f.width}×${f.height}mm`;
+    s += `<g class="accessory-mark hoverable" data-acc-key="Window" data-tip-title="Window / Patch — ${f.shape}" data-tip-lines="Size: ${sizeLabel}|Offset from top: ${f.offsetY}mm">`;
+    if (f.shape==='Circle') {
+      s += el('circle', {cx:cxw, cy:cyw, r:wW/2, fill:'#E2562B12', stroke:FOLD, 'stroke-width':1.5, 'stroke-dasharray':'3 2'});
+    } else if (f.shape==='Oval') {
+      s += el('ellipse', {cx:cxw, cy:cyw, rx:wW/2, ry:wH/2, fill:'#E2562B12', stroke:FOLD, 'stroke-width':1.5, 'stroke-dasharray':'3 2'});
+    } else if (f.shape==='Custom Shape') {
+      s += `<path d="M${cxw-wW/2},${cyw} Q${cxw-wW/2},${cyw-wH/2} ${cxw},${cyw-wH/2} Q${cxw+wW/2},${cyw-wH/2} ${cxw+wW/2},${cyw} Q${cxw+wW/3},${cyw+wH/2} ${cxw},${cyw+wH/2} Q${cxw-wW/3},${cyw+wH/2} ${cxw-wW/2},${cyw} Z" fill="#E2562B12" stroke="${FOLD}" stroke-width="1.5" stroke-dasharray="3 2"/>`;
+    } else {
+      s += el('rect', {x:cxw-wW/2, y:wY, width:wW, height:wH, fill:'#E2562B12', stroke:FOLD, 'stroke-width':1.5, 'stroke-dasharray':'3 2'});
+    }
+    s += '</g>';
+  }
+
+  return s;
+}
+
+// ---------------------------------------------------------------------------
+// Validation engine — geometry checks in mm-space, independent of SVG scale.
+// Levels: 'error' (real conflict), 'warning' (tight but possible), 'info'
+// (machine-behavior note, not a problem).
+// ---------------------------------------------------------------------------
+
+function validateConfiguration(family, variant, dims, accState){
+  const issues = [];
+  const variantCfg = FAMILIES[family].variants[variant];
+  const has = k => accState[k]?.checked;
+  const height = dims.height;
+
+  let bottomSealMM = SEAL_MM;
+  if (family==='CenterFoldSeal' && (variant==='Flat' || variant==='SideGusset')) bottomSealMM = dims.bottomSealWidth||SEAL_MM;
+  const topSealMM = SEAL_MM;
+
+  // Zipper — narrows the usable length range on the same machine (MD §4 note)
+  if (has('Zipper')) {
+    const clearance = 15;
+    const minDimCfg = variantCfg.dims.find(dd=>dd.key==='height');
+    if (minDimCfg) {
+      const effectiveMin = minDimCfg.min + clearance;
+      if (height < effectiveMin) {
+        issues.push({level:'warning', message:`Zipper insertion needs ~${clearance}mm extra clearance; at L=${height}mm this is under the ${effectiveMin}mm effective minimum length once the zip station is engaged on this machine.`});
+      } else {
+        issues.push({level:'info', message:`Zipper insertion station engaged — effective minimum length on this route rises from ${minDimCfg.min}mm to ${effectiveMin}mm.`});
+      }
+    }
+  }
+
+  // Window
+  if (has('Window')) {
+    const f = accState.Window.fields;
+    const wTop = f.offsetY, wBottom = f.offsetY + (f.shape==='Circle' ? f.width : f.height);
+    if (wTop < topSealMM) {
+      issues.push({level:'error', message:`Window top edge sits inside the top seal band (needs ≥${topSealMM}mm clearance, currently ${wTop}mm) — a window can't cut through sealed film.`});
+    }
+    if (wBottom > height - bottomSealMM) {
+      issues.push({level:'error', message:`Window bottom edge overruns the bottom seal band by ${(wBottom-(height-bottomSealMM)).toFixed(0)}mm — reduce window height or raise its offset from top.`});
+    }
+    if (has('Zipper')) {
+      const zY = accState.Zipper.fields.positionFromTop;
+      const zHalf = (accState.Zipper.fields.zipWidth||9)/2 + 5;
+      if (wTop < zY+zHalf && wBottom > zY-zHalf) {
+        issues.push({level:'error', message:`Window overlaps the zipper band around ${zY}mm from top — reposition the window clear of the zip line.`});
+      }
+    }
+  }
+
+  // Spout vs Zipper — spout occupies the top zone
+  if (has('Spout') && has('Zipper')) {
+    const zY = accState.Zipper.fields.positionFromTop;
+    const spoutZone = 25;
+    if (zY < spoutZone + 10) {
+      issues.push({level:'error', message:`Spout occupies roughly the top ${spoutZone}mm; a zipper at ${zY}mm from top leaves insufficient clearance between the two features.`});
+    }
+  }
+
+  // Tear notch vs spout — same corner
+  if (has('TearNotch') && has('Spout')) {
+    const tPos = accState.TearNotch.fields.position;
+    const sPos = accState.Spout.fields.position;
+    if ((tPos==='Left' && sPos==='Left Corner') || (tPos==='Right' && sPos==='Right Corner')) {
+      issues.push({level:'warning', message:`Tear notch and spout are both positioned at the ${tPos} corner — move one to avoid a tooling collision.`});
+    }
+  }
+
+  // Hanging hole
+  if (has('HangingHole')) {
+    const hY = accState.HangingHole.fields.offsetY;
+    const headerZone = 25;
+    if (hY > headerZone) {
+      issues.push({level:'error', message:`Hanging hole at ${hY}mm from top falls outside the reinforced header/seal area (~${headerZone}mm) — it needs full film-to-film contact to bear the pack's weight.`});
+    }
+    if (has('Zipper')) {
+      const zY = accState.Zipper.fields.positionFromTop;
+      if (Math.abs(hY-zY) < 15) {
+        issues.push({level:'error', message:`Hanging hole (${hY}mm) sits within 15mm of the zipper (${zY}mm) — insufficient clearance for both tooling operations.`});
+      }
+    }
+  }
+
+  // Corner style not meaningful on oblique-cut shapes
+  if (family==='ObliqueSideWeld' && cornerState.style==='Rounded') {
+    issues.push({level:'info', message:'Corner rounding is not applied to oblique-cut profiles; the angled trim already defines the corner geometry.'});
+  }
+
+  return issues;
+}
+
+function machineCapabilityNotes(family, variant, accState){
+  const notes = [];
+  const variantCfg = FAMILIES[family].variants[variant];
+  if (variantCfg.separateBottomWeb) notes.push('Requires separate bottom web (independent print/laminate feed).');
+  Object.entries(accState).forEach(([k,v])=>{
+    if (v.checked && ACCESSORIES[k].machineNote) notes.push(ACCESSORIES[k].machineNote);
+  });
+  if (cornerState.style==='Rounded' && family!=='ObliqueSideWeld') {
+    notes.push(`Requires rounded-corner die (R${cornerState.radius}mm) at the corner-cut station.`);
+  }
+  return notes;
+}
+
+function buildManufacturingSummary(family, variant, flat, accState){
+  const activeAcc = Object.entries(accState).filter(([k,v])=>v.checked).map(([k])=>ACCESSORIES[k].label);
+  return {
+    family: FAMILIES[family].label,
+    variant: FAMILIES[family].variants[variant].label,
+    webCount: flat.webCount,
+    flatWidth: flat.flatWidth,
+    flatHeight: flat.flatHeight,
+    separateBottomWeb: !!FAMILIES[family].variants[variant].separateBottomWeb,
+    accessories: activeAcc,
+    complexity: FAMILY_COMPLEXITY[family],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// UI wiring
+// ---------------------------------------------------------------------------
+
+let currentFamily = 'ThreeSideSeal';
+let currentVariant = 'Standing';
+const dims = {};
+const accState = {};
+
+const familyBar = document.getElementById('familyBar');
+const variantSelect = document.getElementById('variantSelect');
+const diagramEl = document.getElementById('diagram');
+
+Object.entries(FAMILIES).forEach(([key,f])=>{
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.className = 'chip' + (key===currentFamily ? ' active' : '');
+  chip.dataset.family = key;
+  chip.innerHTML = `${f.label} <span class="count">${Object.keys(f.variants).length}</span>`;
+  chip.addEventListener('click', ()=>{
+    currentFamily = key;
+    familyBar.querySelectorAll('.chip').forEach(c=>c.classList.toggle('active', c.dataset.family===key));
+    buildVariantOptions();
+    buildAll();
+  });
+  familyBar.appendChild(chip);
+});
+
+function buildVariantOptions(){
+  variantSelect.innerHTML = '';
+  Object.entries(FAMILIES[currentFamily].variants).forEach(([key,v])=>{
+    const opt = document.createElement('option');
+    opt.value = key; opt.textContent = v.label;
+    variantSelect.appendChild(opt);
+  });
+  currentVariant = Object.keys(FAMILIES[currentFamily].variants)[0];
+  variantSelect.value = currentVariant;
+}
+variantSelect.addEventListener('change', ()=>{
+  currentVariant = variantSelect.value;
+  buildAll();
+});
+
+function buildDimFields(){
+  const container = document.getElementById('dimFields');
+  container.innerHTML = '';
+  const variantCfg = FAMILIES[currentFamily].variants[currentVariant];
+  variantCfg.dims.forEach(f=>{
+    dims[f.key] = f.def;
+    const wrap = document.createElement('div');
+    wrap.className = 'field';
+    wrap.innerHTML = `
+      <label>${f.label} <span class="range">${f.min}–${f.max}mm</span></label>
+      <div class="input-wrap">
+        <input type="number" min="${f.min}" max="${f.max}" value="${f.def}" data-dim="${f.key}">
+        <span class="unit-suffix">mm</span>
+      </div>
+      ${f.help ? `<div class="help">${f.help}</div>` : ''}
+    `;
+    container.appendChild(wrap);
+  });
+  container.querySelectorAll('input[data-dim]').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      dims[inp.dataset.dim] = Number(inp.value) || 0;
+      updateDiagram();
+    });
+  });
+}
+
+// ---- Corner Style ----
+const cornerStyleRow = document.getElementById('cornerStyleRow');
+const cornerRadiusField = document.getElementById('cornerRadiusField');
+const cornerRadiusInput = document.getElementById('cornerRadiusInput');
+const cornerNaNote = document.getElementById('cornerNaNote');
+
+cornerStyleRow.querySelectorAll('.cs-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    cornerState.style = btn.dataset.corner;
+    cornerStyleRow.querySelectorAll('.cs-btn').forEach(b=>b.classList.toggle('active', b===btn));
+    updateCornerStyleUI();
+    updateDiagram();
+  });
+});
+cornerRadiusInput.addEventListener('input', ()=>{
+  cornerState.radius = Number(cornerRadiusInput.value) || 0;
+  updateDiagram();
+});
+function updateCornerStyleUI(){
+  const isRounded = cornerState.style === 'Rounded';
+  const isOblique = currentFamily === 'ObliqueSideWeld';
+  cornerRadiusField.style.display = (isRounded && !isOblique) ? 'block' : 'none';
+  cornerNaNote.style.display = (isRounded && isOblique) ? 'block' : 'none';
+}
+
+// ---- Accessories ----
+function buildAccFields(){
+  const container = document.getElementById('accFields');
+  container.innerHTML = '';
+  Object.keys(accState).forEach(k=>delete accState[k]);
+
+  Object.entries(ACCESSORIES).forEach(([key,cfg])=>{
+    const valid = cfg.validOn.includes(currentFamily);
+    accState[key] = { checked:false, fields:{} };
+    cfg.fields.forEach(f=>accState[key].fields[f.key]=f.def);
+
+    const item = document.createElement('div');
+    item.className = 'acc-item' + (valid ? '' : ' disabled');
+    item.innerHTML = `
+      <span class="acc-check">
+        <svg viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 5" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="acc-label">${cfg.label}${valid ? '' : ' <span class="acc-na">n/a</span>'}</span>
+      <button type="button" class="locate-btn" title="Highlight on diagram">⌖</button>
+    `;
+    const sub = document.createElement('div');
+    sub.className = 'acc-sub';
+    sub.innerHTML = cfg.fields.map(f=>{
+      const inputHtml = f.type==='select'
+        ? `<select data-acc="${key}" data-accfield="${f.key}">${f.options.map(o=>`<option value="${o}" ${o===f.def?'selected':''}>${o}</option>`).join('')}</select>`
+        : `<input type="number" data-acc="${key}" data-accfield="${f.key}" value="${f.def}">`;
+      return `<div class="acc-field" data-fieldkey="${f.key}">
+        <label style="font-size:11px;color:var(--muted)">${f.label}</label>
+        ${inputHtml}
+      </div>`;
+    }).join('') + (cfg.machineNote ? `<div class="acc-machine-note">${cfg.machineNote}</div>` : '');
+
+    const locateBtn = item.querySelector('.locate-btn');
+    locateBtn.addEventListener('click', (e)=>{ e.stopPropagation(); pulseAccessory(key); });
+
+    if (valid) {
+      item.addEventListener('click', (e)=>{
+        if (e.target.closest('.locate-btn')) return;
+        accState[key].checked = !accState[key].checked;
+        item.classList.toggle('checked', accState[key].checked);
+        updateDiagram();
+      });
+    }
+    container.appendChild(item);
+    container.appendChild(sub);
+
+    sub.querySelectorAll('[data-accfield]').forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        const val = inp.tagName==='SELECT' ? inp.value : Number(inp.value)||0;
+        accState[key].fields[inp.dataset.accfield] = val;
+        updateDiagram();
+      });
+      inp.addEventListener('click', e=>e.stopPropagation());
+    });
+
+    // Window: Circle shape doesn't need a separate height field
+    if (key==='Window') {
+      const shapeSel = sub.querySelector('[data-accfield="shape"]');
+      const heightWrap = sub.querySelector('[data-fieldkey="height"]');
+      const widthWrap = sub.querySelector('[data-fieldkey="width"]');
+      const widthLabel = widthWrap.querySelector('label');
+      function syncWindowShape(){
+        if (shapeSel.value === 'Circle') { heightWrap.style.display='none'; widthLabel.textContent='Diameter (mm)'; }
+        else { heightWrap.style.display=''; widthLabel.textContent='Width (mm)'; }
+      }
+      shapeSel.addEventListener('change', syncWindowShape);
+      syncWindowShape();
+    }
+  });
+}
+
+function pulseAccessory(key){
+  const targets = diagramEl.querySelectorAll(`[data-acc-key="${key}"]`);
+  targets.forEach(t=>{
+    t.classList.remove('pulse-anim');
+    requestAnimationFrame(()=>{ requestAnimationFrame(()=> t.classList.add('pulse-anim')); });
+    setTimeout(()=>t.classList.remove('pulse-anim'), 1800);
+  });
+}
+
+// ---- Tooltip ----
+const tooltip = document.createElement('div');
+tooltip.className = 'svg-tooltip';
+document.querySelector('.canvas-wrap').appendChild(tooltip);
+
+diagramEl.addEventListener('mousemove', (e)=>{
+  const target = e.target.closest ? e.target.closest('[data-tip-title]') : null;
+  if (!target) { tooltip.classList.remove('show'); return; }
+  const title = target.getAttribute('data-tip-title');
+  const lines = (target.getAttribute('data-tip-lines')||'').split('|').filter(Boolean);
+  tooltip.innerHTML = `<span class="tip-title">${title}</span>` + lines.map(l=>`<div class="tip-line">${l}</div>`).join('');
+  const wrapRect = diagramEl.closest('.canvas-wrap').getBoundingClientRect();
+  let x = e.clientX - wrapRect.left + 14;
+  let y = e.clientY - wrapRect.top + 14;
+  const maxX = wrapRect.width - 230;
+  if (x > maxX) x = e.clientX - wrapRect.left - 230;
+  tooltip.style.left = Math.max(4,x)+'px';
+  tooltip.style.top = y+'px';
+  tooltip.classList.add('show');
+});
+diagramEl.addEventListener('mouseleave', ()=> tooltip.classList.remove('show'));
+
+// ---- Description / diagram / summary / validation ----
+function updateDesc(){
+  const f = FAMILIES[currentFamily];
+  document.getElementById('familyDesc').innerHTML = `<b>${f.label}</b> — ${f.desc}`;
+}
+
+function renderValidationPanel(issues, notes){
+  const list = document.getElementById('validationList');
+  let html = '';
+  const errors = issues.filter(i=>i.level==='error');
+  const warnings = issues.filter(i=>i.level==='warning');
+  const infos = issues.filter(i=>i.level==='info');
+
+  if (errors.length===0 && warnings.length===0) {
+    html += `<div class="ok-box"><span class="ic">✓</span><span>No geometry conflicts detected for this configuration.</span></div>`;
+  }
+  errors.forEach(i=> html += `<div class="warn-box"><span class="ic">✕</span><span>${i.message}</span></div>`);
+  warnings.forEach(i=> html += `<div class="warn-box"><span class="ic">!</span><span>${i.message}</span></div>`);
+  infos.forEach(i=> html += `<div class="info-box"><span class="ic">i</span><span>${i.message}</span></div>`);
+
+  if (notes.length) {
+    html += `<div class="validation-subhead">Machine Capability Notes</div>`;
+    html += `<div class="machine-notes">${notes.map(n=>`<div class="note-chip">${n}</div>`).join('')}</div>`;
+  }
+  list.innerHTML = html;
+}
+
+function renderManufacturingSummary(sum){
+  const el = document.getElementById('mfgSummary');
+  const accHtml = sum.accessories.length
+    ? `<div class="acc-tags">${sum.accessories.map(a=>`<span class="acc-tag">${a}</span>`).join('')}</div>`
+    : `<span class="none">None selected</span>`;
+  el.innerHTML = `
+    <div class="row"><span class="k">Family</span><span class="v">${sum.family}</span></div>
+    <div class="row"><span class="k">Variant</span><span class="v">${sum.variant}</span></div>
+    <div class="row"><span class="k">Web Count</span><span class="v">${sum.webCount}</span></div>
+    <div class="row"><span class="k">Flat Width</span><span class="v">${sum.flatWidth.toFixed(0)}mm</span></div>
+    <div class="row"><span class="k">Flat Height</span><span class="v">${sum.flatHeight.toFixed(0)}mm</span></div>
+    <div class="row"><span class="k">Separate Bottom Web</span><span class="v">${sum.separateBottomWeb ? 'Yes' : 'No'}</span></div>
+    <div class="row"><span class="k">Accessories</span>${accHtml}</div>
+    <div class="row"><span class="k">Est. Construction Complexity</span><span class="v">${sum.complexity}</span></div>
+  `;
+}
+
+function updateDiagram(){
+  updateCornerStyleUI();
+  const layout = DRAW_FNS[`${currentFamily}.${currentVariant}`](dims);
+  const overlay = overlayAccessories(layout, accState);
+  diagramEl.innerHTML = layout.svg + overlay;
+
+  const variantCfg = FAMILIES[currentFamily].variants[currentVariant];
+  const flat = calcFlatArea(currentFamily, currentVariant, dims);
+
+  const stats = [
+    { label:'Webs / panels', value: flat.webCount },
+    { label:'Separate bottom web', value: variantCfg.separateBottomWeb ? 'Yes' : 'No' },
+    { label:'Flat width', value: flat.flatWidth.toFixed(0)+'mm' },
+    { label:'Flat height', value: flat.flatHeight.toFixed(0)+'mm' },
+  ];
+  if (flat.extra) stats.push({ label:'Separate panel area', value: flat.extra.toFixed(0)+' mm²' });
+  document.getElementById('statsRow').innerHTML = stats.map(s=>`
+    <div class="stat"><div class="label">${s.label}</div><div class="value">${s.value}</div></div>
+  `).join('');
+
+  const issues = validateConfiguration(currentFamily, currentVariant, dims, accState);
+  const notes = machineCapabilityNotes(currentFamily, currentVariant, accState);
+  renderValidationPanel(issues, notes);
+
+  const summary = buildManufacturingSummary(currentFamily, currentVariant, flat, accState);
+  renderManufacturingSummary(summary);
+}
+
+function buildAll(){
+  updateDesc();
+  buildDimFields();
+  buildAccFields();
+  updateCornerStyleUI();
+  updateDiagram();
+}
+
+buildVariantOptions();
+buildAll();
+</script>
+
+</body>
+</html>

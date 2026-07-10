@@ -1,9 +1,10 @@
 /**
- * Lamination adhesive recipes (GP / MP / HP) — parts-by-weight dilution with EA.
+ * Lamination adhesive recipes (MP / HP / SL / MONO) — plant sheet + PEBI component prices.
  * Master stores binder concentrate; EA priced at estimate from Solvent catalog.
+ * Sheet "40% solid" on SB grades = diluted mix solids after EA; component solid% = concentrate TDS.
  */
 
-export type LaminationTier = 'GP' | 'MP' | 'HP' | 'HP_SF' | 'CUSTOM';
+export type LaminationTier = 'GP' | 'MP' | 'HP' | 'HP_SF' | 'SL' | 'MONO' | 'CUSTOM';
 
 export type LaminationComponentRole = 'adhesive' | 'hardener' | 'solvent' | 'other';
 
@@ -21,6 +22,11 @@ export interface LaminationRecipeComponent {
 export interface LaminationRecipe {
   tier: LaminationTier;
   components: LaminationRecipeComponent[];
+  /** Optional replacement chemistry (same ES grade; not default for costing). */
+  alternate?: {
+    label: string;
+    components: LaminationRecipeComponent[];
+  };
 }
 
 export interface LaminationCostResult {
@@ -38,58 +44,98 @@ export interface LaminationCostResult {
 
 export const DEFAULT_CLEANING_SOLVENT_KG_PER_JOB = 20;
 
+/** Plant sheet slot 4 — MORBOND 675A/675C (foil / dry). GP kept as alias of MP for legacy. */
+const RECIPE_MP_FOIL: LaminationRecipe = {
+  tier: 'MP',
+  components: [
+    { role: 'adhesive', name: 'MORBOND 675 A', parts: 100, solidPercent: 75, pricePerKgUsd: 3.33 },
+    { role: 'hardener', name: 'MORBOND 675C', parts: 25, solidPercent: 75, pricePerKgUsd: 3.33 },
+    {
+      role: 'solvent',
+      name: 'Ethyl Acetate',
+      parts: 108,
+      solidPercent: 0,
+      solventKey: 'solvent-ethyl-acetate',
+      pricePerKgUsd: 1.0,
+    },
+  ],
+  alternate: {
+    label: 'Flexcote 1152',
+    components: [
+      { role: 'adhesive', name: 'FLEXCOTE 1152', parts: 100, solidPercent: 70, pricePerKgUsd: 3.26 },
+      { role: 'hardener', name: 'FLEXCOTE 9062LE', parts: 15, solidPercent: 100, pricePerKgUsd: 4.24 },
+      {
+        role: 'solvent',
+        name: 'Ethyl Acetate',
+        parts: 130,
+        solidPercent: 0,
+        solventKey: 'solvent-ethyl-acetate',
+        pricePerKgUsd: 1.0,
+      },
+    ],
+  },
+};
+
+/** Plant sheet slot 3 — MORBOND 655 + CT 85 (liquid / tomato). */
+const RECIPE_HP_LIQUID: LaminationRecipe = {
+  tier: 'HP',
+  components: [
+    { role: 'adhesive', name: 'MORBOND 655', parts: 100, solidPercent: 70, pricePerKgUsd: 3.81 },
+    { role: 'hardener', name: 'CURATIVE CT 85', parts: 3, solidPercent: 100, pricePerKgUsd: 16.16 },
+    {
+      role: 'solvent',
+      name: 'Ethyl Acetate',
+      parts: 80,
+      solidPercent: 0,
+      solventKey: 'solvent-ethyl-acetate',
+      pricePerKgUsd: 1.54,
+    },
+  ],
+};
+
+/** Plant sheet slot 1 — MORFREE MF 75-300 + C79. */
+export const RECIPE_SL_DRY: LaminationRecipe = {
+  tier: 'SL',
+  components: [
+    { role: 'adhesive', name: 'MORFREE 75-300', parts: 100, solidPercent: 100, pricePerKgUsd: 3.0 },
+    { role: 'hardener', name: 'MORFREE C79', parts: 50, solidPercent: 100, pricePerKgUsd: 3.19 },
+  ],
+  alternate: {
+    label: 'MORBOND 870',
+    components: [
+      { role: 'adhesive', name: 'MORBOND 870', parts: 100, solidPercent: 100, pricePerKgUsd: 3.48 },
+      { role: 'hardener', name: 'CURATIVE CT 95', parts: 70, solidPercent: 100, pricePerKgUsd: 4.64 },
+    ],
+  },
+};
+
+/** Plant sheet slot 2 — MORFREE L75×850. */
+export const RECIPE_MONO_PAPER: LaminationRecipe = {
+  tier: 'MONO',
+  components: [
+    { role: 'adhesive', name: 'MORFREE L75×850', parts: 100, solidPercent: 100, pricePerKgUsd: 4.25 },
+  ],
+  alternate: {
+    label: 'MORBOND 795 LV',
+    components: [
+      { role: 'adhesive', name: 'MORBOND 795 LV', parts: 100, solidPercent: 100, pricePerKgUsd: 8.0 },
+    ],
+  },
+};
+
 export const DEFAULT_LAMINATION_RECIPES: Record<'GP' | 'MP' | 'HP', LaminationRecipe> = {
-  GP: {
-    tier: 'GP',
-    components: [
-      { role: 'adhesive', name: 'MORBOND 675 ADHESIVE', parts: 100, solidPercent: 75, pricePerKgUsd: 3.27 },
-      { role: 'hardener', name: 'CURATIVE 675C HARDENER', parts: 20, solidPercent: 75, pricePerKgUsd: 3.27 },
-      {
-        role: 'solvent',
-        name: 'Ethyl Acetate',
-        parts: 137,
-        solidPercent: 0,
-        solventKey: 'solvent-ethyl-acetate',
-        pricePerKgUsd: 1.0,
-      },
-    ],
-  },
-  MP: {
-    tier: 'MP',
-    components: [
-      { role: 'adhesive', name: 'ECOLAD SB-982', parts: 100, solidPercent: 70, pricePerKgUsd: 3.47 },
-      { role: 'hardener', name: 'ECOLAD SB-529', parts: 3.2, solidPercent: 100, pricePerKgUsd: 3.47 },
-      {
-        role: 'solvent',
-        name: 'Ethyl Acetate',
-        parts: 106,
-        solidPercent: 0,
-        solventKey: 'solvent-ethyl-acetate',
-        pricePerKgUsd: 1.0,
-      },
-    ],
-  },
-  HP: {
-    tier: 'HP',
-    components: [
-      { role: 'adhesive', name: 'MORBOND 655 ADHESIVE', parts: 100, solidPercent: 70, pricePerKgUsd: 3.81 },
-      { role: 'hardener', name: 'CURATIVE CT 85 HARDENER', parts: 3, solidPercent: 100, pricePerKgUsd: 16.19 },
-      {
-        role: 'solvent',
-        name: 'Ethyl Acetate',
-        parts: 106,
-        solidPercent: 0,
-        solventKey: 'solvent-ethyl-acetate',
-        pricePerKgUsd: 1.54,
-      },
-    ],
-  },
+  /** Legacy alias — same chemistry as MP foil (675). */
+  GP: { ...RECIPE_MP_FOIL, tier: 'GP' },
+  MP: RECIPE_MP_FOIL,
+  HP: RECIPE_HP_LIQUID,
 };
 
 export function recipeForTier(tier: string | undefined | null): LaminationRecipe | null {
   if (tier === 'GP' || tier === 'MP' || tier === 'HP') {
     return structuredClone(DEFAULT_LAMINATION_RECIPES[tier]);
   }
+  if (tier === 'SL') return structuredClone(RECIPE_SL_DRY);
+  if (tier === 'MONO') return structuredClone(RECIPE_MONO_PAPER);
   return null;
 }
 

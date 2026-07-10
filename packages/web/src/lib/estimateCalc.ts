@@ -3,6 +3,7 @@ import {
   derivePrintingWebClass,
   stackNeedsSolventMix,
   DEFAULT_CLEANING_SOLVENT_KG_PER_JOB,
+  DEFAULT_SLEEVE_SEAMING_SOLVENT_GSM,
   type Estimate,
   type Material,
   type LaminationRecipe,
@@ -19,6 +20,7 @@ export interface ClientCalcMaterial {
   costPerKgUsd: number | string;
   wastePercent: number;
   isSolventBased?: boolean;
+  substrateFamily?: string | null;
   laminationRecipe?: LaminationRecipe | null;
 }
 
@@ -48,8 +50,10 @@ export interface ClientCalcInput {
   displayCurrency: string;
   exchangeRateUsdToDisplay: number;
   solventCostPerKgUsd?: number;
+  seamingSolventCostPerKgUsd?: number;
   laminationRecipeOverrides?: Record<string, LaminationRecipe>;
   cleaningSolventKgPerJob?: number;
+  sleeveSeamingSolventGsm?: number;
   inkPrintingProcess?: 'flexo' | 'rotogravure' | null;
   inkSolventRatio?: number;
   orderQuantityKg?: number;
@@ -95,6 +99,7 @@ function toMaterial(m: ClientCalcMaterial): Material {
     costPerKgUsd,
     wastePercent: m.wastePercent,
     isSolventBased: m.isSolventBased,
+    substrateFamily: m.substrateFamily ?? null,
     laminationRecipe: m.laminationRecipe ?? null,
     laminationTier: m.laminationRecipe?.tier ?? null,
   };
@@ -161,8 +166,10 @@ export function runClientCalculation(input: ClientCalcInput) {
     orderQuantityUnit: input.orderQuantityUnit ?? 'kgs',
     orderQuantityUnitDef: input.orderQuantityUnitDef,
     solventCostPerKgUsd: needsSolvent ? input.solventCostPerKgUsd : undefined,
+    seamingSolventCostPerKgUsd: input.seamingSolventCostPerKgUsd,
     laminationRecipeOverrides: input.laminationRecipeOverrides,
     cleaningSolventKgPerJob: input.cleaningSolventKgPerJob ?? DEFAULT_CLEANING_SOLVENT_KG_PER_JOB,
+    sleeveSeamingSolventGsm: input.sleeveSeamingSolventGsm ?? DEFAULT_SLEEVE_SEAMING_SOLVENT_GSM,
     inkPrintingProcess: input.inkPrintingProcess ?? undefined,
     inkSolventRatio: input.inkSolventRatio,
     pricingMethod: input.pricingMethod,

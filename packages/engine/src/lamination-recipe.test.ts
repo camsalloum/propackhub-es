@@ -9,39 +9,38 @@ import {
 const eaPrice = (c: { pricePerKgUsd?: number }) => c.pricePerKgUsd ?? 1;
 
 describe('lamination recipes', () => {
-  it('GP matches spreadsheet totals at 3 gsm dry', () => {
-    const recipe = DEFAULT_LAMINATION_RECIPES.GP;
+  it('MP foil (675) matches plant sheet mix ~40% solid after EA', () => {
+    const recipe = DEFAULT_LAMINATION_RECIPES.MP;
     const summary = summarizeRecipe(recipe, eaPrice, 3);
-    expect(summary.totalParts).toBeCloseTo(257, 0);
-    expect(summary.totalSolids).toBeCloseTo(90, 0);
-    expect(summary.usdPerKgWet).toBeCloseTo(2.06, 2);
-    expect(summary.usdPerKgSolid).toBeCloseTo(5.88, 2);
-    expect(summary.usdPer1000Sqm).toBeCloseTo(17.65, 1);
+    expect(summary.totalParts).toBeCloseTo(233, 0);
+    expect(summary.mixSolidPercent).toBeCloseTo(40.2, 0);
+    expect(summary.usdPerKgWet).toBeCloseTo(2.25, 2);
+    expect(summary.usdPerKgSolid).toBeCloseTo(5.59, 1);
+    expect(summary.usdPer1000Sqm).toBeCloseTo(16.78, 1);
 
     const cost = calculateLaminationCost(3, recipe, eaPrice);
-    expect(cost.totalCostPerM2).toBeCloseTo(0.01765, 4);
     expect(cost.eaGsm).toBeGreaterThan(cost.dryGsm);
   });
 
-  it('MP matches spreadsheet totals at 3 gsm dry', () => {
-    const recipe = DEFAULT_LAMINATION_RECIPES.MP;
-    const summary = summarizeRecipe(recipe, eaPrice, 3);
-    expect(summary.usdPerKgWet).toBeCloseTo(2.22, 2);
-    expect(summary.usdPerKgSolid).toBeCloseTo(6.35, 1);
-    expect(summary.usdPer1000Sqm).toBeCloseTo(19.04, 1);
+  it('GP aliases MP foil chemistry', () => {
+    const gp = DEFAULT_LAMINATION_RECIPES.GP;
+    const mp = DEFAULT_LAMINATION_RECIPES.MP;
+    expect(gp.components.map((c) => c.parts)).toEqual(mp.components.map((c) => c.parts));
   });
 
-  it('HP SB matches spreadsheet totals at 3 gsm dry', () => {
+  it('HP liquid (655) matches plant sheet mix ~40% solid after EA', () => {
     const recipe = DEFAULT_LAMINATION_RECIPES.HP;
     const summary = summarizeRecipe(recipe, (c) => c.pricePerKgUsd ?? 1.54, 3);
-    expect(summary.usdPerKgWet).toBeCloseTo(2.84, 2);
-    expect(summary.usdPerKgSolid).toBeCloseTo(8.13, 1);
-    expect(summary.usdPer1000Sqm).toBeCloseTo(24.4, 1);
+    expect(summary.mixSolidPercent).toBeCloseTo(39.9, 0);
+    expect(summary.usdPerKgWet).toBeCloseTo(3.02, 2);
+    expect(summary.usdPerKgSolid).toBeCloseTo(7.57, 1);
+    expect(summary.usdPer1000Sqm).toBeCloseTo(22.71, 1);
   });
 
   it('deriveBinderConcentrateStats excludes EA from master row', () => {
-    const stats = deriveBinderConcentrateStats(DEFAULT_LAMINATION_RECIPES.GP);
+    const stats = deriveBinderConcentrateStats(DEFAULT_LAMINATION_RECIPES.MP);
     expect(stats.solidPercent).toBe(75);
-    expect(stats.costPerKgUsd).toBeCloseTo(392.4 / 90, 2);
+    expect(stats.liquidCostUsd).toBeCloseTo(3.33, 2);
+    expect(stats.costPerKgUsd).toBeCloseTo(4.44, 2);
   });
 });

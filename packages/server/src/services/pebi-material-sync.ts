@@ -8,10 +8,24 @@ import { fileURLToPath } from 'node:url';
 import { Pool } from 'pg';
 import axios from 'axios';
 import { and, eq } from 'drizzle-orm';
+import { deriveBinderConcentrateStats, type LaminationRecipe } from '@es/engine';
 import { getDatabase, schema } from '../db/index.js';
 
 export const PEBI_MATERIAL_SOURCE = 'pebi';
-export const PEBI_SYNC_FAMILIES = ['PET', 'ALU', 'BOPP', 'CPP', 'PA', 'PAP', 'SLEEVE', 'SPECIALTY'] as const;
+export const PEBI_SYNC_FAMILIES = [
+  'PET',
+  'ALU',
+  'BOPP',
+  'CPP',
+  'PA',
+  'PAP',
+  'SLEEVE',
+  'SPECIALTY',
+  'PE',
+  'INK',
+  'ADHESIVE',
+  'SOLVENT',
+] as const;
 export type PebiSyncFamily = (typeof PEBI_SYNC_FAMILIES)[number];
 
 const require = createRequire(import.meta.url);
@@ -19,54 +33,42 @@ const pphServicesPath = path.resolve(
   fileURLToPath(new URL('.', import.meta.url)),
   '../../../../../pph/server/services'
 );
-const { buildPetMaterialsCatalog } = require(`${pphServicesPath}/pebi-es-pet-catalog.js`) as {
-  buildPetMaterialsCatalog: (
-    pool: Pool,
-    options?: { aedPerUsd?: number }
-  ) => Promise<PebiMaterialsCatalog>;
+
+type CatalogBuilder = (
+  pool: Pool,
+  options?: { aedPerUsd?: number }
+) => Promise<PebiMaterialsCatalog>;
+
+const CATALOG_MODULES: Record<PebiSyncFamily, { file: string; exportName: string }> = {
+  PET: { file: 'pebi-es-pet-catalog.js', exportName: 'buildPetMaterialsCatalog' },
+  ALU: { file: 'pebi-es-alu-catalog.js', exportName: 'buildAluMaterialsCatalog' },
+  BOPP: { file: 'pebi-es-bopp-catalog.js', exportName: 'buildBoppMaterialsCatalog' },
+  CPP: { file: 'pebi-es-cpp-catalog.js', exportName: 'buildCppMaterialsCatalog' },
+  PA: { file: 'pebi-es-pa-catalog.js', exportName: 'buildPaMaterialsCatalog' },
+  PAP: { file: 'pebi-es-pap-catalog.js', exportName: 'buildPapMaterialsCatalog' },
+  SLEEVE: { file: 'pebi-es-sleeve-catalog.js', exportName: 'buildSleeveMaterialsCatalog' },
+  SPECIALTY: { file: 'pebi-es-specialty-catalog.js', exportName: 'buildSpecialtyMaterialsCatalog' },
+  PE: { file: 'pebi-es-pe-catalog.js', exportName: 'buildPeMaterialsCatalog' },
+  INK: { file: 'pebi-es-ink-catalog.js', exportName: 'buildInkMaterialsCatalog' },
+  ADHESIVE: { file: 'pebi-es-adhesive-catalog.js', exportName: 'buildAdhesiveMaterialsCatalog' },
+  SOLVENT: { file: 'pebi-es-solvent-catalog.js', exportName: 'buildSolventMaterialsCatalog' },
 };
-const { buildAluMaterialsCatalog } = require(`${pphServicesPath}/pebi-es-alu-catalog.js`) as {
-  buildAluMaterialsCatalog: (
-    pool: Pool,
-    options?: { aedPerUsd?: number }
-  ) => Promise<PebiMaterialsCatalog>;
-};
-const { buildBoppMaterialsCatalog } = require(`${pphServicesPath}/pebi-es-bopp-catalog.js`) as {
-  buildBoppMaterialsCatalog: (
-    pool: Pool,
-    options?: { aedPerUsd?: number }
-  ) => Promise<PebiMaterialsCatalog>;
-};
-const { buildCppMaterialsCatalog } = require(`${pphServicesPath}/pebi-es-cpp-catalog.js`) as {
-  buildCppMaterialsCatalog: (
-    pool: Pool,
-    options?: { aedPerUsd?: number }
-  ) => Promise<PebiMaterialsCatalog>;
-};
-const { buildPaMaterialsCatalog } = require(`${pphServicesPath}/pebi-es-pa-catalog.js`) as {
-  buildPaMaterialsCatalog: (
-    pool: Pool,
-    options?: { aedPerUsd?: number }
-  ) => Promise<PebiMaterialsCatalog>;
-};
-const { buildPapMaterialsCatalog } = require(`${pphServicesPath}/pebi-es-pap-catalog.js`) as {
-  buildPapMaterialsCatalog: (
-    pool: Pool,
-    options?: { aedPerUsd?: number }
-  ) => Promise<PebiMaterialsCatalog>;
-};
-const { buildSleeveMaterialsCatalog } = require(`${pphServicesPath}/pebi-es-sleeve-catalog.js`) as {
-  buildSleeveMaterialsCatalog: (
-    pool: Pool,
-    options?: { aedPerUsd?: number }
-  ) => Promise<PebiMaterialsCatalog>;
-};
-const { buildSpecialtyMaterialsCatalog } = require(`${pphServicesPath}/pebi-es-specialty-catalog.js`) as {
-  buildSpecialtyMaterialsCatalog: (
-    pool: Pool,
-    options?: { aedPerUsd?: number }
-  ) => Promise<PebiMaterialsCatalog>;
-};
+
+const catalogBuilderCache = new Map<PebiSyncFamily, CatalogBuilder>();
+
+function getCatalogBuilder(family: PebiSyncFamily): CatalogBuilder {
+  const cached = catalogBuilderCache.get(family);
+  if (cached) return cached;
+
+  const spec = CATALOG_MODULES[family];
+  const mod = require(`${pphServicesPath}/${spec.file}`) as Record<string, CatalogBuilder>;
+  const builder = mod[spec.exportName];
+  if (typeof builder !== 'function') {
+    throw new Error(`PEBI catalog builder ${spec.exportName} missing in ${spec.file}`);
+  }
+  catalogBuilderCache.set(family, builder);
+  return builder;
+}
 
 export type PebiMaterialRow = {
   pebiGradeKey: string;
@@ -76,11 +78,26 @@ export type PebiMaterialRow = {
   substrateGrade: string;
   marketPriceUsd: number | null;
   costPerKgUsd: number | null;
+  /** Liquid $/kg from PEBI for ink/adhesive — ES converts to dry using ES solid%. */
+  liquidCostUsd?: number | null;
   densityGCm3: number | null;
-  solidPercent: number;
+  solidPercent: number | null;
   hasStock: boolean;
   pricePolicy: string;
   mappingStatus: string;
+  priceBasis?: 'liquid' | 'solid' | string | null;
+  recipeComponentPrices?: Array<{
+    role: string;
+    sku?: string;
+    parts?: number;
+    pricePerKgUsd: number;
+  }> | null;
+  alternateComponentPrices?: Array<{
+    role: string;
+    sku?: string;
+    parts?: number;
+    pricePerKgUsd: number;
+  }> | null;
   substrateHoover?: string | null;
   nominalGsm?: number | null;
   compositionUnparsedDescriptions?: string[] | null;
@@ -119,9 +136,13 @@ export type PebiMissingMaterialsResult = {
   source: 'pebi_api' | 'pebi_db';
 };
 
-function toDecimalString(value: number | null | undefined, fallback: string): string {
+function toDecimalString(value: number | null | undefined, fallback: string, decimals = 4): string {
   if (value == null || !Number.isFinite(value)) return fallback;
-  return value.toFixed(4);
+  return value.toFixed(decimals);
+}
+
+function toDensityString(value: number | null | undefined, fallback: string): string {
+  return toDecimalString(value, fallback, 2);
 }
 
 async function buildMaterialsCatalog(
@@ -129,14 +150,7 @@ async function buildMaterialsCatalog(
   family: PebiSyncFamily,
   aedPerUsd: number
 ): Promise<PebiMaterialsCatalog> {
-  if (family === 'ALU') return buildAluMaterialsCatalog(pool, { aedPerUsd });
-  if (family === 'BOPP') return buildBoppMaterialsCatalog(pool, { aedPerUsd });
-  if (family === 'CPP') return buildCppMaterialsCatalog(pool, { aedPerUsd });
-  if (family === 'PA') return buildPaMaterialsCatalog(pool, { aedPerUsd });
-  if (family === 'PAP') return buildPapMaterialsCatalog(pool, { aedPerUsd });
-  if (family === 'SLEEVE') return buildSleeveMaterialsCatalog(pool, { aedPerUsd });
-  if (family === 'SPECIALTY') return buildSpecialtyMaterialsCatalog(pool, { aedPerUsd });
-  return buildPetMaterialsCatalog(pool, { aedPerUsd });
+  return getCatalogBuilder(family)(pool, { aedPerUsd });
 }
 
 async function loadPebiMaterials(
@@ -194,6 +208,10 @@ async function findTenantMaterial(
       isTenantOnly: boolean;
       marketPriceUsd: string | null;
       costPerKgUsd: string | null;
+      density: string;
+      solidPercent: number;
+      laminationRecipe: LaminationRecipe | null;
+      priceSource: 'excel' | 'manual' | 'platform' | 'pebi';
     }
   | undefined
 > {
@@ -203,6 +221,10 @@ async function findTenantMaterial(
     isTenantOnly: schema.materials.isTenantOnly,
     marketPriceUsd: schema.materials.marketPriceUsd,
     costPerKgUsd: schema.materials.costPerKgUsd,
+    density: schema.materials.density,
+    solidPercent: schema.materials.solidPercent,
+    laminationRecipe: schema.materials.laminationRecipe,
+    priceSource: schema.materials.priceSource,
   };
 
   const [byPlatformKey] = await db
@@ -216,7 +238,12 @@ async function findTenantMaterial(
     )
     .limit(1);
 
-  if (byPlatformKey) return byPlatformKey;
+  if (byPlatformKey) {
+    return {
+      ...byPlatformKey,
+      laminationRecipe: asLaminationRecipe(byPlatformKey.laminationRecipe),
+    };
+  }
 
   const [byExternal] = await db
     .select(selectFields)
@@ -230,7 +257,11 @@ async function findTenantMaterial(
     )
     .limit(1);
 
-  return byExternal;
+  if (!byExternal) return undefined;
+  return {
+    ...byExternal,
+    laminationRecipe: asLaminationRecipe(byExternal.laminationRecipe),
+  };
 }
 
 async function loadPlatformMaterialFallback(platformMasterKey: string) {
@@ -241,6 +272,7 @@ async function loadPlatformMaterialFallback(platformMasterKey: string) {
       solidPercent: schema.platformMasterMaterials.solidPercent,
       costPerKgUsd: schema.platformMasterMaterials.costPerKgUsd,
       marketPriceUsd: schema.platformMasterMaterials.marketPriceUsd,
+      laminationRecipe: schema.platformMasterMaterials.laminationRecipe,
     })
     .from(schema.platformMasterMaterials)
     .where(eq(schema.platformMasterMaterials.key, platformMasterKey))
@@ -275,6 +307,10 @@ const PLATFORM_PRICE_HOLD_KEYS_BY_FAMILY: Partial<Record<PebiSyncFamily, Readonl
 
 function shouldHoldPlatformPrice(family: PebiSyncFamily, platformMasterKey: string): boolean {
   return PLATFORM_PRICE_HOLD_KEYS_BY_FAMILY[family]?.has(platformMasterKey) ?? false;
+}
+
+function allowsManualPriceFallback(family: PebiSyncFamily): boolean {
+  return family === 'PE' || family === 'INK' || family === 'ADHESIVE' || family === 'SOLVENT';
 }
 
 function positivePriceOrNull(value: number | null | undefined): number | null {
@@ -312,6 +348,56 @@ function resolveHeldPlatformPrice(
 
 function roundUsd(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+/** PEBI ink prices are liquid $/kg; ES costing uses dry $/kg = liquid / (solid%/100). */
+function resolveInkDryCostUsd(
+  row: PebiMaterialRow,
+  solidPercent: number
+): { marketUsd: number | null; costUsd: number | null } {
+  const liquid =
+    positivePriceOrNull(row.liquidCostUsd) ??
+    positivePriceOrNull(row.marketPriceUsd) ??
+    positivePriceOrNull(row.costPerKgUsd);
+  if (liquid == null) return { marketUsd: null, costUsd: null };
+  const solid = solidPercent > 0 && solidPercent <= 100 ? solidPercent : 100;
+  const dry = roundUsd(liquid / (solid / 100));
+  return { marketUsd: dry, costUsd: dry };
+}
+
+function asLaminationRecipe(value: unknown): LaminationRecipe | null {
+  if (!value || typeof value !== 'object') return null;
+  const recipe = value as LaminationRecipe;
+  if (!Array.isArray(recipe.components)) return null;
+  return recipe;
+}
+
+function applyComponentPricesToRecipe(
+  recipe: LaminationRecipe,
+  prices: NonNullable<PebiMaterialRow['recipeComponentPrices']>,
+  alternatePrices?: PebiMaterialRow['alternateComponentPrices']
+): LaminationRecipe {
+  const byRole = new Map(prices.map((p) => [p.role, p.pricePerKgUsd]));
+  const next: LaminationRecipe = {
+    ...recipe,
+    components: recipe.components.map((c) => {
+      if (c.role === 'solvent') return c;
+      const price = byRole.get(c.role);
+      return price != null ? { ...c, pricePerKgUsd: price } : c;
+    }),
+  };
+  if (recipe.alternate && alternatePrices?.length) {
+    const altByRole = new Map(alternatePrices.map((p) => [p.role, p.pricePerKgUsd]));
+    next.alternate = {
+      ...recipe.alternate,
+      components: recipe.alternate.components.map((c) => {
+        if (c.role === 'solvent') return c;
+        const price = altByRole.get(c.role);
+        return price != null ? { ...c, pricePerKgUsd: price } : c;
+      }),
+    };
+  }
+  return next;
 }
 
 function derivePetWhiteFallbackPrice(
@@ -496,34 +582,13 @@ async function applyCatalogToTenant(
       continue;
     }
 
-    const marketUsd = positivePriceOrNull(row.marketPriceUsd);
-    const costUsd = positivePriceOrNull(row.costPerKgUsd);
-    const formulaFallback = !hasPositivePrice(marketUsd, costUsd)
-      ? deriveFormulaFallbackPrice(row, catalog.materials, family, aedPerUsd)
-      : null;
-    let effectiveMarketUsd = marketUsd ?? formulaFallback?.marketUsd ?? null;
-    let effectiveCostUsd = costUsd ?? formulaFallback?.costUsd ?? null;
-    let priceSource: 'pebi' | 'platform' = 'pebi';
-
-    const noPebiPrice = !hasPositivePrice(marketUsd, costUsd) && formulaFallback == null;
-    if (shouldHoldPlatformPrice(family, row.esPlatformMasterKey) && noPebiPrice) {
-      const platformFallback = await loadPlatformMaterialFallback(row.esPlatformMasterKey);
-      const held = resolveHeldPlatformPrice(existing, platformFallback);
-      if (!held) {
-        skipped++;
-        continue;
-      }
-      effectiveMarketUsd = held.marketUsd;
-      effectiveCostUsd = held.costUsd;
-      priceSource = 'platform';
-    } else if (!hasPositivePrice(effectiveMarketUsd, effectiveCostUsd)) {
-      skipped++;
-      continue;
-    }
-
     const platformFallback = await loadPlatformMaterialFallback(row.esPlatformMasterKey);
-    const resolvedCost = effectiveCostUsd ?? effectiveMarketUsd ?? 0;
-    const resolvedMarket = effectiveMarketUsd ?? effectiveCostUsd ?? resolvedCost;
+    const isInkFamily = family === 'INK';
+    const isAdhesiveFamily = family === 'ADHESIVE';
+    const isSolventFamily = family === 'SOLVENT';
+    const preservePhysical = isInkFamily || isAdhesiveFamily || isSolventFamily;
+
+    // INK/ADHESIVE/SOLVENT: never overwrite ES solid% / density from PEBI (catalog sends null).
     const defaultDensity =
       family === 'ALU'
         ? 2.7
@@ -539,22 +604,146 @@ async function applyCatalogToTenant(
                   ? 1.32
                   : family === 'SPECIALTY'
                     ? 0.85
-                    : 1.4;
-    const density =
-      row.densityGCm3 != null && row.densityGCm3 > 0
-        ? row.densityGCm3
-        : Number(platformFallback?.density ?? defaultDensity);
-    const solidPercent =
-      row.solidPercent != null && row.solidPercent > 0
-        ? row.solidPercent
-        : platformFallback?.solidPercent ?? 100;
+                    : family === 'PE'
+                      ? 0.92
+                      : family === 'INK' || family === 'ADHESIVE'
+                        ? 1.1
+                        : family === 'SOLVENT'
+                          ? 0.9
+                          : 1.4;
 
-    const patch = {
+    let solidPercent: number;
+    let density: number;
+    let laminationRecipe: LaminationRecipe | null = null;
+
+    if (preservePhysical) {
+      const existingSolid = existing?.solidPercent;
+      const existingDensity = existing?.density != null ? Number(existing.density) : null;
+      solidPercent =
+        existingSolid != null && existingSolid > 0
+          ? existingSolid
+          : platformFallback?.solidPercent ?? 100;
+      density =
+        existingDensity != null && existingDensity > 0
+          ? existingDensity
+          : Number(platformFallback?.density ?? defaultDensity);
+      if (isAdhesiveFamily) {
+        laminationRecipe =
+          asLaminationRecipe(existing?.laminationRecipe) ??
+          asLaminationRecipe(platformFallback?.laminationRecipe);
+      }
+    } else {
+      density =
+        row.densityGCm3 != null && row.densityGCm3 > 0
+          ? row.densityGCm3
+          : Number(platformFallback?.density ?? defaultDensity);
+      solidPercent =
+        row.solidPercent != null && row.solidPercent > 0
+          ? row.solidPercent
+          : platformFallback?.solidPercent ?? 100;
+    }
+
+    let effectiveMarketUsd: number | null = null;
+    let effectiveCostUsd: number | null = null;
+    let priceSource: 'pebi' | 'platform' | 'manual' = 'pebi';
+
+    if (isAdhesiveFamily && laminationRecipe && row.recipeComponentPrices?.length) {
+      laminationRecipe = applyComponentPricesToRecipe(
+        laminationRecipe,
+        row.recipeComponentPrices,
+        row.alternateComponentPrices
+      );
+      const stats = deriveBinderConcentrateStats(laminationRecipe);
+      solidPercent = Math.round(stats.solidPercent);
+      effectiveCostUsd = roundUsd(stats.costPerKgUsd);
+      effectiveMarketUsd = effectiveCostUsd;
+      if (!hasPositivePrice(effectiveMarketUsd, effectiveCostUsd)) {
+        if (allowsManualPriceFallback(family)) {
+          const existingMarket = decimalPriceOrNull(existing?.marketPriceUsd);
+          const existingCost = decimalPriceOrNull(existing?.costPerKgUsd);
+          effectiveCostUsd = existingCost ?? 0;
+          effectiveMarketUsd = existingMarket ?? existingCost ?? 0;
+          priceSource = 'manual';
+        } else {
+          skipped++;
+          continue;
+        }
+      }
+    } else if (isInkFamily) {
+      const inkDry = resolveInkDryCostUsd(row, solidPercent);
+      effectiveMarketUsd = inkDry.marketUsd;
+      effectiveCostUsd = inkDry.costUsd;
+      if (!hasPositivePrice(effectiveMarketUsd, effectiveCostUsd)) {
+        if (allowsManualPriceFallback(family)) {
+          const existingMarket = decimalPriceOrNull(existing?.marketPriceUsd);
+          const existingCost = decimalPriceOrNull(existing?.costPerKgUsd);
+          effectiveCostUsd = existingCost ?? 0;
+          effectiveMarketUsd = existingMarket ?? existingCost ?? 0;
+          priceSource = 'manual';
+        } else {
+          skipped++;
+          continue;
+        }
+      }
+    } else if (isSolventFamily) {
+      const liquidUsd =
+        positivePriceOrNull(row.liquidCostUsd) ?? positivePriceOrNull(row.marketPriceUsd);
+      effectiveMarketUsd = liquidUsd;
+      effectiveCostUsd = liquidUsd;
+      if (!hasPositivePrice(effectiveMarketUsd, effectiveCostUsd)) {
+        if (allowsManualPriceFallback(family)) {
+          const existingMarket = decimalPriceOrNull(existing?.marketPriceUsd);
+          const existingCost = decimalPriceOrNull(existing?.costPerKgUsd);
+          effectiveCostUsd = existingCost ?? 0;
+          effectiveMarketUsd = existingMarket ?? existingCost ?? 0;
+          priceSource = 'manual';
+        } else {
+          skipped++;
+          continue;
+        }
+      }
+    } else {
+      const marketUsd = positivePriceOrNull(row.marketPriceUsd);
+      const costUsd = positivePriceOrNull(row.costPerKgUsd);
+      const formulaFallback = !hasPositivePrice(marketUsd, costUsd)
+        ? deriveFormulaFallbackPrice(row, catalog.materials, family, aedPerUsd)
+        : null;
+      effectiveMarketUsd = marketUsd ?? formulaFallback?.marketUsd ?? null;
+      effectiveCostUsd = costUsd ?? formulaFallback?.costUsd ?? null;
+
+      const noPebiPrice = !hasPositivePrice(marketUsd, costUsd) && formulaFallback == null;
+      if (shouldHoldPlatformPrice(family, row.esPlatformMasterKey) && noPebiPrice) {
+        const held = resolveHeldPlatformPrice(existing, platformFallback);
+        if (!held) {
+          skipped++;
+          continue;
+        }
+        effectiveMarketUsd = held.marketUsd;
+        effectiveCostUsd = held.costUsd;
+        priceSource = 'platform';
+      } else if (!hasPositivePrice(effectiveMarketUsd, effectiveCostUsd)) {
+        if (allowsManualPriceFallback(family)) {
+          const existingMarket = decimalPriceOrNull(existing?.marketPriceUsd);
+          const existingCost = decimalPriceOrNull(existing?.costPerKgUsd);
+          effectiveCostUsd = existingCost ?? 0;
+          effectiveMarketUsd = existingMarket ?? existingCost ?? 0;
+          priceSource = 'manual';
+        } else {
+          skipped++;
+          continue;
+        }
+      }
+    }
+
+    const resolvedCost = effectiveCostUsd ?? effectiveMarketUsd ?? 0;
+    const resolvedMarket = effectiveMarketUsd ?? effectiveCostUsd ?? resolvedCost;
+
+    const patch: Record<string, unknown> = {
       substrateFamily: row.substrateFamily,
       substrateGrade: row.substrateGrade,
       marketPriceUsd: toDecimalString(resolvedMarket, toDecimalString(resolvedCost, '0')),
       costPerKgUsd: toDecimalString(resolvedCost, '0'),
-      density: toDecimalString(density, toDecimalString(defaultDensity, '1.4000')),
+      density: toDensityString(density, toDensityString(defaultDensity, '1.40')),
       solidPercent,
       priceSource,
       platformMasterKey: row.esPlatformMasterKey,
@@ -562,6 +751,7 @@ async function applyCatalogToTenant(
       externalId: row.pebiGradeKey,
       externalSource: PEBI_MATERIAL_SOURCE,
       ...(row.substrateHoover ? { hoover: row.substrateHoover } : {}),
+      ...(laminationRecipe ? { laminationRecipe } : {}),
       updatedAt: now,
     };
 
@@ -573,8 +763,27 @@ async function applyCatalogToTenant(
       await db.insert(schema.materials).values({
         tenantId,
         name,
-        type: 'substrate',
-        ...patch,
+        type: isInkFamily
+          ? 'ink'
+          : isAdhesiveFamily
+            ? 'adhesive'
+            : isSolventFamily
+              ? 'solvent'
+              : 'substrate',
+        solidPercent: solidPercent,
+        density: toDensityString(density, toDensityString(defaultDensity, '1.40')),
+        costPerKgUsd: toDecimalString(resolvedCost, '0'),
+        marketPriceUsd: toDecimalString(resolvedMarket, toDecimalString(resolvedCost, '0')),
+        substrateFamily: row.substrateFamily,
+        substrateGrade: row.substrateGrade,
+        priceSource,
+        platformMasterKey: row.esPlatformMasterKey,
+        platformSyncedAt: now,
+        externalId: row.pebiGradeKey,
+        externalSource: PEBI_MATERIAL_SOURCE,
+        ...(row.substrateHoover ? { hoover: row.substrateHoover } : {}),
+        ...(laminationRecipe ? { laminationRecipe } : {}),
+        updatedAt: now,
       });
       inserted++;
     }
@@ -597,6 +806,10 @@ export async function syncFamilyMaterialsFromPebiForTenant(
   const aedPerUsd = tenantAedPerUsd(tenant);
   const { catalog, source } = await loadPebiMaterials(tenant.platformCompanyCode!, family, aedPerUsd);
   const applied = await applyCatalogToTenant(tenantId, catalog, family, aedPerUsd);
+
+  if (family === 'SOLVENT') {
+    await refreshTenantSolventCommon(tenantId);
+  }
 
   return {
     tenantId,
@@ -647,6 +860,87 @@ export async function syncSpecialtyMaterialsFromPebiForTenant(tenantId: string):
   return syncFamilyMaterialsFromPebiForTenant(tenantId, 'SPECIALTY');
 }
 
+export async function syncPeMaterialsFromPebiForTenant(tenantId: string): Promise<MaterialSyncResult> {
+  return syncFamilyMaterialsFromPebiForTenant(tenantId, 'PE');
+}
+
+export async function syncInkMaterialsFromPebiForTenant(tenantId: string): Promise<MaterialSyncResult> {
+  return syncFamilyMaterialsFromPebiForTenant(tenantId, 'INK');
+}
+
+export async function syncAdhesiveMaterialsFromPebiForTenant(tenantId: string): Promise<MaterialSyncResult> {
+  return syncFamilyMaterialsFromPebiForTenant(tenantId, 'ADHESIVE');
+}
+
+export async function syncSolventMaterialsFromPebiForTenant(tenantId: string): Promise<MaterialSyncResult> {
+  return syncFamilyMaterialsFromPebiForTenant(tenantId, 'SOLVENT');
+}
+
+/**
+ * After SOLVENT price sync, recompute tenant Solvent Common from peer solvents.
+ */
+async function refreshTenantSolventCommon(tenantId: string): Promise<void> {
+  const db = getDatabase();
+  const rows = await db
+    .select()
+    .from(schema.materials)
+    .where(and(eq(schema.materials.tenantId, tenantId), eq(schema.materials.type, 'solvent')));
+
+  const peers = rows.filter(
+    (r) =>
+      r.platformMasterKey !== 'solvent-common' &&
+      r.platformMasterKey !== 'solvent-sleeve-seaming' &&
+      Number(r.costPerKgUsd) > 0 &&
+      Number(r.density) > 0
+  );
+  if (peers.length === 0) return;
+
+  const cost =
+    Math.round((peers.reduce((s, r) => s + Number(r.costPerKgUsd), 0) / peers.length) * 100) / 100;
+  const density =
+    Math.round((peers.reduce((s, r) => s + Number(r.density), 0) / peers.length) * 1000) / 1000;
+
+  const common = rows.find((r) => r.platformMasterKey === 'solvent-common');
+  if (!common) return;
+
+  // Keep seaming mix price aligned to THF (or dioxolane) after sync.
+  const thf = rows.find((r) => r.platformMasterKey === 'solvent-thf');
+  const diox = rows.find((r) => r.platformMasterKey === 'solvent-dioxolane');
+  const seaming = rows.find((r) => r.platformMasterKey === 'solvent-sleeve-seaming');
+  const thfPrice = thf ? Number(thf.costPerKgUsd) : null;
+  if (thfPrice != null && thfPrice > 0 && diox) {
+    await db
+      .update(schema.materials)
+      .set({
+        costPerKgUsd: toDecimalString(thfPrice, '0'),
+        marketPriceUsd: toDecimalString(thfPrice, '0'),
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.materials.id, diox.id));
+  }
+  if (thfPrice != null && thfPrice > 0 && seaming) {
+    await db
+      .update(schema.materials)
+      .set({
+        costPerKgUsd: toDecimalString(thfPrice, '0'),
+        marketPriceUsd: toDecimalString(thfPrice, '0'),
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.materials.id, seaming.id));
+  }
+
+  await db
+    .update(schema.materials)
+    .set({
+      costPerKgUsd: toDecimalString(cost, '0'),
+      marketPriceUsd: toDecimalString(cost, '0'),
+      density: toDensityString(density, '0.85'),
+      hoover: 'Average of all solvents (price + density)',
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.materials.id, common.id));
+}
+
 /**
  * Review queue for a PEBI-linked family (no DB writes).
  */
@@ -681,15 +975,29 @@ export async function getMaterialsMissingForTenant(
 
     const marketUsd = positivePriceOrNull(row.marketPriceUsd);
     const costUsd = positivePriceOrNull(row.costPerKgUsd);
-    const formulaFallback = !hasPositivePrice(marketUsd, costUsd)
-      ? deriveFormulaFallbackPrice(row, catalog.materials, family, aedPerUsd)
-      : null;
+    const liquidUsd = positivePriceOrNull(row.liquidCostUsd);
+    const formulaFallback =
+      family !== 'INK' &&
+      family !== 'ADHESIVE' &&
+      family !== 'SOLVENT' &&
+      !hasPositivePrice(marketUsd, costUsd)
+        ? deriveFormulaFallbackPrice(row, catalog.materials, family, aedPerUsd)
+        : null;
 
-    const effectiveMarketUsd = marketUsd ?? formulaFallback?.marketUsd ?? null;
-    const effectiveCostUsd = costUsd ?? formulaFallback?.costUsd ?? null;
+    const effectiveMarketUsd =
+      family === 'INK' || family === 'ADHESIVE' || family === 'SOLVENT'
+        ? liquidUsd ?? marketUsd
+        : marketUsd ?? formulaFallback?.marketUsd ?? null;
+    const effectiveCostUsd =
+      family === 'INK' || family === 'ADHESIVE' || family === 'SOLVENT'
+        ? liquidUsd ?? marketUsd ?? costUsd
+        : costUsd ?? formulaFallback?.costUsd ?? null;
 
     if (!hasPositivePrice(effectiveMarketUsd, effectiveCostUsd)) {
-      const noPebiPrice = !hasPositivePrice(marketUsd, costUsd) && formulaFallback == null;
+      const noPebiPrice =
+        family === 'INK' || family === 'ADHESIVE' || family === 'SOLVENT'
+          ? !hasPositivePrice(liquidUsd, marketUsd)
+          : !hasPositivePrice(marketUsd, costUsd) && formulaFallback == null;
       if (shouldHoldPlatformPrice(family, row.esPlatformMasterKey) && noPebiPrice) {
         const existing = await findTenantMaterial(tenantId, row);
         const platformFallback = await loadPlatformMaterialFallback(row.esPlatformMasterKey);
@@ -697,6 +1005,19 @@ export async function getMaterialsMissingForTenant(
         if (held) {
           continue;
         }
+      }
+
+      if (allowsManualPriceFallback(family)) {
+        const existing = await findTenantMaterial(tenantId, row);
+        if (hasPositivePrice(decimalPriceOrNull(existing?.marketPriceUsd), decimalPriceOrNull(existing?.costPerKgUsd))) {
+          continue;
+        }
+        missing.push({
+          pbGradeKey: row.pebiGradeKey,
+          pbGrade: pbGradeFromKey(row.pebiGradeKey),
+          reason: 'awaiting_manual_price',
+        });
+        continue;
       }
 
       missing.push({

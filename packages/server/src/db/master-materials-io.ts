@@ -140,8 +140,15 @@ export const LEGACY_UNIT_METADATA: Record<string, { basis: UnitBasis; multiplier
 
 /** Template ref_material_key → master seed `key`. */
 export const TEMPLATE_REF_TO_MASTER_KEY: Record<string, string> = {
-  'ldpe-natural': 'ldpe-natural',
-  'ldpe-white': 'ldpe-white',
+  'pe-plain-commercial': 'pe-plain-commercial',
+  'pe-plain-industrial': 'pe-plain-industrial',
+  'pe-ffs': 'pe-ffs',
+  'pe-wide-hdpe': 'pe-wide-hdpe',
+  'pe-lamination': 'pe-lamination',
+  'pe-shrink': 'pe-shrink',
+  /** Legacy aliases kept for older templates / estimates */
+  'ldpe-natural': 'pe-plain-commercial',
+  'ldpe-white': 'pe-plain-industrial',
   'ldpe-shrink': 'pe-shrink',
   'pet-transparent': 'pet-transparent',
   'pet-shrink': 'pet-shrink',
@@ -156,13 +163,15 @@ export const TEMPLATE_REF_TO_MASTER_KEY: Record<string, string> = {
   'alu-foil-12': 'alu-foil-12',
   'ink-sb': 'ink-sb',
   'ink-uv': 'ink-uv',
-  'adhesive-sb': 'adhesive-sb-gp',
-  'adhesive-sb-gp': 'adhesive-sb-gp',
+  'adhesive-sb': 'adhesive-sb-mp',
+  'adhesive-sb-gp': 'adhesive-sb-mp',
   'adhesive-sb-mp': 'adhesive-sb-mp',
   'adhesive-sb-hp': 'adhesive-sb-hp',
-  'adhesive-wb': 'adhesive-wb',
-  'adhesive-mono-component': 'adhesive-mono-component',
-  'solvent-base': 'adhesive-sb',
+  'adhesive-wb': 'adhesive-sl-dry',
+  'adhesive-sl-dry': 'adhesive-sl-dry',
+  'adhesive-mono-component': 'adhesive-mono',
+  'adhesive-mono': 'adhesive-mono',
+  'solvent-base': 'adhesive-sb-mp',
   'solvent-common': 'solvent-common',
 };
 

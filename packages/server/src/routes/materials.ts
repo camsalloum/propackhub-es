@@ -11,6 +11,12 @@ import { sendCaughtError, errorBody } from '../utils/errors';
 import {
   buildTenantCatalogAccess,
   canMutateMaterialRow,
+  canEditPebiSyncedMaterialPrice,
+  canEditPeSubstrateManualPrice,
+  canEditInkCoatingManualPrice,
+  canEditInkCoatingPhysicalProps,
+  canEditAdhesiveManualPrice,
+  canEditAdhesivePhysicalProps,
   CATALOG_READ_ONLY_MESSAGE,
 } from '../services/tenant-catalog-access';
 import { getMaterialsCatalogMeta } from '../services/materials-catalog-meta';
@@ -83,6 +89,7 @@ const MaterialSchema = z.object({
   hoover: z.string().nullable().optional(),
   marketPriceUsd: z.number().nonnegative().nullable().optional(),
   itemClass: z.string().max(64).nullable().optional(),
+  laminationRecipe: z.unknown().nullable().optional(),
   // Accessory pricing (type='accessory' rows).
   accessoryKind: z.enum(['zipper', 'spout', 'valve', 'handle', 'window']).nullable().optional(),
   costPerMeterUsd: z.number().nonnegative().nullable().optional(),
@@ -208,7 +215,12 @@ export async function updateMaterialRoute(
     const [existing] = await db
       .select({
         isTenantOnly: schema.materials.isTenantOnly,
+        type: schema.materials.type,
+        substrateFamily: schema.materials.substrateFamily,
         externalSource: schema.materials.externalSource,
+        priceSource: schema.materials.priceSource,
+        solidPercent: schema.materials.solidPercent,
+        costPerKgUsd: schema.materials.costPerKgUsd,
       })
       .from(schema.materials)
       .where(and(eq(schema.materials.id, id), eq(schema.materials.tenantId, tenantId)))
@@ -226,10 +238,57 @@ export async function updateMaterialRoute(
       catalogAccess.catalogSource === 'pebi' &&
       !existing.isTenantOnly &&
       existing.externalSource === 'pebi' &&
+      existing.priceSource === 'pebi' &&
       definedPatchKeys.length === 1 &&
       definedPatchKeys[0] === 'marketPriceUsd';
+    const isPebiManualPriceEdit =
+      canEditPebiSyncedMaterialPrice({
+        catalogSource: catalogAccess.catalogSource,
+        externalSource: existing.externalSource,
+        priceSource: existing.priceSource,
+        isTenantOnly: existing.isTenantOnly,
+      }) &&
+      definedPatchKeys.every((key) => key === 'marketPriceUsd' || key === 'costPerKgUsd');
+    const isPeManualPriceEdit =
+      canEditPeSubstrateManualPrice({
+        type: existing.type,
+        substrateFamily: existing.substrateFamily,
+        externalSource: existing.externalSource,
+        priceSource: existing.priceSource,
+      }) &&
+      definedPatchKeys.every((key) => key === 'marketPriceUsd' || key === 'costPerKgUsd');
+    const isInkManualEdit = canEditInkCoatingManualPrice({
+      type: existing.type,
+      externalSource: existing.externalSource,
+      priceSource: existing.priceSource,
+    });
+    const inkPhysicalKeys = new Set(['solidPercent', 'density', 'name', 'substrateFamily', 'substrateGrade', 'hoover']);
+    const isInkPhysicalEdit =
+      canEditInkCoatingPhysicalProps({ type: existing.type }) &&
+      definedPatchKeys.every((key) => inkPhysicalKeys.has(key));
+    const isAdhesiveManualEdit = canEditAdhesiveManualPrice({
+      type: existing.type,
+      externalSource: existing.externalSource,
+      priceSource: existing.priceSource,
+    });
+    const adhesivePhysicalKeys = new Set([
+      ...inkPhysicalKeys,
+      'laminationRecipe',
+    ]);
+    const isAdhesivePhysicalEdit =
+      canEditAdhesivePhysicalProps({ type: existing.type }) &&
+      definedPatchKeys.every((key) => adhesivePhysicalKeys.has(key));
 
-    if (!canMutateMaterialRow(catalogAccess, existing.isTenantOnly) && !isPebiMarketRefOnlyEdit) {
+    if (
+      !canMutateMaterialRow(catalogAccess, existing.isTenantOnly) &&
+      !isPebiMarketRefOnlyEdit &&
+      !isPebiManualPriceEdit &&
+      !isPeManualPriceEdit &&
+      !isInkManualEdit &&
+      !isInkPhysicalEdit &&
+      !isAdhesiveManualEdit &&
+      !isAdhesivePhysicalEdit
+    ) {
       return reply
         .status(403)
         .send(errorBody('FORBIDDEN', CATALOG_READ_ONLY_MESSAGE, { catalogAccess }));
@@ -240,11 +299,38 @@ export async function updateMaterialRoute(
     if (marketPriceUsd !== undefined) {
       patch.marketPriceUsd = marketPriceUsd;
     }
-    if (!isPebiMarketRefOnlyEdit && (costPerKgUsd !== undefined || marketPriceUsd !== undefined)) {
+    if (
+      !isPebiMarketRefOnlyEdit &&
+      (isPebiManualPriceEdit ||
+        isPeManualPriceEdit ||
+        isInkManualEdit ||
+        isAdhesiveManualEdit ||
+        canMutateMaterialRow(catalogAccess, existing.isTenantOnly)) &&
+      (costPerKgUsd !== undefined || marketPriceUsd !== undefined)
+    ) {
       patch.priceSource = 'manual';
     }
     if (costPerKgUsd !== undefined) {
       patch.costPerKgUsd = costPerKgUsd;
+    }
+    // PEBI-priced ink: solid% change keeps liquid $/kg, recomputes dry cost (does not flip priceSource).
+    if (
+      isInkPhysicalEdit &&
+      !isInkManualEdit &&
+      existing.type === 'ink' &&
+      existing.priceSource === 'pebi' &&
+      data.solidPercent != null &&
+      data.solidPercent > 0 &&
+      existing.solidPercent > 0
+    ) {
+      const oldSolid = existing.solidPercent;
+      const newSolid = data.solidPercent;
+      const dry = Number(existing.costPerKgUsd);
+      if (Number.isFinite(dry) && dry > 0 && oldSolid !== newSolid) {
+        const liquid = dry * (oldSolid / 100);
+        patch.costPerKgUsd = String(roundUsd(liquid / (newSolid / 100)));
+        patch.marketPriceUsd = patch.costPerKgUsd;
+      }
     }
     // Accessory pricing (decimal columns take strings).
     if (costPerMeterUsd !== undefined) patch.costPerMeterUsd = costPerMeterUsd != null ? String(costPerMeterUsd) : null;

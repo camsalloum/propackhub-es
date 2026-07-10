@@ -19,6 +19,7 @@ type TenantMaterialRow = {
   externalId?: string | null;
   externalSource?: string | null;
   isTenantOnly?: boolean;
+  priceSource?: string | null;
   accessoryKind?: string | null;
   costPerMeterUsd?: string | number | null;
   costPerPieceUsd?: string | number | null;
@@ -53,7 +54,7 @@ export function tenantMaterialToPlatformRow(m: TenantMaterialRow): PlatformMaste
     name: m.name,
     type: m.type as PlatformMasterMaterialRow['type'],
     solidPercent,
-    density: num(m.density),
+    density: Math.round(num(m.density) * 100) / 100,
     costPerKgUsd,
     liquidCostUsd,
     wastePercent: Math.round(num(m.wastePercent)),
@@ -64,6 +65,7 @@ export function tenantMaterialToPlatformRow(m: TenantMaterialRow): PlatformMaste
     marketPriceUsd: m.marketPriceUsd != null ? usd(m.marketPriceUsd) : null,
     externalId: m.externalId ?? null,
     externalSource: m.externalSource ?? null,
+    priceSource: (m as { priceSource?: string | null }).priceSource ?? null,
     accessoryKind: (m.accessoryKind as PlatformMasterMaterialRow['accessoryKind']) ?? null,
     costPerMeterUsd: m.costPerMeterUsd != null ? usd(m.costPerMeterUsd) : null,
     costPerPieceUsd: m.costPerPieceUsd != null ? usd(m.costPerPieceUsd) : null,
@@ -99,9 +101,72 @@ export function buildTenantMaterialPayload(row: PlatformMasterMaterialRow) {
 }
 
 export function canEditTenantMaterialRow(
-  row: PlatformMasterMaterialRow & { isTenantOnly?: boolean },
-  canEditSyncedMaterials: boolean
+  row: PlatformMasterMaterialRow & {
+    isTenantOnly?: boolean;
+    priceSource?: string | null;
+    type?: string;
+    substrateFamily?: string | null;
+  },
+  canEditSyncedMaterials: boolean,
+  catalogSource: 'tenant' | 'platform' | 'pebi' = 'tenant'
 ): boolean {
   if (row.isTenantOnly) return true;
-  return canEditSyncedMaterials;
+  if (canEditSyncedMaterials) return true;
+  if (
+    row.type === 'substrate' &&
+    row.substrateFamily === 'PE' &&
+    !(row.externalSource === 'pebi' && row.priceSource === 'pebi')
+  ) {
+    return true;
+  }
+  // All ink/coating grades: editable except live PEBI-priced SB/UV Common (price only).
+  // Solid%/density stay editable via canEditInkPhysicalProps when price is PEBI-locked.
+  if (row.type === 'ink' && !(row.externalSource === 'pebi' && row.priceSource === 'pebi')) {
+    return true;
+  }
+  if (row.type === 'adhesive' && !(row.externalSource === 'pebi' && row.priceSource === 'pebi')) {
+    return true;
+  }
+  // Manual solvents always editable; PEBI-linked solvents: density always, price when not live PEBI.
+  if (row.type === 'solvent' && !(row.externalSource === 'pebi' && row.priceSource === 'pebi')) {
+    return true;
+  }
+  if (
+    catalogSource === 'pebi' &&
+    row.externalSource === 'pebi' &&
+    (row.priceSource === 'manual' || row.priceSource === 'platform')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** ES owns ink solid% and density even when PEBI owns liquid/dry price. */
+export function canEditInkPhysicalProps(
+  row: { type?: string; isTenantOnly?: boolean },
+  canEditSyncedMaterials: boolean
+): boolean {
+  if (row.type !== 'ink') return false;
+  if (row.isTenantOnly || canEditSyncedMaterials) return true;
+  return true;
+}
+
+/** ES owns adhesive mix / solid% / density even when PEBI owns component prices. */
+export function canEditAdhesivePhysicalProps(
+  row: { type?: string; isTenantOnly?: boolean },
+  canEditSyncedMaterials: boolean
+): boolean {
+  if (row.type !== 'adhesive') return false;
+  if (row.isTenantOnly || canEditSyncedMaterials) return true;
+  return true;
+}
+
+/** ES owns solvent density even when PEBI owns liquid price. */
+export function canEditSolventPhysicalProps(
+  row: { type?: string; isTenantOnly?: boolean },
+  canEditSyncedMaterials: boolean
+): boolean {
+  if (row.type !== 'solvent') return false;
+  if (row.isTenantOnly || canEditSyncedMaterials) return true;
+  return true;
 }

@@ -190,6 +190,8 @@ export function calculateEstimate(
     inkMakeupSolventCostPerM2: solventDetail.inkMakeupCostPerM2,
     cleaningSolventCostPerKg: solventDetail.cleaningCostPerKg,
     cleaningSolventCostPerM2: solventDetail.cleaningCostPerM2,
+    seamingSolventCostPerKg: solventDetail.seamingCostPerKg,
+    seamingSolventCostPerM2: solventDetail.seamingCostPerM2,
     solventMixRatio: solventDetail.inkSolventRatio,
     inkPrintingProcessResolved: solventDetail.inkPrintingProcess,
     inkSolventRatioResolved: solventDetail.inkSolventRatio,
@@ -480,7 +482,9 @@ function priceWithNewModel(params: {
   wasteQtyKg: number;
   amortizeQtyKg: number;
   wasteBands?: WasteBand[];
+  /** USD/kg — caller converts from display at engine boundary. */
   platesPerKg: number;
+  /** USD/kg — caller converts from display at engine boundary. */
   deliveryPerKg: number;
   toolingChargeUsd: number;
   toolingBilled: boolean;
@@ -505,7 +509,7 @@ function priceWithNewModel(params: {
   const wasteAdjustedMaterialPerKg = params.materialPerKg * (1 + wastePct / 100);
 
   const amort = params.amortizeQtyKg > 0 ? params.amortizeQtyKg : 0;
-  // PrePress (development / tooling) and Transport (delivery) — per kg.
+  // PrePress / Transport — platesPerKg & deliveryPerKg are USD (converted at boundary).
   const prepressCostPerKg =
     params.platesPerKg + (params.toolingBilled && amort > 0 ? params.toolingChargeUsd / amort : 0);
   const transportCostPerKg =

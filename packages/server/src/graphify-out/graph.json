@@ -50,7 +50,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_index",
-      "community": 28,
+      "community": 9,
       "norm_label": "index.ts"
     },
     {
@@ -60,7 +60,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "db_index_parseenvint",
-      "community": 28,
+      "community": 9,
       "norm_label": "parseenvint()"
     },
     {
@@ -70,7 +70,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "db_index_parseenvbool",
-      "community": 28,
+      "community": 9,
       "norm_label": "parseenvbool()"
     },
     {
@@ -90,7 +90,7 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "db_index_runmigrations",
-      "community": 28,
+      "community": 9,
       "norm_label": "runmigrations()"
     },
     {
@@ -100,7 +100,7 @@
       "source_location": "L127",
       "_origin": "ast",
       "id": "db_index_initializedatabase",
-      "community": 28,
+      "community": 9,
       "norm_label": "initializedatabase()"
     },
     {
@@ -120,7 +120,7 @@
       "source_location": "L174",
       "_origin": "ast",
       "id": "db_index_resetdatabaseconnection",
-      "community": 28,
+      "community": 9,
       "norm_label": "resetdatabaseconnection()"
     },
     {
@@ -130,7 +130,7 @@
       "source_location": "L189",
       "_origin": "ast",
       "id": "db_index_closedatabase",
-      "community": 28,
+      "community": 9,
       "norm_label": "closedatabase()"
     },
     {
@@ -150,7 +150,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_master_materials_io",
-      "community": 18,
+      "community": 26,
       "norm_label": "master-materials-io.ts"
     },
     {
@@ -160,7 +160,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "db_master_materials_io_mastermaterial",
-      "community": 3,
+      "community": 26,
       "norm_label": "mastermaterial"
     },
     {
@@ -170,7 +170,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "db_master_materials_io_producttyperow",
-      "community": 18,
+      "community": 26,
       "norm_label": "producttyperow"
     },
     {
@@ -180,7 +180,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "db_master_materials_io_printingwebrow",
-      "community": 18,
+      "community": 26,
       "norm_label": "printingwebrow"
     },
     {
@@ -220,7 +220,7 @@
       "source_location": "L121",
       "_origin": "ast",
       "id": "db_master_materials_io_default_unit_rows",
-      "community": 18,
+      "community": 26,
       "norm_label": "default_unit_rows"
     },
     {
@@ -240,7 +240,7 @@
       "source_location": "L142",
       "_origin": "ast",
       "id": "db_master_materials_io_template_ref_to_master_key",
-      "community": 18,
+      "community": 26,
       "norm_label": "template_ref_to_master_key"
     },
     {
@@ -260,7 +260,7 @@
       "source_location": "L177",
       "_origin": "ast",
       "id": "db_master_materials_io_resolvemasterseedpath",
-      "community": 18,
+      "community": 26,
       "norm_label": "resolvemasterseedpath()"
     },
     {
@@ -350,7 +350,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "db_platform_master_audit_materialauditsnapshot",
-      "community": 24,
+      "community": 17,
       "norm_label": "materialauditsnapshot()"
     },
     {
@@ -390,7 +390,7 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "db_platform_master_audit_appendmasterauditentries",
-      "community": 24,
+      "community": 17,
       "norm_label": "appendmasterauditentries()"
     },
     {
@@ -480,7 +480,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "db_platform_master_data_ensureplatformmasterstate",
-      "community": 4,
+      "community": 19,
       "norm_label": "ensureplatformmasterstate()"
     },
     {
@@ -500,7 +500,7 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "db_platform_master_data_incrementmasterdataversion",
-      "community": 24,
+      "community": 17,
       "norm_label": "incrementmasterdataversion()"
     },
     {
@@ -570,7 +570,7 @@
       "source_location": "L142",
       "_origin": "ast",
       "id": "db_platform_master_data_rowtomastermaterial",
-      "community": 24,
+      "community": 17,
       "norm_label": "rowtomastermaterial()"
     },
     {
@@ -580,7 +580,7 @@
       "source_location": "L168",
       "_origin": "ast",
       "id": "db_platform_master_data_mastermaterialinputtodbvalues",
-      "community": 23,
+      "community": 17,
       "norm_label": "mastermaterialinputtodbvalues()"
     },
     {
@@ -590,7 +590,7 @@
       "source_location": "L202",
       "_origin": "ast",
       "id": "db_platform_master_data_listplatformmastermaterials",
-      "community": 23,
+      "community": 17,
       "norm_label": "listplatformmastermaterials()"
     },
     {
@@ -610,7 +610,7 @@
       "source_location": "L222",
       "_origin": "ast",
       "id": "db_platform_master_data_getplatformmastermaterialbyid",
-      "community": 24,
+      "community": 17,
       "norm_label": "getplatformmastermaterialbyid()"
     },
     {
@@ -620,7 +620,7 @@
       "source_location": "L232",
       "_origin": "ast",
       "id": "db_platform_master_data_createplatformmastermaterial",
-      "community": 24,
+      "community": 17,
       "norm_label": "createplatformmastermaterial()"
     },
     {
@@ -630,7 +630,7 @@
       "source_location": "L255",
       "_origin": "ast",
       "id": "db_platform_master_data_updateplatformmastermaterial",
-      "community": 24,
+      "community": 17,
       "norm_label": "updateplatformmastermaterial()"
     },
     {
@@ -640,7 +640,7 @@
       "source_location": "L319",
       "_origin": "ast",
       "id": "db_platform_master_data_refreshsolventcommonrow",
-      "community": 24,
+      "community": 17,
       "norm_label": "refreshsolventcommonrow()"
     },
     {
@@ -650,7 +650,7 @@
       "source_location": "L362",
       "_origin": "ast",
       "id": "db_platform_master_data_deleteplatformmastermaterial",
-      "community": 24,
+      "community": 17,
       "norm_label": "deleteplatformmastermaterial()"
     },
     {
@@ -660,7 +660,7 @@
       "source_location": "L389",
       "_origin": "ast",
       "id": "db_platform_master_data_replaceplatformmastermaterials",
-      "community": 24,
+      "community": 17,
       "norm_label": "replaceplatformmastermaterials()"
     },
     {
@@ -680,7 +680,7 @@
       "source_location": "L456",
       "_origin": "ast",
       "id": "db_platform_master_data_listplatformreferenceitems",
-      "community": 30,
+      "community": 17,
       "norm_label": "listplatformreferenceitems()"
     },
     {
@@ -700,7 +700,7 @@
       "source_location": "L494",
       "_origin": "ast",
       "id": "db_platform_master_data_buildmasterdatareferencefromdb",
-      "community": 4,
+      "community": 19,
       "norm_label": "buildmasterdatareferencefromdb()"
     },
     {
@@ -730,7 +730,7 @@
       "source_location": "L726",
       "_origin": "ast",
       "id": "db_platform_master_data_syncplatformmastertoalltenants",
-      "community": 1,
+      "community": 17,
       "norm_label": "syncplatformmastertoalltenants()"
     },
     {
@@ -740,7 +740,7 @@
       "source_location": "L772",
       "_origin": "ast",
       "id": "db_platform_master_data_loadseedmaterialsfromjson",
-      "community": 23,
+      "community": 17,
       "norm_label": "loadseedmaterialsfromjson()"
     },
     {
@@ -760,7 +760,7 @@
       "source_location": "L796",
       "_origin": "ast",
       "id": "db_platform_master_data_ensureplatformmasterseeded",
-      "community": 23,
+      "community": 17,
       "norm_label": "ensureplatformmasterseeded()"
     },
     {
@@ -770,7 +770,7 @@
       "source_location": "L902",
       "_origin": "ast",
       "id": "db_platform_master_data_ensureprocessesseeded",
-      "community": 23,
+      "community": 17,
       "norm_label": "ensureprocessesseeded()"
     },
     {
@@ -780,7 +780,7 @@
       "source_location": "L933",
       "_origin": "ast",
       "id": "db_platform_master_data_ensuresolventcatalogseeded",
-      "community": 23,
+      "community": 17,
       "norm_label": "ensuresolventcatalogseeded()"
     },
     {
@@ -810,7 +810,7 @@
       "source_location": "L1004",
       "_origin": "ast",
       "id": "db_platform_master_data_ensurelaminationadhesivesseeded",
-      "community": 23,
+      "community": 17,
       "norm_label": "ensurelaminationadhesivesseeded()"
     },
     {
@@ -850,7 +850,7 @@
       "source_location": "L1094",
       "_origin": "ast",
       "id": "db_platform_master_data_ensurepetsubstratesfromseed",
-      "community": 23,
+      "community": 17,
       "norm_label": "ensurepetsubstratesfromseed()"
     },
     {
@@ -880,7 +880,7 @@
       "source_location": "L1161",
       "_origin": "ast",
       "id": "db_platform_master_data_ensureboppsubstratesfromseed",
-      "community": 23,
+      "community": 17,
       "norm_label": "ensureboppsubstratesfromseed()"
     },
     {
@@ -900,7 +900,7 @@
       "source_location": "L1238",
       "_origin": "ast",
       "id": "db_platform_master_data_ensurecppsubstratesfromseed",
-      "community": 23,
+      "community": 17,
       "norm_label": "ensurecppsubstratesfromseed()"
     },
     {
@@ -920,7 +920,7 @@
       "source_location": "L1297",
       "_origin": "ast",
       "id": "db_platform_master_data_ensurepasubstratesfromseed",
-      "community": 23,
+      "community": 17,
       "norm_label": "ensurepasubstratesfromseed()"
     },
     {
@@ -937,7 +937,7 @@
       "label": "RETIRED_PAP_SUBSTRATE_KEYS",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L1360",
+      "source_location": "L1359",
       "_origin": "ast",
       "id": "db_platform_master_data_retired_pap_substrate_keys",
       "community": 17,
@@ -947,17 +947,67 @@
       "label": "ensurePapSubstratesFromSeed()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L1363",
+      "source_location": "L1362",
       "_origin": "ast",
       "id": "db_platform_master_data_ensurepapsubstratesfromseed",
-      "community": 23,
+      "community": 17,
       "norm_label": "ensurepapsubstratesfromseed()"
+    },
+    {
+      "label": "SLEEVE_SUBSTRATE_KEYS",
+      "file_type": "code",
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1426",
+      "_origin": "ast",
+      "id": "db_platform_master_data_sleeve_substrate_keys",
+      "community": 17,
+      "norm_label": "sleeve_substrate_keys"
+    },
+    {
+      "label": "ensureSleeveSubstratesFromSeed()",
+      "file_type": "code",
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1434",
+      "_origin": "ast",
+      "id": "db_platform_master_data_ensuresleevesubstratesfromseed",
+      "community": 17,
+      "norm_label": "ensuresleevesubstratesfromseed()"
+    },
+    {
+      "label": "SPECIALTY_SUBSTRATE_KEYS",
+      "file_type": "code",
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1486",
+      "_origin": "ast",
+      "id": "db_platform_master_data_specialty_substrate_keys",
+      "community": 17,
+      "norm_label": "specialty_substrate_keys"
+    },
+    {
+      "label": "RETIRED_SPECIALTY_SUBSTRATE_KEYS",
+      "file_type": "code",
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1493",
+      "_origin": "ast",
+      "id": "db_platform_master_data_retired_specialty_substrate_keys",
+      "community": 17,
+      "norm_label": "retired_specialty_substrate_keys"
+    },
+    {
+      "label": "ensureSpecialtySubstratesFromSeed()",
+      "file_type": "code",
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1496",
+      "_origin": "ast",
+      "id": "db_platform_master_data_ensurespecialtysubstratesfromseed",
+      "community": 17,
+      "norm_label": "ensurespecialtysubstratesfromseed()"
     },
     {
       "label": "updateCostingDefaults()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L1428",
+      "source_location": "L1565",
       "_origin": "ast",
       "id": "db_platform_master_data_updatecostingdefaults",
       "community": 17,
@@ -967,7 +1017,7 @@
       "label": "normalizeBandList()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L1478",
+      "source_location": "L1615",
       "_origin": "ast",
       "id": "db_platform_master_data_normalizebandlist",
       "community": 17,
@@ -977,7 +1027,7 @@
       "label": "parseBandList()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L1493",
+      "source_location": "L1630",
       "_origin": "ast",
       "id": "db_platform_master_data_parsebandlist",
       "community": 17,
@@ -987,7 +1037,7 @@
       "label": "assertValidBandList()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L1505",
+      "source_location": "L1642",
       "_origin": "ast",
       "id": "db_platform_master_data_assertvalidbandlist",
       "community": 17,
@@ -997,7 +1047,7 @@
       "label": "parseWasteBandsByPrintMode()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L1518",
+      "source_location": "L1655",
       "_origin": "ast",
       "id": "db_platform_master_data_parsewastebandsbyprintmode",
       "community": 17,
@@ -1007,27 +1057,27 @@
       "label": "getPlatformWasteBandsByPrintMode()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L1544",
+      "source_location": "L1681",
       "_origin": "ast",
       "id": "db_platform_master_data_getplatformwastebandsbyprintmode",
-      "community": 4,
+      "community": 19,
       "norm_label": "getplatformwastebandsbyprintmode()"
     },
     {
       "label": "getPlatformWasteBands()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L1556",
+      "source_location": "L1693",
       "_origin": "ast",
       "id": "db_platform_master_data_getplatformwastebands",
-      "community": 4,
+      "community": 19,
       "norm_label": "getplatformwastebands()"
     },
     {
       "label": "replacePlatformWasteBands()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L1562",
+      "source_location": "L1699",
       "_origin": "ast",
       "id": "db_platform_master_data_replaceplatformwastebands",
       "community": 17,
@@ -1037,20 +1087,20 @@
       "label": "getPlatformCormScaleWithWaste()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L1607",
+      "source_location": "L1744",
       "_origin": "ast",
       "id": "db_platform_master_data_getplatformcormscalewithwaste",
-      "community": 4,
+      "community": 19,
       "norm_label": "getplatformcormscalewithwaste()"
     },
     {
       "label": "setPlatformCormScaleWithWaste()",
       "file_type": "code",
       "source_file": "db/platform-master-data.ts",
-      "source_location": "L1619",
+      "source_location": "L1756",
       "_origin": "ast",
       "id": "db_platform_master_data_setplatformcormscalewithwaste",
-      "community": 24,
+      "community": 17,
       "norm_label": "setplatformcormscalewithwaste()"
     },
     {
@@ -1060,7 +1110,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_platform_service_keys",
-      "community": 0,
+      "community": 22,
       "norm_label": "platform-service-keys.ts"
     },
     {
@@ -1070,7 +1120,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "db_platform_service_keys_pepper",
-      "community": 0,
+      "community": 22,
       "norm_label": "pepper()"
     },
     {
@@ -1080,7 +1130,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "db_platform_service_keys_servicekeylistitem",
-      "community": 0,
+      "community": 22,
       "norm_label": "servicekeylistitem"
     },
     {
@@ -1090,7 +1140,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "db_platform_service_keys_createplatformservicekey",
-      "community": 0,
+      "community": 22,
       "norm_label": "createplatformservicekey()"
     },
     {
@@ -1120,7 +1170,7 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "db_platform_service_keys_verifiedservicekey",
-      "community": 0,
+      "community": 22,
       "norm_label": "verifiedservicekey"
     },
     {
@@ -1130,7 +1180,7 @@
       "source_location": "L72",
       "_origin": "ast",
       "id": "db_platform_service_keys_verifyplatformservicekey",
-      "community": 0,
+      "community": 22,
       "norm_label": "verifyplatformservicekey()"
     },
     {
@@ -1140,7 +1190,7 @@
       "source_location": "L110",
       "_origin": "ast",
       "id": "db_platform_service_keys_tolistitem",
-      "community": 0,
+      "community": 22,
       "norm_label": "tolistitem()"
     },
     {
@@ -1590,7 +1640,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_seed_admin",
-      "community": 2,
+      "community": 1,
       "norm_label": "seed-admin.ts"
     },
     {
@@ -1600,7 +1650,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "db_seed_admin_adminseedconfig",
-      "community": 2,
+      "community": 1,
       "norm_label": "adminseedconfig()"
     },
     {
@@ -1610,7 +1660,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "db_seed_admin_seeddefaultadmin",
-      "community": 2,
+      "community": 1,
       "norm_label": "seeddefaultadmin()"
     },
     {
@@ -1620,7 +1670,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_seed_categories",
-      "community": 30,
+      "community": 17,
       "norm_label": "seed-categories.ts"
     },
     {
@@ -1630,7 +1680,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "db_seed_categories_standard_rm_codes",
-      "community": 30,
+      "community": 17,
       "norm_label": "standard_rm_codes"
     },
     {
@@ -1640,7 +1690,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "db_seed_categories_base_taxonomy",
-      "community": 30,
+      "community": 17,
       "norm_label": "base_taxonomy"
     },
     {
@@ -1650,7 +1700,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "db_seed_categories_taxonomycategory",
-      "community": 30,
+      "community": 17,
       "norm_label": "taxonomycategory"
     },
     {
@@ -1660,7 +1710,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "db_seed_categories_buildtaxonomy",
-      "community": 30,
+      "community": 17,
       "norm_label": "buildtaxonomy()"
     },
     {
@@ -1670,7 +1720,7 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "db_seed_categories_subcategoryformaterial",
-      "community": 30,
+      "community": 17,
       "norm_label": "subcategoryformaterial()"
     },
     {
@@ -1680,7 +1730,7 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "db_seed_categories_backfillmaterialsubcategories",
-      "community": 30,
+      "community": 17,
       "norm_label": "backfillmaterialsubcategories()"
     },
     {
@@ -1690,7 +1740,7 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "db_seed_categories_seedcategoriesfortenant",
-      "community": 30,
+      "community": 17,
       "norm_label": "seedcategoriesfortenant()"
     },
     {
@@ -1700,7 +1750,7 @@
       "source_location": "L160",
       "_origin": "ast",
       "id": "db_seed_categories_synccustomrmtypecategories",
-      "community": 30,
+      "community": 17,
       "norm_label": "synccustomrmtypecategories()"
     },
     {
@@ -1710,7 +1760,7 @@
       "source_location": "L191",
       "_origin": "ast",
       "id": "db_seed_categories_ensurecategoriesfortenant",
-      "community": 30,
+      "community": 16,
       "norm_label": "ensurecategoriesfortenant()"
     },
     {
@@ -1720,7 +1770,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_seed_materials_test",
-      "community": 3,
+      "community": 24,
       "norm_label": "seed-materials.test.ts"
     },
     {
@@ -1730,7 +1780,7 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "db_seed_materials_test_dbmaterial",
-      "community": 3,
+      "community": 24,
       "norm_label": "dbmaterial"
     },
     {
@@ -1740,7 +1790,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "db_seed_materials_test_row",
-      "community": 3,
+      "community": 24,
       "norm_label": "row()"
     },
     {
@@ -1750,7 +1800,7 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "db_seed_materials_test_ldpemaster",
-      "community": 3,
+      "community": 24,
       "norm_label": "ldpemaster"
     },
     {
@@ -1860,7 +1910,7 @@
       "source_location": "L177",
       "_origin": "ast",
       "id": "db_seed_materials_loadplatformmastermaterials",
-      "community": 3,
+      "community": 17,
       "norm_label": "loadplatformmastermaterials()"
     },
     {
@@ -1870,7 +1920,7 @@
       "source_location": "L187",
       "_origin": "ast",
       "id": "db_seed_materials_seedmaterialsfortenant",
-      "community": 2,
+      "community": 1,
       "norm_label": "seedmaterialsfortenant()"
     },
     {
@@ -1880,7 +1930,7 @@
       "source_location": "L207",
       "_origin": "ast",
       "id": "db_seed_materials_ensurematerialsfortenant",
-      "community": 2,
+      "community": 1,
       "norm_label": "ensurematerialsfortenant()"
     },
     {
@@ -1890,7 +1940,7 @@
       "source_location": "L227",
       "_origin": "ast",
       "id": "db_seed_materials_syncmaterialsfortenant",
-      "community": 23,
+      "community": 17,
       "norm_label": "syncmaterialsfortenant()"
     },
     {
@@ -1910,7 +1960,7 @@
       "source_location": "L345",
       "_origin": "ast",
       "id": "db_seed_materials_prunetenantsubstratesbyplatformkeyallowlist",
-      "community": 23,
+      "community": 17,
       "norm_label": "prunetenantsubstratesbyplatformkeyallowlist()"
     },
     {
@@ -1930,7 +1980,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_seed_platform_templates",
-      "community": 32,
+      "community": 9,
       "norm_label": "seed-platform-templates.ts"
     },
     {
@@ -1940,7 +1990,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "db_seed_platform_templates_seedlayer",
-      "community": 32,
+      "community": 9,
       "norm_label": "seedlayer"
     },
     {
@@ -1950,7 +2000,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "db_seed_platform_templates_seedentry",
-      "community": 32,
+      "community": 9,
       "norm_label": "seedentry"
     },
     {
@@ -1960,7 +2010,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "db_seed_platform_templates_entrytoinsertrow",
-      "community": 32,
+      "community": 9,
       "norm_label": "entrytoinsertrow()"
     },
     {
@@ -1970,7 +2020,7 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "db_seed_platform_templates_bootstrapplatformstandardcatalog",
-      "community": 32,
+      "community": 9,
       "norm_label": "bootstrapplatformstandardcatalog()"
     },
     {
@@ -1980,7 +2030,7 @@
       "source_location": "L107",
       "_origin": "ast",
       "id": "db_seed_platform_templates_listplatformstandards",
-      "community": 32,
+      "community": 9,
       "norm_label": "listplatformstandards()"
     },
     {
@@ -1990,7 +2040,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "db_seed_slab_templates",
-      "community": 2,
+      "community": 16,
       "norm_label": "seed-slab-templates.ts"
     },
     {
@@ -2000,7 +2050,7 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "db_seed_slab_templates_default_slab_templates",
-      "community": 2,
+      "community": 16,
       "norm_label": "default_slab_templates"
     },
     {
@@ -2010,7 +2060,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "db_seed_slab_templates_seedslabtemplatesfortenant",
-      "community": 2,
+      "community": 16,
       "norm_label": "seedslabtemplatesfortenant()"
     },
     {
@@ -2020,7 +2070,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "db_seed_slab_templates_ensureslabtemplatesfortenant",
-      "community": 2,
+      "community": 16,
       "norm_label": "ensureslabtemplatesfortenant()"
     },
     {
@@ -2350,7 +2400,7 @@
       "source_location": "L214",
       "_origin": "ast",
       "id": "db_tenant_reference_data_resolveorderunitdef",
-      "community": 4,
+      "community": 19,
       "norm_label": "resolveorderunitdef()"
     },
     {
@@ -2370,7 +2420,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "index",
-      "community": 23,
+      "community": 17,
       "norm_label": "index.ts"
     },
     {
@@ -2380,7 +2430,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "index_port",
-      "community": 23,
+      "community": 17,
       "norm_label": "port"
     },
     {
@@ -2390,7 +2440,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "index_start",
-      "community": 23,
+      "community": 17,
       "norm_label": "start()"
     },
     {
@@ -2650,7 +2700,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "routes_auth_registerroute",
-      "community": 2,
+      "community": 16,
       "norm_label": "registerroute()"
     },
     {
@@ -2970,7 +3020,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_estimates",
-      "community": 5,
+      "community": 0,
       "norm_label": "estimates.ts"
     },
     {
@@ -2980,7 +3030,7 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "routes_estimates_estimaterow",
-      "community": 5,
+      "community": 0,
       "norm_label": "estimaterow"
     },
     {
@@ -2990,7 +3040,7 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "routes_estimates_quotelockerror",
-      "community": 16,
+      "community": 0,
       "norm_label": "quotelockerror()"
     },
     {
@@ -3000,7 +3050,7 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "routes_estimates_layerrow",
-      "community": 5,
+      "community": 0,
       "norm_label": "layerrow"
     },
     {
@@ -3010,7 +3060,7 @@
       "source_location": "L80",
       "_origin": "ast",
       "id": "routes_estimates_signaturelayertype",
-      "community": 5,
+      "community": 0,
       "norm_label": "signaturelayertype()"
     },
     {
@@ -3030,7 +3080,7 @@
       "source_location": "L97",
       "_origin": "ast",
       "id": "routes_estimates_laminationrecipecomponentschema",
-      "community": 5,
+      "community": 0,
       "norm_label": "laminationrecipecomponentschema"
     },
     {
@@ -3040,7 +3090,7 @@
       "source_location": "L106",
       "_origin": "ast",
       "id": "routes_estimates_laminationrecipeschema",
-      "community": 5,
+      "community": 0,
       "norm_label": "laminationrecipeschema"
     },
     {
@@ -3050,7 +3100,7 @@
       "source_location": "L111",
       "_origin": "ast",
       "id": "routes_estimates_estimatecreateschema",
-      "community": 5,
+      "community": 0,
       "norm_label": "estimatecreateschema"
     },
     {
@@ -3060,7 +3110,7 @@
       "source_location": "L182",
       "_origin": "ast",
       "id": "routes_estimates_estimateupdateschema",
-      "community": 5,
+      "community": 0,
       "norm_label": "estimateupdateschema"
     },
     {
@@ -3070,7 +3120,7 @@
       "source_location": "L184",
       "_origin": "ast",
       "id": "routes_estimates_requotebodyschema",
-      "community": 5,
+      "community": 0,
       "norm_label": "requotebodyschema"
     },
     {
@@ -3090,7 +3140,7 @@
       "source_location": "L253",
       "_origin": "ast",
       "id": "routes_estimates_createestimateroute",
-      "community": 8,
+      "community": 0,
       "norm_label": "createestimateroute()"
     },
     {
@@ -3130,7 +3180,7 @@
       "source_location": "L684",
       "_origin": "ast",
       "id": "routes_estimates_updateestimateroute",
-      "community": 5,
+      "community": 0,
       "norm_label": "updateestimateroute()"
     },
     {
@@ -3190,7 +3240,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_integration",
-      "community": 29,
+      "community": 16,
       "norm_label": "integration.ts"
     },
     {
@@ -3230,7 +3280,7 @@
       "source_location": "L114",
       "_origin": "ast",
       "id": "routes_integration_pebioraclepushroute",
-      "community": 29,
+      "community": 16,
       "norm_label": "pebioraclepushroute()"
     },
     {
@@ -3240,7 +3290,7 @@
       "source_location": "L136",
       "_origin": "ast",
       "id": "routes_integration_registerintegrationroutes",
-      "community": 29,
+      "community": 9,
       "norm_label": "registerintegrationroutes()"
     },
     {
@@ -3430,7 +3480,7 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "routes_platform_master_data_requireplatformadmin",
-      "community": 16,
+      "community": 3,
       "norm_label": "requireplatformadmin()"
     },
     {
@@ -3490,7 +3540,7 @@
       "source_location": "L108",
       "_origin": "ast",
       "id": "routes_platform_master_data_afterplatformmutation",
-      "community": 22,
+      "community": 17,
       "norm_label": "afterplatformmutation()"
     },
     {
@@ -3510,7 +3560,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "routes_platform",
-      "community": 16,
+      "community": 3,
       "norm_label": "platform.ts"
     },
     {
@@ -3520,7 +3570,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "routes_platform_requireplatformadmin",
-      "community": 16,
+      "community": 3,
       "norm_label": "requireplatformadmin()"
     },
     {
@@ -3850,7 +3900,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "routes_templates_invalidatetemplatepreparecache",
-      "community": 1,
+      "community": 17,
       "norm_label": "invalidatetemplatepreparecache()"
     },
     {
@@ -3970,7 +4020,7 @@
       "source_location": "L334",
       "_origin": "ast",
       "id": "routes_templates_instantiatetemplateroute",
-      "community": 1,
+      "community": 0,
       "norm_label": "instantiatetemplateroute()"
     },
     {
@@ -4060,7 +4110,7 @@
       "source_location": "L1217",
       "_origin": "ast",
       "id": "routes_templates_deletetemplateroute",
-      "community": 16,
+      "community": 1,
       "norm_label": "deletetemplateroute()"
     },
     {
@@ -4170,7 +4220,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_verify_template_links",
-      "community": 1,
+      "community": 26,
       "norm_label": "verify-template-links.ts"
     },
     {
@@ -4180,7 +4230,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "scripts_verify_template_links_materials",
-      "community": 1,
+      "community": 26,
       "norm_label": "materials"
     },
     {
@@ -4190,7 +4240,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "scripts_verify_template_links_lookup",
-      "community": 1,
+      "community": 26,
       "norm_label": "lookup"
     },
     {
@@ -4200,7 +4250,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "scripts_verify_template_links_validids",
-      "community": 1,
+      "community": 26,
       "norm_label": "validids"
     },
     {
@@ -4280,7 +4330,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "services_estimate_calculation",
-      "community": 20,
+      "community": 19,
       "norm_label": "estimate-calculation.ts"
     },
     {
@@ -4290,7 +4340,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "services_estimate_calculation_db",
-      "community": 20,
+      "community": 19,
       "norm_label": "db"
     },
     {
@@ -4300,7 +4350,7 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "services_estimate_calculation_estimaterow",
-      "community": 20,
+      "community": 19,
       "norm_label": "estimaterow"
     },
     {
@@ -4310,7 +4360,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "services_estimate_calculation_layerrow",
-      "community": 20,
+      "community": 19,
       "norm_label": "layerrow"
     },
     {
@@ -4320,7 +4370,7 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "services_estimate_calculation_estimatecalculationbundle",
-      "community": 20,
+      "community": 19,
       "norm_label": "estimatecalculationbundle"
     },
     {
@@ -4330,7 +4380,7 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "services_estimate_calculation_calculateestimatefromdatabase",
-      "community": 4,
+      "community": 19,
       "norm_label": "calculateestimatefromdatabase()"
     },
     {
@@ -4340,7 +4390,7 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "services_estimate_calculation_calculateandpersistestimate",
-      "community": 20,
+      "community": 19,
       "norm_label": "calculateandpersistestimate()"
     },
     {
@@ -4380,7 +4430,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "services_pebi_customer_sync",
-      "community": 31,
+      "community": 21,
       "norm_label": "pebi-customer-sync.ts"
     },
     {
@@ -4390,7 +4440,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "services_pebi_customer_sync_pebicustomerrow",
-      "community": 31,
+      "community": 21,
       "norm_label": "pebicustomerrow"
     },
     {
@@ -4400,7 +4450,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "services_pebi_customer_sync_customersyncresult",
-      "community": 31,
+      "community": 21,
       "norm_label": "customersyncresult"
     },
     {
@@ -4410,7 +4460,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "services_pebi_customer_sync_buildnotes",
-      "community": 31,
+      "community": 21,
       "norm_label": "buildnotes()"
     },
     {
@@ -4420,7 +4470,7 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "services_pebi_customer_sync_fetchpebicustomersfromdb",
-      "community": 31,
+      "community": 21,
       "norm_label": "fetchpebicustomersfromdb()"
     },
     {
@@ -4430,7 +4480,7 @@
       "source_location": "L102",
       "_origin": "ast",
       "id": "services_pebi_customer_sync_fetchpebicustomersfromapi",
-      "community": 31,
+      "community": 21,
       "norm_label": "fetchpebicustomersfromapi()"
     },
     {
@@ -4440,7 +4490,7 @@
       "source_location": "L133",
       "_origin": "ast",
       "id": "services_pebi_customer_sync_loadpebicustomers",
-      "community": 31,
+      "community": 21,
       "norm_label": "loadpebicustomers()"
     },
     {
@@ -4450,7 +4500,7 @@
       "source_location": "L156",
       "_origin": "ast",
       "id": "services_pebi_customer_sync_synccustomersfrompebifortenant",
-      "community": 31,
+      "community": 21,
       "norm_label": "synccustomersfrompebifortenant()"
     },
     {
@@ -4460,7 +4510,7 @@
       "source_location": "L241",
       "_origin": "ast",
       "id": "services_pebi_customer_sync_synccustomersforplatformcompany",
-      "community": 31,
+      "community": 21,
       "norm_label": "synccustomersforplatformcompany()"
     },
     {
@@ -4470,7 +4520,7 @@
       "source_location": "L259",
       "_origin": "ast",
       "id": "services_pebi_customer_sync_pruneduplicatepebicustomers",
-      "community": 31,
+      "community": 21,
       "norm_label": "pruneduplicatepebicustomers()"
     },
     {
@@ -4510,7 +4560,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "services_pebi_material_sync_pebi_sync_families",
-      "community": 29,
+      "community": 11,
       "norm_label": "pebi_sync_families"
     },
     {
@@ -4520,7 +4570,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "services_pebi_material_sync_pebisyncfamily",
-      "community": 29,
+      "community": 11,
       "norm_label": "pebisyncfamily"
     },
     {
@@ -4604,10 +4654,30 @@
       "norm_label": "{ buildpapmaterialscatalog }"
     },
     {
+      "label": "{ buildSleeveMaterialsCatalog }",
+      "file_type": "code",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L58",
+      "_origin": "ast",
+      "id": "services_pebi_material_sync_buildsleevematerialscatalog",
+      "community": 11,
+      "norm_label": "{ buildsleevematerialscatalog }"
+    },
+    {
+      "label": "{ buildSpecialtyMaterialsCatalog }",
+      "file_type": "code",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L64",
+      "_origin": "ast",
+      "id": "services_pebi_material_sync_buildspecialtymaterialscatalog",
+      "community": 11,
+      "norm_label": "{ buildspecialtymaterialscatalog }"
+    },
+    {
       "label": "PebiMaterialRow",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L59",
+      "source_location": "L71",
       "_origin": "ast",
       "id": "services_pebi_material_sync_pebimaterialrow",
       "community": 11,
@@ -4617,7 +4687,7 @@
       "label": "PebiMaterialsCatalog",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L74",
+      "source_location": "L89",
       "_origin": "ast",
       "id": "services_pebi_material_sync_pebimaterialscatalog",
       "community": 11,
@@ -4627,7 +4697,7 @@
       "label": "MaterialSyncResult",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L82",
+      "source_location": "L97",
       "_origin": "ast",
       "id": "services_pebi_material_sync_materialsyncresult",
       "community": 11,
@@ -4637,7 +4707,7 @@
       "label": "PebiMissingMaterial",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L94",
+      "source_location": "L109",
       "_origin": "ast",
       "id": "services_pebi_material_sync_pebimissingmaterial",
       "community": 11,
@@ -4647,7 +4717,7 @@
       "label": "PebiMissingMaterialsResult",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L100",
+      "source_location": "L115",
       "_origin": "ast",
       "id": "services_pebi_material_sync_pebimissingmaterialsresult",
       "community": 11,
@@ -4657,17 +4727,17 @@
       "label": "toDecimalString()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L107",
+      "source_location": "L122",
       "_origin": "ast",
       "id": "services_pebi_material_sync_todecimalstring",
-      "community": 27,
+      "community": 11,
       "norm_label": "todecimalstring()"
     },
     {
       "label": "buildMaterialsCatalog()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L112",
+      "source_location": "L127",
       "_origin": "ast",
       "id": "services_pebi_material_sync_buildmaterialscatalog",
       "community": 11,
@@ -4677,7 +4747,7 @@
       "label": "loadPebiMaterials()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L125",
+      "source_location": "L142",
       "_origin": "ast",
       "id": "services_pebi_material_sync_loadpebimaterials",
       "community": 11,
@@ -4687,37 +4757,37 @@
       "label": "findTenantMaterial()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L171",
+      "source_location": "L188",
       "_origin": "ast",
       "id": "services_pebi_material_sync_findtenantmaterial",
-      "community": 27,
+      "community": 11,
       "norm_label": "findtenantmaterial()"
     },
     {
       "label": "loadPlatformMaterialFallback()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L219",
+      "source_location": "L236",
       "_origin": "ast",
       "id": "services_pebi_material_sync_loadplatformmaterialfallback",
-      "community": 27,
+      "community": 11,
       "norm_label": "loadplatformmaterialfallback()"
     },
     {
       "label": "hasPositivePrice()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L234",
+      "source_location": "L251",
       "_origin": "ast",
       "id": "services_pebi_material_sync_haspositiveprice",
-      "community": 27,
+      "community": 11,
       "norm_label": "haspositiveprice()"
     },
     {
       "label": "CPP_FALLBACK_DELTA_USD",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L245",
+      "source_location": "L262",
       "_origin": "ast",
       "id": "services_pebi_material_sync_cpp_fallback_delta_usd",
       "community": 11,
@@ -4727,7 +4797,7 @@
       "label": "PLATFORM_PRICE_HOLD_KEYS_BY_FAMILY",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L251",
+      "source_location": "L271",
       "_origin": "ast",
       "id": "services_pebi_material_sync_platform_price_hold_keys_by_family",
       "community": 11,
@@ -4737,67 +4807,67 @@
       "label": "shouldHoldPlatformPrice()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L256",
+      "source_location": "L276",
       "_origin": "ast",
       "id": "services_pebi_material_sync_shouldholdplatformprice",
-      "community": 27,
+      "community": 11,
       "norm_label": "shouldholdplatformprice()"
     },
     {
       "label": "positivePriceOrNull()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L260",
+      "source_location": "L280",
       "_origin": "ast",
       "id": "services_pebi_material_sync_positivepriceornull",
-      "community": 27,
+      "community": 11,
       "norm_label": "positivepriceornull()"
     },
     {
       "label": "decimalPriceOrNull()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L264",
+      "source_location": "L284",
       "_origin": "ast",
       "id": "services_pebi_material_sync_decimalpriceornull",
-      "community": 27,
+      "community": 11,
       "norm_label": "decimalpriceornull()"
     },
     {
       "label": "resolveHeldPlatformPrice()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L269",
+      "source_location": "L289",
       "_origin": "ast",
       "id": "services_pebi_material_sync_resolveheldplatformprice",
-      "community": 27,
+      "community": 11,
       "norm_label": "resolveheldplatformprice()"
     },
     {
       "label": "roundUsd()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L293",
+      "source_location": "L313",
       "_origin": "ast",
       "id": "services_pebi_material_sync_roundusd",
-      "community": 27,
+      "community": 11,
       "norm_label": "roundusd()"
     },
     {
       "label": "derivePetWhiteFallbackPrice()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L297",
+      "source_location": "L317",
       "_origin": "ast",
       "id": "services_pebi_material_sync_derivepetwhitefallbackprice",
-      "community": 27,
+      "community": 11,
       "norm_label": "derivepetwhitefallbackprice()"
     },
     {
       "label": "PET_WHITE_FALLBACK_KEYS",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L320",
+      "source_location": "L340",
       "_origin": "ast",
       "id": "services_pebi_material_sync_pet_white_fallback_keys",
       "community": 11,
@@ -4807,37 +4877,47 @@
       "label": "deriveCppTransparentFallbackPrice()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L322",
+      "source_location": "L342",
       "_origin": "ast",
       "id": "services_pebi_material_sync_derivecpptransparentfallbackprice",
-      "community": 27,
+      "community": 11,
       "norm_label": "derivecpptransparentfallbackprice()"
     },
     {
       "label": "deriveAlu12FallbackPrice()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L346",
+      "source_location": "L366",
       "_origin": "ast",
       "id": "services_pebi_material_sync_derivealu12fallbackprice",
-      "community": 27,
+      "community": 11,
       "norm_label": "derivealu12fallbackprice()"
+    },
+    {
+      "label": "deriveSleevePvcCastFallbackPrice()",
+      "file_type": "code",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L390",
+      "_origin": "ast",
+      "id": "services_pebi_material_sync_derivesleevepvccastfallbackprice",
+      "community": 11,
+      "norm_label": "derivesleevepvccastfallbackprice()"
     },
     {
       "label": "deriveFormulaFallbackPrice()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L370",
+      "source_location": "L411",
       "_origin": "ast",
       "id": "services_pebi_material_sync_deriveformulafallbackprice",
-      "community": 27,
+      "community": 11,
       "norm_label": "deriveformulafallbackprice()"
     },
     {
       "label": "pbGradeFromKey()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L388",
+      "source_location": "L432",
       "_origin": "ast",
       "id": "services_pebi_material_sync_pbgradefromkey",
       "community": 11,
@@ -4847,17 +4927,17 @@
       "label": "resolveMaterialName()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L395",
+      "source_location": "L439",
       "_origin": "ast",
       "id": "services_pebi_material_sync_resolvematerialname",
-      "community": 27,
+      "community": 11,
       "norm_label": "resolvematerialname()"
     },
     {
       "label": "getLinkedTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L406",
+      "source_location": "L450",
       "_origin": "ast",
       "id": "services_pebi_material_sync_getlinkedtenant",
       "community": 11,
@@ -4867,7 +4947,7 @@
       "label": "tenantAedPerUsd()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L425",
+      "source_location": "L469",
       "_origin": "ast",
       "id": "services_pebi_material_sync_tenantaedperusd",
       "community": 11,
@@ -4877,17 +4957,17 @@
       "label": "applyCatalogToTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L431",
+      "source_location": "L475",
       "_origin": "ast",
       "id": "services_pebi_material_sync_applycatalogtotenant",
-      "community": 27,
+      "community": 11,
       "norm_label": "applycatalogtotenant()"
     },
     {
       "label": "syncFamilyMaterialsFromPebiForTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L543",
+      "source_location": "L592",
       "_origin": "ast",
       "id": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant",
       "community": 11,
@@ -4897,27 +4977,27 @@
       "label": "syncAllPebiMaterialsFromPebiForTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L561",
+      "source_location": "L610",
       "_origin": "ast",
       "id": "services_pebi_material_sync_syncallpebimaterialsfrompebifortenant",
-      "community": 29,
+      "community": 11,
       "norm_label": "syncallpebimaterialsfrompebifortenant()"
     },
     {
       "label": "syncPetMaterialsFromPebiForTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L569",
+      "source_location": "L618",
       "_origin": "ast",
       "id": "services_pebi_material_sync_syncpetmaterialsfrompebifortenant",
-      "community": 27,
+      "community": 11,
       "norm_label": "syncpetmaterialsfrompebifortenant()"
     },
     {
       "label": "syncAluMaterialsFromPebiForTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L573",
+      "source_location": "L622",
       "_origin": "ast",
       "id": "services_pebi_material_sync_syncalumaterialsfrompebifortenant",
       "community": 11,
@@ -4927,7 +5007,7 @@
       "label": "syncBoppMaterialsFromPebiForTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L577",
+      "source_location": "L626",
       "_origin": "ast",
       "id": "services_pebi_material_sync_syncboppmaterialsfrompebifortenant",
       "community": 11,
@@ -4937,7 +5017,7 @@
       "label": "syncCppMaterialsFromPebiForTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L581",
+      "source_location": "L630",
       "_origin": "ast",
       "id": "services_pebi_material_sync_synccppmaterialsfrompebifortenant",
       "community": 11,
@@ -4947,7 +5027,7 @@
       "label": "syncPaMaterialsFromPebiForTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L585",
+      "source_location": "L634",
       "_origin": "ast",
       "id": "services_pebi_material_sync_syncpamaterialsfrompebifortenant",
       "community": 11,
@@ -4957,17 +5037,37 @@
       "label": "syncPapMaterialsFromPebiForTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L589",
+      "source_location": "L638",
       "_origin": "ast",
       "id": "services_pebi_material_sync_syncpapmaterialsfrompebifortenant",
       "community": 11,
       "norm_label": "syncpapmaterialsfrompebifortenant()"
     },
     {
+      "label": "syncSleeveMaterialsFromPebiForTenant()",
+      "file_type": "code",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L642",
+      "_origin": "ast",
+      "id": "services_pebi_material_sync_syncsleevematerialsfrompebifortenant",
+      "community": 11,
+      "norm_label": "syncsleevematerialsfrompebifortenant()"
+    },
+    {
+      "label": "syncSpecialtyMaterialsFromPebiForTenant()",
+      "file_type": "code",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L646",
+      "_origin": "ast",
+      "id": "services_pebi_material_sync_syncspecialtymaterialsfrompebifortenant",
+      "community": 11,
+      "norm_label": "syncspecialtymaterialsfrompebifortenant()"
+    },
+    {
       "label": "getMaterialsMissingForTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L596",
+      "source_location": "L653",
       "_origin": "ast",
       "id": "services_pebi_material_sync_getmaterialsmissingfortenant",
       "community": 11,
@@ -4977,7 +5077,7 @@
       "label": "getPetMaterialsMissingForTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L658",
+      "source_location": "L724",
       "_origin": "ast",
       "id": "services_pebi_material_sync_getpetmaterialsmissingfortenant",
       "community": 11,
@@ -4987,7 +5087,7 @@
       "label": "getAluMaterialsMissingForTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L662",
+      "source_location": "L728",
       "_origin": "ast",
       "id": "services_pebi_material_sync_getalumaterialsmissingfortenant",
       "community": 11,
@@ -4997,7 +5097,7 @@
       "label": "getBoppMaterialsMissingForTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L666",
+      "source_location": "L732",
       "_origin": "ast",
       "id": "services_pebi_material_sync_getboppmaterialsmissingfortenant",
       "community": 11,
@@ -5007,7 +5107,7 @@
       "label": "getCppMaterialsMissingForTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L670",
+      "source_location": "L736",
       "_origin": "ast",
       "id": "services_pebi_material_sync_getcppmaterialsmissingfortenant",
       "community": 11,
@@ -5017,7 +5117,7 @@
       "label": "getPaMaterialsMissingForTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L674",
+      "source_location": "L740",
       "_origin": "ast",
       "id": "services_pebi_material_sync_getpamaterialsmissingfortenant",
       "community": 11,
@@ -5027,30 +5127,50 @@
       "label": "getPapMaterialsMissingForTenant()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L678",
+      "source_location": "L744",
       "_origin": "ast",
       "id": "services_pebi_material_sync_getpapmaterialsmissingfortenant",
       "community": 11,
       "norm_label": "getpapmaterialsmissingfortenant()"
     },
     {
+      "label": "getSleeveMaterialsMissingForTenant()",
+      "file_type": "code",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L748",
+      "_origin": "ast",
+      "id": "services_pebi_material_sync_getsleevematerialsmissingfortenant",
+      "community": 11,
+      "norm_label": "getsleevematerialsmissingfortenant()"
+    },
+    {
+      "label": "getSpecialtyMaterialsMissingForTenant()",
+      "file_type": "code",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L752",
+      "_origin": "ast",
+      "id": "services_pebi_material_sync_getspecialtymaterialsmissingfortenant",
+      "community": 11,
+      "norm_label": "getspecialtymaterialsmissingfortenant()"
+    },
+    {
       "label": "syncPetMaterialsForPlatformCompany()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L682",
+      "source_location": "L756",
       "_origin": "ast",
       "id": "services_pebi_material_sync_syncpetmaterialsforplatformcompany",
-      "community": 27,
+      "community": 11,
       "norm_label": "syncpetmaterialsforplatformcompany()"
     },
     {
       "label": "syncAllPebiMaterialsForPlatformCompany()",
       "file_type": "code",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L699",
+      "source_location": "L773",
       "_origin": "ast",
       "id": "services_pebi_material_sync_syncallpebimaterialsforplatformcompany",
-      "community": 29,
+      "community": 11,
       "norm_label": "syncallpebimaterialsforplatformcompany()"
     },
     {
@@ -5060,7 +5180,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "services_pebi_mes_intake",
-      "community": 29,
+      "community": 16,
       "norm_label": "pebi-mes-intake.ts"
     },
     {
@@ -5070,7 +5190,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "services_pebi_mes_intake_mesintakeresult",
-      "community": 29,
+      "community": 16,
       "norm_label": "mesintakeresult"
     },
     {
@@ -5080,7 +5200,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "services_pebi_mes_intake_pushquotetopebimes",
-      "community": 29,
+      "community": 16,
       "norm_label": "pushquotetopebimes()"
     },
     {
@@ -5110,7 +5230,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "services_pebi_oracle_sync_coordinator_pebioraclepushsource",
-      "community": 29,
+      "community": 21,
       "norm_label": "pebioraclepushsource"
     },
     {
@@ -5240,7 +5360,7 @@
       "source_location": "L159",
       "_origin": "ast",
       "id": "services_pebi_oracle_sync_coordinator_syncmaterialsforalllinkedtenants",
-      "community": 29,
+      "community": 11,
       "norm_label": "syncmaterialsforalllinkedtenants()"
     },
     {
@@ -5250,7 +5370,7 @@
       "source_location": "L175",
       "_origin": "ast",
       "id": "services_pebi_oracle_sync_coordinator_synccustomersforalllinkedtenants",
-      "community": 31,
+      "community": 21,
       "norm_label": "synccustomersforalllinkedtenants()"
     },
     {
@@ -5320,7 +5440,7 @@
       "source_location": "L341",
       "_origin": "ast",
       "id": "services_pebi_oracle_sync_coordinator_startpebioraclesynccoordinator",
-      "community": 23,
+      "community": 17,
       "norm_label": "startpebioraclesynccoordinator()"
     },
     {
@@ -5680,7 +5800,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "services_quote_helpers_mapestimatestatustoquotestatus",
-      "community": 8,
+      "community": 0,
       "norm_label": "mapestimatestatustoquotestatus()"
     },
     {
@@ -5780,7 +5900,7 @@
       "source_location": "L331",
       "_origin": "ast",
       "id": "services_quote_helpers_validateestimatesaverefs",
-      "community": 8,
+      "community": 0,
       "norm_label": "validateestimatesaverefs()"
     },
     {
@@ -5790,7 +5910,7 @@
       "source_location": "L353",
       "_origin": "ast",
       "id": "services_quote_helpers_nextestimatesortorder",
-      "community": 1,
+      "community": 0,
       "norm_label": "nextestimatesortorder()"
     },
     {
@@ -5800,7 +5920,7 @@
       "source_location": "L367",
       "_origin": "ast",
       "id": "services_quote_helpers_isquotelocked",
-      "community": 16,
+      "community": 0,
       "norm_label": "isquotelocked()"
     },
     {
@@ -5810,7 +5930,7 @@
       "source_location": "L378",
       "_origin": "ast",
       "id": "services_quote_helpers_syncquotestatusfromestimates",
-      "community": 8,
+      "community": 0,
       "norm_label": "syncquotestatusfromestimates()"
     },
     {
@@ -6120,7 +6240,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_admin_platform_templates_integration_test",
-      "community": 28,
+      "community": 9,
       "norm_label": "admin-platform-templates.integration.test.ts"
     },
     {
@@ -6130,7 +6250,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_auth_estimates_integration_test",
-      "community": 28,
+      "community": 9,
       "norm_label": "auth-estimates.integration.test.ts"
     },
     {
@@ -6140,7 +6260,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_purge_integration_artifacts",
-      "community": 19,
+      "community": 9,
       "norm_label": "purge-integration-artifacts.ts"
     },
     {
@@ -6150,7 +6270,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "test_purge_integration_artifacts_platform_template_name_patterns",
-      "community": 19,
+      "community": 9,
       "norm_label": "platform_template_name_patterns"
     },
     {
@@ -6160,7 +6280,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "test_purge_integration_artifacts_structure_template_name_patterns",
-      "community": 19,
+      "community": 9,
       "norm_label": "structure_template_name_patterns"
     },
     {
@@ -6170,7 +6290,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "test_purge_integration_artifacts_tenant_name_patterns",
-      "community": 19,
+      "community": 9,
       "norm_label": "tenant_name_patterns"
     },
     {
@@ -6180,7 +6300,7 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "test_purge_integration_artifacts_user_email_patterns",
-      "community": 19,
+      "community": 9,
       "norm_label": "user_email_patterns"
     },
     {
@@ -6190,7 +6310,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "test_purge_integration_artifacts_purgeintegrationartifactsresult",
-      "community": 19,
+      "community": 9,
       "norm_label": "purgeintegrationartifactsresult"
     },
     {
@@ -6200,7 +6320,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "test_purge_integration_artifacts_purgeoptions",
-      "community": 19,
+      "community": 9,
       "norm_label": "purgeoptions"
     },
     {
@@ -6210,7 +6330,7 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "test_purge_integration_artifacts_patternor",
-      "community": 19,
+      "community": 9,
       "norm_label": "patternor()"
     },
     {
@@ -6220,7 +6340,7 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "test_purge_integration_artifacts_runidnameor",
-      "community": 19,
+      "community": 9,
       "norm_label": "runidnameor()"
     },
     {
@@ -6230,7 +6350,7 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "test_purge_integration_artifacts_runidemailor",
-      "community": 19,
+      "community": 9,
       "norm_label": "runidemailor()"
     },
     {
@@ -6240,7 +6360,7 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "test_purge_integration_artifacts_purgeintegrationartifacts",
-      "community": 19,
+      "community": 9,
       "norm_label": "purgeintegrationartifacts()"
     },
     {
@@ -6250,7 +6370,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_require_database",
-      "community": 28,
+      "community": 9,
       "norm_label": "require-database.ts"
     },
     {
@@ -6260,7 +6380,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "test_require_database_databaseurl",
-      "community": 28,
+      "community": 9,
       "norm_label": "databaseurl()"
     },
     {
@@ -6270,7 +6390,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "test_require_database_hasdatabase",
-      "community": 28,
+      "community": 9,
       "norm_label": "hasdatabase"
     },
     {
@@ -6280,7 +6400,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "test_require_database_isdedicatedintegrationtestdatabase",
-      "community": 28,
+      "community": 9,
       "norm_label": "isdedicatedintegrationtestdatabase()"
     },
     {
@@ -6290,7 +6410,7 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "test_require_database_undervitest",
-      "community": 28,
+      "community": 9,
       "norm_label": "undervitest"
     },
     {
@@ -6300,7 +6420,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "test_smart_template_builder_integration_test",
-      "community": 28,
+      "community": 9,
       "norm_label": "smart-template-builder.integration.test.ts"
     },
     {
@@ -6330,7 +6450,7 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "utils_auth_hashpassword",
-      "community": 2,
+      "community": 1,
       "norm_label": "hashpassword()"
     },
     {
@@ -6350,7 +6470,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "utils_auth_tokenpayload",
-      "community": 1,
+      "community": 2,
       "norm_label": "tokenpayload"
     },
     {
@@ -6390,7 +6510,7 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "utils_auth_isplatformadmin",
-      "community": 16,
+      "community": 3,
       "norm_label": "isplatformadmin()"
     },
     {
@@ -6430,7 +6550,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "utils_currency_displaytousd",
-      "community": 8,
+      "community": 4,
       "norm_label": "displaytousd()"
     },
     {
@@ -6560,7 +6680,7 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "utils_errors_isautherror",
-      "community": 1,
+      "community": 0,
       "norm_label": "isautherror()"
     },
     {
@@ -6640,7 +6760,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_estimate_classification",
-      "community": 5,
+      "community": 23,
       "norm_label": "estimate-classification.ts"
     },
     {
@@ -6650,7 +6770,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "utils_estimate_classification_structuretier",
-      "community": 5,
+      "community": 23,
       "norm_label": "structuretier"
     },
     {
@@ -6660,7 +6780,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "utils_estimate_classification_estimateclassificationsnapshot",
-      "community": 5,
+      "community": 23,
       "norm_label": "estimateclassificationsnapshot"
     },
     {
@@ -6670,7 +6790,7 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "utils_estimate_classification_layerlike",
-      "community": 5,
+      "community": 23,
       "norm_label": "layerlike"
     },
     {
@@ -6680,7 +6800,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "utils_estimate_classification_substratecount",
-      "community": 5,
+      "community": 23,
       "norm_label": "substratecount()"
     },
     {
@@ -6690,7 +6810,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "utils_estimate_classification_derivestructuretierfromsubstrates",
-      "community": 5,
+      "community": 23,
       "norm_label": "derivestructuretierfromsubstrates()"
     },
     {
@@ -6700,7 +6820,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "utils_estimate_classification_isprintedstack",
-      "community": 5,
+      "community": 23,
       "norm_label": "isprintedstack()"
     },
     {
@@ -6710,7 +6830,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "utils_estimate_classification_buildestimateclassificationsnapshot",
-      "community": 5,
+      "community": 23,
       "norm_label": "buildestimateclassificationsnapshot()"
     },
     {
@@ -6720,7 +6840,7 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "utils_estimate_classification_stripconfigurefromtemplateflag",
-      "community": 5,
+      "community": 0,
       "norm_label": "stripconfigurefromtemplateflag()"
     },
     {
@@ -6730,7 +6850,7 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "utils_estimate_classification_mergeestimatedimensionsclassification",
-      "community": 5,
+      "community": 0,
       "norm_label": "mergeestimatedimensionsclassification()"
     },
     {
@@ -6800,7 +6920,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "utils_estimate_engine_input_buildengineestimatefromrows",
-      "community": 20,
+      "community": 19,
       "norm_label": "buildengineestimatefromrows()"
     },
     {
@@ -7030,7 +7150,7 @@
       "source_location": "L162",
       "_origin": "ast",
       "id": "utils_estimate_processes_loadestimatestructurelayers",
-      "community": 7,
+      "community": 0,
       "norm_label": "loadestimatestructurelayers()"
     },
     {
@@ -7050,7 +7170,7 @@
       "source_location": "L189",
       "_origin": "ast",
       "id": "utils_estimate_processes_loadrawestimateprocesses",
-      "community": 8,
+      "community": 7,
       "norm_label": "loadrawestimateprocesses()"
     },
     {
@@ -7070,7 +7190,7 @@
       "source_location": "L241",
       "_origin": "ast",
       "id": "utils_estimate_processes_detectprocessinsertmode",
-      "community": 7,
+      "community": 0,
       "norm_label": "detectprocessinsertmode()"
     },
     {
@@ -7080,7 +7200,7 @@
       "source_location": "L261",
       "_origin": "ast",
       "id": "utils_estimate_processes_insertprocesscompat",
-      "community": 7,
+      "community": 0,
       "norm_label": "insertprocesscompat()"
     },
     {
@@ -7090,7 +7210,7 @@
       "source_location": "L322",
       "_origin": "ast",
       "id": "utils_estimate_processes_insertestimateprocess",
-      "community": 7,
+      "community": 0,
       "norm_label": "insertestimateprocess()"
     },
     {
@@ -7140,7 +7260,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_fx_rates",
-      "community": 2,
+      "community": 10,
       "norm_label": "fx-rates.ts"
     },
     {
@@ -7150,7 +7270,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "utils_fx_rates_fxresponse",
-      "community": 2,
+      "community": 10,
       "norm_label": "fxresponse"
     },
     {
@@ -7160,7 +7280,7 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "utils_fx_rates_cachedrate",
-      "community": 2,
+      "community": 10,
       "norm_label": "cachedrate"
     },
     {
@@ -7170,7 +7290,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "utils_fx_rates_ratecache",
-      "community": 2,
+      "community": 10,
       "norm_label": "ratecache"
     },
     {
@@ -7180,7 +7300,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "utils_fx_rates_fetchexchangerate",
-      "community": 2,
+      "community": 10,
       "norm_label": "fetchexchangerate()"
     },
     {
@@ -7190,7 +7310,7 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "utils_fx_rates_fetchmultiplerates",
-      "community": 2,
+      "community": 10,
       "norm_label": "fetchmultiplerates()"
     },
     {
@@ -7200,7 +7320,7 @@
       "source_location": "L97",
       "_origin": "ast",
       "id": "utils_fx_rates_clearratecache",
-      "community": 2,
+      "community": 10,
       "norm_label": "clearratecache()"
     },
     {
@@ -7280,7 +7400,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "utils_layer_lineage_snapshotsfrommaterial",
-      "community": 20,
+      "community": 19,
       "norm_label": "snapshotsfrommaterial()"
     },
     {
@@ -7310,7 +7430,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_logger",
-      "community": 2,
+      "community": 10,
       "norm_label": "logger.ts"
     },
     {
@@ -7320,7 +7440,7 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "utils_logger_log",
-      "community": 2,
+      "community": 10,
       "norm_label": "log"
     },
     {
@@ -7610,7 +7730,7 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "utils_material_map_buildenginematerialmap",
-      "community": 20,
+      "community": 19,
       "norm_label": "buildenginematerialmap()"
     },
     {
@@ -7620,7 +7740,7 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "utils_material_map_loadtenantmaterialsbyids",
-      "community": 25,
+      "community": 0,
       "norm_label": "loadtenantmaterialsbyids()"
     },
     {
@@ -7750,7 +7870,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_pebi_integration_auth",
-      "community": 29,
+      "community": 16,
       "norm_label": "pebi-integration-auth.ts"
     },
     {
@@ -7760,7 +7880,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "utils_pebi_integration_auth_pebiintegrationcontext",
-      "community": 29,
+      "community": 16,
       "norm_label": "pebiintegrationcontext"
     },
     {
@@ -7770,7 +7890,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "utils_pebi_integration_auth_verifypebiintegrationrequest",
-      "community": 29,
+      "community": 16,
       "norm_label": "verifypebiintegrationrequest()"
     },
     {
@@ -7780,7 +7900,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_quote_audit",
-      "community": 2,
+      "community": 10,
       "norm_label": "quote-audit.ts"
     },
     {
@@ -7790,7 +7910,7 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "utils_quote_audit_db",
-      "community": 2,
+      "community": 10,
       "norm_label": "db"
     },
     {
@@ -7800,7 +7920,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "utils_quote_audit_quoteauditfields",
-      "community": 2,
+      "community": 10,
       "norm_label": "quoteauditfields"
     },
     {
@@ -7810,7 +7930,7 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "utils_quote_audit_serializefield",
-      "community": 2,
+      "community": 10,
       "norm_label": "serializefield()"
     },
     {
@@ -7820,7 +7940,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "utils_quote_audit_logquotestatustransition",
-      "community": 2,
+      "community": 10,
       "norm_label": "logquotestatustransition()"
     },
     {
@@ -7830,7 +7950,7 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "utils_quote_audit_getquoteaudittrail",
-      "community": 2,
+      "community": 10,
       "norm_label": "getquoteaudittrail()"
     },
     {
@@ -7840,7 +7960,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_rate_limit",
-      "community": 0,
+      "community": 22,
       "norm_label": "rate-limit.ts"
     },
     {
@@ -7850,7 +7970,7 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "utils_rate_limit_bucket",
-      "community": 0,
+      "community": 22,
       "norm_label": "bucket"
     },
     {
@@ -7860,7 +7980,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "utils_rate_limit_buckets",
-      "community": 0,
+      "community": 22,
       "norm_label": "buckets"
     },
     {
@@ -7870,7 +7990,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "utils_rate_limit_checkratelimit",
-      "community": 0,
+      "community": 22,
       "norm_label": "checkratelimit()"
     },
     {
@@ -7980,7 +8100,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_service_key_test",
-      "community": 0,
+      "community": 22,
       "norm_label": "service-key.test.ts"
     },
     {
@@ -7990,7 +8110,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "utils_service_key",
-      "community": 0,
+      "community": 22,
       "norm_label": "service-key.ts"
     },
     {
@@ -8000,7 +8120,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "utils_service_key_hashservicekey",
-      "community": 0,
+      "community": 22,
       "norm_label": "hashservicekey()"
     },
     {
@@ -8010,7 +8130,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "utils_service_key_generateservicekeyplain",
-      "community": 0,
+      "community": 22,
       "norm_label": "generateservicekeyplain()"
     },
     {
@@ -8020,7 +8140,7 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "utils_service_key_parseservicekeyscopes",
-      "community": 0,
+      "community": 22,
       "norm_label": "parseservicekeyscopes()"
     },
     {
@@ -8030,7 +8150,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "utils_service_key_servicekeyhasscope",
-      "community": 0,
+      "community": 22,
       "norm_label": "servicekeyhasscope()"
     },
     {
@@ -10205,9 +10325,31 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "db/platform-master-data.ts",
+      "source_location": "L1439",
+      "weight": 1.0,
+      "source": "db_platform_master_data_ensuresleevesubstratesfromseed",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "db/platform-master-data.ts",
       "source_location": "L858",
       "weight": 1.0,
       "source": "db_platform_master_data_ensuresolventcatalogseeded",
+      "target": "db_index_getdatabase"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1501",
+      "weight": 1.0,
+      "source": "db_platform_master_data_ensurespecialtysubstratesfromseed",
       "target": "db_index_getdatabase"
     },
     {
@@ -11801,9 +11943,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L437",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_applycatalogtotenant",
-      "target": "db_index_getdatabase",
-      "confidence_score": 1.0
+      "target": "db_index_getdatabase"
     },
     {
       "relation": "calls",
@@ -11823,9 +11965,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L407",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getlinkedtenant",
-      "target": "db_index_getdatabase",
-      "confidence_score": 1.0
+      "target": "db_index_getdatabase"
     },
     {
       "relation": "calls",
@@ -13410,9 +13552,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1146",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_bopp_substrate_keys",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_bopp_substrate_keys"
     },
     {
       "relation": "contains",
@@ -13440,9 +13582,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1229",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_cpp_substrate_keys",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_cpp_substrate_keys"
     },
     {
       "relation": "contains",
@@ -13490,9 +13632,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1161",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_ensureboppsubstratesfromseed",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensureboppsubstratesfromseed"
     },
     {
       "relation": "contains",
@@ -13500,9 +13642,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1238",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_ensurecppsubstratesfromseed",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensurecppsubstratesfromseed"
     },
     {
       "relation": "contains",
@@ -13520,9 +13662,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1363",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_ensurepapsubstratesfromseed",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensurepapsubstratesfromseed"
     },
     {
       "relation": "contains",
@@ -13530,9 +13672,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1297",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_ensurepasubstratesfromseed",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensurepasubstratesfromseed"
     },
     {
       "relation": "contains",
@@ -13578,11 +13720,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "db/platform-master-data.ts",
+      "source_location": "L1434",
+      "weight": 1.0,
+      "source": "db_platform_master_data",
+      "target": "db_platform_master_data_ensuresleevesubstratesfromseed",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/platform-master-data.ts",
       "source_location": "L857",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "db_platform_master_data",
       "target": "db_platform_master_data_ensuresolventcatalogseeded"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1496",
+      "weight": 1.0,
+      "source": "db_platform_master_data",
+      "target": "db_platform_master_data_ensurespecialtysubstratesfromseed",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13750,9 +13912,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1294",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_pa_substrate_keys",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_pa_substrate_keys"
     },
     {
       "relation": "contains",
@@ -13760,9 +13922,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1349",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_pap_substrate_keys",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_pap_substrate_keys"
     },
     {
       "relation": "contains",
@@ -13890,9 +14052,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1158",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_retired_bopp_substrate_keys",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_retired_bopp_substrate_keys"
     },
     {
       "relation": "contains",
@@ -13900,9 +14062,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1360",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_platform_master_data_retired_pap_substrate_keys",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_retired_pap_substrate_keys"
     },
     {
       "relation": "contains",
@@ -13913,6 +14075,16 @@
       "confidence_score": 1.0,
       "source": "db_platform_master_data",
       "target": "db_platform_master_data_retired_pet_substrate_keys"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1493",
+      "weight": 1.0,
+      "source": "db_platform_master_data",
+      "target": "db_platform_master_data_retired_specialty_substrate_keys",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -13933,6 +14105,26 @@
       "confidence_score": 1.0,
       "source": "db_platform_master_data",
       "target": "db_platform_master_data_setplatformcormscalewithwaste"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1426",
+      "weight": 1.0,
+      "source": "db_platform_master_data",
+      "target": "db_platform_master_data_sleeve_substrate_keys",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1486",
+      "weight": 1.0,
+      "source": "db_platform_master_data",
+      "target": "db_platform_master_data_specialty_substrate_keys",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -14014,9 +14206,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data",
-      "target": "db_seed_materials_prunetenantsubstratesbyplatformkeyallowlist",
-      "confidence_score": 1.0
+      "target": "db_seed_materials_prunetenantsubstratesbyplatformkeyallowlist"
     },
     {
       "relation": "imports",
@@ -14531,9 +14723,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1207",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensureboppsubstratesfromseed",
-      "target": "db_platform_master_data_incrementmasterdataversion",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_incrementmasterdataversion"
     },
     {
       "relation": "calls",
@@ -14542,9 +14734,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1272",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensurecppsubstratesfromseed",
-      "target": "db_platform_master_data_incrementmasterdataversion",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_incrementmasterdataversion"
     },
     {
       "relation": "calls",
@@ -14564,9 +14756,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1409",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensurepapsubstratesfromseed",
-      "target": "db_platform_master_data_incrementmasterdataversion",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_incrementmasterdataversion"
     },
     {
       "relation": "calls",
@@ -14575,9 +14767,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1331",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensurepasubstratesfromseed",
-      "target": "db_platform_master_data_incrementmasterdataversion",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_incrementmasterdataversion"
     },
     {
       "relation": "calls",
@@ -14595,11 +14787,33 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "db/platform-master-data.ts",
+      "source_location": "L1468",
+      "weight": 1.0,
+      "source": "db_platform_master_data_ensuresleevesubstratesfromseed",
+      "target": "db_platform_master_data_incrementmasterdataversion",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/platform-master-data.ts",
       "source_location": "L906",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "db_platform_master_data_ensuresolventcatalogseeded",
       "target": "db_platform_master_data_incrementmasterdataversion"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1542",
+      "weight": 1.0,
+      "source": "db_platform_master_data_ensurespecialtysubstratesfromseed",
+      "target": "db_platform_master_data_incrementmasterdataversion",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -14805,9 +15019,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1177",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensureboppsubstratesfromseed",
-      "target": "db_platform_master_data_mastermaterialinputtodbvalues",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_mastermaterialinputtodbvalues"
     },
     {
       "relation": "calls",
@@ -14816,9 +15030,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1254",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensurecppsubstratesfromseed",
-      "target": "db_platform_master_data_mastermaterialinputtodbvalues",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_mastermaterialinputtodbvalues"
     },
     {
       "relation": "calls",
@@ -14838,9 +15052,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1379",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensurepapsubstratesfromseed",
-      "target": "db_platform_master_data_mastermaterialinputtodbvalues",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_mastermaterialinputtodbvalues"
     },
     {
       "relation": "calls",
@@ -14849,9 +15063,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1313",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensurepasubstratesfromseed",
-      "target": "db_platform_master_data_mastermaterialinputtodbvalues",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_mastermaterialinputtodbvalues"
     },
     {
       "relation": "calls",
@@ -14880,11 +15094,33 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "db/platform-master-data.ts",
+      "source_location": "L1450",
+      "weight": 1.0,
+      "source": "db_platform_master_data_ensuresleevesubstratesfromseed",
+      "target": "db_platform_master_data_mastermaterialinputtodbvalues",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/platform-master-data.ts",
       "source_location": "L871",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "db_platform_master_data_ensuresolventcatalogseeded",
       "target": "db_platform_master_data_mastermaterialinputtodbvalues"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1512",
+      "weight": 1.0,
+      "source": "db_platform_master_data_ensurespecialtysubstratesfromseed",
+      "target": "db_platform_master_data_mastermaterialinputtodbvalues",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -14937,9 +15173,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1208",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensureboppsubstratesfromseed",
-      "target": "db_platform_master_data_listplatformmastermaterials",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_listplatformmastermaterials"
     },
     {
       "relation": "calls",
@@ -14948,9 +15184,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1273",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensurecppsubstratesfromseed",
-      "target": "db_platform_master_data_listplatformmastermaterials",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_listplatformmastermaterials"
     },
     {
       "relation": "calls",
@@ -14970,9 +15206,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1410",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensurepapsubstratesfromseed",
-      "target": "db_platform_master_data_listplatformmastermaterials",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_listplatformmastermaterials"
     },
     {
       "relation": "calls",
@@ -14981,9 +15217,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1332",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensurepasubstratesfromseed",
-      "target": "db_platform_master_data_listplatformmastermaterials",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_listplatformmastermaterials"
     },
     {
       "relation": "calls",
@@ -15001,11 +15237,33 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "db/platform-master-data.ts",
+      "source_location": "L1469",
+      "weight": 1.0,
+      "source": "db_platform_master_data_ensuresleevesubstratesfromseed",
+      "target": "db_platform_master_data_listplatformmastermaterials",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/platform-master-data.ts",
       "source_location": "L907",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "db_platform_master_data_ensuresolventcatalogseeded",
       "target": "db_platform_master_data_listplatformmastermaterials"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1543",
+      "weight": 1.0,
+      "source": "db_platform_master_data_ensurespecialtysubstratesfromseed",
+      "target": "db_platform_master_data_listplatformmastermaterials",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -15432,9 +15690,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1167",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensureboppsubstratesfromseed",
-      "target": "db_platform_master_data_loadseedmaterialsfromjson",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_loadseedmaterialsfromjson"
     },
     {
       "relation": "calls",
@@ -15443,9 +15701,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1244",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensurecppsubstratesfromseed",
-      "target": "db_platform_master_data_loadseedmaterialsfromjson",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_loadseedmaterialsfromjson"
     },
     {
       "relation": "calls",
@@ -15465,9 +15723,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1369",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensurepapsubstratesfromseed",
-      "target": "db_platform_master_data_loadseedmaterialsfromjson",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_loadseedmaterialsfromjson"
     },
     {
       "relation": "calls",
@@ -15476,9 +15734,9 @@
       "source_file": "db/platform-master-data.ts",
       "source_location": "L1303",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_platform_master_data_ensurepasubstratesfromseed",
-      "target": "db_platform_master_data_loadseedmaterialsfromjson",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_loadseedmaterialsfromjson"
     },
     {
       "relation": "calls",
@@ -15507,11 +15765,33 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "db/platform-master-data.ts",
+      "source_location": "L1440",
+      "weight": 1.0,
+      "source": "db_platform_master_data_ensuresleevesubstratesfromseed",
+      "target": "db_platform_master_data_loadseedmaterialsfromjson",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/platform-master-data.ts",
       "source_location": "L859",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "db_platform_master_data_ensuresolventcatalogseeded",
       "target": "db_platform_master_data_loadseedmaterialsfromjson"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1502",
+      "weight": 1.0,
+      "source": "db_platform_master_data_ensurespecialtysubstratesfromseed",
+      "target": "db_platform_master_data_loadseedmaterialsfromjson",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -15696,9 +15976,9 @@
       "source_file": "index.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "db_platform_master_data_ensureboppsubstratesfromseed",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensureboppsubstratesfromseed"
     },
     {
       "relation": "calls",
@@ -15707,9 +15987,9 @@
       "source_file": "index.ts",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index_start",
-      "target": "db_platform_master_data_ensureboppsubstratesfromseed",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensureboppsubstratesfromseed"
     },
     {
       "relation": "calls",
@@ -15740,9 +16020,9 @@
       "source_file": "index.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "db_platform_master_data_ensurecppsubstratesfromseed",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensurecppsubstratesfromseed"
     },
     {
       "relation": "calls",
@@ -15751,9 +16031,9 @@
       "source_file": "index.ts",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index_start",
-      "target": "db_platform_master_data_ensurecppsubstratesfromseed",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensurecppsubstratesfromseed"
     },
     {
       "relation": "calls",
@@ -15784,9 +16064,9 @@
       "source_file": "index.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "db_platform_master_data_ensurepasubstratesfromseed",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensurepasubstratesfromseed"
     },
     {
       "relation": "calls",
@@ -15795,9 +16075,9 @@
       "source_file": "index.ts",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index_start",
-      "target": "db_platform_master_data_ensurepasubstratesfromseed",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensurepasubstratesfromseed"
     },
     {
       "relation": "calls",
@@ -15828,9 +16108,9 @@
       "source_file": "index.ts",
       "source_location": "L4",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "db_platform_master_data_ensurepapsubstratesfromseed",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensurepapsubstratesfromseed"
     },
     {
       "relation": "calls",
@@ -15839,9 +16119,53 @@
       "source_file": "index.ts",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index_start",
-      "target": "db_platform_master_data_ensurepapsubstratesfromseed",
-      "confidence_score": 1.0
+      "target": "db_platform_master_data_ensurepapsubstratesfromseed"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1477",
+      "weight": 1.0,
+      "source": "db_platform_master_data_ensuresleevesubstratesfromseed",
+      "target": "db_seed_materials_prunetenantsubstratesbyplatformkeyallowlist"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1471",
+      "weight": 1.0,
+      "source": "db_platform_master_data_ensuresleevesubstratesfromseed",
+      "target": "db_seed_materials_syncmaterialsfortenant"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1551",
+      "weight": 1.0,
+      "source": "db_platform_master_data_ensurespecialtysubstratesfromseed",
+      "target": "db_seed_materials_prunetenantsubstratesbyplatformkeyallowlist"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "db/platform-master-data.ts",
+      "source_location": "L1545",
+      "weight": 1.0,
+      "source": "db_platform_master_data_ensurespecialtysubstratesfromseed",
+      "target": "db_seed_materials_syncmaterialsfortenant"
     },
     {
       "relation": "imports",
@@ -17665,9 +17989,9 @@
       "source_file": "db/seed-materials.ts",
       "source_location": "L345",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "db_seed_materials",
-      "target": "db_seed_materials_prunetenantsubstratesbyplatformkeyallowlist",
-      "confidence_score": 1.0
+      "target": "db_seed_materials_prunetenantsubstratesbyplatformkeyallowlist"
     },
     {
       "relation": "contains",
@@ -23899,9 +24223,9 @@
       "source_file": "routes/integration.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_integration",
-      "target": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_getmaterialsmissingfortenant"
     },
     {
       "relation": "imports",
@@ -23910,9 +24234,9 @@
       "source_file": "routes/integration.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_integration",
-      "target": "services_pebi_material_sync_pebi_sync_families",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_pebi_sync_families"
     },
     {
       "relation": "imports",
@@ -23921,9 +24245,9 @@
       "source_file": "routes/integration.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_integration",
-      "target": "services_pebi_material_sync_pebisyncfamily",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_pebisyncfamily"
     },
     {
       "relation": "imports",
@@ -23932,9 +24256,9 @@
       "source_file": "routes/integration.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_integration",
-      "target": "services_pebi_material_sync_syncallpebimaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncallpebimaterialsfrompebifortenant"
     },
     {
       "relation": "imports",
@@ -23943,9 +24267,9 @@
       "source_file": "routes/integration.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_integration",
-      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant"
     },
     {
       "relation": "imports",
@@ -24185,9 +24509,9 @@
       "source_file": "routes/integration.ts",
       "source_location": "L107",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_integration_syncpebimaterialsroute",
-      "target": "services_pebi_material_sync_syncallpebimaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncallpebimaterialsfrompebifortenant"
     },
     {
       "relation": "calls",
@@ -24196,9 +24520,9 @@
       "source_file": "routes/integration.ts",
       "source_location": "L100",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "routes_integration_syncpebimaterialsroute",
-      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant"
     },
     {
       "relation": "calls",
@@ -29222,9 +29546,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L431",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_applycatalogtotenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_applycatalogtotenant"
     },
     {
       "relation": "contains",
@@ -29232,9 +29556,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_buildalumaterialscatalog",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_buildalumaterialscatalog"
     },
     {
       "relation": "contains",
@@ -29242,9 +29566,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L34",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_buildboppmaterialscatalog",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_buildboppmaterialscatalog"
     },
     {
       "relation": "contains",
@@ -29252,9 +29576,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L40",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_buildcppmaterialscatalog",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_buildcppmaterialscatalog"
     },
     {
       "relation": "contains",
@@ -29262,9 +29586,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L112",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_buildmaterialscatalog",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_buildmaterialscatalog"
     },
     {
       "relation": "contains",
@@ -29272,9 +29596,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L46",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_buildpamaterialscatalog",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_buildpamaterialscatalog"
     },
     {
       "relation": "contains",
@@ -29282,9 +29606,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L52",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_buildpapmaterialscatalog",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_buildpapmaterialscatalog"
     },
     {
       "relation": "contains",
@@ -29300,11 +29624,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L245",
+      "source_location": "L58",
       "weight": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_cpp_fallback_delta_usd",
+      "target": "services_pebi_material_sync_buildsleevematerialscatalog",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L64",
+      "weight": 1.0,
+      "source": "services_pebi_material_sync",
+      "target": "services_pebi_material_sync_buildspecialtymaterialscatalog",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L245",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_pebi_material_sync",
+      "target": "services_pebi_material_sync_cpp_fallback_delta_usd"
     },
     {
       "relation": "contains",
@@ -29312,9 +29656,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L264",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_decimalpriceornull",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_decimalpriceornull"
     },
     {
       "relation": "contains",
@@ -29322,9 +29666,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L346",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_derivealu12fallbackprice",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_derivealu12fallbackprice"
     },
     {
       "relation": "contains",
@@ -29332,9 +29676,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L322",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_derivecpptransparentfallbackprice",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_derivecpptransparentfallbackprice"
     },
     {
       "relation": "contains",
@@ -29342,9 +29686,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L370",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_deriveformulafallbackprice",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_deriveformulafallbackprice"
     },
     {
       "relation": "contains",
@@ -29355,6 +29699,16 @@
       "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
       "target": "services_pebi_material_sync_derivepetwhitefallbackprice"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L390",
+      "weight": 1.0,
+      "source": "services_pebi_material_sync",
+      "target": "services_pebi_material_sync_derivesleevepvccastfallbackprice",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -29372,9 +29726,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L662",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_getalumaterialsmissingfortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_getalumaterialsmissingfortenant"
     },
     {
       "relation": "contains",
@@ -29382,9 +29736,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L666",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_getboppmaterialsmissingfortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_getboppmaterialsmissingfortenant"
     },
     {
       "relation": "contains",
@@ -29392,9 +29746,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L670",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_getcppmaterialsmissingfortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_getcppmaterialsmissingfortenant"
     },
     {
       "relation": "contains",
@@ -29402,9 +29756,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L406",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_getlinkedtenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_getlinkedtenant"
     },
     {
       "relation": "contains",
@@ -29412,9 +29766,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L596",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_getmaterialsmissingfortenant"
     },
     {
       "relation": "contains",
@@ -29422,9 +29776,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L674",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_getpamaterialsmissingfortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_getpamaterialsmissingfortenant"
     },
     {
       "relation": "contains",
@@ -29432,9 +29786,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L678",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_getpapmaterialsmissingfortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_getpapmaterialsmissingfortenant"
     },
     {
       "relation": "contains",
@@ -29442,8 +29796,28 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L658",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_getpetmaterialsmissingfortenant",
+      "target": "services_pebi_material_sync_getpetmaterialsmissingfortenant"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L748",
+      "weight": 1.0,
+      "source": "services_pebi_material_sync",
+      "target": "services_pebi_material_sync_getsleevematerialsmissingfortenant",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L752",
+      "weight": 1.0,
+      "source": "services_pebi_material_sync",
+      "target": "services_pebi_material_sync_getspecialtymaterialsmissingfortenant",
       "confidence_score": 1.0
     },
     {
@@ -29462,9 +29836,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L125",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_loadpebimaterials",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_loadpebimaterials"
     },
     {
       "relation": "contains",
@@ -29492,9 +29866,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L388",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_pbgradefromkey",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_pbgradefromkey"
     },
     {
       "relation": "contains",
@@ -29502,9 +29876,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_pebi_sync_families",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_pebi_sync_families"
     },
     {
       "relation": "contains",
@@ -29532,9 +29906,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L94",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_pebimissingmaterial",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_pebimissingmaterial"
     },
     {
       "relation": "contains",
@@ -29542,9 +29916,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L100",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_pebimissingmaterialsresult",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_pebimissingmaterialsresult"
     },
     {
       "relation": "contains",
@@ -29552,9 +29926,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_pebisyncfamily",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_pebisyncfamily"
     },
     {
       "relation": "contains",
@@ -29572,9 +29946,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L251",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_platform_price_hold_keys_by_family",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_platform_price_hold_keys_by_family"
     },
     {
       "relation": "contains",
@@ -29592,9 +29966,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_pphservicespath",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_pphservicespath"
     },
     {
       "relation": "contains",
@@ -29612,9 +29986,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L269",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_resolveheldplatformprice",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_resolveheldplatformprice"
     },
     {
       "relation": "contains",
@@ -29642,9 +30016,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L256",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_shouldholdplatformprice",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_shouldholdplatformprice"
     },
     {
       "relation": "contains",
@@ -29652,9 +30026,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L699",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_syncallpebimaterialsforplatformcompany",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncallpebimaterialsforplatformcompany"
     },
     {
       "relation": "contains",
@@ -29662,9 +30036,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L561",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_syncallpebimaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncallpebimaterialsfrompebifortenant"
     },
     {
       "relation": "contains",
@@ -29672,9 +30046,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L573",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_syncalumaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncalumaterialsfrompebifortenant"
     },
     {
       "relation": "contains",
@@ -29682,9 +30056,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L577",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_syncboppmaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncboppmaterialsfrompebifortenant"
     },
     {
       "relation": "contains",
@@ -29692,9 +30066,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L581",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_synccppmaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_synccppmaterialsfrompebifortenant"
     },
     {
       "relation": "contains",
@@ -29702,9 +30076,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L543",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant"
     },
     {
       "relation": "contains",
@@ -29712,9 +30086,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L585",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_syncpamaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncpamaterialsfrompebifortenant"
     },
     {
       "relation": "contains",
@@ -29722,9 +30096,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L589",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_syncpapmaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncpapmaterialsfrompebifortenant"
     },
     {
       "relation": "contains",
@@ -29750,11 +30124,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L425",
+      "source_location": "L642",
       "weight": 1.0,
       "source": "services_pebi_material_sync",
-      "target": "services_pebi_material_sync_tenantaedperusd",
+      "target": "services_pebi_material_sync_syncsleevematerialsfrompebifortenant",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L646",
+      "weight": 1.0,
+      "source": "services_pebi_material_sync",
+      "target": "services_pebi_material_sync_syncspecialtymaterialsfrompebifortenant",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L425",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_pebi_material_sync",
+      "target": "services_pebi_material_sync_tenantaedperusd"
     },
     {
       "relation": "contains",
@@ -29784,9 +30178,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L507",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_applycatalogtotenant",
-      "target": "services_pebi_material_sync_todecimalstring",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_todecimalstring"
     },
     {
       "relation": "calls",
@@ -29806,9 +30200,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L137",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_loadpebimaterials",
-      "target": "services_pebi_material_sync_buildmaterialscatalog",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_buildmaterialscatalog"
     },
     {
       "relation": "calls",
@@ -29817,9 +30211,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L602",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "target": "services_pebi_material_sync_loadpebimaterials",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_loadpebimaterials"
     },
     {
       "relation": "calls",
@@ -29828,9 +30222,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L549",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant",
-      "target": "services_pebi_material_sync_loadpebimaterials",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_loadpebimaterials"
     },
     {
       "relation": "calls",
@@ -29839,9 +30233,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L449",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_applycatalogtotenant",
-      "target": "services_pebi_material_sync_findtenantmaterial",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_findtenantmaterial"
     },
     {
       "relation": "calls",
@@ -29850,9 +30244,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L628",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "target": "services_pebi_material_sync_findtenantmaterial",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_findtenantmaterial"
     },
     {
       "relation": "calls",
@@ -29872,9 +30266,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L466",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_applycatalogtotenant",
-      "target": "services_pebi_material_sync_loadplatformmaterialfallback",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_loadplatformmaterialfallback"
     },
     {
       "relation": "calls",
@@ -29883,9 +30277,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L629",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "target": "services_pebi_material_sync_loadplatformmaterialfallback",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_loadplatformmaterialfallback"
     },
     {
       "relation": "calls",
@@ -29905,9 +30299,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L457",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_applycatalogtotenant",
-      "target": "services_pebi_material_sync_haspositiveprice",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_haspositiveprice"
     },
     {
       "relation": "calls",
@@ -29916,9 +30310,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L618",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "target": "services_pebi_material_sync_haspositiveprice",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_haspositiveprice"
     },
     {
       "relation": "calls",
@@ -29927,9 +30321,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L285",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_resolveheldplatformprice",
-      "target": "services_pebi_material_sync_haspositiveprice",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_haspositiveprice"
     },
     {
       "relation": "calls",
@@ -29949,9 +30343,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L465",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_applycatalogtotenant",
-      "target": "services_pebi_material_sync_shouldholdplatformprice",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_shouldholdplatformprice"
     },
     {
       "relation": "calls",
@@ -29960,9 +30354,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L627",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "target": "services_pebi_material_sync_shouldholdplatformprice",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_shouldholdplatformprice"
     },
     {
       "relation": "calls",
@@ -29971,9 +30365,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L455",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_applycatalogtotenant",
-      "target": "services_pebi_material_sync_positivepriceornull",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_positivepriceornull"
     },
     {
       "relation": "calls",
@@ -29982,9 +30376,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L266",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_decimalpriceornull",
-      "target": "services_pebi_material_sync_positivepriceornull",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_positivepriceornull"
     },
     {
       "relation": "calls",
@@ -29993,9 +30387,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L358",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_derivealu12fallbackprice",
-      "target": "services_pebi_material_sync_positivepriceornull",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_positivepriceornull"
     },
     {
       "relation": "calls",
@@ -30004,9 +30398,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L334",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_derivecpptransparentfallbackprice",
-      "target": "services_pebi_material_sync_positivepriceornull",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_positivepriceornull"
     },
     {
       "relation": "calls",
@@ -30024,11 +30418,22 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "services/pebi-material-sync.ts",
-      "source_location": "L616",
+      "source_location": "L399",
       "weight": 1.0,
-      "source": "services_pebi_material_sync_getmaterialsmissingfortenant",
+      "source": "services_pebi_material_sync_derivesleevepvccastfallbackprice",
       "target": "services_pebi_material_sync_positivepriceornull",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L616",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "services_pebi_material_sync_getmaterialsmissingfortenant",
+      "target": "services_pebi_material_sync_positivepriceornull"
     },
     {
       "relation": "calls",
@@ -30048,9 +30453,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L278",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_resolveheldplatformprice",
-      "target": "services_pebi_material_sync_decimalpriceornull",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_decimalpriceornull"
     },
     {
       "relation": "calls",
@@ -30059,9 +30464,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L467",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_applycatalogtotenant",
-      "target": "services_pebi_material_sync_resolveheldplatformprice",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_resolveheldplatformprice"
     },
     {
       "relation": "calls",
@@ -30070,9 +30475,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L630",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "target": "services_pebi_material_sync_resolveheldplatformprice",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_resolveheldplatformprice"
     },
     {
       "relation": "calls",
@@ -30081,9 +30486,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L363",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_derivealu12fallbackprice",
-      "target": "services_pebi_material_sync_roundusd",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_roundusd"
     },
     {
       "relation": "calls",
@@ -30092,9 +30497,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L339",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_derivecpptransparentfallbackprice",
-      "target": "services_pebi_material_sync_roundusd",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_roundusd"
     },
     {
       "relation": "calls",
@@ -30112,11 +30517,22 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L404",
+      "weight": 1.0,
+      "source": "services_pebi_material_sync_derivesleevepvccastfallbackprice",
+      "target": "services_pebi_material_sync_roundusd",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "services/pebi-material-sync.ts",
       "source_location": "L377",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_deriveformulafallbackprice",
-      "target": "services_pebi_material_sync_derivepetwhitefallbackprice",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_derivepetwhitefallbackprice"
     },
     {
       "relation": "calls",
@@ -30136,9 +30552,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L383",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_deriveformulafallbackprice",
-      "target": "services_pebi_material_sync_derivecpptransparentfallbackprice",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_derivecpptransparentfallbackprice"
     },
     {
       "relation": "calls",
@@ -30147,8 +30563,19 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L380",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_deriveformulafallbackprice",
-      "target": "services_pebi_material_sync_derivealu12fallbackprice",
+      "target": "services_pebi_material_sync_derivealu12fallbackprice"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L427",
+      "weight": 1.0,
+      "source": "services_pebi_material_sync_deriveformulafallbackprice",
+      "target": "services_pebi_material_sync_derivesleevepvccastfallbackprice",
       "confidence_score": 1.0
     },
     {
@@ -30158,9 +30585,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L458",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_applycatalogtotenant",
-      "target": "services_pebi_material_sync_deriveformulafallbackprice",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_deriveformulafallbackprice"
     },
     {
       "relation": "calls",
@@ -30169,9 +30596,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L619",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "target": "services_pebi_material_sync_deriveformulafallbackprice",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_deriveformulafallbackprice"
     },
     {
       "relation": "calls",
@@ -30180,9 +30607,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L610",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "target": "services_pebi_material_sync_pbgradefromkey",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_pbgradefromkey"
     },
     {
       "relation": "calls",
@@ -30191,9 +30618,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L523",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_applycatalogtotenant",
-      "target": "services_pebi_material_sync_resolvematerialname",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_resolvematerialname"
     },
     {
       "relation": "calls",
@@ -30213,9 +30640,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L600",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "target": "services_pebi_material_sync_getlinkedtenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_getlinkedtenant"
     },
     {
       "relation": "calls",
@@ -30224,9 +30651,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L547",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant",
-      "target": "services_pebi_material_sync_getlinkedtenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_getlinkedtenant"
     },
     {
       "relation": "calls",
@@ -30235,9 +30662,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L601",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "target": "services_pebi_material_sync_tenantaedperusd",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_tenantaedperusd"
     },
     {
       "relation": "calls",
@@ -30246,9 +30673,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L548",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant",
-      "target": "services_pebi_material_sync_tenantaedperusd",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_tenantaedperusd"
     },
     {
       "relation": "calls",
@@ -30257,9 +30684,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L550",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant",
-      "target": "services_pebi_material_sync_applycatalogtotenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_applycatalogtotenant"
     },
     {
       "relation": "calls",
@@ -30268,9 +30695,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L564",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_syncallpebimaterialsfrompebifortenant",
-      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant"
     },
     {
       "relation": "calls",
@@ -30279,9 +30706,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L574",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_syncalumaterialsfrompebifortenant",
-      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant"
     },
     {
       "relation": "calls",
@@ -30290,9 +30717,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L578",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_syncboppmaterialsfrompebifortenant",
-      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant"
     },
     {
       "relation": "calls",
@@ -30301,9 +30728,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L582",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_synccppmaterialsfrompebifortenant",
-      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant"
     },
     {
       "relation": "calls",
@@ -30312,9 +30739,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L586",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_syncpamaterialsfrompebifortenant",
-      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant"
     },
     {
       "relation": "calls",
@@ -30323,9 +30750,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L590",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_syncpapmaterialsfrompebifortenant",
-      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant"
     },
     {
       "relation": "calls",
@@ -30334,7 +30761,29 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L570",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_syncpetmaterialsfrompebifortenant",
+      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L643",
+      "weight": 1.0,
+      "source": "services_pebi_material_sync_syncsleevematerialsfrompebifortenant",
+      "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L647",
+      "weight": 1.0,
+      "source": "services_pebi_material_sync_syncspecialtymaterialsfrompebifortenant",
       "target": "services_pebi_material_sync_syncfamilymaterialsfrompebifortenant",
       "confidence_score": 1.0
     },
@@ -30345,9 +30794,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L713",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_syncallpebimaterialsforplatformcompany",
-      "target": "services_pebi_material_sync_syncallpebimaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncallpebimaterialsfrompebifortenant"
     },
     {
       "relation": "imports",
@@ -30356,9 +30805,9 @@
       "source_file": "services/pebi-oracle-sync-coordinator.ts",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_oracle_sync_coordinator",
-      "target": "services_pebi_material_sync_syncallpebimaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncallpebimaterialsfrompebifortenant"
     },
     {
       "relation": "calls",
@@ -30367,9 +30816,9 @@
       "source_file": "services/pebi-oracle-sync-coordinator.ts",
       "source_location": "L168",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_oracle_sync_coordinator_syncmaterialsforalllinkedtenants",
-      "target": "services_pebi_material_sync_syncallpebimaterialsfrompebifortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_syncallpebimaterialsfrompebifortenant"
     },
     {
       "relation": "calls",
@@ -30411,9 +30860,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L663",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getalumaterialsmissingfortenant",
-      "target": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_getmaterialsmissingfortenant"
     },
     {
       "relation": "calls",
@@ -30422,9 +30871,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L667",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getboppmaterialsmissingfortenant",
-      "target": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_getmaterialsmissingfortenant"
     },
     {
       "relation": "calls",
@@ -30433,9 +30882,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L671",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getcppmaterialsmissingfortenant",
-      "target": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_getmaterialsmissingfortenant"
     },
     {
       "relation": "calls",
@@ -30444,9 +30893,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L675",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getpamaterialsmissingfortenant",
-      "target": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_getmaterialsmissingfortenant"
     },
     {
       "relation": "calls",
@@ -30455,9 +30904,9 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L679",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getpapmaterialsmissingfortenant",
-      "target": "services_pebi_material_sync_getmaterialsmissingfortenant",
-      "confidence_score": 1.0
+      "target": "services_pebi_material_sync_getmaterialsmissingfortenant"
     },
     {
       "relation": "calls",
@@ -30466,7 +30915,29 @@
       "source_file": "services/pebi-material-sync.ts",
       "source_location": "L659",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "services_pebi_material_sync_getpetmaterialsmissingfortenant",
+      "target": "services_pebi_material_sync_getmaterialsmissingfortenant"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L749",
+      "weight": 1.0,
+      "source": "services_pebi_material_sync_getsleevematerialsmissingfortenant",
+      "target": "services_pebi_material_sync_getmaterialsmissingfortenant",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "services/pebi-material-sync.ts",
+      "source_location": "L753",
+      "weight": 1.0,
+      "source": "services_pebi_material_sync_getspecialtymaterialsmissingfortenant",
       "target": "services_pebi_material_sync_getmaterialsmissingfortenant",
       "confidence_score": 1.0
     },

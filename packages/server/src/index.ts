@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { initializeDatabase, closeDatabase } from './db';
 import { seedDefaultAdmin } from './db/seed-admin';
-import { ensurePlatformMasterSeeded, ensureProcessesSeeded, ensureSolventCatalogSeeded, ensureLaminationAdhesivesSeeded, ensurePetSubstratesFromSeed, ensureBoppSubstratesFromSeed, ensureCppSubstratesFromSeed, ensurePaSubstratesFromSeed, ensurePapSubstratesFromSeed } from './db/platform-master-data';
+import { ensurePlatformMasterSeeded, ensureProcessesSeeded, ensureSolventCatalogSeeded, ensureLaminationAdhesivesSeeded, ensurePetSubstratesFromSeed, ensureBoppSubstratesFromSeed, ensureCppSubstratesFromSeed, ensurePaSubstratesFromSeed, ensurePapSubstratesFromSeed, ensureSpecialtySubstratesFromSeed, ensurePeSubstratesFromSeed } from './db/platform-master-data';
 import { bootstrapPlatformStandardCatalog } from './db/seed-platform-templates';
 import { buildApp } from './app';
 import { log } from './utils/logger';
@@ -21,12 +21,18 @@ async function start() {
     await ensurePlatformMasterSeeded();
     await ensureProcessesSeeded();
     await ensureSolventCatalogSeeded();
-    await ensureLaminationAdhesivesSeeded();
+    try {
+      await ensureLaminationAdhesivesSeeded();
+    } catch (err) {
+      log.warn({ err }, 'ensureLaminationAdhesivesSeeded failed — API will still start');
+    }
     await ensurePetSubstratesFromSeed();
     await ensureBoppSubstratesFromSeed();
     await ensureCppSubstratesFromSeed();
     await ensurePaSubstratesFromSeed();
     await ensurePapSubstratesFromSeed();
+    await ensureSpecialtySubstratesFromSeed();
+    await ensurePeSubstratesFromSeed();
     await seedDefaultAdmin();
     try {
       await bootstrapPlatformStandardCatalog();

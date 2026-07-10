@@ -10,7 +10,11 @@ import {
   resolveInkPrintingProcess,
   resolveInkSolventRatio,
 } from './ink-printing';
-import { stackHasSbInk, stackNeedsSolventMix } from './layer-stack';
+import { stackHasSbInk, stackHasSleeveSubstrate, stackNeedsSolventMix } from './layer-stack';
+import {
+  calculateSeamingSolventCost,
+  DEFAULT_SLEEVE_SEAMING_SOLVENT_GSM,
+} from './sleeve-seaming';
 
 export interface SolventCostDetail {
   laminationCostPerM2: number;
@@ -19,6 +23,8 @@ export interface SolventCostDetail {
   inkMakeupCostPerKg: number;
   cleaningCostPerKg: number;
   cleaningCostPerM2: number;
+  seamingCostPerM2: number;
+  seamingCostPerKg: number;
   totalCostPerM2: number;
   totalCostPerKg: number;
   inkPrintingProcess: ReturnType<typeof resolveInkPrintingProcess>;
@@ -48,8 +54,8 @@ function layerRecipe(
 }
 
 /**
- * Lamination EA (SB adhesive recipes) + ink makeup (SB ink only, flexo/roto ratio) + cleaning (SB ink only).
- * UV ink layers: dry GSM in RM cost only — no makeup or cleaning solvent.
+ * Lamination EA (SB adhesive recipes) + ink makeup (SB ink only, flexo/roto ratio)
+ * + cleaning (SB ink only) + sleeve seaming solvent (SLEEVE substrate).
  */
 export function calculateSolventCosts(
   estimate: Estimate,
@@ -64,13 +70,17 @@ export function calculateSolventCosts(
     inkMakeupCostPerKg: 0,
     cleaningCostPerKg: 0,
     cleaningCostPerM2: 0,
+    seamingCostPerM2: 0,
+    seamingCostPerKg: 0,
     totalCostPerM2: 0,
     totalCostPerKg: 0,
     inkPrintingProcess: 'rotogravure',
     inkSolventRatio: 1,
   };
 
-  if (!stackNeedsSolventMix(estimate.layers, materials) || totalGsm <= 0) {
+  const needsMix = stackNeedsSolventMix(estimate.layers, materials);
+  const needsSeaming = stackHasSleeveSubstrate(estimate.layers, materials);
+  if ((!needsMix && !needsSeaming) || totalGsm <= 0) {
     return empty;
   }
 
@@ -79,52 +89,74 @@ export function calculateSolventCosts(
     resolveSolventComponentPrice(c, estimate.solventCostPerKgUsd);
 
   let laminationCostPerM2 = 0;
-
-  layers.forEach((layer) => {
-    const material = materials.get(layer.materialId);
-    if (!material || material.type !== 'adhesive' || !material.isSolventBased) return;
-
-    const recipe = layerRecipe(layer, material, estimate.laminationRecipeOverrides);
-    if (!recipe) return;
-
-    const dryGsm = layer.gsm ?? layer.micron;
-    const result = calculateLaminationCost(dryGsm, recipe, resolvePrice);
-    laminationCostPerM2 += result.eaCostPerM2;
-  });
-
-  const laminationCostPerKg = (laminationCostPerM2 / totalGsm) * 1000;
-
-  const inkSolventRatio = resolveInkSolventRatio(estimate, materials);
-  const inkPrintingProcess = resolveInkPrintingProcess(estimate, materials);
-  const inkMakeup = calculateInkMakeupSolventCost(
-    layers,
-    materials,
-    solventPrice,
-    inkSolventRatio,
-    totalGsm
-  );
-
+  let inkMakeupCostPerM2 = 0;
+  let inkMakeupCostPerKg = 0;
   let cleaningCostPerKg = 0;
-  if (stackHasSbInk(estimate.layers, materials)) {
-    const cleaningKg =
-      estimate.cleaningSolventKgPerJob ?? DEFAULT_CLEANING_SOLVENT_KG_PER_JOB;
-    const orderKg = estimate.orderQuantityKg ?? 1000;
-    cleaningCostPerKg = cleaningSolventCostPerKg(cleaningKg, solventPrice, orderKg);
+  let inkPrintingProcess: ReturnType<typeof resolveInkPrintingProcess> = 'rotogravure';
+  let inkSolventRatio = 1;
+
+  if (needsMix) {
+    layers.forEach((layer) => {
+      const material = materials.get(layer.materialId);
+      if (!material || material.type !== 'adhesive' || !material.isSolventBased) return;
+
+      const recipe = layerRecipe(layer, material, estimate.laminationRecipeOverrides);
+      if (!recipe) return;
+
+      const dryGsm = layer.gsm ?? layer.micron;
+      const result = calculateLaminationCost(dryGsm, recipe, resolvePrice);
+      laminationCostPerM2 += result.eaCostPerM2;
+    });
+
+    inkSolventRatio = resolveInkSolventRatio(estimate, materials);
+    inkPrintingProcess = resolveInkPrintingProcess(estimate, materials);
+    const inkMakeup = calculateInkMakeupSolventCost(
+      layers,
+      materials,
+      solventPrice,
+      inkSolventRatio,
+      totalGsm
+    );
+    inkMakeupCostPerM2 = inkMakeup.costPerM2;
+    inkMakeupCostPerKg = inkMakeup.costPerKg;
+
+    if (stackHasSbInk(estimate.layers, materials)) {
+      const cleaningKg =
+        estimate.cleaningSolventKgPerJob ?? DEFAULT_CLEANING_SOLVENT_KG_PER_JOB;
+      const orderKg = estimate.orderQuantityKg ?? 1000;
+      cleaningCostPerKg = cleaningSolventCostPerKg(cleaningKg, solventPrice, orderKg);
+    }
   }
 
+  const laminationCostPerKg = (laminationCostPerM2 / totalGsm) * 1000;
   const cleaningCostPerM2 = (cleaningCostPerKg * totalGsm) / 1000;
+
+  let seamingCostPerM2 = 0;
+  let seamingCostPerKg = 0;
+  if (needsSeaming) {
+    const seamingGsm =
+      estimate.sleeveSeamingSolventGsm ?? DEFAULT_SLEEVE_SEAMING_SOLVENT_GSM;
+    const seamingPrice =
+      estimate.seamingSolventCostPerKgUsd ?? solventPrice;
+    const seaming = calculateSeamingSolventCost(seamingGsm, seamingPrice, totalGsm);
+    seamingCostPerM2 = seaming.costPerM2;
+    seamingCostPerKg = seaming.costPerKg;
+  }
+
   const totalCostPerM2 =
-    laminationCostPerM2 + inkMakeup.costPerM2 + cleaningCostPerM2;
+    laminationCostPerM2 + inkMakeupCostPerM2 + cleaningCostPerM2 + seamingCostPerM2;
   const totalCostPerKg =
-    laminationCostPerKg + inkMakeup.costPerKg + cleaningCostPerKg;
+    laminationCostPerKg + inkMakeupCostPerKg + cleaningCostPerKg + seamingCostPerKg;
 
   return {
     laminationCostPerM2,
     laminationCostPerKg,
-    inkMakeupCostPerM2: inkMakeup.costPerM2,
-    inkMakeupCostPerKg: inkMakeup.costPerKg,
+    inkMakeupCostPerM2,
+    inkMakeupCostPerKg,
     cleaningCostPerKg,
     cleaningCostPerM2,
+    seamingCostPerM2,
+    seamingCostPerKg,
     totalCostPerM2,
     totalCostPerKg,
     inkPrintingProcess,

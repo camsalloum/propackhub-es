@@ -1,13 +1,20 @@
 import type { MasterMaterial } from '../db/master-materials-io';
 
 export const SOLVENT_COMMON_KEY = 'solvent-common';
+/** Mix formula row — not a stock solvent; exclude from Solvent Common average. */
+export const SOLVENT_SEAMING_MIX_KEY = 'solvent-sleeve-seaming';
 
 /** Recompute Solvent Common avg $/kg and density from catalog solvents (excludes Solvent Common row). */
 export function computeSolventCommonAverage(
   materials: Array<Pick<MasterMaterial, 'key' | 'type' | 'costPerKgUsd' | 'density'>>
 ): { costPerKgUsd: number; density: number } | null {
   const peers = materials.filter(
-    (m) => m.type === 'solvent' && m.key !== SOLVENT_COMMON_KEY && m.costPerKgUsd > 0 && m.density > 0
+    (m) =>
+      m.type === 'solvent' &&
+      m.key !== SOLVENT_COMMON_KEY &&
+      m.key !== SOLVENT_SEAMING_MIX_KEY &&
+      m.costPerKgUsd > 0 &&
+      m.density > 0
   );
   if (peers.length === 0) return null;
 

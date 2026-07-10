@@ -1,19 +1,78 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-09 (SPECIALTY per-SKU recipes from Item Master — PB + ES)
-**Session focus:** Phase 4 purchased-RM sync **complete except PE**. Butter foil layer recipes verified per SKU; 95µ = **6.3Alu** (not 7Alu).
+**Last updated:** 2026-07-10 (SOLVENT family + sleeve seaming)
+**Session focus:** PEBI→ES solvent sync; sleeve seaming mix (75% THF / 25% Dioxolane) @ 0.25 g/m².
 
 ---
 
 ## Where we stopped (read this first next session)
 
-### **NEXT:** PE (Family 10 — deferred in-house extrusion; sync last)
+### **Last completed:** SOLVENT sync + sleeve seaming costing
 
-Then **sign-off checklist** before `catalog_source=pebi` on Interplast:
-1. Owner validates live prices in ES Master Data per family tab
-2. Run seeds on VPS (`seed-*-profiles.js`, `seed-pap-subgroups.js`, `seed-specialty-subgroups.js`, `seed-specialty-butter-specs.js`, `seed-alu-foil-subgroups.js`)
-3. Full `npm run db:sync-materials-pebi` (or coordinator after Oracle sync)
-4. Publish platform master if needed; flip `catalog_source`
+1. Sync `family=SOLVENT`: EA, Methoxy Propanol, Ethoxy Propanol, Methoxy Propyl Acetate, THF; Dioxolane mirrors THF price.
+2. PB typo fixed: `FXXOTSNTMPACET` description MITHOXY → **Methoxy** Propyl Acetate.
+3. Estimate: when any **SLEEVE** substrate is in the stack → Seaming g/m² input (default **0.25**); blend price from THF/Dioxolane.
+4. Migration: `drizzle/0018_sleeve_seaming_solvent_gsm.sql` — run `npm run db:migrate` in ES server.
+5. Restart ES (ensureSolventCatalogSeeded upserts new grades) + PEBI; sync SOLVENT.
+
+### **NEXT:** Restart + migrate + sync SOLVENT (+ INK/ADHESIVE if not yet)
+
+1. ES: `db:migrate` then restart API.
+2. Master Data → Solvent: expect THF, 1,3-Dioxolane, Methoxy Propyl Acetate, Sleeve Seaming Mix (Formula 75/25).
+3. Sync `family=SOLVENT` (and INK/ADHESIVE if needed).
+4. Do **not** flip `catalog_source=pebi` yet.
+
+### **Solvent policy**
+
+| Grade | Source | Editable |
+|-------|--------|----------|
+| Ethyl Acetate, Methoxy Propanol, Ethoxy Propanol, Methoxy Propyl Acetate, THF | PEBI liquid $/kg | Density always; price when not live PEBI |
+| 1,3-Dioxolane | Same price as THF (mirror) | Density; price follows THF sync |
+| Ethanol, IPA, MEK, Toluene, n-Propanol, n-Propyl Acetate | ES seed / manual | Full edit |
+| Solvent Common | ES average of peers (excludes seaming mix) | Computed |
+| Sleeve Seaming Mix | Formula 75% THF + 25% Dioxolane | Formula in Master Data |
+
+### **Adhesive policy (plant sheet)**
+
+| Key | Name | Family | Grade | Primary | Sync |
+|-----|------|--------|-------|---------|------|
+| `adhesive-sl-dry` | MORFREE 75-300 | Solvent Less | Dry | 75-300:C79 | PEBI blend |
+| `adhesive-mono` | MORFREE L75×850 | Mono | Paper | L75×850 | PEBI single |
+| `adhesive-sb-hp` | MORBOND 655 | Solvent Base | HP Liquid | 655:CT85 | PEBI blend |
+| `adhesive-sb-mp` | MORBOND 675 | Solvent Base | MP Foil | 675A:675C | PEBI blend |
+
+Retired: GP / WB / mono-component / ECOLAD. No Loctite trial. Names kept short so Master Data columns fit.
+
+### **Ink & Coating policy**
+
+| Grade | Source | Editable |
+|-------|--------|----------|
+| Common Colors SB (`ink-sb`) | PEBI liquid $/kg → dry via ES solid% | Solid%/density always; price when not live PEBI |
+| Common Colors UV (`ink-uv`) | PEBI liquid $/kg → dry via ES solid% | Same |
+| Special colors, primer, varnish, heat/cold seal, wax, UV variants | ES seed / manual | Full edit |
+
+PEBI never overwrites ink solid% or density.
+
+### **PE films in ES (aligned to PEBI HALB)**
+
+| ES name | Key | HALB |
+|---------|-----|------|
+| PE Plain Film — Commercial | `pe-plain-commercial` | SFG-MONO-001 |
+| PE Plain Film — Industrial | `pe-plain-industrial` | SFG-MONO-002 |
+| FFS Film | `pe-ffs` | SFG-MONO-003 |
+| Wide Film HDPE | `pe-wide-hdpe` | SFG-MONO-004 |
+| PE Shrink Film | `pe-shrink` | SFG-3L-001 |
+| PE Lamination Film | `pe-lamination` | SFG-3L-002 |
+| PE Shrink PCR | `pe-shrink-pcr` | (optional) |
+| PE-EVOH | `pe-evoh` | (optional) |
+
+Legacy aliases: `ldpe-natural` → commercial, `ldpe-white` → industrial, `ldpe-shrink` → shrink.
+
+### **Ops notes**
+
+- Interplast still `catalog_source=platform`.
+- Live adhesive catalog smoke 2026-07-10: all **4/4** active (SL ~$3.55, Mono $4.25, HP $4.17, MP $3.33 liquid).
+- Script: `npx tsx scripts/ensure-pe-specialty-nonbom.ts`
 
 ### **AUDIT — SPECIALTY (priority if reviewing this session)**
 
@@ -43,8 +102,11 @@ Then **sign-off checklist** before `catalog_source=pebi` on Interplast:
 | 7 | SLEEVE | ✓ | 4/4 | PETC/PETG/PVC; PVC cast = blow + $0.80 |
 | 8 | SPECIALTY | ✓ | **4/4** | Alu/Pap butter foil (this session) |
 | 9 | **PE** | ✗ | — | **LAST** — in-house extrusion |
+| 10 | **INK** | ✓ | — | SB+UV Common liquid |
+| 11 | **ADHESIVE** | ✓ | — | 4 plant-sheet slots |
+| 12 | **SOLVENT** | ✓ | — | Named PB solvents; Dioxolane=THF; seaming mix |
 
-`PEBI_SYNC_FAMILIES` = above 8 families (not PE yet).
+`PEBI_SYNC_FAMILIES` = substrates + PE + INK + ADHESIVE + SOLVENT.
 
 ### **DONE:** SPECIALTY (2026-07-09)
 

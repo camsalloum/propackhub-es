@@ -1,6 +1,7 @@
 import {
   calculateEstimate,
   DEFAULT_CLEANING_SOLVENT_KG_PER_JOB,
+  DEFAULT_SLEEVE_SEAMING_SOLVENT_GSM,
   BAG_SUBTYPE_TO_CONFIGURATOR,
   type Estimate as EngineEstimate,
   type CalculationResult,
@@ -10,6 +11,7 @@ import {
 import type { materials, estimates, layers } from '../db/schema';
 import { buildEngineMaterialMap } from './material-map';
 import { resolveSolventCostPerKgUsd } from './resolve-solvent-cost';
+import { resolveSeamingSolventCostPerKgUsd } from './resolve-seaming-solvent-cost';
 import { displayToUsd } from './currency';
 
 type EstimateRow = typeof estimates.$inferSelect;
@@ -169,6 +171,10 @@ export function buildEngineEstimateFromRows(opts: {
     cleaningSolventKgPerJob: estimate.cleaningSolventKgPerJob
       ? parseFloat(estimate.cleaningSolventKgPerJob)
       : DEFAULT_CLEANING_SOLVENT_KG_PER_JOB,
+    sleeveSeamingSolventGsm: estimate.sleeveSeamingSolventGsm
+      ? parseFloat(estimate.sleeveSeamingSolventGsm)
+      : DEFAULT_SLEEVE_SEAMING_SOLVENT_GSM,
+    seamingSolventCostPerKgUsd: resolveSeamingSolventCostPerKgUsd(materials),
     inkPrintingProcess:
       (estimate.inkPrintingProcess as EngineEstimate['inkPrintingProcess']) ?? undefined,
     inkSolventRatio: estimate.solventRatio

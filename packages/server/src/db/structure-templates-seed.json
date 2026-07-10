@@ -41,7 +41,7 @@
       "display_order": 10,
       "default_dimensions": { "width_mm": 400, "length_mm": 550, "thickness_um": 45 },
       "default_layers": [
-        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 45 }
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "pe-plain-commercial", "default_micron": 45 }
       ],
       "default_processes": [
         { "process_key": "extrusion", "enabled": true },
@@ -59,7 +59,7 @@
       "display_order": 20,
       "default_dimensions": { "width_mm": 400, "length_mm": 550, "thickness_um": 47 },
       "default_layers": [
-        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 45 },
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "pe-plain-commercial", "default_micron": 45 },
         { "layer_order": 2, "layer_type": "ink", "ref_material_key": "ink-sb", "default_micron": 2 }
       ],
       "default_printing_web_class": "wide_web",
@@ -81,7 +81,7 @@
       "display_order": 30,
       "default_dimensions": { "width_mm": 1000, "thickness_um": 50 },
       "default_layers": [
-        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 50 }
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "pe-plain-industrial", "default_micron": 50 }
       ],
       "default_processes": [
         { "process_key": "extrusion", "enabled": true },
@@ -98,7 +98,7 @@
       "display_order": 40,
       "default_dimensions": { "width_mm": 1000, "thickness_um": 52 },
       "default_layers": [
-        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 50 },
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "pe-plain-industrial", "default_micron": 50 },
         { "layer_order": 2, "layer_type": "ink", "ref_material_key": "ink-sb", "default_micron": 2 }
       ],
       "default_printing_web_class": "wide_web",
@@ -119,7 +119,7 @@
       "display_order": 50,
       "default_dimensions": { "width_mm": 500, "thickness_um": 30 },
       "default_layers": [
-        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "ldpe-shrink", "default_micron": 30 }
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "pe-shrink", "default_micron": 30 }
       ],
       "default_processes": [
         { "process_key": "extrusion", "enabled": true },
@@ -136,7 +136,7 @@
       "display_order": 60,
       "default_dimensions": { "width_mm": 500, "thickness_um": 32 },
       "default_layers": [
-        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "ldpe-shrink", "default_micron": 30 },
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "pe-shrink", "default_micron": 30 },
         { "layer_order": 2, "layer_type": "ink", "ref_material_key": "ink-sb", "default_micron": 2 }
       ],
       "default_printing_web_class": "wide_web",
@@ -157,7 +157,7 @@
       "display_order": 70,
       "default_dimensions": { "width_mm": 2000, "thickness_um": 80 },
       "default_layers": [
-        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 80 }
+        { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "pe-wide-hdpe", "default_micron": 80 }
       ],
       "default_processes": [
         { "process_key": "extrusion", "enabled": true },
@@ -247,7 +247,7 @@
         { "layer_order": 1, "layer_type": "substrate", "ref_material_key": "pet-transparent", "default_micron": 12 },
         { "layer_order": 2, "layer_type": "ink", "ref_material_key": "ink-sb", "default_micron": 2 },
         { "layer_order": 3, "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 },
-        { "layer_order": 4, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 50 }
+        { "layer_order": 4, "layer_type": "substrate", "ref_material_key": "pe-lamination", "default_micron": 50 }
       ],
       "default_printing_web_class": "wide_web",
       "default_processes": [
@@ -274,7 +274,7 @@
         { "layer_order": 4, "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 },
         { "layer_order": 5, "layer_type": "substrate", "ref_material_key": "alu-foil", "default_micron": 9 },
         { "layer_order": 6, "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 },
-        { "layer_order": 7, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 50 }
+        { "layer_order": 7, "layer_type": "substrate", "ref_material_key": "pe-lamination", "default_micron": 50 }
       ],
       "default_printing_web_class": "wide_web",
       "default_processes": [
@@ -302,7 +302,7 @@
         { "layer_order": 5, "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 },
         { "layer_order": 6, "layer_type": "substrate", "ref_material_key": "bopp", "default_micron": 20 },
         { "layer_order": 7, "layer_type": "adhesive", "ref_material_key": "adhesive-sb", "default_micron": 3 },
-        { "layer_order": 8, "layer_type": "substrate", "ref_material_key": "ldpe-natural", "default_micron": 50 }
+        { "layer_order": 8, "layer_type": "substrate", "ref_material_key": "pe-lamination", "default_micron": 50 }
       ],
       "default_printing_web_class": "wide_web",
       "default_processes": [
@@ -315,9 +315,12 @@
     }
   ],
   "ref_materials": [
-    { "key": "ldpe-natural", "name": "LDPE Natural", "layer_type": "substrate", "category": "Substrate", "subcategory": "PE Film", "density": 0.92, "solid_percent": 100, "default_waste": 3 },
-    { "key": "ldpe-white", "name": "LDPE White", "layer_type": "substrate", "category": "Substrate", "subcategory": "PE Film", "density": 0.92, "solid_percent": 100, "default_waste": 3 },
-    { "key": "ldpe-shrink", "name": "LDPE Shrink", "layer_type": "substrate", "category": "Substrate", "subcategory": "PE Film", "density": 0.92, "solid_percent": 100, "default_waste": 3 },
+    { "key": "pe-plain-commercial", "name": "PE Plain Film — Commercial", "layer_type": "substrate", "category": "Substrate", "subcategory": "PE Film", "density": 0.92, "solid_percent": 100, "default_waste": 3 },
+    { "key": "pe-plain-industrial", "name": "PE Plain Film — Industrial", "layer_type": "substrate", "category": "Substrate", "subcategory": "PE Film", "density": 0.93, "solid_percent": 100, "default_waste": 3 },
+    { "key": "pe-ffs", "name": "FFS Film", "layer_type": "substrate", "category": "Substrate", "subcategory": "PE Film", "density": 0.92, "solid_percent": 100, "default_waste": 3 },
+    { "key": "pe-wide-hdpe", "name": "Wide Film HDPE", "layer_type": "substrate", "category": "Substrate", "subcategory": "PE Film", "density": 0.95, "solid_percent": 100, "default_waste": 3 },
+    { "key": "pe-shrink", "name": "PE Shrink Film", "layer_type": "substrate", "category": "Substrate", "subcategory": "PE Film", "density": 0.92, "solid_percent": 100, "default_waste": 3 },
+    { "key": "pe-lamination", "name": "PE Lamination Film", "layer_type": "substrate", "category": "Substrate", "subcategory": "PE Film", "density": 0.92, "solid_percent": 100, "default_waste": 3 },
     { "key": "pet-transparent", "name": "PET Transparent", "layer_type": "substrate", "category": "Substrate", "subcategory": "PET Film", "density": 1.38, "solid_percent": 100, "default_waste": 2 },
     { "key": "pet-shrink", "name": "PET Shrink Film", "layer_type": "substrate", "category": "Substrate", "subcategory": "PET Film", "density": 1.38, "solid_percent": 100, "default_waste": 2 },
     { "key": "pvc-shrink", "name": "PVC Shrink Film", "layer_type": "substrate", "category": "Substrate", "subcategory": "PVC Film", "density": 1.35, "solid_percent": 100, "default_waste": 2 },

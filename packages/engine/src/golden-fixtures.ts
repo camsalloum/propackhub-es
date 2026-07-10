@@ -40,7 +40,7 @@ export const LARAVEL_REFERENCE_MATERIALS = new Map<string, Material>([
     'adhesive-sb',
     {
       id: 'adhesive-sb',
-      name: 'Solvent Base HP',
+      name: 'MORBOND 655',
       type: 'adhesive',
       solidPercent: hpBinder.solidPercent,
       density: 1.1,

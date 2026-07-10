@@ -302,8 +302,8 @@
     "externalId": "PET|PET Adhesive Film"
   },
   {
-    "key": "ldpe-natural",
-    "name": "LDPE Natural",
+    "key": "pe-plain-commercial",
+    "name": "PE Plain Film — Commercial",
     "type": "substrate",
     "solidPercent": 100,
     "density": 0.92,
@@ -311,13 +311,13 @@
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "PE",
-    "substrateGrade": "LDPE Natural",
-    "hoover": "Form Fill & Seal or Lamination Film",
+    "substrateGrade": "PE Plain Film — Commercial",
+    "hoover": "SFG-MONO-001 · Commercial bags / packing",
     "marketPriceUsd": 1.7
   },
   {
-    "key": "ldpe-white",
-    "name": "LDPE White",
+    "key": "pe-plain-industrial",
+    "name": "PE Plain Film — Industrial",
     "type": "substrate",
     "solidPercent": 100,
     "density": 0.93,
@@ -325,27 +325,41 @@
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "PE",
-    "substrateGrade": "LDPE White",
-    "hoover": "Form Fill & Seal or Lamination Film",
+    "substrateGrade": "PE Plain Film — Industrial",
+    "hoover": "SFG-MONO-002 · Industrial plain / printed",
     "marketPriceUsd": 1.75
   },
   {
-    "key": "pe-evoh",
-    "name": "PE-EVOH",
+    "key": "pe-ffs",
+    "name": "FFS Film",
     "type": "substrate",
     "solidPercent": 100,
-    "density": 0.95,
-    "costPerKgUsd": 2.75,
+    "density": 0.92,
+    "costPerKgUsd": 1.72,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "PE",
-    "substrateGrade": "PE-EVOH",
-    "hoover": "Density x Caliper",
-    "marketPriceUsd": 2.75
+    "substrateGrade": "FFS Film",
+    "hoover": "SFG-MONO-003 · FFS rolls / industrial bags",
+    "marketPriceUsd": 1.72
+  },
+  {
+    "key": "pe-wide-hdpe",
+    "name": "Wide Film HDPE",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 0.95,
+    "costPerKgUsd": 1.65,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "PE",
+    "substrateGrade": "Wide Film HDPE",
+    "hoover": "SFG-MONO-004 · Wide PE rolls",
+    "marketPriceUsd": 1.65
   },
   {
     "key": "pe-shrink",
-    "name": "PE Shrink",
+    "name": "PE Shrink Film",
     "type": "substrate",
     "solidPercent": 100,
     "density": 0.92,
@@ -353,9 +367,23 @@
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "PE",
-    "substrateGrade": "PE Shrink",
-    "hoover": "Collation Film",
+    "substrateGrade": "PE Shrink Film",
+    "hoover": "SFG-3L-001 · Shrink plain / printed",
     "marketPriceUsd": 1.8
+  },
+  {
+    "key": "pe-lamination",
+    "name": "PE Lamination Film",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 0.92,
+    "costPerKgUsd": 1.78,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "PE",
+    "substrateGrade": "PE Lamination Film",
+    "hoover": "SFG-3L-002 · Laminate sealant ply",
+    "marketPriceUsd": 1.78
   },
   {
     "key": "pe-shrink-pcr",
@@ -368,8 +396,22 @@
     "isSolventBased": false,
     "substrateFamily": "PE",
     "substrateGrade": "PE Shrink PCR",
-    "hoover": "Collation Film with 50% PCR",
+    "hoover": "Collation film with 50% PCR",
     "marketPriceUsd": 2.2
+  },
+  {
+    "key": "pe-evoh",
+    "name": "PE-EVOH",
+    "type": "substrate",
+    "solidPercent": 100,
+    "density": 0.95,
+    "costPerKgUsd": 2.75,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "PE",
+    "substrateGrade": "PE-EVOH",
+    "hoover": "Barrier PE · Density x Caliper",
+    "marketPriceUsd": 2.75
   },
   {
     "key": "cpp-transparent",
@@ -712,13 +754,13 @@
     "name": "7ALu/10PE/30 GP Paper",
     "type": "substrate",
     "solidPercent": 100,
-    "density": 0.8471,
+    "density": 1.19,
     "costPerKgUsd": 5,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "SPECIALTY",
     "substrateGrade": "7ALu/10PE/30 GP Paper",
-    "hoover": "GSM Direct · 41.89 gsm nominal",
+    "hoover": "GSM Direct · 58.90 gsm nominal",
     "marketPriceUsd": 5
   },
   {
@@ -726,13 +768,13 @@
     "name": "7ALu/10PE/35Paper/12PE",
     "type": "substrate",
     "solidPercent": 100,
-    "density": 0.8685,
+    "density": 1.12,
     "costPerKgUsd": 4.8,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "SPECIALTY",
     "substrateGrade": "7ALu/10PE/35Paper/12PE",
-    "hoover": "GSM Direct · 58.89 gsm nominal",
+    "hoover": "GSM Direct · 75.90 gsm nominal",
     "marketPriceUsd": 4.8
   },
   {
@@ -740,13 +782,13 @@
     "name": "7ALu/10PE/40Paper/12PE",
     "type": "substrate",
     "solidPercent": 100,
-    "density": 0.875,
+    "density": 1.11,
     "costPerKgUsd": 3.2,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "SPECIALTY",
     "substrateGrade": "7ALu/10PE/40Paper/12PE",
-    "hoover": "GSM Direct · 63.89 gsm nominal",
+    "hoover": "GSM Direct · 80.90 gsm nominal",
     "marketPriceUsd": 3.2
   },
   {
@@ -754,13 +796,13 @@
     "name": "6.3ALu/10PE/50Paper/12PE",
     "type": "substrate",
     "solidPercent": 100,
-    "density": 0.8896,
+    "density": 1.07,
     "costPerKgUsd": 3.11,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "SPECIALTY",
     "substrateGrade": "6.3ALu/10PE/50Paper/12PE",
-    "hoover": "GSM Direct · 73.7 gsm nominal",
+    "hoover": "GSM Direct · 89.01 gsm nominal",
     "marketPriceUsd": 3.11
   },
   {
@@ -946,54 +988,39 @@
     "marketPriceUsd": 10.0
   },
   {
-    "key": "adhesive-sb-gp",
-    "name": "Solvent Base GP",
+    "key": "adhesive-sb-mp",
+    "name": "MORBOND 675",
     "type": "adhesive",
     "solidPercent": 75,
     "density": 1.10,
-    "costPerKgUsd": 4.36,
-    "liquidCostUsd": 3.27,
+    "costPerKgUsd": 4.44,
+    "liquidCostUsd": 3.33,
     "wastePercent": 0,
     "isSolventBased": true,
     "substrateFamily": "Solvent Base",
-    "substrateGrade": "GP",
-    "hoover": "General Purpose — MORBOND 675",
-    "marketPriceUsd": 0,
-    "laminationRecipe": {
-      "tier": "GP",
-      "components": [
-        { "role": "adhesive", "name": "MORBOND 675 ADHESIVE", "parts": 100, "solidPercent": 75, "pricePerKgUsd": 3.27 },
-        { "role": "hardener", "name": "CURATIVE 675C HARDENER", "parts": 20, "solidPercent": 75, "pricePerKgUsd": 3.27 },
-        { "role": "solvent", "name": "Ethyl Acetate", "parts": 137, "solidPercent": 0, "solventKey": "solvent-ethyl-acetate", "pricePerKgUsd": 1.0 }
-      ]
-    }
-  },
-  {
-    "key": "adhesive-sb-mp",
-    "name": "Solvent Base MP",
-    "type": "adhesive",
-    "solidPercent": 71,
-    "density": 1.10,
-    "costPerKgUsd": 4.89,
-    "liquidCostUsd": 3.47,
-    "wastePercent": 0,
-    "isSolventBased": true,
-    "substrateFamily": "Solvent Base",
-    "substrateGrade": "MP",
-    "hoover": "Medium Performance — ECOLAD SB-982",
+    "substrateGrade": "MP Foil",
+    "hoover": "Foil / dry — 675A + 675C (alt: Flexcote)",
     "marketPriceUsd": 0,
     "laminationRecipe": {
       "tier": "MP",
       "components": [
-        { "role": "adhesive", "name": "ECOLAD SB-982", "parts": 100, "solidPercent": 70, "pricePerKgUsd": 3.47 },
-        { "role": "hardener", "name": "ECOLAD SB-529", "parts": 3.2, "solidPercent": 100, "pricePerKgUsd": 3.47 },
-        { "role": "solvent", "name": "Ethyl Acetate", "parts": 106, "solidPercent": 0, "solventKey": "solvent-ethyl-acetate", "pricePerKgUsd": 1.0 }
-      ]
+        { "role": "adhesive", "name": "MORBOND 675 A", "parts": 100, "solidPercent": 75, "pricePerKgUsd": 3.33 },
+        { "role": "hardener", "name": "MORBOND 675C", "parts": 25, "solidPercent": 75, "pricePerKgUsd": 3.33 },
+        { "role": "solvent", "name": "Ethyl Acetate", "parts": 108, "solidPercent": 0, "solventKey": "solvent-ethyl-acetate", "pricePerKgUsd": 1.0 }
+      ],
+      "alternate": {
+        "label": "Flexcote 1152",
+        "components": [
+          { "role": "adhesive", "name": "FLEXCOTE 1152", "parts": 100, "solidPercent": 70, "pricePerKgUsd": 3.26 },
+          { "role": "hardener", "name": "FLEXCOTE 9062LE", "parts": 15, "solidPercent": 100, "pricePerKgUsd": 4.24 },
+          { "role": "solvent", "name": "Ethyl Acetate", "parts": 130, "solidPercent": 0, "solventKey": "solvent-ethyl-acetate", "pricePerKgUsd": 1.0 }
+        ]
+      }
     }
   },
   {
     "key": "adhesive-sb-hp",
-    "name": "Solvent Base HP",
+    "name": "MORBOND 655",
     "type": "adhesive",
     "solidPercent": 71,
     "density": 1.10,
@@ -1002,45 +1029,73 @@
     "wastePercent": 0,
     "isSolventBased": true,
     "substrateFamily": "Solvent Base",
-    "substrateGrade": "HP",
-    "hoover": "High Performance — MORBOND 655",
+    "substrateGrade": "HP Liquid",
+    "hoover": "Tomato / liquid — 655 + CT 85",
     "marketPriceUsd": 0,
     "laminationRecipe": {
       "tier": "HP",
       "components": [
-        { "role": "adhesive", "name": "MORBOND 655 ADHESIVE", "parts": 100, "solidPercent": 70, "pricePerKgUsd": 3.81 },
-        { "role": "hardener", "name": "CURATIVE CT 85 HARDENER", "parts": 3, "solidPercent": 100, "pricePerKgUsd": 16.19 },
-        { "role": "solvent", "name": "Ethyl Acetate", "parts": 106, "solidPercent": 0, "solventKey": "solvent-ethyl-acetate", "pricePerKgUsd": 1.54 }
+        { "role": "adhesive", "name": "MORBOND 655", "parts": 100, "solidPercent": 70, "pricePerKgUsd": 3.81 },
+        { "role": "hardener", "name": "CURATIVE CT 85", "parts": 3, "solidPercent": 100, "pricePerKgUsd": 16.16 },
+        { "role": "solvent", "name": "Ethyl Acetate", "parts": 80, "solidPercent": 0, "solventKey": "solvent-ethyl-acetate", "pricePerKgUsd": 1.54 }
       ]
     }
   },
   {
-    "key": "adhesive-wb",
-    "name": "Solvent Less",
+    "key": "adhesive-sl-dry",
+    "name": "MORFREE 75-300",
     "type": "adhesive",
     "solidPercent": 100,
     "density": 1.10,
-    "costPerKgUsd": 8,
+    "costPerKgUsd": 3.06,
+    "liquidCostUsd": 3.06,
     "wastePercent": 0,
     "isSolventBased": false,
     "substrateFamily": "Solvent Less",
-    "substrateGrade": "Solvent Less",
-    "hoover": "Solvent Less",
-    "marketPriceUsd": 0
+    "substrateGrade": "Dry",
+    "hoover": "75-300 + C79 (alt: 870 + CT 95)",
+    "marketPriceUsd": 0,
+    "laminationRecipe": {
+      "tier": "SL",
+      "components": [
+        { "role": "adhesive", "name": "MORFREE 75-300", "parts": 100, "solidPercent": 100, "pricePerKgUsd": 3.0 },
+        { "role": "hardener", "name": "MORFREE C79", "parts": 50, "solidPercent": 100, "pricePerKgUsd": 3.19 }
+      ],
+      "alternate": {
+        "label": "MORBOND 870",
+        "components": [
+          { "role": "adhesive", "name": "MORBOND 870", "parts": 100, "solidPercent": 100, "pricePerKgUsd": 3.48 },
+          { "role": "hardener", "name": "CURATIVE CT 95", "parts": 70, "solidPercent": 100, "pricePerKgUsd": 4.64 }
+        ]
+      }
+    }
   },
   {
-    "key": "adhesive-mono-component",
-    "name": "Mono Component",
+    "key": "adhesive-mono",
+    "name": "MORFREE L75×850",
     "type": "adhesive",
     "solidPercent": 100,
     "density": 1.05,
-    "costPerKgUsd": 8,
+    "costPerKgUsd": 4.25,
+    "liquidCostUsd": 4.25,
     "wastePercent": 0,
     "isSolventBased": false,
-    "substrateFamily": "Mono Component",
-    "substrateGrade": "Mono Component",
-    "hoover": "Mono Component",
-    "marketPriceUsd": 0
+    "substrateFamily": "Mono",
+    "substrateGrade": "Paper",
+    "hoover": "L75×850 (alt: 795 LV manual)",
+    "marketPriceUsd": 0,
+    "laminationRecipe": {
+      "tier": "MONO",
+      "components": [
+        { "role": "adhesive", "name": "MORFREE L75×850", "parts": 100, "solidPercent": 100, "pricePerKgUsd": 4.25 }
+      ],
+      "alternate": {
+        "label": "MORBOND 795 LV",
+        "components": [
+          { "role": "adhesive", "name": "MORBOND 795 LV", "parts": 100, "solidPercent": 100, "pricePerKgUsd": 8.0 }
+        ]
+      }
+    }
   },
   {
     "key": "solvent-ethyl-acetate",
@@ -1151,7 +1206,7 @@
     "isSolventBased": false,
     "substrateFamily": "Solvent",
     "substrateGrade": "Methoxy Propanol",
-    "hoover": "MPA / PMA",
+    "hoover": "Methoxy Propanol",
     "marketPriceUsd": 2.3
   },
   {
@@ -1167,6 +1222,83 @@
     "substrateGrade": "Ethoxy Propanol",
     "hoover": "Ethoxy Propanol",
     "marketPriceUsd": 2.5
+  },
+  {
+    "key": "solvent-methoxy-propyl-acetate",
+    "name": "Methoxy Propyl Acetate",
+    "type": "solvent",
+    "solidPercent": 0,
+    "density": 0.97,
+    "costPerKgUsd": 2.6,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "Solvent",
+    "substrateGrade": "Methoxy Propyl Acetate",
+    "hoover": "MPA / PMA",
+    "marketPriceUsd": 2.6
+  },
+  {
+    "key": "solvent-thf",
+    "name": "Tetrahydrofuran (THF)",
+    "type": "solvent",
+    "solidPercent": 0,
+    "density": 0.89,
+    "costPerKgUsd": 19.59,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "Solvent",
+    "substrateGrade": "THF",
+    "hoover": "THF",
+    "marketPriceUsd": 19.59
+  },
+  {
+    "key": "solvent-dioxolane",
+    "name": "1,3-Dioxolane",
+    "type": "solvent",
+    "solidPercent": 0,
+    "density": 1.06,
+    "costPerKgUsd": 19.59,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "Solvent",
+    "substrateGrade": "1,3-Dioxolane",
+    "hoover": "Same price as THF (sleeve seaming mix)",
+    "marketPriceUsd": 19.59
+  },
+  {
+    "key": "solvent-sleeve-seaming",
+    "name": "Sleeve Seaming Mix",
+    "type": "solvent",
+    "solidPercent": 0,
+    "density": 0.93,
+    "costPerKgUsd": 19.59,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "Solvent",
+    "substrateGrade": "Seaming Mix",
+    "hoover": "Default 75% THF + 25% 1,3-Dioxolane",
+    "marketPriceUsd": 19.59,
+    "laminationRecipe": {
+      "tier": "CUSTOM",
+      "components": [
+        {
+          "role": "solvent",
+          "name": "Tetrahydrofuran (THF)",
+          "parts": 75,
+          "solidPercent": 0,
+          "solventKey": "solvent-thf",
+          "pricePerKgUsd": 19.59
+        },
+        {
+          "role": "solvent",
+          "name": "1,3-Dioxolane",
+          "parts": 25,
+          "solidPercent": 0,
+          "solventKey": "solvent-dioxolane",
+          "pricePerKgUsd": 19.59
+        }
+      ]
+    }
   },
   {
     "key": "solvent-common",

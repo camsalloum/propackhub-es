@@ -61,3 +61,15 @@ export function stackNeedsSolventMix(
     );
   });
 }
+
+/** True when any substrate layer is SLEEVE family (shrink sleeve film). */
+export function stackHasSleeveSubstrate(
+  layers: LayerMaterialRef[],
+  materials: MaterialLookup
+): boolean {
+  return layers.some((layer) => {
+    const material = getMaterial(materials, layer.materialId);
+    if (!material || material.type !== 'substrate') return false;
+    return String(material.substrateFamily || '').trim().toUpperCase() === 'SLEEVE';
+  });
+}

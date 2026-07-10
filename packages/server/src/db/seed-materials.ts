@@ -1,5 +1,5 @@
 import { getDatabase, schema } from './index';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { log } from '../utils/logger';
 import masterMaterialsFallback from './master-materials-seed.json';
 import type { MasterMaterial } from './master-materials-io';
@@ -10,6 +10,75 @@ import { backfillMaterialSubcategories } from './seed-categories';
 import { listPlatformMasterMaterials } from './platform-master-data';
 
 type DbMaterial = typeof schema.materials.$inferSelect;
+
+/** Retired adhesive platform keys → replacement key (plant-sheet cutover). */
+export const ADHESIVE_RETIREMENT_MAP: Record<string, string> = {
+  'adhesive-sb-gp': 'adhesive-sb-mp',
+  'adhesive-sb': 'adhesive-sb-mp',
+  'adhesive-wb': 'adhesive-sl-dry',
+  'adhesive-mono-component': 'adhesive-mono',
+};
+
+/**
+ * Remap estimate layers from retired adhesive materials onto replacements, then delete orphans.
+ * Safe when layers still reference GP/WB/old-mono rows (FK would otherwise block prune).
+ */
+export async function remappingRetiredAdhesivesForTenant(
+  tenantId: string
+): Promise<{ remappedLayers: number; deleted: number }> {
+  const db = getDatabase();
+  const retiredKeys = Object.keys(ADHESIVE_RETIREMENT_MAP);
+  const replacementKeys = [...new Set(Object.values(ADHESIVE_RETIREMENT_MAP))];
+
+  const rows = await db
+    .select({
+      id: schema.materials.id,
+      platformMasterKey: schema.materials.platformMasterKey,
+    })
+    .from(schema.materials)
+    .where(
+      and(
+        eq(schema.materials.tenantId, tenantId),
+        eq(schema.materials.type, 'adhesive'),
+        eq(schema.materials.isTenantOnly, false),
+        inArray(schema.materials.platformMasterKey, [...retiredKeys, ...replacementKeys])
+      )
+    );
+
+  const byKey = new Map<string, string>();
+  for (const row of rows) {
+    const key = row.platformMasterKey?.trim();
+    if (key) byKey.set(key, row.id);
+  }
+
+  let remappedLayers = 0;
+  let deleted = 0;
+
+  for (const [oldKey, newKey] of Object.entries(ADHESIVE_RETIREMENT_MAP)) {
+    const oldId = byKey.get(oldKey);
+    const newId = byKey.get(newKey);
+    if (!oldId || !newId || oldId === newId) continue;
+
+    const updated = await db
+      .update(schema.layers)
+      .set({ materialId: newId })
+      .where(eq(schema.layers.materialId, oldId))
+      .returning({ id: schema.layers.id });
+    remappedLayers += updated.length;
+
+    await db
+      .delete(schema.materials)
+      .where(and(eq(schema.materials.id, oldId), eq(schema.materials.tenantId, tenantId)));
+    deleted++;
+    byKey.delete(oldKey);
+  }
+
+  if (remappedLayers > 0 || deleted > 0) {
+    log.info({ tenantId, remappedLayers, deleted }, 'Retired adhesive materials remapped and removed');
+  }
+
+  return { remappedLayers, deleted };
+}
 
 function mapMasterToDbRow(tenantId: string, material: MasterMaterial) {
   const now = new Date();
@@ -43,11 +112,31 @@ function mapMasterToDbRow(tenantId: string, material: MasterMaterial) {
 }
 
 const LEGACY_ADHESIVE_NAMES: Record<string, string[]> = {
-  'adhesive-sb-gp': ['Adhesive SB (Solvent Based)', 'Solvent Base', 'Solvent Base GP'],
-  'adhesive-sb-mp': ['Solvent Base MP'],
-  'adhesive-sb-hp': ['Solvent Base HP'],
-  'adhesive-wb': ['Adhesive WB (Water Based)', 'Solvent Less'],
-  'adhesive-mono-component': ['Mono Component'],
+  'adhesive-sb-mp': [
+    'Adhesive SB (Solvent Based)',
+    'Solvent Base',
+    'Solvent Base GP',
+    'Solvent Base MP',
+    'Solvent Base MP — Foil',
+    'MORBOND 675',
+  ],
+  'adhesive-sb-hp': [
+    'Solvent Base HP',
+    'Solvent Base HP — Liquid',
+    'MORBOND 655',
+  ],
+  'adhesive-sl-dry': [
+    'Adhesive WB (Water Based)',
+    'Solvent Less',
+    'Solvent Less — Dry',
+    'MORFREE 75-300',
+  ],
+  'adhesive-mono': [
+    'Mono Component',
+    'Mono Component — Paper',
+    'MORFREE L75×850',
+    'MORFREE L75 X 850',
+  ],
 };
 
 const LEGACY_INK_NAMES: Record<string, string[]> = {
@@ -61,6 +150,11 @@ const LEGACY_PLATFORM_KEYS: Record<string, string> = {
   'pet-twist-transparent': 'pet-twist-transparent-twist-transparent',
   'pet-twist-white': 'pet-twist-transparent-twist-white',
   'pet-twist-metalized': 'pet-twist-methalized',
+  'pe-plain-commercial': 'ldpe-natural',
+  'pe-plain-industrial': 'ldpe-white',
+  'adhesive-sl-dry': 'adhesive-wb',
+  'adhesive-mono': 'adhesive-mono-component',
+  'adhesive-sb-mp': 'adhesive-sb-gp',
 };
 
 function rmMatchKey(m: {

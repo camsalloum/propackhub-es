@@ -21,7 +21,7 @@ import {
   type WasteBand,
   type WasteBandsByPrintMode,
 } from '@es/engine';
-import { syncMaterialsForTenant, pruneTenantSubstratesByPlatformKeyAllowlist } from './seed-materials';
+import { syncMaterialsForTenant, pruneTenantSubstratesByPlatformKeyAllowlist, remappingRetiredAdhesivesForTenant } from './seed-materials';
 import { relinkTemplatesForTenant } from './seed-templates';
 import { syncCustomRmTypeCategories } from './seed-categories';
 import { applySolventCommonAverage, SOLVENT_COMMON_KEY, computeSolventCommonAverage } from '../utils/solvent-common';
@@ -929,19 +929,36 @@ export async function ensureProcessesSeeded(): Promise<number> {
 
 /**
  * Idempotent — inserts solvent catalog rows + Solvent RM type for existing deployments.
+ * Also upserts new seaming solvents (THF, Dioxolane, MPA, seaming mix) when missing.
  */
 export async function ensureSolventCatalogSeeded(): Promise<{ materials: number; rmType: boolean }> {
   const db = getDatabase();
   const seed = loadSeedMaterialsFromJson().filter((m) => m.type === 'solvent');
-  const existingRows = await db
-    .select({ key: schema.platformMasterMaterials.key })
-    .from(schema.platformMasterMaterials);
-  const existingKeys = new Set(existingRows.map((r) => r.key));
+  const existingRows = await db.select().from(schema.platformMasterMaterials);
+  const byKey = new Map(existingRows.map((r) => [r.key, r]));
+
+  const NEW_SOLVENT_KEYS = new Set([
+    'solvent-methoxy-propyl-acetate',
+    'solvent-thf',
+    'solvent-dioxolane',
+    'solvent-sleeve-seaming',
+  ]);
 
   let materialsAdded = 0;
+  let materialsUpdated = 0;
   for (let i = 0; i < seed.length; i++) {
     const m = seed[i]!;
-    if (existingKeys.has(m.key)) continue;
+    const match = byKey.get(m.key);
+    if (match) {
+      if (NEW_SOLVENT_KEYS.has(m.key) || m.key === 'solvent-methoxy-propanol') {
+        await db
+          .update(schema.platformMasterMaterials)
+          .set(masterMaterialInputToDbValues({ ...m, sortOrder: match.sortOrder ?? 900 + i }))
+          .where(eq(schema.platformMasterMaterials.id, match.id));
+        materialsUpdated++;
+      }
+      continue;
+    }
     await db
       .insert(schema.platformMasterMaterials)
       .values(masterMaterialInputToDbValues({ ...m, sortOrder: 900 + i }));
@@ -978,14 +995,17 @@ export async function ensureSolventCatalogSeeded(): Promise<{ materials: number;
     rmTypeAdded = true;
   }
 
-  if (materialsAdded > 0) {
+  if (materialsAdded > 0 || materialsUpdated > 0) {
     await incrementMasterDataVersion();
     const materials = await listPlatformMasterMaterials();
     const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);
     for (const t of tenants) {
       await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
     }
-    log.info({ count: materialsAdded }, 'Seeded solvent materials and synced tenants');
+    log.info(
+      { added: materialsAdded, updated: materialsUpdated },
+      'Seeded solvent materials and synced tenants'
+    );
   }
 
   if (rmTypeAdded) {
@@ -995,11 +1015,21 @@ export async function ensureSolventCatalogSeeded(): Promise<{ materials: number;
   return { materials: materialsAdded, rmType: rmTypeAdded };
 }
 
-const LAMINATION_ADHESIVE_KEYS = ['adhesive-sb-gp', 'adhesive-sb-mp', 'adhesive-sb-hp'] as const;
-const RETIRED_ADHESIVE_KEYS = ['adhesive-sb'] as const;
+const LAMINATION_ADHESIVE_KEYS = [
+  'adhesive-sb-mp',
+  'adhesive-sb-hp',
+  'adhesive-sl-dry',
+  'adhesive-mono',
+] as const;
+const RETIRED_ADHESIVE_KEYS = [
+  'adhesive-sb',
+  'adhesive-sb-gp',
+  'adhesive-wb',
+  'adhesive-mono-component',
+] as const;
 
 /**
- * Idempotent — upserts GP/MP/HP lamination adhesives from seed JSON; retires legacy adhesive-sb row.
+ * Idempotent — upserts plant-sheet adhesive slots from seed JSON; retires legacy keys.
  */
 export async function ensureLaminationAdhesivesSeeded(): Promise<{ upserted: number; retired: number }> {
   const db = getDatabase();
@@ -1010,6 +1040,7 @@ export async function ensureLaminationAdhesivesSeeded(): Promise<{ upserted: num
   const byKey = new Map(existing.map((r) => [r.key, r]));
 
   let inserted = 0;
+  let updated = 0;
   for (let i = 0; i < seed.length; i++) {
     const m = seed[i]!;
     const values = masterMaterialInputToDbValues({ ...m, sortOrder: 800 + i });
@@ -1019,6 +1050,7 @@ export async function ensureLaminationAdhesivesSeeded(): Promise<{ upserted: num
         .update(schema.platformMasterMaterials)
         .set(values)
         .where(eq(schema.platformMasterMaterials.id, match.id));
+      updated++;
     } else {
       await db.insert(schema.platformMasterMaterials).values(values);
       inserted++;
@@ -1037,31 +1069,21 @@ export async function ensureLaminationAdhesivesSeeded(): Promise<{ upserted: num
     }
   }
 
-  let monoChanged = false;
-  const mono = byKey.get('adhesive-mono-component');
-  if (mono && (mono.solidPercent !== 100 || mono.isSolventBased)) {
-    await db
-      .update(schema.platformMasterMaterials)
-      .set({
-        solidPercent: 100,
-        isSolventBased: false,
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.platformMasterMaterials.id, mono.id));
-    monoChanged = true;
-  }
-
-  if (inserted > 0 || retired > 0 || monoChanged) {
+  // Always sync + remapping retirees (idempotent). Never hard-prune adhesives while layers may still point at GP/WB.
+  if (inserted > 0 || updated > 0 || retired > 0) {
     await incrementMasterDataVersion();
-    const materials = await listPlatformMasterMaterials();
-    const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);
-    for (const t of tenants) {
-      await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
-    }
-    log.info({ inserted, retired }, 'Lamination adhesives updated and tenants synced');
+  }
+  const materials = await listPlatformMasterMaterials();
+  const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);
+  for (const t of tenants) {
+    await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
+    await remappingRetiredAdhesivesForTenant(t.id);
+  }
+  if (inserted > 0 || updated > 0 || retired > 0) {
+    log.info({ inserted, updated, retired }, 'Lamination adhesives updated and tenants synced');
   }
 
-  return { upserted: inserted + retired + (monoChanged ? 1 : 0), retired };
+  return { upserted: inserted + updated + retired, retired };
 }
 
 const PET_SUBSTRATE_KEYS = [
@@ -1556,6 +1578,98 @@ export async function ensureSpecialtySubstratesFromSeed(): Promise<{
   }
   if (pruned > 0) {
     log.info({ pruned }, 'Stale SPECIALTY substrate rows removed from tenant libraries');
+  }
+
+  return { upserted: inserted + updated + retired, retired, pruned };
+}
+
+const PE_SUBSTRATE_KEYS = [
+  'pe-plain-commercial',
+  'pe-plain-industrial',
+  'pe-ffs',
+  'pe-wide-hdpe',
+  'pe-shrink',
+  'pe-lamination',
+  'pe-shrink-pcr',
+  'pe-evoh',
+] as const;
+
+const RETIRED_PE_SUBSTRATE_KEYS = ['ldpe-natural', 'ldpe-white'] as const;
+
+const LEGACY_PE_PLATFORM_KEYS: Record<string, string> = {
+  'pe-plain-commercial': 'ldpe-natural',
+  'pe-plain-industrial': 'ldpe-white',
+};
+
+/** Idempotent — upserts PE films from seed (PEBI HALB register alignment). */
+export async function ensurePeSubstratesFromSeed(): Promise<{
+  upserted: number;
+  retired: number;
+  pruned: number;
+}> {
+  const db = getDatabase();
+  const seed = loadSeedMaterialsFromJson().filter(
+    (m) => m.type === 'substrate' && (PE_SUBSTRATE_KEYS as readonly string[]).includes(m.key)
+  );
+  const existing = await db.select().from(schema.platformMasterMaterials);
+  const byKey = new Map(existing.map((r) => [r.key, r]));
+
+  let inserted = 0;
+  let updated = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const m = seed[i]!;
+    const values = masterMaterialInputToDbValues({ ...m, sortOrder: 260 + i });
+    const legacyKey = LEGACY_PE_PLATFORM_KEYS[m.key];
+    const match = byKey.get(m.key) ?? (legacyKey ? byKey.get(legacyKey) : undefined);
+    if (match) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set({ ...values, key: m.key })
+        .where(eq(schema.platformMasterMaterials.id, match.id));
+      updated++;
+    } else {
+      await db.insert(schema.platformMasterMaterials).values(values);
+      inserted++;
+    }
+  }
+
+  let retired = 0;
+  for (const key of RETIRED_PE_SUBSTRATE_KEYS) {
+    const row = byKey.get(key);
+    // Only retire if a renamed row already exists under the new key (avoid wiping mid-migrate).
+    const renamedExists =
+      (key === 'ldpe-natural' && byKey.has('pe-plain-commercial')) ||
+      (key === 'ldpe-white' && byKey.has('pe-plain-industrial'));
+    if (row?.active && !renamedExists && row.key === key) {
+      // Legacy key was remapped in-place via LEGACY_PE_PLATFORM_KEYS — nothing to retire.
+      continue;
+    }
+    if (row?.active && row.key === key && renamedExists) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set({ active: false, updatedAt: new Date() })
+        .where(eq(schema.platformMasterMaterials.id, row.id));
+      retired++;
+    }
+  }
+
+  const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);
+  let pruned = 0;
+
+  if (inserted > 0 || updated > 0 || retired > 0) {
+    await incrementMasterDataVersion();
+    const materials = await listPlatformMasterMaterials();
+    for (const t of tenants) {
+      await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
+    }
+    log.info({ inserted, updated, retired }, 'PE substrates updated and tenants synced');
+  }
+
+  for (const t of tenants) {
+    pruned += await pruneTenantSubstratesByPlatformKeyAllowlist(t.id, 'PE', PE_SUBSTRATE_KEYS);
+  }
+  if (pruned > 0) {
+    log.info({ pruned }, 'Stale PE substrate rows removed from tenant libraries');
   }
 
   return { upserted: inserted + updated + retired, retired, pruned };

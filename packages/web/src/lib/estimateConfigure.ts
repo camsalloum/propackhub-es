@@ -234,6 +234,7 @@ export function sanitizeEstimateSavePayload(
     'moqKg',
     'solventCostPerKgUsd',
     'cleaningSolventKgPerJob',
+    'sleeveSeamingSolventGsm',
     'toolingChargeUsd',
     'deliveryChargeUsd',
   ] as const) {

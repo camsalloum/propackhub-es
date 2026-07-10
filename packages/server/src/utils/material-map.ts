@@ -47,3 +47,35 @@ export async function loadTenantMaterialsByIds(
     .from(schema.materials)
     .where(and(eq(schema.materials.tenantId, tenantId), inArray(schema.materials.id, ids)));
 }
+
+const SEAMING_SOLVENT_KEYS = ['solvent-thf', 'solvent-dioxolane'] as const;
+
+/** THF + Dioxolane rows for sleeve seaming blend price. */
+export async function loadTenantSeamingSolventMaterials(
+  tenantId: string
+): Promise<MaterialRow[]> {
+  const db = getDatabase();
+  return db
+    .select()
+    .from(schema.materials)
+    .where(
+      and(
+        eq(schema.materials.tenantId, tenantId),
+        inArray(schema.materials.platformMasterKey, [...SEAMING_SOLVENT_KEYS])
+      )
+    );
+}
+
+/** Merge layer/solvent materials with seaming solvents (dedupe by id). */
+export async function loadTenantMaterialsForEstimate(
+  tenantId: string,
+  materialIds: Iterable<string | null | undefined>
+): Promise<MaterialRow[]> {
+  const [byId, seaming] = await Promise.all([
+    loadTenantMaterialsByIds(tenantId, materialIds),
+    loadTenantSeamingSolventMaterials(tenantId),
+  ]);
+  const map = new Map<string, MaterialRow>();
+  for (const row of [...byId, ...seaming]) map.set(row.id, row);
+  return [...map.values()];
+}

@@ -471,6 +471,8 @@ export const estimates = pgTable('estimates', {
   /** Per-layer lamination recipe overrides keyed by layer id (estimate snapshot). */
   laminationRecipeOverrides: jsonb('lamination_recipe_overrides'),
   cleaningSolventKgPerJob: decimal('cleaning_solvent_kg_per_job', { precision: 12, scale: 4 }).default('20'),
+  /** Sleeve seaming solvent g/m² when SLEEVE substrate present (default 0.25). */
+  sleeveSeamingSolventGsm: decimal('sleeve_seaming_solvent_gsm', { precision: 12, scale: 4 }).default('0.25'),
   /** flexo | rotogravure — on-press SB ink makeup; null = infer from stack (PE→flexo). */
   inkPrintingProcess: varchar('ink_printing_process', { length: 16 }),
   orderQuantityKg: decimal('order_quantity_kg', { precision: 12, scale: 2 }),

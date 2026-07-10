@@ -1,6 +1,7 @@
 export const DEFAULT_SOLVENT_COST_PER_KG_USD = 1.54;
 export const DEFAULT_SOLVENT_RATIO = 1.0;
 export const SOLVENT_COMMON_MASTER_KEY = 'solvent-common';
+export const SOLVENT_SEAMING_MIX_KEY = 'solvent-sleeve-seaming';
 
 export const SOLVENT_RATIO_TOOLTIP =
   'Dry ink/adhesive GSM on the film ÷ this ratio = solvent GSM used for costing. ' +
@@ -54,7 +55,12 @@ export function findDefaultSolventMaterialId(materials: SolventMaterialLike[]): 
 
 export function listSolventMaterials<T extends SolventMaterialLike>(materials: T[]): T[] {
   return materials
-    .filter((m) => m.type === 'solvent')
+    .filter(
+      (m) =>
+        m.type === 'solvent' &&
+        m.platformMasterKey !== SOLVENT_SEAMING_MIX_KEY &&
+        m.name !== 'Sleeve Seaming Mix'
+    )
     .sort((a, b) => {
       if (a.platformMasterKey === SOLVENT_COMMON_MASTER_KEY || a.name === 'Solvent Common') return -1;
       if (b.platformMasterKey === SOLVENT_COMMON_MASTER_KEY || b.name === 'Solvent Common') return 1;

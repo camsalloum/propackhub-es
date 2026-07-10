@@ -47,18 +47,40 @@ export function buildTemplateMaterialLookup(materials: TemplateLookupMaterial[])
     set(n.replace(/\s+/g, '-'), mat.id);
 
     if (mat.type === 'substrate') {
-      if (grade === 'ldpe natural' || (n.includes('ldpe') && n.includes('natural'))) {
+      if (
+        (grade.includes('plain film') && grade.includes('commercial')) ||
+        grade === 'ldpe natural' ||
+        (n.includes('ldpe') && n.includes('natural')) ||
+        (n.includes('plain film') && n.includes('commercial'))
+      ) {
+        set('pe-plain-commercial', mat.id);
         set('ldpe-natural', mat.id);
       }
-      if (grade === 'ldpe white' || (n.includes('ldpe') && n.includes('white'))) {
+      if (
+        (grade.includes('plain film') && grade.includes('industrial')) ||
+        grade === 'ldpe white' ||
+        (n.includes('ldpe') && n.includes('white')) ||
+        (n.includes('plain film') && n.includes('industrial'))
+      ) {
+        set('pe-plain-industrial', mat.id);
         set('ldpe-white', mat.id);
+      }
+      if (grade.includes('ffs') || n.includes('ffs film')) {
+        set('pe-ffs', mat.id);
+      }
+      if (grade.includes('wide film') || n.includes('wide film')) {
+        set('pe-wide-hdpe', mat.id);
+      }
+      if (grade.includes('lamination film') || n.includes('lamination film')) {
+        set('pe-lamination', mat.id);
       }
       if (
         grade === 'ldpe shrink' ||
         grade.includes('pe shrink') ||
         (n.includes('ldpe') && n.includes('shrink')) ||
-        (n.includes('pe') && n.includes('shrink') && !n.includes('pet'))
+        (n.includes('pe') && n.includes('shrink') && !n.includes('pet') && !n.includes('pcr'))
       ) {
+        set('pe-shrink', mat.id);
         set('ldpe-shrink', mat.id);
       }
       if (grade === 'pet transparent' || n === 'pet transparent') {
@@ -105,24 +127,33 @@ export function buildTemplateMaterialLookup(materials: TemplateLookupMaterial[])
     }
 
     if (mat.type === 'adhesive') {
-      if (mat.costingKey === 'adhesive-sb') {
+      if (mat.costingKey === 'adhesive-sb' || mat.platformMasterKey === 'adhesive-sb-mp') {
         set('adhesive-sb', mat.id);
       }
       if (n.includes('adhesive') && n.includes('sb') && mat.costingKey === 'adhesive-sb') {
         set('adhesive-sb', mat.id);
       }
+      if (n.includes('mp') && (n.includes('foil') || grade.includes('mp'))) {
+        set('adhesive-sb', mat.id);
+        set('adhesive-sb-mp', mat.id);
+      }
+      if (n.includes('hp') || grade.includes('hp')) {
+        set('adhesive-sb-hp', mat.id);
+      }
       if (n === 'solvent base gp' || grade === 'gp') {
         set('adhesive-sb', mat.id);
       }
-      if (n === 'solvent base' && grade !== 'mp' && grade !== 'hp') {
+      if (n === 'solvent base' && grade !== 'mp' && grade !== 'hp' && !grade.includes('hp')) {
         set('adhesive-sb', mat.id);
         set('solvent-base', mat.id);
       }
-      if (n === 'solvent less' || family === 'solvent less') {
+      if (n.includes('solvent less') || family === 'solvent less') {
         set('adhesive-wb', mat.id);
+        set('adhesive-sl-dry', mat.id);
       }
-      if (n === 'mono component' || family === 'mono component') {
+      if (n.includes('mono') || family === 'mono' || family === 'mono component') {
         set('adhesive-mono-component', mat.id);
+        set('adhesive-mono', mat.id);
       }
     }
   }

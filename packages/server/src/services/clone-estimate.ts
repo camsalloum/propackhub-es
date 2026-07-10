@@ -162,6 +162,7 @@ export async function cloneEstimate(
       solventRatio: source.solventRatio,
       laminationRecipeOverrides: source.laminationRecipeOverrides,
       cleaningSolventKgPerJob: source.cleaningSolventKgPerJob,
+      sleeveSeamingSolventGsm: source.sleeveSeamingSolventGsm,
       inkPrintingProcess: source.inkPrintingProcess,
       orderQuantityKg: source.orderQuantityKg,
       orderQuantityUnit: source.orderQuantityUnit,

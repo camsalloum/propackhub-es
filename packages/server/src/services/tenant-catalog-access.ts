@@ -50,3 +50,69 @@ export function canMutateMaterialRow(
   if (isTenantOnly) return true;
   return access.canEditSyncedMaterials;
 }
+
+/** PEBI-synced rows without a live PEBI price remain editable in ES (manual or platform hold). */
+export function canEditPebiSyncedMaterialPrice(input: {
+  catalogSource: CatalogSource;
+  externalSource?: string | null;
+  priceSource?: string | null;
+  isTenantOnly?: boolean;
+}): boolean {
+  if (input.isTenantOnly) return true;
+  if (input.catalogSource !== 'pebi') return false;
+  if (input.externalSource !== 'pebi') return false;
+  return input.priceSource === 'manual' || input.priceSource === 'platform';
+}
+
+/** In-house PE films may be priced manually until PEBI publishes a live recipe cost. */
+export function canEditPeSubstrateManualPrice(input: {
+  type?: string | null;
+  substrateFamily?: string | null;
+  externalSource?: string | null;
+  priceSource?: string | null;
+}): boolean {
+  if (input.type !== 'substrate' || input.substrateFamily !== 'PE') return false;
+  if (input.externalSource === 'pebi' && input.priceSource === 'pebi') return false;
+  return true;
+}
+
+/**
+ * Ink & coating grades stay ES-editable except SB/UV Common liquid/dry price
+ * when PEBI price is live. Solid% / density remain ES-owned (never PEBI-overwritten).
+ */
+export function canEditInkCoatingManualPrice(input: {
+  type?: string | null;
+  externalSource?: string | null;
+  priceSource?: string | null;
+}): boolean {
+  if (input.type !== 'ink') return false;
+  if (input.externalSource === 'pebi' && input.priceSource === 'pebi') return false;
+  return true;
+}
+
+/** Solid%, density, and labels for ink — always ES-owned. */
+export function canEditInkCoatingPhysicalProps(input: {
+  type?: string | null;
+}): boolean {
+  return input.type === 'ink';
+}
+
+/**
+ * Adhesive grades stay ES-editable except when PEBI component blend price is live.
+ * Mix parts / solid% / density remain ES-owned.
+ */
+export function canEditAdhesiveManualPrice(input: {
+  type?: string | null;
+  externalSource?: string | null;
+  priceSource?: string | null;
+}): boolean {
+  if (input.type !== 'adhesive') return false;
+  if (input.externalSource === 'pebi' && input.priceSource === 'pebi') return false;
+  return true;
+}
+
+export function canEditAdhesivePhysicalProps(input: {
+  type?: string | null;
+}): boolean {
+  return input.type === 'adhesive';
+}

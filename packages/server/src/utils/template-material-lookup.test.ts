@@ -7,20 +7,20 @@ import {
 
 const fixtureMaterials = [
   {
-    id: 'uuid-ldpe-natural',
-    name: 'LDPE Natural',
+    id: 'uuid-pe-commercial',
+    name: 'PE Plain Film — Commercial',
     type: 'substrate',
     substrateFamily: 'PE',
-    substrateGrade: 'LDPE Natural',
-    costingKey: 'ldpe-natural',
+    substrateGrade: 'PE Plain Film — Commercial',
+    costingKey: 'pe-plain-commercial',
   },
   {
     id: 'uuid-pe-shrink',
-    name: 'PE Shrink',
+    name: 'PE Shrink Film',
     type: 'substrate',
     substrateFamily: 'PE',
-    substrateGrade: 'PE Shrink',
-    costingKey: 'ldpe-shrink',
+    substrateGrade: 'PE Shrink Film',
+    costingKey: 'pe-shrink',
   },
   {
     id: 'uuid-bopp',
@@ -51,7 +51,7 @@ const fixtureMaterials = [
 describe('template-material-lookup', () => {
   it('resolves all canonical ref keys via costingKey', () => {
     const lookup = buildTemplateMaterialLookup(fixtureMaterials);
-    const keys = ['ldpe-natural', 'ldpe-shrink', 'bopp', 'ink-sb', 'adhesive-sb'];
+    const keys = ['pe-plain-commercial', 'ldpe-natural', 'pe-shrink', 'ldpe-shrink', 'bopp', 'ink-sb', 'adhesive-sb'];
     for (const key of keys) {
       expect(lookup.get(key)).toBeTruthy();
     }
@@ -60,6 +60,12 @@ describe('template-material-lookup', () => {
   it('maps ldpe-shrink to PE Shrink row', () => {
     const lookup = buildTemplateMaterialLookup(fixtureMaterials);
     expect(lookup.get('ldpe-shrink')).toBe('uuid-pe-shrink');
+    expect(lookup.get('pe-shrink')).toBe('uuid-pe-shrink');
+  });
+
+  it('maps legacy ldpe-natural to commercial PE film', () => {
+    const lookup = buildTemplateMaterialLookup(fixtureMaterials);
+    expect(lookup.get('ldpe-natural')).toBe('uuid-pe-commercial');
   });
 
   it('maps bopp to BOPP Transparent', () => {
@@ -78,7 +84,7 @@ describe('template-material-lookup', () => {
     expect(resolved).toBe('uuid-ink-sb');
   });
 
-  it('keeps valid materialId when still in library', () => {
+  it('prefers ref_material_key over cached materialId', () => {
     const lookup = buildTemplateMaterialLookup(fixtureMaterials);
     const validIds = buildValidMaterialIdSet(fixtureMaterials);
     const resolved = resolveLayerMaterialId(
@@ -86,6 +92,6 @@ describe('template-material-lookup', () => {
       lookup,
       validIds
     );
-    expect(resolved).toBe('uuid-bopp');
+    expect(resolved).toBe('uuid-pe-commercial');
   });
 });

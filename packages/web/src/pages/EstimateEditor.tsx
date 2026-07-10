@@ -50,7 +50,7 @@ import { normalizeToolingScenario, toolingDevelopmentTotal } from '../lib/toolin
 import { estimateStatusLabel, MES_OUTCOME_ENABLED } from '../lib/estimateStatus';
 import { meaningfulRequotePriceChanges } from '../lib/requote';
 import { groupMaterialsForPicker, type CategoryNode } from '../lib/materialTaxonomy';
-import { stackNeedsSolventMix, stackHasSbInk, defaultInkPrintingProcess, inkSolventRatioForProcess, materialAllowedForTemplateLayer, DEFAULT_CLEANING_SOLVENT_KG_PER_JOB, DEFAULT_WASTE_BANDS_BY_PRINT_MODE, DEFAULT_CORM_SCALE_WITH_WASTE, structureIsPrinted, wasteBandsForPrintMode, plainCormFromPrinted, layerPhysicalThicknessMicron, type LaminationRecipe, type InkPrintingProcess, type PouchAccessorySelection, type WasteBand } from '@es/engine';
+import { stackNeedsSolventMix, stackHasSbInk, stackHasSleeveSubstrate, defaultInkPrintingProcess, inkSolventRatioForProcess, materialAllowedForTemplateLayer, DEFAULT_CLEANING_SOLVENT_KG_PER_JOB, DEFAULT_SLEEVE_SEAMING_SOLVENT_GSM, DEFAULT_WASTE_BANDS_BY_PRINT_MODE, DEFAULT_CORM_SCALE_WITH_WASTE, structureIsPrinted, wasteBandsForPrintMode, plainCormFromPrinted, layerPhysicalThicknessMicron, type LaminationRecipe, type InkPrintingProcess, type PouchAccessorySelection, type WasteBand } from '@es/engine';
 import LaminationFormulaModal from '../components/LaminationFormulaModal';
 import PriceListPanel, { type PriceListUnit } from '../components/PriceListPanel';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
@@ -66,6 +66,7 @@ import {
   listSolventMaterials,
   resolveSolventCostPerKgUsd,
 } from '../lib/solvent';
+import { resolveSeamingSolventCostPerKgUsd } from '../lib/seaming-solvent';
 import {
   dimensionFieldsForEstimation,
   subtypesForFamily,
@@ -291,6 +292,9 @@ const EstimateEditor = ({
   const [solventMaterialId, setSolventMaterialId] = useState<string | null>(null);
   const [solventCostOverrideUsd, setSolventCostOverrideUsd] = useState<number | null>(null);
   const [cleaningSolventKgPerJob, setCleaningSolventKgPerJob] = useState(defaultCleaningKg);
+  const [sleeveSeamingSolventGsm, setSleeveSeamingSolventGsm] = useState(
+    DEFAULT_SLEEVE_SEAMING_SOLVENT_GSM
+  );
   const [inkPrintingProcess, setInkPrintingProcess] = useState<InkPrintingProcess | null>(null);
   const [inkSolventRatioOverride, setInkSolventRatioOverride] = useState<number | null>(null);
   const [laminationRecipeOverrides, setLaminationRecipeOverrides] = useState<Record<string, LaminationRecipe>>({});
@@ -378,7 +382,7 @@ const EstimateEditor = ({
       materials.map((m) => ({
         id: m.id,
         name: m.name,
-        type: m.type as 'substrate' | 'ink' | 'adhesive',
+        type: m.type as 'substrate' | 'ink' | 'adhesive' | 'solvent',
         solidPercent: m.solidPercent,
         density: parseFloat(m.density) || 0.9,
         costPerKgUsd: parseFloat(m.costPerKgUsd) || 0,
@@ -399,6 +403,13 @@ const EstimateEditor = ({
     () => stackNeedsSolventMix(layerMaterialRefs, engineMaterials),
     [layerMaterialRefs, engineMaterials]
   );
+
+  const hasSleeveSubstrate = useMemo(
+    () => stackHasSleeveSubstrate(layerMaterialRefs, engineMaterials),
+    [layerMaterialRefs, engineMaterials]
+  );
+
+  const showSolventCosting = needsSolventMix || hasSleeveSubstrate;
 
   const hasSbInk = useMemo(
     () => stackHasSbInk(layerMaterialRefs, engineMaterials),
@@ -428,6 +439,11 @@ const EstimateEditor = ({
     }
     return resolveSolventCostPerKgUsd(materials, { solventMaterialId });
   }, [materials, solventMaterialId, solventCostOverrideUsd]);
+
+  const resolvedSeamingSolventCostPerKgUsd = useMemo(
+    () => resolveSeamingSolventCostPerKgUsd(materials),
+    [materials]
+  );
 
   const formulaModalLayer = layers.find((l) => l.id === formulaModalLayerId) ?? null;
   const formulaModalRecipe = useMemo(() => {
@@ -1130,6 +1146,11 @@ const EstimateEditor = ({
       } else {
         setCleaningSolventKgPerJob(defaultCleaningKg);
       }
+      if (data.sleeveSeamingSolventGsm != null) {
+        setSleeveSeamingSolventGsm(parseFloat(data.sleeveSeamingSolventGsm));
+      } else {
+        setSleeveSeamingSolventGsm(DEFAULT_SLEEVE_SEAMING_SOLVENT_GSM);
+      }
       if (data.laminationRecipeOverrides && typeof data.laminationRecipeOverrides === 'object') {
         setLaminationRecipeOverrides(data.laminationRecipeOverrides as Record<string, LaminationRecipe>);
       } else {
@@ -1308,6 +1329,7 @@ const EstimateEditor = ({
       laminationRecipeOverrides:
         Object.keys(laminationRecipeOverrides).length > 0 ? laminationRecipeOverrides : undefined,
       cleaningSolventKgPerJob: needsSolventMix ? cleaningSolventKgPerJob : undefined,
+      sleeveSeamingSolventGsm: hasSleeveSubstrate ? sleeveSeamingSolventGsm : undefined,
       inkPrintingProcess: hasSbInk ? effectiveInkPrintingProcess : undefined,
       // Persist the ratio only when the user explicitly bypassed it. When it's
       // process-derived we omit it so reopening keeps the Flexo/Roto toggle live.
@@ -1344,7 +1366,7 @@ const EstimateEditor = ({
       if (slabs.length > 0) payload.slabs = slabs;
     }
     return sanitizeEstimateSavePayload(payload);
-  }, [isPriceCheck, multiOnQuote, jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, estimate?.quoteId, quoteIdFromUrl, productType, productTypeOptions, productSubtype, needsSolventMix, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, cormPerKgPlain, moqKg, toolingChargeUsd, skuLabel, brand, specsCode, printColorCount, costPerColor, toolingBillingMode, toolingScenario, billableColorCount, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
+  }, [isPriceCheck, multiOnQuote, jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, estimate?.quoteId, quoteIdFromUrl, productType, productTypeOptions, productSubtype, needsSolventMix, hasSleeveSubstrate, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, cormPerKgPlain, moqKg, toolingChargeUsd, skuLabel, brand, specsCode, printColorCount, costPerColor, toolingBillingMode, toolingScenario, billableColorCount, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, sleeveSeamingSolventGsm, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   /** Link estimate to a customer row — create customer record if user typed a new name. */
   const ensureCustomerForSave = async (): Promise<string | undefined> => {
@@ -1421,8 +1443,12 @@ const EstimateEditor = ({
         displayCurrency: estimate?.displayCurrency || 'USD',
         exchangeRateUsdToDisplay: parseFloat(estimate?.exchangeRateUsdToDisplay) || 1,
         solventCostPerKgUsd: resolvedSolventCostPerKgUsd,
+        seamingSolventCostPerKgUsd: hasSleeveSubstrate
+          ? resolvedSeamingSolventCostPerKgUsd
+          : undefined,
         laminationRecipeOverrides,
         cleaningSolventKgPerJob,
+        sleeveSeamingSolventGsm: hasSleeveSubstrate ? sleeveSeamingSolventGsm : undefined,
         inkPrintingProcess: hasSbInk ? effectiveInkPrintingProcess : undefined,
         inkSolventRatio: hasSbInk ? effectiveInkSolventRatio : undefined,
         pricingMethod,
@@ -1460,8 +1486,8 @@ const EstimateEditor = ({
     loading, materials, layerInputsKey, productType, dimensions,
     markupPercent, platesPerKg, deliveryPerKg, slabQuantitiesKey,
     estimate?.displayCurrency, estimate?.exchangeRateUsdToDisplay,
-    solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob,
-    hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, layers.length, accessories,
+    solventMaterialId, resolvedSolventCostPerKgUsd, resolvedSeamingSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob,
+    sleeveSeamingSolventGsm, hasSleeveSubstrate, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, layers.length, accessories,
     orderQuantity, orderQuantityUnit, masterReference, wasteBands,
     pricingMethod, marginValuePerKgUsd, baseCormDisplay, cormScaleWithWaste, toolingChargeUsd,
     printColorCount, costPerColor, toolingBillingMode, toolingScenario, billableColorCount,
@@ -1471,7 +1497,7 @@ const EstimateEditor = ({
 
   const solventCostLines = useMemo(() => {
     const e = clientCalcResult?.estimate;
-    if (!e || !needsSolventMix) return [];
+    if (!e || !showSolventCosting) return [];
     const lines: Array<{ key: string; label: string; perKgUsd: number; perM2Usd: number }> = [];
     const inkKg = e.inkMakeupSolventCostPerKg ?? 0;
     const inkM2 = e.inkMakeupSolventCostPerM2 ?? 0;
@@ -1489,8 +1515,13 @@ const EstimateEditor = ({
     if (cleanKg > 0 || cleanM2 > 0) {
       lines.push({ key: 'cleaning', label: 'Press cleaning', perKgUsd: cleanKg, perM2Usd: cleanM2 });
     }
+    const seamKg = e.seamingSolventCostPerKg ?? 0;
+    const seamM2 = e.seamingSolventCostPerM2 ?? 0;
+    if (seamKg > 0 || seamM2 > 0) {
+      lines.push({ key: 'seaming', label: 'Seaming', perKgUsd: seamKg, perM2Usd: seamM2 });
+    }
     return lines;
-  }, [clientCalcResult, needsSolventMix]);
+  }, [clientCalcResult, showSolventCosting]);
 
   const solventTotalPerKgUsd = useMemo(() => {
     if (clientCalcResult?.estimate.solventMixCostPerKg != null) {
@@ -2356,7 +2387,7 @@ const EstimateEditor = ({
     }
     return rows;
   })();
-  const solventConfigBar = canConfigureSolvent && (hasSbInk || needsSolventMix) ? (
+  const solventConfigBar = canConfigureSolvent && (hasSbInk || needsSolventMix || hasSleeveSubstrate) ? (
     <div
       id="solvent-costing"
       className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm"
@@ -2404,7 +2435,7 @@ const EstimateEditor = ({
               onFocus={selectOnFocus}
             />
           </label>
-          {needsSolventMix && <span className="hidden sm:inline text-warning">|</span>}
+          {(needsSolventMix || hasSleeveSubstrate) && <span className="hidden sm:inline text-warning">|</span>}
         </>
       )}
       {needsSolventMix && (
@@ -2454,6 +2485,25 @@ const EstimateEditor = ({
               onFocus={selectOnFocus}
             />
             <span className="text-xs text-mist">kg</span>
+          </label>
+        </>
+      )}
+      {hasSleeveSubstrate && (
+        <>
+          {(needsSolventMix || hasSbInk) && <span className="hidden sm:inline text-warning">|</span>}
+          <label className="inline-flex items-center gap-1 shrink-0">
+            <span className="text-xs text-mist">Seaming</span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              aria-label="Seaming solvent g per m2"
+              className="input py-1 px-2 w-16 text-xs font-mono"
+              value={sleeveSeamingSolventGsm}
+              onChange={(e) => setSleeveSeamingSolventGsm(Number(e.target.value) || 0)}
+              onFocus={selectOnFocus}
+            />
+            <span className="text-xs text-mist">g/m²</span>
           </label>
         </>
       )}
@@ -2899,7 +2949,7 @@ const EstimateEditor = ({
                   >
                     {structureLocked ? '+ Add ink & coating' : '+ Add layer'}
                   </button>
-                  {needsSolventMix && (
+                  {showSolventCosting && (
                     <div className="border border-warning/30 rounded-lg overflow-hidden bg-warning/10">
                       {solventConfigBar && (
                         <div className="px-3 py-2.5 border-b border-warning/30 overflow-x-hidden">
@@ -3255,7 +3305,7 @@ const EstimateEditor = ({
                           )}
                         </div>
                       ))}
-                      {needsSolventMix && (
+                      {showSolventCosting && (
                         <>
                           {solventConfigBar && (
                             <div className="structure-grid__row bg-warning/10" role="row">

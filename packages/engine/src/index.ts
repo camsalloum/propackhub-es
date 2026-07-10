@@ -9,6 +9,7 @@ export * from './template-classification';
 export * from './template-scaffolding';
 export * from './lamination-recipe';
 export * from './solvent-costing';
+export * from './sleeve-seaming';
 export * from './ink-printing';
 export * from './structure-metrics';
 export * from './bag-flat-sheet';

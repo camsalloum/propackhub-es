@@ -221,6 +221,7 @@ export function stripEstimateRow(row: any, profile: VisibilityProfile): any {
     visible.solventRatio = row.solventRatio;
     visible.laminationRecipeOverrides = row.laminationRecipeOverrides;
     visible.cleaningSolventKgPerJob = row.cleaningSolventKgPerJob;
+    visible.sleeveSeamingSolventGsm = row.sleeveSeamingSolventGsm;
     visible.inkPrintingProcess = row.inkPrintingProcess;
   }
 

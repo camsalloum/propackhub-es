@@ -1228,8 +1228,71 @@ Not every company subscribes to both PEBI and ES. **IP/FP (Interplast) is linked
 |-----|---------------------|
 | `platform_admin` | Master Data (platform scope) → auto-publish on save or **Publish to tenants** |
 | Individual / self-managed tenant | Master Data (tenant scope) |
-| PEBI-linked company (Phase 4) | PEBI MES — ES read-only for synced rows |
+| PEBI-linked company (Phase 4) | PEBI MES — ES read-only for synced rows **except** PE films without live PEBI price (manual $/kg editable) |
 | Custom tenant-only rows | Always editable in tenant Master Data (`is_tenant_only`) |
+
+### 2026-07-10 — SOLVENT sync + sleeve seaming costing
+
+- PEBI `family=SOLVENT`: Ethyl Acetate, Methoxy Propanol, Ethoxy Propanol, Methoxy Propyl Acetate, THF; 1,3-Dioxolane mirrors THF.
+- PB description fix: MITHOXY → Methoxy Propyl Acetate (`FXXOTSNTMPACET`).
+- Density ES-owned; Solvent Common = average (excludes seaming mix).
+- Sleeve seaming: when SLEEVE substrate in stack → default **0.25 g/m²** (editable); blend **75% THF + 25% Dioxolane**.
+- Migration `0018_sleeve_seaming_solvent_gsm.sql`.
+
+### 2026-07-10 — Engine types: currency comments (Decision #22)
+
+- Clarified `platesPerKg` / `deliveryPerKg` / `Slab.pricePerKg` are **USD at engine entry/output**; display→USD happens in `estimate-engine-input` / `estimateCalc`, not inside `priceWithNewModel`.
+- Fixed stale `fixed_per_group` note that said CoRM converts “inside the engine.”
+
+### 2026-07-10 — Adhesive display names shortened (fit Master Data)
+
+- **NAME** = chemistry only: `MORBOND 675`, `MORBOND 655`, `MORFREE 75-300`, `MORFREE L75×850`.
+- **GRADE** = slot: `MP Foil`, `HP Liquid`, `Dry`, `Paper`.
+- **FAMILY** = `Solvent Base` / `Solvent Less` / `Mono` (was Mono Component).
+- Formula component labels shortened (no trailing ADHESIVE/HARDENER).
+- Boot prune removes retired GP/WB/old-mono tenant rows; Formula button for all grades with a recipe.
+
+### 2026-07-10 — ADHESIVE: plant-sheet slots (no Loctite trial)
+
+- **4 ES grades:** `adhesive-sl-dry`, `adhesive-mono`, `adhesive-sb-hp`, `adhesive-sb-mp` — primary chemistry from plant sheet; replacements as `recipe.alternate`.
+- **No trial:** Loctite LA7796/LA6154 not an ES grade.
+- **Retired:** `adhesive-sb-gp`, `adhesive-wb`, `adhesive-mono-component`; ECOLAD no longer default MP.
+- **PB sync:** `family=ADHESIVE` — component liquid WA → blend → dry via ES recipe solid%; mix parts/solid%/density never from PEBI.
+- **Sheet note:** SB “40% solid” = diluted mix after EA; component solid% stays concentrate TDS (70/75/100).
+
+### 2026-07-10 — INK & Coating: SB + UV from PEBI; rest ES-editable
+
+- **Sync from PB:** only Common Colors SB (`ink-sb`) and UV (`ink-uv`) — Oracle liquid WA → ES dry $/kg via ES solid%.
+- **Keep ES:** special colors, primer, varnish, heat/cold seal, wax, UV variants — values stay; user can edit.
+- **Solid% + density:** always ES-owned; PEBI catalog sends null; sync never overwrites existing/platform seed.
+- **Edit rules:** `canEditInkCoatingManualPrice` (non-PEBI price); `canEditInkCoatingPhysicalProps` (solid%/density even when PEBI price live).
+- **API:** `GET /api/integration/es/materials?family=INK`; `INK` in `PEBI_SYNC_FAMILIES`.
+
+### 2026-07-10 — Non-BOM closeout: PE names = PEBI HALB register
+
+- ES PE list renamed to match Master BOM HALB register: Commercial / Industrial / FFS / Wide HDPE / Shrink / Lamination (+ optional PCR, EVOH).
+- Templates: Commercial→`pe-plain-commercial`, Industrial→`pe-plain-industrial`, Shrink→`pe-shrink`, Wide→`pe-wide-hdpe`, laminate sealant→`pe-lamination`.
+- Legacy aliases kept: `ldpe-natural` / `ldpe-white` / `ldpe-shrink`.
+- Boot: `ensureSpecialtySubstratesFromSeed` + `ensurePeSubstratesFromSeed`.
+- Local Interplast: PE 8/8 + SPECIALTY 4/4 synced (GSM fix). Still no live HALB costs → manual $/kg.
+- **Blocked on BOM:** live recipe cost + `catalog_source=pebi` cutover.
+
+### 2026-07-09 — Session close: PE Family 10 + manual PE pricing (Phase 4 complete — code)
+
+**PE (Family 10) — in-house extruded films**
+- **5 ES keys:** `ldpe-natural`, `ldpe-white`, `pe-shrink`, `pe-shrink-pcr`, `pe-evoh`.
+- **PB:** `pebi-es-pe-catalog.js` + `pebi-es-pe-crosswalk.json`; HALB recipe material cost via `resolveHalbMaterialCostPerKg` (excludes `TEST_*` BOMs).
+- **ES sync:** `PE` in `PEBI_SYNC_FAMILIES`; lazy catalog builders (HTTP path needs no PPH modules at startup); Master Data → PE review panel.
+- **Industrial mono:** `structure-templates-seed.json` — Industrial Items Plain/Printed default `ldpe-white`.
+- **No live PEBI cost yet:** sync upserts all 5 rows; review reason `awaiting_manual_price`; tenant may enter $/kg manually.
+- **Manual edit rule:** `canEditPeSubstrateManualPrice` — PE substrate cost/market editable until `externalSource=pebi` **and** `priceSource=pebi` (works even when `catalog_source=platform`).
+- **Interplast (local):** `npm run db:sync-materials-pebi` → PE **5/5** updated. **Restart does not run sync.**
+
+**SPECIALTY audit fixes (same day, PEBI)**
+- Alu GSM bug fixed: `GSM = density × micron` (was wrongly ÷10); nominal GSM + composite density recalculated; re-sync SPECIALTY after deploy.
+- Butter-spec seed transactional; SPECIALTY tab deduped in `substratePbTaxonomy.ts` (`SPECIALTY` no longer under Alu/Pap tab).
+
+**Next session:** VPS HALB BOM validation → enter PE manual prices → full family price review → flip `catalog_source=pebi`.
 
 ### 2026-07-09 — SLEEVE PVC cast formula + SPECIALTY sync (Phase 4 steps 8–9)
 
@@ -1268,9 +1331,7 @@ Not every company subscribes to both PEBI and ES. **IP/FP (Interplast) is linked
 - `pebi-material-sync.ts` — SPECIALTY builder + sync
 - `platform-master-data.ts` — `ensureSpecialtySubstratesFromSeed` (4 keys)
 - `master-materials-seed.json` — 4 SPECIALTY rows
-- `substratePbTaxonomy.ts` — `SPECIALTY_PB_CROSSWALK`, `ES_FAMILY_TO_PB.SPECIALTY → Alu/Pap`
-
-**Next:** PE (in-house, last). Then Interplast `catalog_source=pebi` sign-off.
+- `substratePbTaxonomy.ts` — `SPECIALTY_PB_CROSSWALK`, `PE_PB_CROSSWALK`; SPECIALTY tab only (not duplicated under Alu/Pap)
 
 ### 2026-07-09 — PAP sync wired (Phase 4 step 7 — code complete)
 

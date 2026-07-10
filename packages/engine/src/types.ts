@@ -101,8 +101,13 @@ export interface EstimateDimensions {
 
 export interface Slab {
   quantityKg: number;
-  pricePerKg: number; // In display currency
-  total?: number; // Calculated
+  /**
+   * Sale price per kg in **USD** (engine output / input ladder qty only).
+   * Callers convert to display currency for UI/PDF; do not treat as display-native.
+   */
+  pricePerKg: number;
+  /** quantityKg × pricePerKg (USD). */
+  total?: number;
 }
 
 export interface Process {
@@ -141,8 +146,19 @@ export interface Estimate {
 
   // Pricing
   markupPercent: number;
-  platesPerKg: number; // Legacy flat per-kg (display currency) — superseded by tooling below
-  deliveryPerKg: number; // Legacy flat per-kg (display currency) — superseded by delivery below
+  /**
+   * Legacy flat prepress $/kg as **USD** for engine math.
+   * Stored/edited in display currency; server (`estimate-engine-input`) and
+   * client (`estimateCalc`) convert via `displayToUsd` before calling the engine.
+   * Superseded by amortized `toolingChargeUsd` when that model is used.
+   */
+  platesPerKg: number;
+  /**
+   * Legacy flat transport $/kg as **USD** for engine math.
+   * Stored/edited in display currency; converted at the engine boundary (same as plates).
+   * Distinct from freight lump sum `deliveryChargeUsd` (already USD).
+   */
+  deliveryPerKg: number;
   processes: Process[];
   slabs: Slab[];
 
@@ -151,8 +167,8 @@ export interface Estimate {
    *   'process_per_kg'  — Σ(process.costPerKgUsd × processQuantity) for enabled processes.
    *                       Default for company tenants (Interplast-style, multi-user).
    *   'markup_over_rm'  — Total RM/kg × markupPercent%. Default for individual (single-user) tenants.
-   *   'fixed_per_group' — Fixed display-currency/kg CoRM from the source template
-   *                       (converted to USD inside the engine price build-up).
+   *   'fixed_per_group' — Fixed CoRM/kg from the source template (display in storage;
+   *                       converted to USD at the engine boundary — see `cormPerKgUsd`).
    * This markup is the ONLY markup in the price build-up (no separate profit markup).
    */
   operatingCostMethod?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
@@ -203,6 +219,10 @@ export interface Estimate {
   /** Override dry-ink÷ratio; null → from inkPrintingProcess (flexo 1.5, roto 1.0). */
   inkSolventRatio?: number;
   cleaningSolventKgPerJob?: number; // EA kg per job for press cleaning (default 20)
+  /** Sleeve seaming solvent coat weight g/m² (default 0.25) when SLEEVE substrate in stack. */
+  sleeveSeamingSolventGsm?: number;
+  /** Resolved blend $/kg for seaming mix (75% THF + 25% Dioxolane from catalog). */
+  seamingSolventCostPerKgUsd?: number;
   /** Per-layer recipe overrides keyed by layer id (estimate-only, option B). */
   laminationRecipeOverrides?: Record<string, LaminationRecipe>;
 
@@ -251,6 +271,8 @@ export interface Estimate {
   inkMakeupSolventCostPerM2?: number;
   cleaningSolventCostPerKg?: number;
   cleaningSolventCostPerM2?: number;
+  seamingSolventCostPerKg?: number;
+  seamingSolventCostPerM2?: number;
   solventMixRatio?: number;
   inkPrintingProcessResolved?: InkPrintingProcess;
   inkSolventRatioResolved?: number;

@@ -37,7 +37,7 @@ export const ES_FAMILY_TO_PB: Record<string, string | null> = {
   ALU: 'Aluminium Foil',
   PAPER: 'PAP',
   SLEEVE: null,
-  SPECIALTY: 'Alu/Pap',
+  SPECIALTY: null,
 };
 
 /** Sub-tabs under Master Data → Substrates. */
@@ -152,6 +152,18 @@ export const SPECIALTY_PB_CROSSWALK = [
   { platformMasterKey: '6.3alu-10pe-50paper-12pe', pbGrade: 'Alu Foil Paper · 95' },
 ] as const;
 
+/** PE film grades — PEBI HALB register (Family 10). */
+export const PE_PB_CROSSWALK = [
+  { platformMasterKey: 'pe-plain-commercial', pbGrade: 'PE Plain Film — Commercial' },
+  { platformMasterKey: 'pe-plain-industrial', pbGrade: 'PE Plain Film — Industrial' },
+  { platformMasterKey: 'pe-ffs', pbGrade: 'FFS Film' },
+  { platformMasterKey: 'pe-wide-hdpe', pbGrade: 'Wide Film HDPE' },
+  { platformMasterKey: 'pe-shrink', pbGrade: 'PE Shrink Film' },
+  { platformMasterKey: 'pe-lamination', pbGrade: 'PE Lamination Film' },
+  { platformMasterKey: 'pe-shrink-pcr', pbGrade: 'PE Shrink PCR' },
+  { platformMasterKey: 'pe-evoh', pbGrade: 'PE-EVOH' },
+] as const;
+
 /** Master Data substrate tab id → PEBI sync family for review panel. */
 export const PEBI_REVIEW_FAMILY_BY_TAB: Record<string, string> = {
   PET: 'PET',
@@ -162,6 +174,7 @@ export const PEBI_REVIEW_FAMILY_BY_TAB: Record<string, string> = {
   PAP: 'PAP',
   SLEEVE: 'SLEEVE',
   SPECIALTY: 'SPECIALTY',
+  PE: 'PE',
 };
 
 export function pbGradeKey(family: string, grade: string): string {
@@ -231,6 +244,12 @@ export function sortSpecialtySubstrateRows<T extends { key?: string; substrateGr
   rows: T[]
 ): T[] {
   return sortPbCrosswalkRows(rows, SPECIALTY_PB_CROSSWALK);
+}
+
+export function sortPeSubstrateRows<T extends { key?: string; substrateGrade?: string | null }>(
+  rows: T[]
+): T[] {
+  return sortPbCrosswalkRows(rows, PE_PB_CROSSWALK);
 }
 
 function sortPbCrosswalkRows<T extends { key?: string; substrateGrade?: string | null }>(

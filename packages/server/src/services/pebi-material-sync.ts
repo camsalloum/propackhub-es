@@ -10,6 +10,7 @@ import axios from 'axios';
 import { and, eq } from 'drizzle-orm';
 import { deriveBinderConcentrateStats, type LaminationRecipe } from '@es/engine';
 import { getDatabase, schema } from '../db/index.js';
+import { computeSolventCommonAverage } from '../utils/solvent-common.js';
 
 export const PEBI_MATERIAL_SOURCE = 'pebi';
 export const PEBI_SYNC_FAMILIES = [
@@ -924,7 +925,8 @@ export async function syncPackagingMaterialsFromPebiForTenant(tenantId: string):
 }
 
 /**
- * After SOLVENT price sync, recompute tenant Solvent Common from peer solvents.
+ * After SOLVENT price sync, recompute tenant Solvent Common from dilution peers only
+ * (Ethyl Acetate, Ethanol, Methoxy Propanol, Ethoxy Propanol).
  */
 async function refreshTenantSolventCommon(tenantId: string): Promise<void> {
   const db = getDatabase();
@@ -933,19 +935,14 @@ async function refreshTenantSolventCommon(tenantId: string): Promise<void> {
     .from(schema.materials)
     .where(and(eq(schema.materials.tenantId, tenantId), eq(schema.materials.type, 'solvent')));
 
-  const peers = rows.filter(
-    (r) =>
-      r.platformMasterKey !== 'solvent-common' &&
-      r.platformMasterKey !== 'solvent-sleeve-seaming' &&
-      Number(r.costPerKgUsd) > 0 &&
-      Number(r.density) > 0
+  const avg = computeSolventCommonAverage(
+    rows.map((r) => ({
+      platformMasterKey: r.platformMasterKey,
+      type: r.type,
+      costPerKgUsd: Number(r.costPerKgUsd),
+      density: Number(r.density),
+    }))
   );
-  if (peers.length === 0) return;
-
-  const cost =
-    Math.round((peers.reduce((s, r) => s + Number(r.costPerKgUsd), 0) / peers.length) * 100) / 100;
-  const density =
-    Math.round((peers.reduce((s, r) => s + Number(r.density), 0) / peers.length) * 1000) / 1000;
 
   const common = rows.find((r) => r.platformMasterKey === 'solvent-common');
   if (!common) return;
@@ -976,13 +973,15 @@ async function refreshTenantSolventCommon(tenantId: string): Promise<void> {
       .where(eq(schema.materials.id, seaming.id));
   }
 
+  if (!avg) return;
+
   await db
     .update(schema.materials)
     .set({
-      costPerKgUsd: toDecimalString(cost, '0'),
-      marketPriceUsd: toDecimalString(cost, '0'),
-      density: toDensityString(density, '0.85'),
-      hoover: 'Average of all solvents (price + density)',
+      costPerKgUsd: toDecimalString(avg.costPerKgUsd, '0'),
+      marketPriceUsd: toDecimalString(avg.costPerKgUsd, '0'),
+      density: toDensityString(avg.density, '0.85'),
+      hoover: 'Average of Ethyl Acetate, Ethanol, Methoxy Propanol, Ethoxy Propanol',
       updatedAt: new Date(),
     })
     .where(eq(schema.materials.id, common.id));

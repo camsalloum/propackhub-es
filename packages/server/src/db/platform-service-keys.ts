@@ -6,9 +6,10 @@ import {
   parseServiceKeyScopes,
   serviceKeyHasScope,
 } from '../utils/service-key';
+import { resolveJwtSecret } from '../utils/jwt-secret';
 
 function pepper(): string {
-  return process.env.JWT_SECRET ?? 'dev-secret-key-change-in-production';
+  return resolveJwtSecret();
 }
 
 export type ServiceKeyListItem = {

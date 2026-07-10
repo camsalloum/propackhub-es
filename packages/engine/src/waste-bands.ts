@@ -10,9 +10,9 @@
  * table from the structure (any ink layer → Printed, otherwise Plain). Plain
  * defaults to 50% of Printed; admins may edit either table independently.
  *
- * The waste % is applied ON TOP of the material cost already computed from the
- * structure (which itself includes each material's own `wastePercent`). It is a
- * separate run/setup waste, not a replacement.
+ * The waste % is applied ON TOP of the structure material cost (layer GSM ×
+ * density × $/kg). It is run/setup waste by order quantity — not per-material
+ * scrap. `Material.wastePercent` is unused legacy and is not applied here.
  *
  * Matching: a quantity falls into the first band whose `maxKg` is >= the
  * quantity (`maxKg: null` is the open-ended top band). `minKg` is for display.

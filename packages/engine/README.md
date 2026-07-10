@@ -94,7 +94,7 @@ estimate.markupPercent = price * fxRate; // never — keep engine inputs USD
   density: number;          // g/cm³
   solidPercent: number;     // 100 for substrate/adhesive, 30 for SB ink
   costPerKgUsd: number;     // USD
-  wastePercent: number;     // 0–100
+  wastePercent: number;     // unused legacy — band waste only (see waste-bands)
   isSolventBased?: boolean; // true for SB ink/adhesive → triggers solvent-mix calc
 }
 ```
@@ -120,15 +120,16 @@ estimate.markupPercent = price * fxRate; // never — keep engine inputs USD
 The formulas are ported from the Laravel legacy costing system and validated against 6 golden rows (see `golden-fixtures.ts`). Key formula chain:
 
 ```
-GSM per layer  = micron × density
-cost/m² per layer = (costPerKgUsd × GSM) / 1000   (adjusted for waste + solvent)
-totalGSM      = Σ GSM[layer]
-sqmPerKg      = 1000 / totalGSM
-materialCost  = Σ (cost/m² × sqmPerKg)
-operationCost = Σ process.totalCost / orderQuantityKg
-salePriceUsd  = (materialCost + operationCost + platesPerKg + deliveryPerKg) × (1 + markupPercent/100)
-slabPrice[i]  = same formula at slabs[i].quantityKg (process costs vary by volume)
+GSM per layer     = micron × density  (or micron alone when hoover contains "gsm direct")
+cost/m² per layer = (costPerKgUsd × GSM) / 1000
+totalGSM          = Σ GSM[layer]
+sqmPerKg          = 1000 / totalGSM
+materialCost/kg   = Σ (cost/m² × sqmPerKg)   (+ solvent / packaging as applicable)
+Total RM/kg       = materialCost × (1 + bandWaste%/100)   // quantity waste bands
+Sale/kg           = Total RM + M&O + PrePress + Transport (+ accessory)
 ```
+
+`Material.wastePercent` is **not** applied. Converting waste is order-quantity bands only.
 
 ---
 

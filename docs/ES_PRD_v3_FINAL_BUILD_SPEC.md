@@ -2,8 +2,9 @@
 
 **Document type:** Build specification (developer-ready)  
 **Version:** 3.4 Audit-ready (external audit refinements)  
-**Date:** 2026-06-11 (V1 build verified 2026-06-18)  
-**Status:** **V1 implemented** — monorepo `packages/{engine,server,web}`; see [LIVE_STATE.md](./LIVE_STATE.md) and [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md)  
+**Date:** 2026-06-11 (V1 build verified 2026-06-18; **runtime truth:** [LIVE_STATE.md](./LIVE_STATE.md) as of 2026-07-10)  
+**Status:** **V1 shipped** — monorepo `packages/{engine,server,web}`. This PRD is product intent; UI/features may have changed during build. Prefer LIVE_STATE over unchecked PRD bullets.  
+**Living memory:** [ES_MEMORY.md](./ES_MEMORY.md) · **Plan history:** [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) (historical)  
 **Audit handoff:** [ES_AUDIT_HANDOFF.md](./ES_AUDIT_HANDOFF.md)  
 **Living memory:** [ES_MEMORY.md](./ES_MEMORY.md) · **Wireframes:** [ES_WIREFRAMES.md](./ES_WIREFRAMES.md) · **Mockup:** [mockup/es-estimate-editor.html](./mockup/es-estimate-editor.html)  
 **Supersedes:** PRD v3.0 (2026-06-11), [ES_PRD_v3_STRATEGIC.md](./ES_PRD_v3_STRATEGIC.md), [PRD_v3_Final.md](./PRD_v3_Final.md) (enterprise — mostly rejected)  
@@ -17,7 +18,7 @@
 
 **For auditors:** Read [ES_AUDIT_HANDOFF.md](./ES_AUDIT_HANDOFF.md) first, then this PRD and `legacy-laravel/COSTING_NOTES.md`.
 
-**For builders:** V1 is built. Use [LIVE_STATE.md](./LIVE_STATE.md) for what works today and [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) for phase history. New work should extend this PRD §21 (out of scope) or post-V1 items in LIVE_STATE.
+**For builders:** V1 is built. Use [LIVE_STATE.md](./LIVE_STATE.md) for what works today. [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) is phase **history** (June 2026 snapshot — not live status). New work should extend this PRD §21 (out of scope) or open items in LIVE_STATE — and verify in code before marking done.
 
 This PRD includes:
 

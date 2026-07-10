@@ -3,7 +3,6 @@
 
 export * from './types';
 export * from './calculator';
-export * from './validator';
 export * from './layer-stack';
 export * from './template-classification';
 export * from './template-scaffolding';

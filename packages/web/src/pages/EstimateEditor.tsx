@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Save, Download, ArrowLeft, Layers, Calculator, Loader2, Check, Plus, Minus, GripVertical, AlertCircle, RefreshCw, Copy, BookmarkPlus } from 'lucide-react';
+import { Save, Download, ArrowLeft, Layers, Calculator, Loader2, Check, GripVertical, AlertCircle, RefreshCw, Copy, BookmarkPlus } from 'lucide-react';
 import LayerCard from '../components/LayerCard';
 import BottomSheet from '../components/BottomSheet';
 import FilmStackVisualizer from '../components/FilmStackVisualizer';
@@ -36,6 +36,10 @@ import {
   type PackagingConfig,
 } from '@es/engine';
 import { usdToDisplay, usdToDisplayPrecise } from '../lib/currency';
+import { useBeforeUnloadGuard } from '../hooks/useBeforeUnloadGuard';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { PromptDialog } from '../components/PromptDialog';
+import { SkeletonCard, SkeletonTableRows } from '../components/Skeleton';
 import { formatMicronDisplay } from '../lib/formatMicron';
 import { layerFieldsFromMaterial } from '../lib/materialNominalMicron';
 import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
@@ -53,6 +57,7 @@ import {
 } from '../lib/estimateConfigure';
 import { setWorkingEstimateForTemplate } from '../lib/estimateSession';
 import { selectOnFocus } from '../lib/inputs';
+import { StructureCostingBlocks } from '../features/estimate-editor/StructureCostingBlocks';
 import { normalizeToolingScenario, toolingDevelopmentTotal } from '../lib/tooling';
 import { estimateStatusLabel, MES_OUTCOME_ENABLED } from '../lib/estimateStatus';
 import { meaningfulRequotePriceChanges } from '../lib/requote';
@@ -323,8 +328,16 @@ const EstimateEditor = ({
   const [mobileStackOpen, setMobileStackOpen] = useState(false);
   const [needsConfiguration, setNeedsConfiguration] = useState(false);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
+  const [editorError, setEditorError] = useState<string | null>(null);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [snapBackConfirmOpen, setSnapBackConfirmOpen] = useState(false);
+  const [templatePromptOpen, setTemplatePromptOpen] = useState(false);
+  const [templateOpenConfirmOpen, setTemplateOpenConfirmOpen] = useState(false);
+  const [pendingTemplateName, setPendingTemplateName] = useState('');
+  const [cleanSnapshot, setCleanSnapshot] = useState<string | null>(null);
   const [solventDetailsExpanded, setSolventDetailsExpanded] = useState(false);
   const [packagingDetailsExpanded, setPackagingDetailsExpanded] = useState(false);
+  const [prepressDetailsExpanded, setPrepressDetailsExpanded] = useState(false);
   const [packagingConfig, setPackagingConfig] = useState<PackagingConfig>(() =>
     mergePackagingConfigDefaults({
       loadPerPalletKg: DEFAULT_LOAD_PER_PALLET_KG,
@@ -443,7 +456,7 @@ const EstimateEditor = ({
   const effectiveInkSolventRatio = inkSolventRatioOverride ?? processDefaultInkRatio;
 
   const inkMakeupRatioTooltip =
-    'Ink dilution = solvent needed before printing. Dividing by 1.5 means every 1.5 gsm of ink needs 1 gsm of solvent. Dividing by 1.0 means 1 gsm of ink needs 1 gsm of solvent, more dilution.';
+    'Ink : solvent parts on press. 1:1 = one part solvent per part dry ink (typical flexo). 1:2 = two parts solvent per part dry ink (typical roto). Makeup g/m² = ink GSM × solvent parts.';
 
   /** Estimators / admins — not sales-only profiles. */
   const canConfigureSolvent = can('solventMixCost') || can('markupPercent');
@@ -1550,30 +1563,123 @@ const EstimateEditor = ({
   const solventCostLines = useMemo(() => {
     const e = clientCalcResult?.estimate;
     if (!e || !showSolventCosting) return [];
-    const lines: Array<{ key: string; label: string; perKgUsd: number; perM2Usd: number }> = [];
+    const lines: Array<{
+      key: string;
+      label: string;
+      perKgUsd: number;
+      perM2Usd: number;
+      qty?: number | null;
+      qtyUnit?: string;
+      qtyHint?: string;
+      calcHint?: string;
+    }> = [];
+    const fx = parseFloat(estimate?.exchangeRateUsdToDisplay) || 1;
+    const cur = estimate?.displayCurrency || 'USD';
+    const priceDisp = usdToDisplay(resolvedSolventCostPerKgUsd, fx).toFixed(2);
+    const totalGsm =
+      e.totalGsm ?? layers.reduce((s, l) => s + (l.gsm || 0), 0);
+    const orderKg = e.orderQuantityKg ?? orderQuantity ?? 1000;
+
     const inkKg = e.inkMakeupSolventCostPerKg ?? 0;
     const inkM2 = e.inkMakeupSolventCostPerM2 ?? 0;
-    if (inkKg > 0 || inkM2 > 0) {
+    if (inkKg > 0 || inkM2 > 0 || hasSbInk) {
       const proc = e.inkPrintingProcessResolved === 'rotogravure' ? 'roto' : 'flexo';
-      lines.push({ key: 'ink-makeup', label: `Ink Dilution (${proc})`, perKgUsd: inkKg, perM2Usd: inkM2 });
+      const dryInkGsm = layers
+        .filter((l) => l.materialType === 'ink' && l.isSolventBased)
+        .reduce((sum, l) => sum + (l.gsm || 0), 0);
+      const ratio = effectiveInkSolventRatio;
+      const makeupGsm = dryInkGsm * ratio;
+      lines.push({
+        key: 'ink-makeup',
+        label: `Ink Dilution (${proc})`,
+        perKgUsd: inkKg,
+        perM2Usd: inkM2,
+        qty: makeupGsm,
+        qtyUnit: 'g/m²',
+        qtyHint: `ink:solvent 1:${ratio}`,
+        calcHint: [
+          `Ink : solvent parts = 1 : ${ratio} (${proc})`,
+          `Makeup ${makeupGsm.toFixed(2)} g/m² = dry ink ${dryInkGsm.toFixed(2)} g/m² × ${ratio} solvent parts`,
+          `$/m² = (${makeupGsm.toFixed(2)} / 1000) × ${priceDisp} ${cur}/kg`,
+          `$/kg = ($/m² ÷ ${Number(totalGsm).toFixed(2)} total GSM) × 1000`,
+        ].join('\n'),
+      });
     }
     const lamKg = e.laminationSolventCostPerKg ?? 0;
     const lamM2 = e.laminationSolventCostPerM2 ?? 0;
     if (lamKg > 0 || lamM2 > 0) {
-      lines.push({ key: 'lamination', label: 'Lamination Dilution', perKgUsd: lamKg, perM2Usd: lamM2 });
+      const price = resolvedSolventCostPerKgUsd;
+      const lamGsm = price > 0 ? (lamM2 / price) * 1000 : null;
+      lines.push({
+        key: 'lamination',
+        label: 'Lamination Dilution',
+        perKgUsd: lamKg,
+        perM2Usd: lamM2,
+        qty: lamGsm,
+        qtyUnit: 'g/m²',
+        qtyHint: 'EA from SB adhesive recipe',
+        calcHint: [
+          `EA solvent coat from each SB adhesive layer recipe`,
+          lamGsm != null
+            ? `Shown ${lamGsm.toFixed(2)} g/m² = ($/m² ÷ solvent ${priceDisp} ${cur}/kg) × 1000`
+            : `Solvent portion of dry adhesive coat`,
+          `$/m² = (EA g/m² / 1000) × solvent ${cur}/kg`,
+          `$/kg = ($/m² ÷ ${Number(totalGsm).toFixed(2)} total GSM) × 1000`,
+        ].join('\n'),
+      });
     }
     const cleanKg = e.cleaningSolventCostPerKg ?? 0;
     const cleanM2 = e.cleaningSolventCostPerM2 ?? 0;
-    if (cleanKg > 0 || cleanM2 > 0) {
-      lines.push({ key: 'cleaning', label: 'Press cleaning', perKgUsd: cleanKg, perM2Usd: cleanM2 });
+    if (cleanKg > 0 || cleanM2 > 0 || needsSolventMix) {
+      lines.push({
+        key: 'cleaning',
+        label: 'Press cleaning',
+        perKgUsd: cleanKg,
+        perM2Usd: cleanM2,
+        qty: cleaningSolventKgPerJob,
+        qtyUnit: 'kg/job',
+        qtyHint: 'allocated over order kg',
+        calcHint: [
+          `Press cleaning solvent per job (editable)`,
+          `$/kg = (${cleaningSolventKgPerJob} kg/job × ${priceDisp} ${cur}/kg) ÷ ${Number(orderKg).toFixed(0)} kg order`,
+          `$/m² = ($/kg × ${Number(totalGsm).toFixed(2)} total GSM) / 1000`,
+        ].join('\n'),
+      });
     }
     const seamKg = e.seamingSolventCostPerKg ?? 0;
     const seamM2 = e.seamingSolventCostPerM2 ?? 0;
-    if (seamKg > 0 || seamM2 > 0) {
-      lines.push({ key: 'seaming', label: 'Seaming', perKgUsd: seamKg, perM2Usd: seamM2 });
+    if (seamKg > 0 || seamM2 > 0 || hasSleeveSubstrate) {
+      lines.push({
+        key: 'seaming',
+        label: 'Seaming',
+        perKgUsd: seamKg,
+        perM2Usd: seamM2,
+        qty: sleeveSeamingSolventGsm,
+        qtyUnit: 'g/m²',
+        qtyHint: 'sleeve seam solvent coat',
+        calcHint: [
+          `Sleeve seaming mix coat (editable g/m²)`,
+          `$/m² = (${sleeveSeamingSolventGsm} g/m² / 1000) × seaming mix ${cur}/kg`,
+          `$/kg = ($/m² ÷ ${Number(totalGsm).toFixed(2)} total GSM) × 1000`,
+        ].join('\n'),
+      });
     }
     return lines;
-  }, [clientCalcResult, showSolventCosting]);
+  }, [
+    clientCalcResult,
+    showSolventCosting,
+    hasSbInk,
+    needsSolventMix,
+    hasSleeveSubstrate,
+    layers,
+    effectiveInkSolventRatio,
+    resolvedSolventCostPerKgUsd,
+    cleaningSolventKgPerJob,
+    sleeveSeamingSolventGsm,
+    estimate?.exchangeRateUsdToDisplay,
+    estimate?.displayCurrency,
+    orderQuantity,
+  ]);
 
   const solventTotalPerKgUsd = useMemo(() => {
     if (clientCalcResult?.estimate.solventMixCostPerKg != null) {
@@ -1783,6 +1889,11 @@ const EstimateEditor = ({
     activeSection,
   ]);
 
+  const showEditorError = useCallback((msg: string) => {
+    setEditorError(msg);
+    setSaveNotice(null);
+  }, []);
+
   const ensureStructureReady = useCallback((): boolean => {
     const err = validateConfiguredEstimate({
       layers,
@@ -1793,12 +1904,12 @@ const EstimateEditor = ({
       structureHasPrinting,
     });
     if (err) {
-      alert(err);
+      showEditorError(err);
       setActiveSection('structure');
       return false;
     }
     return true;
-  }, [layers, productType, dimensions, processesState, requiresRollLength, structureHasPrinting]);
+  }, [layers, productType, dimensions, processesState, requiresRollLength, structureHasPrinting, showEditorError]);
 
   const goToSection = useCallback(
     (section: 'structure' | 'dimensions' | 'slabs') => {
@@ -1808,14 +1919,14 @@ const EstimateEditor = ({
       if (section === 'slabs') {
         const enabledCount = processesState.filter((p) => p.enabled !== false).length;
         if (enabledCount === 0) {
-          alert('Select at least one process before proceeding to pricing.');
+          showEditorError('Select at least one process before proceeding to pricing.');
           return;
         }
       }
 
       setActiveSection(section);
     },
-    [ensureStructureReady, processesState]
+    [ensureStructureReady, processesState, showEditorError]
   );
 
   // Replay a draft that was saved while offline back to the server once we're
@@ -1866,16 +1977,16 @@ const EstimateEditor = ({
 
   const persistEstimate = async (mode: SaveMode = 'draft'): Promise<boolean> => {
     if (readOnly) {
-      if (mode !== 'silent') alert('This quote is sent and locked. Unlock or re-quote to edit.');
+      if (mode !== 'silent') showEditorError('This quote is sent and locked. Unlock or re-quote to edit.');
       return false;
     }
     if (saving) return false;
     if (layers.length === 0) {
-      if (mode !== 'silent') alert('Add at least one layer before saving.');
+      if (mode !== 'silent') showEditorError('Add at least one layer before saving.');
       return false;
     }
     if (layers.some((l) => !l.materialId)) {
-      if (mode !== 'silent') alert('Select a material for every layer before saving.');
+      if (mode !== 'silent') showEditorError('Select a material for every layer before saving.');
       return false;
     }
     const materialRefError = validateSaveMaterialRefs({
@@ -1885,17 +1996,17 @@ const EstimateEditor = ({
       solventMaterialId,
     });
     if (materialRefError) {
-      if (mode !== 'silent') alert(materialRefError);
+      if (mode !== 'silent') showEditorError(materialRefError);
       return false;
     }
     if (!jobName.trim()) {
       if (mode !== 'silent') {
-        alert(isPriceCheck ? 'Enter a product group before saving.' : 'Enter a job name before saving.');
+        showEditorError(isPriceCheck ? 'Enter a product group before saving.' : 'Enter a job name before saving.');
       }
       return false;
     }
     if (isPriceCheck && multiOnQuote && !skuLabel.trim() && mode === 'final') {
-      alert('Enter a variant name before saving.');
+      showEditorError('Enter a variant name before saving.');
       return false;
     }
     if (mode === 'final') {
@@ -1911,7 +2022,7 @@ const EstimateEditor = ({
         structureHasPrinting,
       });
       if (validationError) {
-        alert(validationError);
+        showEditorError(validationError);
         setActiveSection('structure');
         return false;
       }
@@ -1960,6 +2071,8 @@ const EstimateEditor = ({
         await syncPriceCheckQuoteName(estimate.quoteId || quoteIdFromUrl || undefined);
         if (mode === 'draft') setSaveNotice('Draft saved.');
         else if (mode === 'final') setSaveNotice('Saved.');
+        setEditorError(null);
+        setCleanSnapshot(editorSnapshot);
         onSaved?.();
         return true;
       }
@@ -1997,6 +2110,8 @@ const EstimateEditor = ({
         }
         if (mode === 'draft') setSaveNotice('Draft saved.');
         else if (mode === 'final') setSaveNotice('Saved.');
+        setEditorError(null);
+        setCleanSnapshot(editorSnapshot);
         onSaved?.();
         return true;
       } finally {
@@ -2004,21 +2119,95 @@ const EstimateEditor = ({
       }
     } catch (err: any) {
       console.error('Save failed:', err);
-      // Silent saves (Calculate) shouldn't blast the user with a modal — log +
-      // carry on. Explicit Save buttons still alert.
-      if (mode !== 'silent') alert(`Save failed: ${err.message || 'Unknown error'}`);
+      // Silent saves (Calculate) shouldn't interrupt with a banner.
+      if (mode !== 'silent') showEditorError(`Save failed: ${err.message || 'Unknown error'}`);
       return false;
     } finally {
       setSaving(false);
     }
   };
 
+  const editorSnapshot = useMemo(
+    () =>
+      JSON.stringify({
+        jobName,
+        customerId,
+        productType,
+        productSubtype,
+        layers: layers.map((l) => ({
+          id: l.id,
+          materialId: l.materialId,
+          micron: l.micron,
+          costPerKgUsd: l.costPerKgUsd,
+          materialType: l.materialType,
+        })),
+        processes: processesState.map((p) => ({
+          id: p.id,
+          enabled: p.enabled !== false,
+          processQuantity: p.processQuantity ?? 1,
+          costPerKgUsd: p.costPerKgUsd ?? 0,
+        })),
+        slabQty: slabsState.map((s) => Number(s.quantityKg) || 0),
+        markupPercent,
+        platesPerKg,
+        deliveryPerKg,
+        pricingMethod,
+        marginValuePerKgUsd,
+        cormPerKgUsd,
+        toolingChargeUsd,
+        deliveryTerm,
+        deliveryChargeUsd,
+        orderQuantity,
+        orderQuantityUnit,
+        dimensions,
+        accessories,
+        packagingConfig,
+      }),
+    [
+      jobName,
+      customerId,
+      productType,
+      productSubtype,
+      layers,
+      processesState,
+      slabsState,
+      markupPercent,
+      platesPerKg,
+      deliveryPerKg,
+      pricingMethod,
+      marginValuePerKgUsd,
+      cormPerKgUsd,
+      toolingChargeUsd,
+      deliveryTerm,
+      deliveryChargeUsd,
+      orderQuantity,
+      orderQuantityUnit,
+      dimensions,
+      accessories,
+      packagingConfig,
+    ]
+  );
+
+  useEffect(() => {
+    if (loading || !estimate) return;
+    const t = window.setTimeout(() => setCleanSnapshot(editorSnapshot), 0);
+    return () => window.clearTimeout(t);
+    // Capture baseline once per estimate load — not on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, estimate?.id]);
+
+  const isDirty =
+    !readOnly && cleanSnapshot != null && editorSnapshot !== cleanSnapshot;
+  useBeforeUnloadGuard(isDirty);
+
   /**
-   * Back: leave the editor WITHOUT persisting anything. The user has
-   * explicit "Save draft" and "Save" buttons for persistence; Back always
-   * discards unsaved changes and never creates a draft row.
+   * Back: leave without persisting. Confirm when there are unsaved edits.
    */
   const handleCancel = () => {
+    if (isDirty) {
+      setLeaveConfirmOpen(true);
+      return;
+    }
     navigate(returnTo);
   };
 
@@ -2040,7 +2229,7 @@ const EstimateEditor = ({
           state: { priceChanges: changes, warnings: res.warnings || [] },
         });
       }
-    } catch (err) { alert('Failed to create re-quote'); }
+    } catch (err) { showEditorError('Failed to create re-quote'); }
   };
 
   const downloadProposalPdf = async () => {
@@ -2052,55 +2241,47 @@ const EstimateEditor = ({
     } catch (error) { console.error('Failed to download proposal PDF', error); }
   };
 
-  const handleSaveAsTemplate = async () => {
+  const handleSaveAsTemplate = () => {
     if (!estimate?.id) {
-      alert('Save the estimate before creating a template.');
+      showEditorError('Save the estimate before creating a template.');
       return;
     }
-    const name = prompt('Name for My Templates (reusable structure):', jobName || estimate.jobName);
-    if (!name?.trim()) return;
+    setTemplatePromptOpen(true);
+  };
+
+  const submitSaveAsTemplate = async (name: string) => {
+    if (!estimate?.id) return;
+    setTemplatePromptOpen(false);
     try {
-      await apiClient.createTemplate(name.trim(), estimate.id);
-      const open = window.confirm(
-        `Structure "${name.trim()}" saved to My Templates.\n\nOpen My Templates now?`
-      );
-      if (open) {
-        navigate('/my-templates');
-      }
+      await apiClient.createTemplate(name, estimate.id);
+      setPendingTemplateName(name);
+      setTemplateOpenConfirmOpen(true);
     } catch (err) {
-      alert('Failed to save template: ' + (err instanceof Error ? err.message : 'Unknown'));
+      showEditorError('Failed to save template: ' + (err instanceof Error ? err.message : 'Unknown'));
     }
   };
 
-  const handleSnapBack = async () => {
+  const runSnapBack = async () => {
     if (!estimate?.id || !estimate?.sourceTemplateKey) {
-      alert('Only template quotes can be reverted to template.');
+      showEditorError('Only template quotes can be reverted to template.');
       return;
     }
-    const confirmed = window.confirm(
-      'Revert to template structure? This will reset layers & processes to the template defaults. Current edits will be lost.'
-    );
-    if (!confirmed) return;
-    
     try {
       setSaving(true);
-      // Load the template by its ID (sourceTemplateKey)
       const template = await apiClient.getTemplate(estimate.sourceTemplateKey);
       if (!template) {
-        alert('Template not found.');
+        showEditorError('Template not found.');
         return;
       }
-      // Re-instantiate estimate from template (server-side fork check)
       const instantiated = await apiClient.instantiateTemplate(template.id, {
         customerId,
         jobName,
       });
       if (!instantiated?.estimate) {
-        alert('Failed to instantiate template.');
+        showEditorError('Failed to instantiate template.');
         return;
       }
 
-      // Merge into current estimate while preserving customer/job name
       const payload = {
         ...instantiated.estimate,
         jobName,
@@ -2111,12 +2292,21 @@ const EstimateEditor = ({
       };
       await apiClient.updateEstimate(estimate.id, payload);
       setSaveNotice('Reverted to template structure.');
+      setEditorError(null);
       await fetchEstimate(estimate.id, { silent: true });
     } catch (err) {
-      alert('Failed to revert: ' + (err instanceof Error ? err.message : 'Unknown'));
+      showEditorError('Failed to revert: ' + (err instanceof Error ? err.message : 'Unknown'));
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSnapBack = () => {
+    if (!estimate?.id || !estimate?.sourceTemplateKey) {
+      showEditorError('Only template quotes can be reverted to template.');
+      return;
+    }
+    setSnapBackConfirmOpen(true);
   };
 
   const handleCustomizeProcesses = async () => {
@@ -2129,7 +2319,7 @@ const EstimateEditor = ({
       setSaveNotice('Processes locked in — future layer changes won\'t affect them.');
       await fetchEstimate(estimate.id, { silent: true });
     } catch (err) {
-      alert('Failed to lock processes: ' + (err instanceof Error ? err.message : 'Unknown'));
+      showEditorError('Failed to lock processes: ' + (err instanceof Error ? err.message : 'Unknown'));
     } finally {
       setSaving(false);
     }
@@ -2148,19 +2338,26 @@ const EstimateEditor = ({
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Failed to download stored proposal PDF', error);
-      alert('Could not download stored proposal PDF.');
+      showEditorError('Could not download stored proposal PDF.');
     }
   };
 
   const changeStatus = async (newStatus: 'won' | 'lost') => {
-    if (!estimate?.id) { alert('Save the estimate before changing status'); return; }
+    if (!estimate?.id) { showEditorError('Save the estimate before changing status'); return; }
     try {
       await apiClient.updateEstimate(estimate.id, { status: newStatus });
       await fetchEstimate(estimate.id);
-    } catch (err) { alert('Failed to change status'); }
+    } catch (err) { showEditorError('Failed to change status'); }
   };
 
-  if (loading) return <div className="p-8">Loading estimate...</div>;
+  if (loading) {
+    return (
+      <div className="p-8 space-y-6 max-w-5xl" aria-busy="true" aria-label="Loading estimate">
+        <SkeletonCard />
+        <SkeletonTableRows rows={6} />
+      </div>
+    );
+  }
 
   if (loadError && !estimate && id) {
     return (
@@ -2446,128 +2643,56 @@ const EstimateEditor = ({
     }
     return rows;
   })();
-  const solventConfigBar = canConfigureSolvent && (hasSbInk || needsSolventMix || hasSleeveSubstrate) ? (
-    <div
-      id="solvent-costing"
-      className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm"
-    >
-      {hasSbInk && (
-        <>
-          <span className="text-xs text-mist shrink-0">Print</span>
-          <div className="inline-flex rounded overflow-hidden border border-border shrink-0 bg-surface-raised">
-            {(['flexo', 'rotogravure'] as const).map((method) => {
-              const selected = effectiveInkPrintingProcess === method;
-              const label = method === 'flexo' ? 'Flexo' : 'Roto';
-              return (
-                <button
-                  key={method}
-                  type="button"
-                  title={method === 'flexo' ? 'Flexo' : 'Rotogravure'}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium ${
-                    selected ? 'bg-navy text-text-on-accent' : 'bg-surface-raised text-navy hover:bg-slate'
-                  }`}
-                  onClick={() => setInkPrintingProcess(method)}
-                >
-                  {selected && <Check className="w-3 h-3" aria-hidden />}
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-          <label
-            className="inline-flex items-center gap-0.5 shrink-0 cursor-help"
-            title={inkMakeupRatioTooltip}
-          >
-            <span className="text-xs font-mono text-mist">÷</span>
-            <input
-              type="number"
-              min="0.01"
-              step="0.1"
-              aria-label="Ink dilution solvent ratio"
-              title={inkMakeupRatioTooltip}
-              className="input py-1 px-1.5 w-14 text-xs font-mono text-center"
-              value={effectiveInkSolventRatio}
-              onChange={(e) => {
-                const v = parseFloat(e.target.value);
-                setInkSolventRatioOverride(Number.isFinite(v) && v > 0 ? v : null);
-              }}
-              onFocus={selectOnFocus}
-            />
-          </label>
-          {(needsSolventMix || hasSleeveSubstrate) && <span className="hidden sm:inline text-warning">|</span>}
-        </>
-      )}
-      {needsSolventMix && (
-        <>
-          <select
-            className="input py-1 px-2 text-xs w-28 sm:w-36 shrink-0"
-            aria-label="Solvent"
-            value={solventMaterialId ?? ''}
-            onChange={(e) => {
-              setSolventMaterialId(e.target.value || null);
-              setSolventCostOverrideUsd(null);
-            }}
-          >
-            {solventMaterialOptions.length === 0 && <option value="">No solvent</option>}
-            {solventMaterialOptions.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-          <label className="inline-flex items-center gap-1 shrink-0">
-            <span className="text-xs text-mist">{estimate?.displayCurrency || 'USD'}/kg</span>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              aria-label="Solvent per kg"
-              className="input py-1 px-2 w-16 text-xs font-mono"
-              value={usdToDisplay(resolvedSolventCostPerKgUsd, fxRate).toFixed(2)}
-              onChange={(e) => {
-                const displayVal = parseFloat(e.target.value) || 0;
-                setSolventCostOverrideUsd(fxRate > 0 ? displayVal / fxRate : displayVal);
-              }}
-              onFocus={selectOnFocus}
-            />
-          </label>
-          <label className="inline-flex items-center gap-1 shrink-0">
-            <span className="text-xs text-mist">Clean</span>
-            <input
-              type="number"
-              min="0"
-              step="1"
-              aria-label="Cleaning kg per job"
-              className="input py-1 px-2 w-14 text-xs font-mono"
-              value={cleaningSolventKgPerJob}
-              onChange={(e) => setCleaningSolventKgPerJob(Number(e.target.value) || 0)}
-              onFocus={selectOnFocus}
-            />
-            <span className="text-xs text-mist">kg</span>
-          </label>
-        </>
-      )}
-      {hasSleeveSubstrate && (
-        <>
-          {(needsSolventMix || hasSbInk) && <span className="hidden sm:inline text-warning">|</span>}
-          <label className="inline-flex items-center gap-1 shrink-0">
-            <span className="text-xs text-mist">Seaming</span>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              aria-label="Seaming solvent g per m2"
-              className="input py-1 px-2 w-16 text-xs font-mono"
-              value={sleeveSeamingSolventGsm}
-              onChange={(e) => setSleeveSeamingSolventGsm(Number(e.target.value) || 0)}
-              onFocus={selectOnFocus}
-            />
-            <span className="text-xs text-mist">g/m²</span>
-          </label>
-        </>
-      )}
-    </div>
-  ) : null;
+  const costingBlocksProps = {
+    showStructureCosts,
+    showLayerControlsCol,
+    fxRate,
+    displayCurrency: displayCurrencyLabel,
+    canConfigure: canConfigureSolvent,
+    showSolvent: showSolventCosting,
+    solventExpanded: solventDetailsExpanded,
+    onSolventExpandedChange: setSolventDetailsExpanded,
+    solventTotalPerKgUsd,
+    solventTotalPerM2Usd,
+    hasSbInk,
+    needsSolventMix,
+    hasSleeveSubstrate,
+    inkPrintingProcess: effectiveInkPrintingProcess,
+    onInkPrintingProcessChange: (method: 'flexo' | 'rotogravure') => {
+      setInkPrintingProcess(method);
+      // Follow process default (flexo 1:1, roto 1:2) unless user edits the ratio again.
+      setInkSolventRatioOverride(null);
+    },
+    inkSolventRatio: effectiveInkSolventRatio,
+    onInkSolventRatioChange: setInkSolventRatioOverride,
+    inkMakeupRatioTooltip,
+    solventMaterialId,
+    solventMaterialOptions,
+    onSolventMaterialIdChange: (id: string | null) => {
+      setSolventMaterialId(id);
+      setSolventCostOverrideUsd(null);
+    },
+    solventCostPerKgUsd: resolvedSolventCostPerKgUsd,
+    onSolventCostPerKgUsdChange: setSolventCostOverrideUsd,
+    cleaningSolventKgPerJob,
+    onCleaningSolventKgPerJobChange: setCleaningSolventKgPerJob,
+    sleeveSeamingSolventGsm,
+    onSleeveSeamingSolventGsmChange: setSleeveSeamingSolventGsm,
+    solventCostLines,
+    showPackaging: showPackagingCosting,
+    packagingExpanded: packagingDetailsExpanded,
+    onPackagingExpandedChange: setPackagingDetailsExpanded,
+    packagingTotalPerKgUsd,
+    packagingTotalPerM2Usd,
+    packagingNeedsReview,
+    packagingCostLines,
+    productType: productType as 'roll' | 'sleeve' | 'pouch' | 'bag',
+    packagingConfig,
+    onPackagingConfigChange: (patch: Partial<PackagingConfig>) =>
+      setPackagingConfig((c) => ({ ...c, ...patch })),
+    prepressExpanded: prepressDetailsExpanded,
+    onPrepressExpandedChange: setPrepressDetailsExpanded,
+  };
 
   return (
     <div className="w-full pb-24 md:pb-0">
@@ -2583,6 +2708,15 @@ const EstimateEditor = ({
         <div className="mb-4 card bg-success/10 border border-success/30 text-sm text-success flex items-center justify-between gap-2">
           <span>{saveNotice}</span>
           <button type="button" className="text-success/80 hover:text-success" onClick={() => setSaveNotice(null)} aria-label="Dismiss">✕</button>
+        </div>
+      )}
+      {editorError && (
+        <div className="mb-4 card bg-danger/10 border border-danger/30 text-sm text-danger flex items-center justify-between gap-2" role="alert">
+          <span className="inline-flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{editorError}</span>
+          </span>
+          <button type="button" className="text-danger/80 hover:text-danger" onClick={() => setEditorError(null)} aria-label="Dismiss">✕</button>
         </div>
       )}
 
@@ -2619,7 +2753,7 @@ const EstimateEditor = ({
               type="button"
               onClick={handleCancel}
               className="btn-secondary inline-flex items-center gap-2 shrink-0"
-              title="Back — discards unsaved changes"
+              title={isDirty ? "Back — unsaved changes" : "Back"}
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Back</span>
@@ -3008,154 +3142,7 @@ const EstimateEditor = ({
                   >
                     {structureLocked ? '+ Add ink & coating' : '+ Add layer'}
                   </button>
-                  {showSolventCosting && (
-                    <div className="border border-warning/30 rounded-lg overflow-hidden bg-warning/10">
-                      {solventConfigBar && (
-                        <div className="px-3 py-2.5 border-b border-warning/30 overflow-x-hidden">
-                          {solventConfigBar}
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        className="w-full flex items-center justify-between px-3 py-2.5 text-sm"
-                        onClick={() => setSolventDetailsExpanded((v) => !v)}
-                      >
-                        <span className="inline-flex items-center gap-2 font-medium text-navy">
-                          {solventDetailsExpanded ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                          Solvents
-                        </span>
-                        {showStructureCosts && (
-                          <span className="font-mono text-xs font-semibold text-navy">
-                            {usdToDisplayPrecise(solventTotalPerKgUsd, fxRate).toFixed(4)}/kg ·{' '}
-                            {usdToDisplayPrecise(solventTotalPerM2Usd, fxRate).toFixed(4)}/m²
-                          </span>
-                        )}
-                      </button>
-                      {solventDetailsExpanded && showStructureCosts && (
-                        <div className="divide-y divide-warning/20 bg-warning/5 text-sm">
-                          {solventCostLines.map((line) => (
-                            <div key={line.key} className="flex justify-between px-3 py-2 pl-8 text-mist">
-                              <span>{line.label}</span>
-                              <span className="font-mono text-navy">
-                                {usdToDisplayPrecise(line.perKgUsd, fxRate).toFixed(4)}/kg ·{' '}
-                                {usdToDisplayPrecise(line.perM2Usd, fxRate).toFixed(4)}/m²
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {showPackagingCosting && (
-                    <div
-                      id="packaging-costing"
-                      className="border border-border rounded-lg overflow-hidden bg-surface-raised"
-                    >
-                      {packagingNeedsReview && (
-                        <div className="px-3 py-2 bg-warning/20 text-warning text-xs font-medium border-b border-warning/30">
-                          Packaging unpriced — sync PACKAGING from PEBI before sending quote
-                        </div>
-                      )}
-                      <div className="px-3 py-2.5 border-b border-border flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
-                        {(productType === 'roll') && (
-                          <label className="inline-flex items-center gap-1 shrink-0">
-                            <span className="text-xs text-mist">Load/pallet</span>
-                            <input
-                              type="number"
-                              min="1"
-                              step="1"
-                              className="input py-1 px-2 w-20 text-xs font-mono"
-                              value={packagingConfig.loadPerPalletKg ?? DEFAULT_LOAD_PER_PALLET_KG}
-                              onChange={(e) => {
-                                const v = parseFloat(e.target.value);
-                                setPackagingConfig((c) => ({
-                                  ...c,
-                                  loadPerPalletKg: Number.isFinite(v) && v > 0 ? v : DEFAULT_LOAD_PER_PALLET_KG,
-                                }));
-                              }}
-                              onFocus={selectOnFocus}
-                            />
-                            <span className="text-xs text-mist">kg</span>
-                          </label>
-                        )}
-                        {(productType === 'sleeve' || productType === 'pouch' || productType === 'bag') && (
-                          <label className="inline-flex items-center gap-1 shrink-0">
-                            <span className="text-xs text-mist">Cartons/pallet</span>
-                            <input
-                              type="number"
-                              min="1"
-                              step="1"
-                              className="input py-1 px-2 w-16 text-xs font-mono"
-                              value={packagingConfig.cartonsPerPallet ?? DEFAULT_CARTONS_PER_PALLET}
-                              onChange={(e) => {
-                                const v = parseFloat(e.target.value);
-                                setPackagingConfig((c) => ({
-                                  ...c,
-                                  cartonsPerPallet: Number.isFinite(v) && v > 0 ? v : DEFAULT_CARTONS_PER_PALLET,
-                                }));
-                              }}
-                              onFocus={selectOnFocus}
-                            />
-                          </label>
-                        )}
-                        {(productType === 'pouch' || productType === 'bag') && (
-                          <label className="inline-flex items-center gap-1 shrink-0">
-                            <span className="text-xs text-mist">Pcs/carton</span>
-                            <input
-                              type="number"
-                              min="1"
-                              step="1"
-                              className="input py-1 px-2 w-20 text-xs font-mono"
-                              value={packagingConfig.pcsPerCarton ?? DEFAULT_PCS_PER_CARTON}
-                              onChange={(e) => {
-                                const v = parseFloat(e.target.value);
-                                setPackagingConfig((c) => ({
-                                  ...c,
-                                  pcsPerCarton: Number.isFinite(v) && v > 0 ? v : DEFAULT_PCS_PER_CARTON,
-                                }));
-                              }}
-                              onFocus={selectOnFocus}
-                            />
-                          </label>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        className="w-full flex items-center justify-between px-3 py-2.5 text-sm"
-                        onClick={() => setPackagingDetailsExpanded((v) => !v)}
-                      >
-                        <span className="inline-flex items-center gap-2 font-medium text-navy">
-                          {packagingDetailsExpanded ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                          Packaging
-                        </span>
-                        {showStructureCosts && (
-                          <span className="font-mono text-xs font-semibold text-navy">
-                            {usdToDisplayPrecise(packagingTotalPerKgUsd, fxRate).toFixed(4)}/kg ·{' '}
-                            {usdToDisplayPrecise(packagingTotalPerM2Usd, fxRate).toFixed(4)}/m²
-                          </span>
-                        )}
-                      </button>
-                      {packagingDetailsExpanded && showStructureCosts && (
-                        <div className="divide-y divide-border bg-slate/30 text-sm">
-                          {packagingCostLines.length === 0 && (
-                            <div className="px-3 py-2 pl-8 text-mist">No packaging lines</div>
-                          )}
-                          {packagingCostLines.map((line) => (
-                            <div key={line.role} className="flex justify-between px-3 py-2 pl-8 text-mist">
-                              <span>
-                                {line.label}
-                                {line.needsReview ? ' · needs review' : ''}
-                              </span>
-                              <span className="font-mono text-navy">
-                                {usdToDisplayPrecise(line.costPerKgUsd, fxRate).toFixed(4)}/kg ·{' '}
-                                {usdToDisplayPrecise(line.costPerM2Usd, fxRate).toFixed(4)}/m²
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <StructureCostingBlocks variant="mobile" {...costingBlocksProps} />
                 </div>
 
                 {/* Desktop structure grid — one column definition for header + every row */}
@@ -3474,226 +3461,7 @@ const EstimateEditor = ({
                           )}
                         </div>
                       ))}
-                      {showSolventCosting && (
-                        <>
-                          {solventConfigBar && (
-                            <div className="structure-grid__row bg-warning/10" role="row">
-                              <div
-                                className="structure-grid__cell py-2"
-                                style={{ gridColumn: '1 / -1' }}
-                                role="cell"
-                              >
-                                {solventConfigBar}
-                              </div>
-                            </div>
-                          )}
-                          <div className="structure-grid__row bg-warning/10" role="row">
-                            <div className="structure-grid__cell" role="cell" />
-                            <div className="structure-grid__cell" role="cell">
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-warning/20 text-warning">Solvent</span>
-                            </div>
-                            <div className="structure-grid__cell text-mist text-xs" role="cell">—</div>
-                            <div className="structure-grid__cell" role="cell">
-                              <button
-                                type="button"
-                                className="inline-flex items-center gap-1 text-xs font-medium text-navy hover:text-gold"
-                                onClick={() => setSolventDetailsExpanded((v) => !v)}
-                                aria-expanded={solventDetailsExpanded}
-                              >
-                                {solventDetailsExpanded ? (
-                                  <Minus className="w-3.5 h-3.5 shrink-0" aria-hidden />
-                                ) : (
-                                  <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden />
-                                )}
-                                Solvents
-                              </button>
-                            </div>
-                            <div className="structure-grid__cell text-mist text-[10px]" role="cell">—</div>
-                            <div className="structure-grid__cell text-mist" role="cell">—</div>
-                            {showStructureCosts && (
-                              <>
-                                <div className="structure-grid__cell font-mono text-[11px] font-semibold text-navy tabular-nums" role="cell">
-                                  {usdToDisplayPrecise(solventTotalPerKgUsd, fxRate).toFixed(4)}
-                                </div>
-                                <div className="structure-grid__cell font-mono text-[11px] font-semibold text-navy tabular-nums" role="cell">
-                                  {usdToDisplayPrecise(solventTotalPerM2Usd, fxRate).toFixed(4)}
-                                </div>
-                              </>
-                            )}
-                            {showLayerControlsCol && <div className="structure-grid__cell" role="cell" />}
-                          </div>
-                          {solventDetailsExpanded &&
-                            solventCostLines.map((line) => (
-                              <div key={line.key} className="structure-grid__row bg-slate/30" role="row">
-                                <div className="structure-grid__cell" role="cell" />
-                                <div className="structure-grid__cell" role="cell" />
-                                <div className="structure-grid__cell" role="cell" />
-                                <div className="structure-grid__cell pl-4 text-[11px] text-mist truncate" role="cell">{line.label}</div>
-                                <div className="structure-grid__cell text-mist text-[10px]" role="cell">—</div>
-                                <div className="structure-grid__cell text-mist" role="cell">—</div>
-                                {showStructureCosts && (
-                                  <>
-                                    <div className="structure-grid__cell font-mono text-[11px] tabular-nums" role="cell">
-                                      {usdToDisplayPrecise(line.perKgUsd, fxRate).toFixed(4)}
-                                    </div>
-                                    <div className="structure-grid__cell font-mono text-[11px] tabular-nums" role="cell">
-                                      {usdToDisplayPrecise(line.perM2Usd, fxRate).toFixed(4)}
-                                    </div>
-                                  </>
-                                )}
-                                {showLayerControlsCol && <div className="structure-grid__cell" role="cell" />}
-                              </div>
-                            ))}
-                        </>
-                      )}
-                      {showPackagingCosting && (
-                        <>
-                          {packagingNeedsReview && (
-                            <div className="structure-grid__row bg-warning/20" role="row">
-                              <div
-                                className="structure-grid__cell py-2 text-xs font-medium text-warning"
-                                style={{ gridColumn: '1 / -1' }}
-                                role="cell"
-                              >
-                                Packaging unpriced — sync PACKAGING from PEBI before sending quote
-                              </div>
-                            </div>
-                          )}
-                          <div className="structure-grid__row bg-slate/20" role="row">
-                            <div
-                              className="structure-grid__cell py-2"
-                              style={{ gridColumn: '1 / -1' }}
-                              role="cell"
-                            >
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
-                                {productType === 'roll' && (
-                                  <label className="inline-flex items-center gap-1">
-                                    <span className="text-xs text-mist">Load/pallet</span>
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      className="input py-1 px-2 w-20 text-xs font-mono"
-                                      value={packagingConfig.loadPerPalletKg ?? DEFAULT_LOAD_PER_PALLET_KG}
-                                      onChange={(e) => {
-                                        const v = parseFloat(e.target.value);
-                                        setPackagingConfig((c) => ({
-                                          ...c,
-                                          loadPerPalletKg:
-                                            Number.isFinite(v) && v > 0 ? v : DEFAULT_LOAD_PER_PALLET_KG,
-                                        }));
-                                      }}
-                                      onFocus={selectOnFocus}
-                                    />
-                                    <span className="text-xs text-mist">kg</span>
-                                  </label>
-                                )}
-                                {(productType === 'sleeve' ||
-                                  productType === 'pouch' ||
-                                  productType === 'bag') && (
-                                  <label className="inline-flex items-center gap-1">
-                                    <span className="text-xs text-mist">Cartons/pallet</span>
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      className="input py-1 px-2 w-16 text-xs font-mono"
-                                      value={packagingConfig.cartonsPerPallet ?? DEFAULT_CARTONS_PER_PALLET}
-                                      onChange={(e) => {
-                                        const v = parseFloat(e.target.value);
-                                        setPackagingConfig((c) => ({
-                                          ...c,
-                                          cartonsPerPallet:
-                                            Number.isFinite(v) && v > 0 ? v : DEFAULT_CARTONS_PER_PALLET,
-                                        }));
-                                      }}
-                                      onFocus={selectOnFocus}
-                                    />
-                                  </label>
-                                )}
-                                {(productType === 'pouch' || productType === 'bag') && (
-                                  <label className="inline-flex items-center gap-1">
-                                    <span className="text-xs text-mist">Pcs/carton</span>
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      className="input py-1 px-2 w-20 text-xs font-mono"
-                                      value={packagingConfig.pcsPerCarton ?? DEFAULT_PCS_PER_CARTON}
-                                      onChange={(e) => {
-                                        const v = parseFloat(e.target.value);
-                                        setPackagingConfig((c) => ({
-                                          ...c,
-                                          pcsPerCarton:
-                                            Number.isFinite(v) && v > 0 ? v : DEFAULT_PCS_PER_CARTON,
-                                        }));
-                                      }}
-                                      onFocus={selectOnFocus}
-                                    />
-                                  </label>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="structure-grid__row bg-slate/20" role="row">
-                            <div className="structure-grid__cell" role="cell" />
-                            <div className="structure-grid__cell" role="cell">
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate text-navy">Pack</span>
-                            </div>
-                            <div className="structure-grid__cell text-mist text-xs" role="cell">—</div>
-                            <div className="structure-grid__cell" role="cell">
-                              <button
-                                type="button"
-                                className="inline-flex items-center gap-1 text-xs font-medium text-navy hover:text-gold"
-                                onClick={() => setPackagingDetailsExpanded((v) => !v)}
-                                aria-expanded={packagingDetailsExpanded}
-                              >
-                                {packagingDetailsExpanded ? (
-                                  <Minus className="w-3.5 h-3.5 shrink-0" aria-hidden />
-                                ) : (
-                                  <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden />
-                                )}
-                                Packaging
-                              </button>
-                            </div>
-                            <div className="structure-grid__cell text-mist text-[10px]" role="cell">—</div>
-                            <div className="structure-grid__cell text-mist" role="cell">—</div>
-                            {showStructureCosts && (
-                              <>
-                                <div className="structure-grid__cell font-mono text-[11px] font-semibold text-navy tabular-nums" role="cell">
-                                  {usdToDisplayPrecise(packagingTotalPerKgUsd, fxRate).toFixed(4)}
-                                </div>
-                                <div className="structure-grid__cell font-mono text-[11px] font-semibold text-navy tabular-nums" role="cell">
-                                  {usdToDisplayPrecise(packagingTotalPerM2Usd, fxRate).toFixed(4)}
-                                </div>
-                              </>
-                            )}
-                            {showLayerControlsCol && <div className="structure-grid__cell" role="cell" />}
-                          </div>
-                          {packagingDetailsExpanded &&
-                            packagingCostLines.map((line) => (
-                              <div key={line.role} className="structure-grid__row bg-slate/30" role="row">
-                                <div className="structure-grid__cell" role="cell" />
-                                <div className="structure-grid__cell" role="cell" />
-                                <div className="structure-grid__cell" role="cell" />
-                                <div className="structure-grid__cell pl-4 text-[11px] text-mist truncate" role="cell">
-                                  {line.label}
-                                  {line.needsReview ? ' · needs review' : ''}
-                                </div>
-                                <div className="structure-grid__cell text-mist text-[10px]" role="cell">—</div>
-                                <div className="structure-grid__cell text-mist" role="cell">—</div>
-                                {showStructureCosts && (
-                                  <>
-                                    <div className="structure-grid__cell font-mono text-[11px] tabular-nums" role="cell">
-                                      {usdToDisplayPrecise(line.costPerKgUsd, fxRate).toFixed(4)}
-                                    </div>
-                                    <div className="structure-grid__cell font-mono text-[11px] tabular-nums" role="cell">
-                                      {usdToDisplayPrecise(line.costPerM2Usd, fxRate).toFixed(4)}
-                                    </div>
-                                  </>
-                                )}
-                                {showLayerControlsCol && <div className="structure-grid__cell" role="cell" />}
-                              </div>
-                            ))}
-                        </>
-                      )}
+                      <StructureCostingBlocks variant="desktop" {...costingBlocksProps} />
                     <div className="structure-grid__row border-t-2 border-border bg-slate/40" role="row">
                       <div className="structure-grid__cell py-3" role="cell" />
                       <div className="structure-grid__cell py-3" role="cell" />
@@ -4173,14 +3941,79 @@ const EstimateEditor = ({
             </p>
           </div>
           {!readOnly && (
-            <button onClick={handleSaveFinal} disabled={saving} className="btn-primary px-4 py-2 text-sm min-h-[48px]">
-              {saving ? 'Saving...' : 'Save'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={saving}
+                className="btn-secondary px-3 py-2 text-sm min-h-[48px]"
+              >
+                {saving ? '…' : 'Draft'}
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveFinal}
+                disabled={saving}
+                className="btn-primary px-4 py-2 text-sm min-h-[48px]"
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
           )}
         </div>
       </div>
       )}
       </fieldset>
+
+      <ConfirmDialog
+        open={leaveConfirmOpen}
+        title="Discard unsaved changes?"
+        message="You have unsaved edits. Leave without saving?"
+        confirmLabel="Discard"
+        cancelLabel="Stay"
+        destructive
+        onConfirm={() => {
+          setLeaveConfirmOpen(false);
+          navigate(returnTo);
+        }}
+        onCancel={() => setLeaveConfirmOpen(false)}
+      />
+      <ConfirmDialog
+        open={snapBackConfirmOpen}
+        title="Revert to template?"
+        message="This resets layers and processes to the template defaults. Current edits will be lost."
+        confirmLabel="Revert"
+        cancelLabel="Cancel"
+        destructive
+        busy={saving}
+        onConfirm={() => {
+          setSnapBackConfirmOpen(false);
+          void runSnapBack();
+        }}
+        onCancel={() => setSnapBackConfirmOpen(false)}
+      />
+      <PromptDialog
+        open={templatePromptOpen}
+        title="Save to My Templates"
+        message="Reusable structure for future estimates."
+        label="Template name"
+        defaultValue={jobName || estimate.jobName || ''}
+        confirmLabel="Save template"
+        onConfirm={(name) => void submitSaveAsTemplate(name)}
+        onCancel={() => setTemplatePromptOpen(false)}
+      />
+      <ConfirmDialog
+        open={templateOpenConfirmOpen}
+        title="Template saved"
+        message={`Structure "${pendingTemplateName}" is in My Templates. Open My Templates now?`}
+        confirmLabel="Open My Templates"
+        cancelLabel="Stay here"
+        onConfirm={() => {
+          setTemplateOpenConfirmOpen(false);
+          navigate('/my-templates');
+        }}
+        onCancel={() => setTemplateOpenConfirmOpen(false)}
+      />
 
       <BottomSheet
         open={layerSheetOpen && !!editingLayer}

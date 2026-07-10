@@ -10,13 +10,13 @@
 
 | Doc | Role |
 |-----|------|
-| [MATERIALS_CATALOG_UNIFICATION_PLAN.md](./MATERIALS_CATALOG_UNIFICATION_PLAN.md) | **Planned:** remove Raw Materials page; single Materials UX; PEBI RM sync for IP/FP |
-| [PEBI_ES_RM_SYNC_SPEC.md](./PEBI_ES_RM_SYNC_SPEC.md) | **Spec:** PEBI→ES RM mapping (family, grade, crosswalk, price roll-up) |
-| [../../platform/docs/PACKAGING_COST.md](../../platform/docs/PACKAGING_COST.md) | **Done v1:** outbound packaging costing (PEBI↔ES) — phases 1–6 + sleeve 600 OD carton |
-| [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md) | Build PRD **v3.4** (V1 implemented — see Appendix A.1) |
-| [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) | **Phased build plan** (audit findings, P0–G, DoD) |
-| [MULTI_SKU_QUOTE_EXPLORER_PLAN.md](./MULTI_SKU_QUOTE_EXPLORER_PLAN.md) | **Planned:** multi-SKU quotes, customer folders, explorer, combined price list |
-| [LIVE_STATE.md](./LIVE_STATE.md) | Current phase + what works |
+| [LIVE_STATE.md](./LIVE_STATE.md) | **Source of truth** for what works today (prefer over plans) |
+| [MATERIALS_CATALOG_UNIFICATION_PLAN.md](./MATERIALS_CATALOG_UNIFICATION_PLAN.md) | Phases 1–5 done (Raw Materials removed); **Phase 4 PEBI cutover** still workshop-blocked |
+| [PEBI_ES_RM_SYNC_SPEC.md](./PEBI_ES_RM_SYNC_SPEC.md) | **Spec:** PEBI→ES RM mapping (family, grade, crosswalk, price roll-up) — families sync in code; cutover flags may lag |
+| [../../platform/docs/PACKAGING_COST.md](../../platform/docs/PACKAGING_COST.md) | **Code done v1** (phases 1–6 + sleeve 600 OD); **user E2E** still pending |
+| [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md) | Build PRD **v3.4** — product intent; not every § is current UI |
+| [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) | **Historical** 2026-06-15 audit plan — §1–2 state is obsolete; use LIVE_STATE |
+| [MULTI_SKU_QUOTE_EXPLORER_PLAN.md](./MULTI_SKU_QUOTE_EXPLORER_PLAN.md) | Phases 1–4 **shipped**; Phase 5 optional |
 | [archive/legacy-laravel/COSTING_NOTES.md](../archive/legacy-laravel/COSTING_NOTES.md) | Laravel engine source of truth |
 | [ES_STANDARD_TEMPLATES_SEED.json](./ES_STANDARD_TEMPLATES_SEED.json) | 11 parent PG default stacks (v3) |
 | [ES_STANDARD_TEMPLATES_SEED.md](./ES_STANDARD_TEMPLATES_SEED.md) | Human-readable seed + review checklist |
@@ -62,7 +62,7 @@
 
 ### Outbound packaging (logistics — not laminate layers)
 
-Separate costing block (same UX pattern as solvents). Inside **Total RM** with markup. Plan: [`platform/docs/PACKAGING_COST.md`](../../../platform/docs/PACKAGING_COST.md).
+Separate costing block (same UX pattern as solvents). Inside **Total RM** with markup. Plan: [`platform/docs/PACKAGING_COST.md`](../../platform/docs/PACKAGING_COST.md).
 
 | Product | Lines |
 |---------|--------|
@@ -178,16 +178,26 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 |------|------|--------|
 | 1 | Layer stacks + material model | **Complete** |
 | 2 | Wireframes + mockup | **Complete** |
-| 2b | Audit handoff doc | **Complete** (external audit still open) |
+| 2b | Early audit / handoff | **Complete** (2026-06) — later audits re-verified 2026-07-10 |
 | 3 | Scaffold `propackhub-es/` | **Complete** (2026-06-14) |
-| 4 | Engine golden tests (Laravel) | **Partial** — 12 unit tests pass; not full Laravel reference suite |
-| 5 | MVP build | **In progress** — see [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) |
+| 4 | Engine golden tests (Laravel) | **Partial** — unit/integration tests pass; not full Laravel reference suite |
+| 5 | V1 quote loop (save / calculate / PDF / re-quote / visibility) | **Complete** (2026-06) |
+| 6 | Multi-SKU quotes + explorer + combined price list | **Complete** Phases 1–4 (2026-07-04); Phase 5 optional |
+| 7 | PEBI RM families + packaging + solvents/inks/adhesives | **In progress** — most families sync; packaging code done, user E2E pending |
+| 8 | Post-V1 polish / deferred PRD items | **Ongoing** — see [LIVE_STATE.md](./LIVE_STATE.md) open items |
 
-**Code scaffold exists** — monorepo with engine, server, web. Quote workflow not E2E functional (audit 2026-06-15).
+**Do not** treat [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) §1–2 (“web does not build”) as current — that was the 2026-06-15 snapshot.
 
 ---
 
 ## Session log
+
+### 2026-07-10 — Structure costing blocks UI (Solvent / Packaging / Prepress)
+
+- Under substrate/inks: expandable **Solvent** → **Packaging** → **Prepress** rows in the same structure grid (desktop) + card expanders (mobile).
+- Collapsed = totals only ($/kg, $/m²). Expand Solvent = ink dilution (Flexo/Roto, ÷ ratio, solvent pick + cost) + press cleaning + seaming. Expand Packaging = config fields + cost lines (qty, unit, editable unit cost via `unitPriceOverridesUsd`). Prepress = “Coming soon”.
+- Extracted to `features/estimate-editor/StructureCostingBlocks.tsx`; wired from `EstimateEditor`. Engine rebuild required for web types.
+- Tests: `packaging-costing.test.ts` 11/11 pass.
 
 ### 2026-07-07 — Customer master by tenant licensing (session)
 
@@ -1247,6 +1257,12 @@ Not every company subscribes to both PEBI and ES. **IP/FP (Interplast) is linked
 | PEBI-linked company (Phase 4) | PEBI MES — ES read-only for synced rows **except** PE films without live PEBI price (manual $/kg editable) |
 | Custom tenant-only rows | Always editable in tenant Master Data (`is_tenant_only`) |
 
+### 2026-07-10 — Solvent Common peer set (dilution only)
+
+- **Solvent Common** = average of **Ethyl Acetate, Ethanol, Methoxy Propanol, Ethoxy Propanol** only.
+- Excludes THF, 1,3-Dioxolane, IPA, MEK, toluene, MPA, seaming mix, etc. (those were skewing Common to ~18 AED).
+- Shared allowlist: `SOLVENT_COMMON_PEER_KEYS` in `solvent-common.ts`; used by platform refresh + tenant SOLVENT sync.
+
 ### 2026-07-10 — Packaging costing Phases 1–6 + sleeve 600 OD carton (complete)
 
 **Plan:** `platform/docs/PACKAGING_COST.md` (owner rules locked; PB combined_avg only).
@@ -1296,9 +1312,41 @@ Not every company subscribes to both PEBI and ES. **IP/FP (Interplast) is linked
 
 - PEBI `family=SOLVENT`: Ethyl Acetate, Methoxy Propanol, Ethoxy Propanol, Methoxy Propyl Acetate, THF; 1,3-Dioxolane mirrors THF.
 - PB description fix: MITHOXY → Methoxy Propyl Acetate (`FXXOTSNTMPACET`).
-- Density ES-owned; Solvent Common = average (excludes seaming mix).
+- Density ES-owned; Solvent Common = average of **Ethyl Acetate, Ethanol, Methoxy Propanol, Ethoxy Propanol** only (not THF/dioxolane/IPA/etc.).
 - Sleeve seaming: when SLEEVE substrate in stack → default **0.25 g/m²** (editable); blend **75% THF + 25% Dioxolane**.
 - Migration `0018_sleeve_seaming_solvent_gsm.sql`.
+
+### 2026-07-10 — Docs aligned to code (honesty pass)
+
+- **Rule:** LIVE_STATE + code beat PRD/plan checkboxes. Plans often describe intent or mid-build state.
+- Fixed stale ES_MEMORY build sequence (“MVP in progress / quote not E2E” from 2026-06-15).
+- Marked `ES_IMPLEMENTATION_PLAN` §1–2 historical; Raw Materials `/library` removed in LIVE_STATE feature notes.
+- Canonical doc index: multi-SKU 1–4 shipped; materials unification Phase 4 still blocked; packaging code done / user E2E pending.
+- Audit table in LIVE_STATE: what was false, fixed, overstated, or left alone (auth deferrals, app-wide alerts, TemplateDeck, etc.).
+
+### 2026-07-10 — Infra: migrations lock + secrets + error detail
+
+- Migrations take a Postgres advisory lock so two servers cannot apply DDL together.
+- One `resolveJwtSecret()` for app + service-key pepper (production blocks the fake default).
+- `sendCaughtError` only includes raw `detail` outside production.
+
+### 2026-07-10 — PEBI integration auth hardening
+
+- `verifyPebiIntegrationRequest`: SHA-256 + `timingSafeEqual` for `X-PPH-Integration-Key` (no plain `!==`).
+- `X-PPH-Company-Code` must be in `PEBI_ES_ALLOWED_COMPANY_CODES` (if set) or an existing `tenants.platform_company_code`.
+
+### 2026-07-10 — EstimateEditor UX: leave guard + no native dialogs
+
+- Back confirms when dirty; `beforeunload` on tab close.
+- Validation/errors → inline danger banner (`editorError`); confirms → `ConfirmDialog`; template name → `PromptDialog`.
+- Mobile sticky bar: Draft + Save. Loading uses skeleton.
+- Docs: removed false "≈5 alert spots" claim.
+
+### 2026-07-10 — List currency FX + dead engine cleanup
+
+- **Bug fix:** CustomerDetail / CustomerExplorer / EstimatesList / CombinedPriceListPanel (+ Excel) now convert persisted USD `salePricePerKg` / slab prices via estimate FX before showing display currency (Decision #22).
+- **Removed:** unused `packages/engine/src/validator.ts` (no callers).
+- **Docs:** `Material.wastePercent` marked unused; waste-bands/README no longer claim per-material scrap is in structure cost. Band waste only.
 
 ### 2026-07-10 — Engine types: currency comments (Decision #22)
 

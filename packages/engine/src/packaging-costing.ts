@@ -62,12 +62,18 @@ export interface PackagingConfig {
   stretchMaterialId?: string | null;
   palletMaterialId?: string | null;
   cartonMaterialId?: string | null;
+  /** Estimate-level USD unit price overrides by packaging role. */
+  unitPriceOverridesUsd?: Partial<Record<PackagingRole, number>>;
+  /** Estimate-level quantity overrides by packaging role (defaults from geometry). */
+  qtyOverrides?: Partial<Record<PackagingRole, number>>;
 }
 
 export interface PackagingCostLine {
   role: PackagingRole;
   label: string;
   qty: number;
+  /** Geometry-derived qty before user override (for hover / reset). */
+  calculatedQty: number;
   qtyUnit: string;
   unitPriceUsd: number | null;
   priceUnit: string | null;
@@ -180,23 +186,33 @@ function lineCost(
   material: Material | undefined,
   orderKg: number,
   totalGsm: number,
+  cfg: PackagingConfig,
   detail?: Record<string, number>
 ): PackagingCostLine {
-  const { unitPriceUsd, priceUnit, needsReview } = resolvePackagingUnitPrice(material);
-  const costJobUsd = !needsReview && unitPriceUsd != null ? qty * unitPriceUsd : 0;
+  const calculatedQty = qty;
+  const qtyOverride = positive(cfg.qtyOverrides?.[role] ?? null);
+  const effectiveQty = qtyOverride ?? calculatedQty;
+  const override = positive(cfg.unitPriceOverridesUsd?.[role] ?? null);
+  const resolved = resolvePackagingUnitPrice(material);
+  const unitPriceUsd = override ?? resolved.unitPriceUsd;
+  const priceUnit = resolved.priceUnit;
+  const needsReview = unitPriceUsd == null || unitPriceUsd <= 0;
+  const costJobUsd =
+    !needsReview && unitPriceUsd != null ? effectiveQty * unitPriceUsd : 0;
   const costPerKgUsd = orderKg > 0 ? costJobUsd / orderKg : 0;
   const costPerM2Usd = totalGsm > 0 ? (costPerKgUsd * totalGsm) / 1000 : 0;
   return {
     role,
     label,
-    qty,
+    qty: effectiveQty,
+    calculatedQty,
     qtyUnit,
     unitPriceUsd: needsReview ? null : unitPriceUsd,
     priceUnit,
     costJobUsd,
     costPerKgUsd,
     costPerM2Usd,
-    needsReview: needsReview || (qty > 0 && (unitPriceUsd == null || unitPriceUsd <= 0)),
+    needsReview: needsReview || (effectiveQty > 0 && (unitPriceUsd == null || unitPriceUsd <= 0)),
     detail,
   };
 }
@@ -446,20 +462,20 @@ function costRoll(
   const stretchQty = stretchFrac * palletsInOrder;
 
   const lines: PackagingCostLine[] = [
-    lineCost('core', 'Core', coreQty, 'm', coreM, opts.orderQuantityKg, opts.totalGsm, {
+    lineCost('core', 'Core', coreQty, 'm', coreM, opts.orderQuantityKg, opts.totalGsm, cfg, {
       rollsInOrder,
       reelWidthMm,
     }),
-    lineCost('ld_wrap', 'Roll wrap (LD)', wrapKg, 'kg', ldM, opts.orderQuantityKg, opts.totalGsm, {
+    lineCost('ld_wrap', 'Roll wrap (LD)', wrapKg, 'kg', ldM, opts.orderQuantityKg, opts.totalGsm, cfg, {
       wrapKgPerRoll: wrap.kg,
       wrapAreaM2PerRoll: wrap.areaM2,
       rollOdMm: rollSpec.rollOutsideDiameterMm,
     }),
-    lineCost('stretch', 'Stretch wrap', stretchQty, 'roll', stretchM, opts.orderQuantityKg, opts.totalGsm, {
+    lineCost('stretch', 'Stretch wrap', stretchQty, 'roll', stretchM, opts.orderQuantityKg, opts.totalGsm, cfg, {
       stretchFraction: stretchFrac,
       palletsInOrder,
     }),
-    lineCost('pallet', 'Pallet', palletsInOrder, 'pc', palletM, opts.orderQuantityKg, opts.totalGsm, {
+    lineCost('pallet', 'Pallet', palletsInOrder, 'pc', palletM, opts.orderQuantityKg, opts.totalGsm, cfg, {
       loadPerPalletKg: loadPerPallet,
       rollsPerPallet: Math.floor(loadPerPallet / rollWeightKg),
     }),
@@ -509,20 +525,20 @@ function costSleeve(
   const stretchQty = stretchFrac * palletsInOrder;
 
   const lines: PackagingCostLine[] = [
-    lineCost('core', 'Core', coreQty, 'm', coreM, opts.orderQuantityKg, opts.totalGsm, {
+    lineCost('core', 'Core', coreQty, 'm', coreM, opts.orderQuantityKg, opts.totalGsm, cfg, {
       sleeveRollsInOrder,
       packOdMm: SLEEVE_PACK_TARGET_OD_MM,
     }),
-    lineCost('carton', 'Carton', cartonsNeeded, 'pc', cartonM, opts.orderQuantityKg, opts.totalGsm, {
+    lineCost('carton', 'Carton', cartonsNeeded, 'pc', cartonM, opts.orderQuantityKg, opts.totalGsm, cfg, {
       rollsPerCarton: 1,
       sleeveRollWeightKg: rollWeightKg,
       cartonOdMm: SLEEVE_PACK_TARGET_OD_MM,
     }),
-    lineCost('stretch', 'Stretch wrap', stretchQty, 'roll', stretchM, opts.orderQuantityKg, opts.totalGsm, {
+    lineCost('stretch', 'Stretch wrap', stretchQty, 'roll', stretchM, opts.orderQuantityKg, opts.totalGsm, cfg, {
       stretchFraction: stretchFrac,
       palletsInOrder,
     }),
-    lineCost('pallet', 'Pallet', palletsInOrder, 'pc', palletM, opts.orderQuantityKg, opts.totalGsm, {
+    lineCost('pallet', 'Pallet', palletsInOrder, 'pc', palletM, opts.orderQuantityKg, opts.totalGsm, cfg, {
       cartonsPerPallet,
     }),
   ];
@@ -536,7 +552,7 @@ function costSleeve(
 }
 
 function costPouchBag(
-  estimate: Estimate,
+  _estimate: Estimate,
   materials: Map<string, Material>,
   cfg: PackagingConfig,
   opts: { orderQuantityKg: number; totalGsm: number; filmDensity: number; piecesPerKg: number }
@@ -558,15 +574,15 @@ function costPouchBag(
   const stretchQty = stretchFrac * palletsInOrder;
 
   const lines: PackagingCostLine[] = [
-    lineCost('carton', 'Carton', cartonsNeeded, 'pc', cartonM, opts.orderQuantityKg, opts.totalGsm, {
+    lineCost('carton', 'Carton', cartonsNeeded, 'pc', cartonM, opts.orderQuantityKg, opts.totalGsm, cfg, {
       pcsPerCarton,
       piecesInOrder,
     }),
-    lineCost('stretch', 'Stretch wrap', stretchQty, 'roll', stretchM, opts.orderQuantityKg, opts.totalGsm, {
+    lineCost('stretch', 'Stretch wrap', stretchQty, 'roll', stretchM, opts.orderQuantityKg, opts.totalGsm, cfg, {
       stretchFraction: stretchFrac,
       palletsInOrder,
     }),
-    lineCost('pallet', 'Pallet', palletsInOrder, 'pc', palletM, opts.orderQuantityKg, opts.totalGsm, {
+    lineCost('pallet', 'Pallet', palletsInOrder, 'pc', palletM, opts.orderQuantityKg, opts.totalGsm, cfg, {
       cartonsPerPallet,
     }),
   ];

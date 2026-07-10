@@ -1,34 +1,64 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-10 (Packaging costing v1 complete)  
-**Session focus:** Outbound packaging PEBI↔ES — Phases 1–6 + sleeve carton 600 OD.
+**Last updated:** 2026-07-10 (structure costing blocks UI reorg)
+**Session focus:** Solvent → Packaging → Prepress as expandable structure-table rows under substrate/inks.
+
+---
+
+## Doc rule (read before trusting any plan)
+
+| Source | Trust for |
+|--------|-----------|
+| **This file + code** | What works today |
+| PRD / `ES_IMPLEMENTATION_PLAN` / feature plans | Intent and history — often **ahead of or behind** code |
+| Old audit write-ups | Hypotheses — re-verify before fixing |
+
+If a plan checkbox says done but the file is gone or the UI differs, **code wins**. Update this file when shipping.
 
 ---
 
 ## Where we stopped (read this first next session)
 
-### **Last completed:** Packaging costing Phases 1–6 + sleeve 600 OD carton
+### Audit verification 2026-07-10 — fixed vs not
 
-Plan: **`platform/docs/PACKAGING_COST.md`**. Separate block (like solvents), inside Total RM. PB **combined_avg** only — no hardcoded prices.
+| Claim | Verdict | Action |
+|-------|---------|--------|
+| Engine treats display `platesPerKg`/`deliveryPerKg` as USD (live FX bug) | **False** — convert at boundary | Comments only (`types.ts`) |
+| List UIs show DB USD sale/slab under display-currency labels | **True** | Fixed: `formatSalePricePerKgDisplay` / `saleUsdToDisplayAmount` on CustomerDetail, CustomerExplorer, EstimatesList, CombinedPriceList (+ Excel) |
+| Dead `validator.ts`; `Material.wastePercent` in structure cost | **True** (misleading docs) | Deleted unused validator; waste = quantity bands only |
+| EstimateEditor: Back loses work; native alert/confirm/prompt | **True** (editor) | Dirty leave + beforeunload; ConfirmDialog / PromptDialog / inline `editorError`; mobile Draft+Save; skeleton |
+| App-wide native dialogs; TemplateDeck redesign; breadcrumbs | Not in scope | **Not done** |
+| PEBI key plain string compare | **True** | `timingSafeEqual` + SHA-256; company allowlist (`PEBI_ES_ALLOWED_COMPANY_CODES` or linked tenants) |
+| Free `companyCode` → sync wrong tenant | **Overstated** — push syncs all linked tenants; code mainly for PEBI status | Allowlist still shipped |
+| Refresh non-rotation, Redis rate limit, account lockout, JWT on `/visibility-presets` | Design / deferred | **Not changed** |
+| Migration race (two servers) | **True** | `pg_advisory_lock` in `runMigrations` |
+| Second JWT fake fallback in service-key pepper | **True** | Shared `resolveJwtSecret()` |
+| `sendCaughtError` always returns raw `detail` | **True** | `detail` omitted when `NODE_ENV=production` |
 
-| Phase | Shipped |
-|-------|---------|
-| **1** | PEBI crosswalk + catalog + `family=PACKAGING` |
-| **2** | Migrations `0019`–`0021`; packaging seeds; sync skips unpriced |
-| **3** | `packaging-costing.ts` — Roll / Sleeve / Pouch\|Bag → Total RM |
-| **4** | EstimateEditor packaging UI + needs-review banner; `packagingConfig` |
-| **5** | Defaults: load **800** kg/pallet, **20** cartons/pallet; merge on create/UI; tests |
-| **6** | Master Data Packaging tab (unit/unit-price) + PEBI review panel |
-| **+** | `packaging-carton-sleeve-600` (side ≥600 mm); pouch → `packaging-carton-default` |
+### Packaging costing — code shipped; user E2E still pending
+
+Plan: **`platform/docs/PACKAGING_COST.md`**. Block inside Total RM. PB **combined_avg** only — no hardcoded prices.
+
+| Phase | In code? |
+|-------|----------|
+| **1** PEBI crosswalk + catalog + `family=PACKAGING` | Yes |
+| **2** Migrations `0019`–`0021`; seeds; sync skips unpriced | Yes |
+| **3** `packaging-costing.ts` → Total RM | Yes |
+| **4** EstimateEditor packaging UI + needs-review; `packagingConfig` | Yes |
+| **5** Defaults 800 kg/pallet, 20 cartons/pallet | Yes |
+| **6** Master Data Packaging tab + PEBI review | Yes |
+| **+** `packaging-carton-sleeve-600` (side ≥600); pouch → default carton | Yes |
+| **+** Structure table: Solvent / Packaging / Prepress expandable rows | Yes |
 
 Owner locks: `cartonsPerPallet` **20**; sleeve carton matched to 600 OD.
 
-### **NEXT:** User E2E test packaging
+**Structure costing UI (2026-07-10):** Under layers → **Solvent** → **Packaging** → **Prepress**. Collapsed = total $/kg + $/m² only. Expand Solvent = ink dilution (Flexo/Roto, ÷ ratio, solvent + cost) + cleaning + seaming. Expand Packaging = config (load/pallet, cartons/pallet, …) + lines with qty/unit/editable unit cost. Prepress = placeholder. Component: `features/estimate-editor/StructureCostingBlocks.tsx`. Engine: `unitPriceOverridesUsd` on `PackagingConfig`.
 
-1. Restart ES (+ PEBI if needed); ensure migrations `0019`–`0021` applied.
-2. Sync `family=PACKAGING` (or wait for delayed coordinator).
-3. Master Data → Packaging: 8 keys + unit prices; review list if unpriced.
-4. Estimate Roll / Sleeve / Pouch — packaging in Total RM; banner if needs review.
+### **NEXT**
+
+1. **User E2E:** hard-refresh estimate → exercise expand/collapse Solvent + Packaging; sync `PACKAGING` if unpriced banner.
+2. Optional later: remaining `alert`/`confirm`/`prompt` on MasterData, Settings, QuoteWorkspace, etc.
+3. Do **not** implement deferred auth items unless asked.
 
 ### **Solvent policy**
 
@@ -37,7 +67,7 @@ Owner locks: `cartonsPerPallet` **20**; sleeve carton matched to 600 OD.
 | Ethyl Acetate, Methoxy Propanol, Ethoxy Propanol, Methoxy Propyl Acetate, THF | PEBI liquid $/kg | Density always; price when not live PEBI |
 | 1,3-Dioxolane | Same price as THF (mirror) | Density; price follows THF sync |
 | Ethanol, IPA, MEK, Toluene, n-Propanol, n-Propyl Acetate | ES seed / manual | Full edit |
-| Solvent Common | ES average of peers (excludes seaming mix) | Computed |
+| Solvent Common | Avg of Ethyl Acetate, Ethanol, Methoxy Propanol, Ethoxy Propanol | Computed |
 | Sleeve Seaming Mix | Formula 75% THF + 25% Dioxolane | Formula in Master Data |
 
 ### **Adhesive policy (plant sheet)**
@@ -523,6 +553,8 @@ External agent gave a thorough code review. We verified every claim against the 
 
 ## Fixes from external audit (all verified & implemented)
 
+> Historical fixes from an earlier external audit. Materials UI later unified: **no** `RawMaterials` / `/library` — use Master Data (see feature §2 below).
+
 ### 🔴 Critical: platform catalog access control
 
 **Problem:** `requireMasterDataAdmin` in `platform-master-data.ts` allowed `tenant_admin` to write the global platform catalog + mint/revoke service keys. Registration sets `role: 'tenant_admin'`, so any self-registered tenant could mutate the shared master catalog affecting everyone.
@@ -531,7 +563,7 @@ External agent gave a thorough code review. We verified every claim against the 
 - All platform routes (materials CRUD, reference categories, costing defaults, sync, service keys, change-feed JWT path) now gate on `isPlatformAdmin()` only.
 - `platform.ts` `/platform/master-materials` also tightened.
 - `service-key-auth.ts` JWT path tightened.
-- `/library` page repointed to tenant-scoped `RawMaterials.tsx` (new page); platform editor moved to `/platform/master-data` (gated by `PlatformAdminRoute` in router + nav).
+- Platform catalog UI is platform-admin only; tenants edit via **Master Data** (tenant scope). `/library` Raw Materials page was later **removed** (catalog unification).
 
 ### 🟠 High: Dashboard soft-delete leak
 
@@ -543,7 +575,7 @@ External agent gave a thorough code review. We verified every claim against the 
 
 ### 🟠 High: JWT secret prod hard-fail
 
-`app.ts` now throws on startup if `NODE_ENV=production` and the JWT secret is the built-in dev default. Same string peppers service-key hashes (`platform-service-keys.ts`).
+`resolveJwtSecret()` (shared by `app.ts` + service-key pepper) throws in production if the secret is the built-in dev default.
 
 ### 🟠 High: 401 refresh-and-retry interceptor
 
@@ -570,9 +602,10 @@ External agent gave a thorough code review. We verified every claim against the 
 
 Tenant `type` threaded through auth responses (`/me`, login, register) → frontend `AuthTenant.type`.
 
-### 2. Tenant-scoped Raw Materials page (`/library`)
+### 2. Materials UI (historical → current)
 
-New `RawMaterials.tsx`: tenant-scoped CRUD on `/api/v1/materials`, tabbed by type, inline editing, sync-from-platform, role-gated. Replaced the platform `MasterData.tsx` (moved to `/platform/master-data`, platform_admin only).
+**Was (mid-2026):** tenant `RawMaterials.tsx` at `/library` + platform Master Data.  
+**Now (catalog unification):** `/library` / `RawMaterials.tsx` **removed**. Single **Master Data** surface (`MasterData.tsx` / `master-data` route); platform vs tenant scope by role. Do not reintroduce a second materials page.
 
 ### 3. Data-driven order-quantity unit conversion (engine)
 
@@ -598,7 +631,7 @@ New `RawMaterials.tsx`: tenant-scoped CRUD on `/api/v1/materials`, tabbed by typ
 - `GET /api/v1/master-data/reference/custom` → tenant's own rows.
 - `PUT /api/v1/master-data/reference/:category` → tenant save (role-gated).
 
-**UI:** Tenant `RawMaterials.tsx` has a "Custom Lists" toggle → `TenantReferenceEditor` with tabs for RM Types, Units (basis + multiplier), Subtypes, Processes.
+**UI:** Master Data / tenant reference editor for Class A categories (RM Types, Units with basis + multiplier, Subtypes, Processes). *(Former Raw Materials “Custom Lists” path removed with `/library`.)*
 
 ### 5. Unit metadata + admin editor
 
@@ -655,21 +688,23 @@ Both pouch and bag configurators now label each diagram: "{Subtype Name} — ope
 
 Solvent row, detail rows, and Total/tfoot in the structure table had their trailing cell gated on `showLayerActionsCol` instead of `showLayerControlsCol` → missing `<td>` in locked mode → white gap. Fixed all three.
 
-### 16. Raw Materials decimal display
+### 16. Materials decimal display
 
-Tenant page now formats numeric columns (density, cost, market) to 2 decimals on load, widened inputs, step=0.01.
+Numeric columns (density, cost, market) format to 2 decimals; widened inputs, step=0.01 — on **Master Data** materials tables (formerly Raw Materials `/library`, removed).
 
 ---
 
 ## To-do / known open items
 
-- [ ] Run `npm run db:migrate` to create `tenant_reference_items` table (migration 0010).
-- [ ] Verify pouch open-view dimension labels read correctly after landscape rotation (may need label re-anchoring).
-- [ ] Existing platform units in DB may lack `metadata: { basis, multiplier }` — the code falls back via `LEGACY_UNIT_METADATA`, but a one-time backfill script would make admin edits save cleanly.
-- [ ] `Settings.tsx:35` still defaults `exchangeRateUsdToDisplay` to 3.6725 (AED) instead of reading from tenant. Low priority.
-- [ ] Price-scraper maps paper → LDPE resin futures (misleading but not costing-critical).
-- [ ] Native `alert()`/`confirm()` in EstimateEditor (≈5 spots) should use the design system overlay. Low priority.
-- [ ] Server has 10 pre-existing TS errors in `templates.ts`, `proposal-pdf.ts`, 2 test files — none in files we edited.
+- [ ] **User E2E:** packaging sync + Roll/Sleeve/Pouch estimates (migrations through `0021` exist in repo).
+- [ ] Native `alert()`/`confirm()`/`prompt()` still on non-editor pages (MasterData, Settings, QuoteWorkspace, EstimatesList, Customer*, TemplateBuilder, …). EstimateEditor is cleaned up.
+- [ ] GSM-direct density via hoover still fragile; zipper subtype / process-aware waste / lamination preview math — not touched 2026-07-10.
+- [ ] Offline draft **sync** still Phase 2 (local flush exists; full offline queue is not V1).
+- [ ] Materials catalog Phase 4 PEBI cutover still workshop-blocked (`MATERIALS_CATALOG_UNIFICATION_PLAN` — Raw Materials `/library` already removed; single Master Data surface).
+- [ ] Verify pouch open-view dimension labels after landscape rotation (may need re-anchoring).
+- [ ] Platform units may lack `metadata: { basis, multiplier }` — `LEGACY_UNIT_METADATA` fallback; optional backfill.
+- [ ] `Settings.tsx` default FX 3.6725 if tenant rate missing — low priority.
+- [ ] Price-scraper paper → LDPE futures map — advisory only, not costing-critical.
 
 ---
 

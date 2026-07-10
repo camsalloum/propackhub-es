@@ -115,7 +115,7 @@ async function pebiOraclePushRoute(
   request: FastifyRequest<{ Body: { source?: PebiOraclePushSource } }>,
   reply: FastifyReply
 ) {
-  const ctx = verifyPebiIntegrationRequest(request);
+  const ctx = await verifyPebiIntegrationRequest(request);
   if (!ctx) {
     return reply.status(401).send({ error: 'Unauthorized' });
   }

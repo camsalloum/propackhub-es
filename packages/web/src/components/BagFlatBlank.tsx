@@ -392,7 +392,7 @@ function TwoWebBlank({
  * register / print marks, knife & cut tolerances, gripper / lead-edge and other
  * machine-specific allowances — are intentionally NOT modelled in this blank. They are
  * EXCLUDED from the flat blank and instead accounted for in the WASTE calculation
- * (per-material waste %). Detailed die-line tooling specs are captured at the MES
+ * (quantity waste bands). Detailed die-line tooling specs are captured at the MES
  * production stage, not during estimation — do not add them to this estimate view.
  */
 export function BagFlatBlank({ type, dims }: { type: BagConfiguratorType; dims: EstimateDimensions }) {

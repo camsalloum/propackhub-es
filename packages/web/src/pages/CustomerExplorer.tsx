@@ -21,6 +21,7 @@ import {
   estimateStatusLabel,
   isDraftStatus,
 } from '../lib/estimateStatus';
+import { formatSalePricePerKgDisplay } from '../lib/currency';
 
 type GroupBy = 'quote' | 'brand' | 'sku' | 'date';
 type SortBy = 'newest' | 'oldest' | 'name';
@@ -35,6 +36,7 @@ type ExplorerEstimate = {
   status?: string;
   salePricePerKg?: string | number | null;
   displayCurrency?: string;
+  exchangeRateUsdToDisplay?: string | number | null;
   structureSummary?: string;
   updatedAt?: string;
   quoteId?: string;
@@ -130,9 +132,11 @@ function quoteStatusLabel(status: string): string {
 }
 
 function formatPrice(est: ExplorerEstimate): string {
-  if (est.salePricePerKg == null || est.salePricePerKg === '') return '—';
-  const cur = est.displayCurrency || 'USD';
-  return `${cur} ${Number(est.salePricePerKg).toFixed(2)}/kg`;
+  return formatSalePricePerKgDisplay(
+    est.salePricePerKg,
+    est.displayCurrency,
+    est.exchangeRateUsdToDisplay
+  );
 }
 
 function matchesStatus(status: string | undefined, filter: StatusFilter): boolean {

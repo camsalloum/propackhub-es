@@ -144,8 +144,10 @@ export function sendCaughtError(
   }
   const logger = reply.request?.log ?? log;
   logger.error({ err }, logLabel ?? internalMessage);
-  return reply.status(500).send({
-    error: internalMessage,
-    detail: err instanceof Error ? err.message : String(err),
-  });
+  // Never send raw driver/DB text to clients in production.
+  const payload: { error: string; detail?: string } = { error: internalMessage };
+  if (process.env.NODE_ENV !== 'production') {
+    payload.detail = err instanceof Error ? err.message : String(err);
+  }
+  return reply.status(500).send(payload);
 }

@@ -8,6 +8,7 @@ import {
 } from '../lib/estimateStatus';
 import { useAuth } from '../hooks/useAuth';
 import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
+import { saleUsdToDisplayAmount } from '../lib/currency';
 
 type PriceListRow = {
   id: string;
@@ -26,6 +27,7 @@ type PriceListRow = {
   productType?: string;
   salePricePerKg?: string | number | null;
   displayCurrency?: string;
+  exchangeRateUsdToDisplay?: string | number | null;
   status?: string;
   slabs?: Array<{ quantityKg: string | number; pricePerKg: string | number }>;
 };
@@ -137,8 +139,12 @@ export default function CombinedPriceListPanel({
       sheet.addRow(headers);
 
       for (const r of rows) {
+        const fx = r.exchangeRateUsdToDisplay;
         const slabMap = new Map(
-          (r.slabs || []).map((s) => [Number(s.quantityKg), Number(s.pricePerKg)])
+          (r.slabs || []).map((s) => [
+            Number(s.quantityKg),
+            saleUsdToDisplayAmount(s.pricePerKg, fx),
+          ])
         );
         sheet.addRow([
           r.jobName || r.skuLabel || '',
@@ -154,7 +160,7 @@ export default function CombinedPriceListPanel({
           r.totalGsm != null ? Number(r.totalGsm) : '',
           r.totalMicron != null ? Number(r.totalMicron) : '',
           r.orderQuantityKg != null ? Number(r.orderQuantityKg) : '',
-          r.salePricePerKg != null ? Number(r.salePricePerKg) : '',
+          saleUsdToDisplayAmount(r.salePricePerKg, fx) ?? '',
           r.displayCurrency || currency,
           estimateStatusLabel(r.status),
           ...slabQtys.map((q) => {
@@ -276,8 +282,13 @@ export default function CombinedPriceListPanel({
           <tbody>
             {rows.map((r) => {
               const active = r.id === activeEstimateId;
+              const fx = r.exchangeRateUsdToDisplay;
+              const saleDisplay = saleUsdToDisplayAmount(r.salePricePerKg, fx);
               const slabMap = new Map(
-                (r.slabs || []).map((s) => [Number(s.quantityKg), Number(s.pricePerKg)])
+                (r.slabs || []).map((s) => [
+                  Number(s.quantityKg),
+                  saleUsdToDisplayAmount(s.pricePerKg, fx),
+                ])
               );
               return (
                 <tr
@@ -316,8 +327,8 @@ export default function CombinedPriceListPanel({
                   <td className="py-2 px-3 text-right tabular-nums">{fmt(r.totalMicron, 1)}</td>
                   <td className="py-2 px-3 text-right tabular-nums">{fmt(r.orderQuantityKg, 0)}</td>
                   <td className="py-2 px-3 text-right font-semibold text-gold tabular-nums whitespace-nowrap">
-                    {r.salePricePerKg != null
-                      ? `${r.displayCurrency || currency} ${fmt(r.salePricePerKg)}`
+                    {saleDisplay != null
+                      ? `${r.displayCurrency || currency} ${fmt(saleDisplay)}`
                       : '—'}
                   </td>
                   <td className="py-2 px-3">

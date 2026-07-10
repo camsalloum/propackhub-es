@@ -337,7 +337,7 @@ async function refreshSolventCommonRow(actor?: AuditActor): Promise<void> {
     costPerKgUsd: avg.costPerKgUsd,
     density: avg.density,
     marketPriceUsd: avg.costPerKgUsd,
-    hoover: 'Average of all solvents (price + density)',
+    hoover: 'Average of Ethyl Acetate, Ethanol, Methoxy Propanol, Ethoxy Propanol',
   });
 
   const [updated] = await db

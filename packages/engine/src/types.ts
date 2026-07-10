@@ -16,6 +16,11 @@ export interface Material {
   solidPercent: number; // 30 for Ink SB, 100 for Ink UV, 100 for substrates/adhesives
   density: number; // g/cm³
   costPerKgUsd: number;
+  /**
+   * Unused legacy field. Engine costing does **not** apply per-material scrap.
+   * Converting waste is quantity-band only (`wasteBands` / `wastePercentForQuantity`).
+   * Kept for API/DB compatibility; prefer `0`.
+   */
   wastePercent: number;
   isSolventBased?: boolean; // True for SB ink/adhesive (replaces name.includes('SB') check)
   substrateFamily?: string | null; // BOPP, PET, PE, CPP, PA, ALU, PAPER, SLEEVE, SPECIALTY

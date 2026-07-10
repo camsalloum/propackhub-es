@@ -8,6 +8,7 @@ import { useEntrance } from '../hooks/useEntrance';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import CustomerFormDialog, { type CustomerFormValues } from '../components/CustomerFormDialog';
 import { useCustomerAccess } from '../hooks/useCustomerAccess';
+import { formatSalePricePerKgDisplay } from '../lib/currency';
 
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
@@ -229,7 +230,11 @@ export default function CustomerDetail() {
                     <td className="px-4 py-2.5 text-sm">{est.jobName || est.skuLabel || '—'}</td>
                     <td className="px-4 py-2.5 text-sm">{est.productType || '—'}</td>
                     <td className="px-4 py-2.5 text-sm text-accent-text">
-                      {est.displayCurrency} {Number(est.salePricePerKg || 0).toFixed(2)}/kg
+                      {formatSalePricePerKgDisplay(
+                        est.salePricePerKg,
+                        est.displayCurrency,
+                        est.exchangeRateUsdToDisplay
+                      )}
                     </td>
                     <td className="px-4 py-2.5">
                       <span className={`badge ${estimateStatusBadgeClass(est.status)}`}>

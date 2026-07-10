@@ -1311,7 +1311,7 @@
     "isSolventBased": false,
     "substrateFamily": "Solvent",
     "substrateGrade": "Solvent Common",
-    "hoover": "Average of all solvents (price + density)",
+    "hoover": "Average of Ethyl Acetate, Ethanol, Methoxy Propanol, Ethoxy Propanol",
     "marketPriceUsd": 1.54
   },
   {

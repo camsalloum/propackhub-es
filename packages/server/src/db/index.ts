@@ -69,6 +69,9 @@ export function isTransientDatabaseError(error: unknown): boolean {
  * Run pending SQL migrations from the drizzle/ folder.
  * Tracks applied migrations in __drizzle_migrations table.
  * Called automatically on boot when NODE_ENV !== 'development'.
+ *
+ * Uses a Postgres advisory lock so two servers starting together
+ * cannot apply the same migration at once.
  */
 export async function runMigrations(pgPool: Pool): Promise<void> {
   const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -80,8 +83,14 @@ export async function runMigrations(pgPool: Pool): Promise<void> {
     return;
   }
 
-  // Ensure tracking table exists
-  await pgPool.query(`
+  // Fixed lock key for Estimation Studio migrations (session-scoped).
+  const MIGRATION_LOCK_KEY = 872_014_001;
+  const client = await pgPool.connect();
+  try {
+    await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
+    try {
+      // Ensure tracking table exists
+      await client.query(`
     CREATE TABLE IF NOT EXISTS __drizzle_migrations (
       id          SERIAL PRIMARY KEY,
       tag         VARCHAR(256) NOT NULL UNIQUE,
@@ -89,38 +98,41 @@ export async function runMigrations(pgPool: Pool): Promise<void> {
     )
   `);
 
-  // Load journal
-  const journalPath = resolve(migrationsDir, 'meta/_journal.json');
-  if (!existsSync(journalPath)) {
-    log.warn('drizzle/meta/_journal.json not found — skipping migrations');
-    return;
-  }
-  const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as {
-    entries: Array<{ tag: string }>;
-  };
+      // Load journal
+      const journalPath = resolve(migrationsDir, 'meta/_journal.json');
+      if (!existsSync(journalPath)) {
+        log.warn('drizzle/meta/_journal.json not found — skipping migrations');
+        return;
+      }
+      const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as {
+        entries: Array<{ tag: string }>;
+      };
 
-  for (const entry of journal.entries) {
-    // Check if already applied
-    const { rows } = await pgPool.query(
-      'SELECT id FROM __drizzle_migrations WHERE tag = $1',
-      [entry.tag]
-    );
-    if (rows.length > 0) continue;
+      for (const entry of journal.entries) {
+        // Check if already applied
+        const { rows } = await client.query(
+          'SELECT id FROM __drizzle_migrations WHERE tag = $1',
+          [entry.tag]
+        );
+        if (rows.length > 0) continue;
 
-    const sqlPath = resolve(migrationsDir, `${entry.tag}.sql`);
-    if (!existsSync(sqlPath)) {
-      log.warn({ sqlPath }, 'Migration file not found');
-      continue;
+        const sqlPath = resolve(migrationsDir, `${entry.tag}.sql`);
+        if (!existsSync(sqlPath)) {
+          log.warn({ sqlPath }, 'Migration file not found');
+          continue;
+        }
+
+        const sql = readFileSync(sqlPath, 'utf8');
+        log.info({ tag: entry.tag }, 'Applying migration');
+        await client.query(sql);
+        await client.query('INSERT INTO __drizzle_migrations (tag) VALUES ($1)', [entry.tag]);
+        log.info({ tag: entry.tag }, 'Migration applied');
+      }
+    } finally {
+      await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]);
     }
-
-    const sql = readFileSync(sqlPath, 'utf8');
-    log.info({ tag: entry.tag }, 'Applying migration');
-    await pgPool.query(sql);
-    await pgPool.query(
-      'INSERT INTO __drizzle_migrations (tag) VALUES ($1)',
-      [entry.tag]
-    );
-    log.info({ tag: entry.tag }, 'Migration applied');
+  } finally {
+    client.release();
   }
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+﻿import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, RefreshCw, Loader2, FileText, Trash2 } from 'lucide-react';
 import { useEntrance } from '../hooks/useEntrance';
@@ -23,6 +23,7 @@ import {
   estimateStatusBadgeClass,
   estimateStatusLabel,
 } from '../lib/estimateStatus';
+import { formatSalePricePerKgDisplay } from '../lib/currency';
 
 function estimateOpenPath(e: { id: string; quoteId?: string | null }): string {
   return e.quoteId ? `/quotes/${e.quoteId}/estimates/${e.id}` : `/estimate/${e.id}`;
@@ -30,7 +31,7 @@ function estimateOpenPath(e: { id: string; quoteId?: string | null }): string {
 
 const EstimatesList = () => {
   const navigate = useNavigate();
-  // Smooth list → editor transition via the browser-native View Transitions API
+  // Smooth list â†’ editor transition via the browser-native View Transitions API
   // (instant fallback on older browsers; reduced-motion handled in CSS).
   const navigateWithTransition = useViewTransition();
   // Single-play mount entrance for the list content; no-op under reduced motion (R16.3, R16.6).
@@ -62,7 +63,7 @@ const EstimatesList = () => {
         sessionStorage.removeItem('es:flashNotice');
       }
     } catch {
-      /* sessionStorage may be unavailable — silent skip */
+      /* sessionStorage may be unavailable â€” silent skip */
     }
   }, []);
 
@@ -173,7 +174,7 @@ const EstimatesList = () => {
     return (
       <div className="flex items-center justify-center min-h-[300px] gap-2 text-mist">
         <Loader2 className="w-5 h-5 animate-spin" />
-        Loading estimates…
+        Loading estimatesâ€¦
       </div>
     );
   }
@@ -230,7 +231,7 @@ const EstimatesList = () => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-mist" />
           <input
             type="text"
-            placeholder="Search job, ref #, customer, template key…"
+            placeholder="Search job, ref #, customer, template keyâ€¦"
             className="input w-full pl-12"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -239,7 +240,7 @@ const EstimatesList = () => {
         <div>
           <input
             type="text"
-            placeholder="Filter by customer name…"
+            placeholder="Filter by customer nameâ€¦"
             className="input w-full"
             value={customerFilter}
             onChange={(e) => setCustomerFilter(e.target.value)}
@@ -294,7 +295,7 @@ const EstimatesList = () => {
       ) : filtered.length === 0 ? (
         <EmptyState
           title="No estimates match these filters"
-          body="Try clearing search, customer, or status — or reset all filters."
+          body="Try clearing search, customer, or status â€” or reset all filters."
           action={
             <button
               type="button"
@@ -326,9 +327,11 @@ const EstimatesList = () => {
                   </span>
                 </div>
                 <p className="mt-2 text-gold font-display font-semibold">
-                  {e.salePricePerKg
-                    ? `${e.displayCurrency || 'USD'} ${Number(e.salePricePerKg).toFixed(2)}/kg`
-                    : '—'}
+                  {formatSalePricePerKgDisplay(
+                    e.salePricePerKg,
+                    e.displayCurrency,
+                    e.exchangeRateUsdToDisplay
+                  )}
                 </p>
                 <div className="flex gap-2 mt-3">
                   <Link
@@ -360,7 +363,7 @@ const EstimatesList = () => {
                     aria-label={`Delete estimate ${e.refNumber}`}
                     onClick={(ev) => {
                       setDeleteAnchor(ev.currentTarget.getBoundingClientRect());
-                      setPendingDelete({ id: e.id, label: `${e.refNumber} — ${e.jobName || 'Untitled'}` });
+                      setPendingDelete({ id: e.id, label: `${e.refNumber} â€” ${e.jobName || 'Untitled'}` });
                     }}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -387,17 +390,19 @@ const EstimatesList = () => {
                   {filtered.map((e) => (
                     <tr key={e.id} className="border-b border-border last:border-0 hover:bg-slate/50 transition-colors duration-micro ease-micro">
                       <td className="py-4 px-4 font-mono text-sm">{e.refNumber}</td>
-                      <td className="py-4 px-4">{e.jobName || '—'}</td>
-                      <td className="py-4 px-4">{e.customerName || '—'}</td>
+                      <td className="py-4 px-4">{e.jobName || 'â€”'}</td>
+                      <td className="py-4 px-4">{e.customerName || 'â€”'}</td>
                       <td className="py-4 px-4">
                         <span className={`badge ${estimateStatusBadgeClass(e.status)}`}>
                           {estimateStatusLabel(e.status)}
                         </span>
                       </td>
                       <td className="py-4 px-4">
-                        {e.salePricePerKg
-                          ? `${e.displayCurrency || 'USD'} ${Number(e.salePricePerKg).toFixed(2)}/kg`
-                          : '—'}
+                        {formatSalePricePerKgDisplay(
+                          e.salePricePerKg,
+                          e.displayCurrency,
+                          e.exchangeRateUsdToDisplay
+                        )}
                       </td>
                       <td className="py-4 px-4 text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -430,7 +435,7 @@ const EstimatesList = () => {
                             aria-label={`Delete estimate ${e.refNumber}`}
                             onClick={(ev) => {
                               setDeleteAnchor(ev.currentTarget.getBoundingClientRect());
-                              setPendingDelete({ id: e.id, label: `${e.refNumber} — ${e.jobName || 'Untitled'}` });
+                              setPendingDelete({ id: e.id, label: `${e.refNumber} â€” ${e.jobName || 'Untitled'}` });
                             }}
                           >
                             <Trash2 className="w-3.5 h-3.5" />

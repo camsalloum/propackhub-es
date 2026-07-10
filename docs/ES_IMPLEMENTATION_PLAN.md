@@ -1,16 +1,19 @@
 # Estimation Studio — Implementation Plan
 
 **Created:** 2026-06-15  
-**Source:** Code audit vs [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md) (read source, ran builds/tests)  
-**Living memory:** [ES_MEMORY.md](./ES_MEMORY.md) · **Status:** [LIVE_STATE.md](./LIVE_STATE.md)
+**Status:** **HISTORICAL** — phases A–G were executed; do **not** treat §1–2 “current state” as today’s product.  
+**Source of truth now:** [LIVE_STATE.md](./LIVE_STATE.md) · [ES_MEMORY.md](./ES_MEMORY.md)  
+**Original source:** Code audit vs [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md)
+
+> **2026-07-10 honesty note:** Sections below freeze the June 2026 audit (broken web build, unwired calculate, etc.). Those P0/P1 items were fixed in later sessions. New work: read LIVE_STATE first; only use this file for phase history and DoD checklists.
 
 ---
 
-## 1. Executive summary
+## 1. Executive summary *(snapshot 2026-06-15 — obsolete as live status)*
 
 Estimation Studio has a **credible foundation** (monorepo, PostgreSQL schema, auth, costing engine with 12 passing tests, most REST routes). The **primary quote workflow is not functional end-to-end**: the web app **does not build**, the estimate editor does not save/calculate correctly, and several server paths have **confirmed runtime bugs**.
 
-**Honest phase position:** early **PRD §14.1 Phase 1** (~40%) with fragments of Phases 2–4 (UI shells, partial PDF/re-quote).
+**Honest phase position (then):** early **PRD §14.1 Phase 1** (~40%) with fragments of Phases 2–4 (UI shells, partial PDF/re-quote).
 
 **Goal of this plan:** Fix blockers first, then wire the quote loop, then close PRD gaps in priority order.
 

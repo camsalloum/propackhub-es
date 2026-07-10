@@ -49,3 +49,34 @@ export function cormDisplayPerKgToEngineUsd(
 export function formatPrice(amount: number, currency: string, decimals = 2): string {
   return `${currency} ${roundUsd(amount).toFixed(decimals)}`;
 }
+
+/**
+ * Format persisted engine sale $/kg (USD) for list/summary UI under the estimate's
+ * display currency (Decision #22). Returns "—" when missing/invalid.
+ */
+export function formatSalePricePerKgDisplay(
+  salePricePerKgUsd: number | string | null | undefined,
+  displayCurrency: string | null | undefined,
+  exchangeRateUsdToDisplay: number | string | null | undefined
+): string {
+  if (salePricePerKgUsd == null || salePricePerKgUsd === '') return '—';
+  const usd = Number(salePricePerKgUsd);
+  if (!Number.isFinite(usd)) return '—';
+  const fx = Number(exchangeRateUsdToDisplay);
+  const rate = Number.isFinite(fx) && fx > 0 ? fx : 1;
+  const cur = displayCurrency || 'USD';
+  return `${cur} ${usdToDisplay(usd, rate).toFixed(2)}/kg`;
+}
+
+/** Convert a persisted USD price (estimate/slab) to display currency for tables. */
+export function saleUsdToDisplayAmount(
+  saleUsd: number | string | null | undefined,
+  exchangeRateUsdToDisplay: number | string | null | undefined
+): number | null {
+  if (saleUsd == null || saleUsd === '') return null;
+  const usd = Number(saleUsd);
+  if (!Number.isFinite(usd)) return null;
+  const fx = Number(exchangeRateUsdToDisplay);
+  const rate = Number.isFinite(fx) && fx > 0 ? fx : 1;
+  return usdToDisplay(usd, rate);
+}

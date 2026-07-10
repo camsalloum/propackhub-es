@@ -106,6 +106,13 @@
       "when": 1782900000000,
       "tag": "0017_tooling_scenario",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1783000000000,
+      "tag": "0018_sleeve_seaming_solvent_gsm",
+      "breakpoints": true
     }
   ]
 }

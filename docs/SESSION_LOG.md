@@ -1,6 +1,9 @@
 # SESSION LOG — Estimation Studio
 
 | DATE | AGENT | Summary | Files | Tech debt |
+| 2026-07-10 | Cursor | **Packaging plan v4:** PB combined_avg mandatory for estimation; §0 agent primer PB↔ES; priceUnit for pcs/rol/mtr; agent review §15 before build | platform/docs/PACKAGING_COST.md, LIVE_STATE | Phase 1 PACKAGING catalog + schema |
+| 2026-07-10 | Cursor | **Packaging plan v3 locked:** pouch/bag + sleeve get stretch+pallet via `cartonsPerPallet`; sleeve carton=1 roll@600OD; LD wrap from OD×RW; stretch=fraction/1×1m pallet; `totalRollWeightKg` for roll pallet load | platform/docs/PACKAGING_COST.md, LIVE_STATE | Default cartonsPerPallet TBD; Phase 1 PACKAGING sync |
+| 2026-07-10 | Cursor | **Packaging plan:** PB audit 61 Packing Materials SKUs; cross-app plan for UOM-aware ES costing (not layer stack) | platform/docs/PACKAGING_COST.md, pph audit-packaging-pb.js, LIVE_STATE | Workshop interleaf + carton defaults |
 | 2026-07-10 | Cursor | **SOLVENT + sleeve seaming:** PEBI sync EA/MPA/methoxy/ethoxy/THF; Dioxolane=THF price; seaming 75/25 @ 0.25 g/m² when SLEEVE substrate; PB MITHOXY→Methoxy | pph: solvent catalog/crosswalk, fix script, es.js; ES: seed, sync, sleeve-seaming, solvent-costing, EstimateEditor, migration 0018 | db:migrate + restart + sync SOLVENT |
 | 2026-07-10 | Cursor | **Currency docs:** engine `types.ts` + `priceWithNewModel` — plates/deliveryPerKg/slab price are USD at boundary; display→USD in adapters (not a live FX bug) | types.ts, calculator.ts, ES_MEMORY, LIVE_STATE | — |
 | 2026-07-10 | Cursor | **Boot fix:** remapping layers off retired adhesives before delete (FK layers_material_id); no hard prune on adhesive sync | seed-materials.ts, platform-master-data.ts, index.ts | — |

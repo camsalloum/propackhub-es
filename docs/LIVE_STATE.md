@@ -15,12 +15,9 @@
 4. Migration: `drizzle/0018_sleeve_seaming_solvent_gsm.sql` — run `npm run db:migrate` in ES server.
 5. Restart ES (ensureSolventCatalogSeeded upserts new grades) + PEBI; sync SOLVENT.
 
-### **NEXT:** Restart + migrate + sync SOLVENT (+ INK/ADHESIVE if not yet)
+### **NEXT:** Packaging costing — plan reviewed (PB avg cost rule)
 
-1. ES: `db:migrate` then restart API.
-2. Master Data → Solvent: expect THF, 1,3-Dioxolane, Methoxy Propyl Acetate, Sleeve Seaming Mix (Formula 75/25).
-3. Sync `family=SOLVENT` (and INK/ADHESIVE if needed).
-4. Do **not** flip `catalog_source=pebi` yet.
+See **`platform/docs/PACKAGING_COST.md`** (v4). **Mandatory:** estimation uses PB **combined weighted average** per SKU cluster (not audit snapshots / legacy seeds). Mixed UOM (kg/m/rol/pcs) → needs `priceUnit` + `unitPriceUsd`. Agent review §15 before Phase 1.
 
 ### **Solvent policy**
 

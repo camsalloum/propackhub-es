@@ -3,6 +3,7 @@ import {
   EstimateDimensions, Process, MissingMaterialsError,
 } from './types';
 import { calculateSolventCosts } from './solvent-costing';
+import { calculatePackagingCosts } from './packaging-costing';
 import {
   calculateSubstrateGaugeMicron,
   calculateTotalConstructionMicron,
@@ -92,6 +93,15 @@ export function calculateEstimate(
   );
   const solventCostPerKg = solventDetail.totalCostPerKg;
 
+  // Step 7b: Outbound packaging (core / wrap / carton / stretch / pallet)
+  const packagingDetail = calculatePackagingCosts(estimate, materials, {
+    orderQuantityKg: trueOrderQuantityKg,
+    totalGsm,
+    filmDensity,
+    piecesPerKg: productMetrics.piecesPerKg || 0,
+  });
+  const packagingCostPerKg = packagingDetail.totalCostPerKg;
+
   // Step 8: Manufacturing & Operating (M&O) — sales-level model (no machine time).
   // process_per_kg : Σ(process.costPerKgUsd × processQuantity) for enabled rows.
   // markup_over_rm : Total RM/kg × markupPercent% (computed inside the price build-up).
@@ -99,8 +109,8 @@ export function calculateEstimate(
   const mfg = computeMfgProcessCosts(estimate.processes, trueOrderQuantityKg);
 
   // ── Step 9: Pricing ──────────────────────────────────────────────────────
-  const materialCost = layerRmCostPerKg + solventCostPerKg;
-  const rmCostPerM2 = totalCostM2 + solventDetail.totalCostPerM2;
+  const materialCost = layerRmCostPerKg + solventCostPerKg + packagingCostPerKg;
+  const rmCostPerM2 = totalCostM2 + solventDetail.totalCostPerM2 + packagingDetail.totalCostPerM2;
 
   // Unified final-price breakup (single model — no legacy/per-hour branch):
   //   Total RM  = material × (1 + band waste%)         (substrates + ink/adh/solvent + packaging + waste)
@@ -195,6 +205,10 @@ export function calculateEstimate(
     solventMixRatio: solventDetail.inkSolventRatio,
     inkPrintingProcessResolved: solventDetail.inkPrintingProcess,
     inkSolventRatioResolved: solventDetail.inkSolventRatio,
+    packagingCostPerKg,
+    packagingCostPerM2: packagingDetail.totalCostPerM2,
+    packagingNeedsReview: packagingDetail.needsReview,
+    packagingCostLines: packagingDetail.lines,
     // Product metrics
     piecesPerKg: productMetrics.piecesPerKg,
     gramsPerPiece: productMetrics.gramsPerPiece,

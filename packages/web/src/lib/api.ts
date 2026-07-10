@@ -140,7 +140,7 @@ export type MasterDataReferencePayload = {
 export type PlatformMasterMaterialInput = {
   key: string;
   name: string;
-  type: 'substrate' | 'ink' | 'adhesive' | 'solvent' | 'accessory';
+  type: 'substrate' | 'ink' | 'adhesive' | 'solvent' | 'accessory' | 'packaging';
   solidPercent: number;
   density: number;
   costPerKgUsd: number;
@@ -162,6 +162,9 @@ export type PlatformMasterMaterialInput = {
   costPerPieceUsd?: number | null;
   weightGramPerMeter?: number | null;
   weightGramPerPiece?: number | null;
+  /** Packaging PB purchase unit */
+  priceUnit?: 'kgs' | 'mtr' | 'rol' | 'pcs' | null;
+  unitPriceUsd?: number | null;
 };
 
 export type PlatformMasterMaterialRow = PlatformMasterMaterialInput & {

@@ -25,6 +25,8 @@ type TenantMaterialRow = {
   costPerPieceUsd?: string | number | null;
   weightGramPerMeter?: string | number | null;
   weightGramPerPiece?: string | number | null;
+  priceUnit?: string | null;
+  unitPriceUsd?: string | number | null;
   laminationRecipe?: unknown;
 };
 
@@ -71,6 +73,8 @@ export function tenantMaterialToPlatformRow(m: TenantMaterialRow): PlatformMaste
     costPerPieceUsd: m.costPerPieceUsd != null ? usd(m.costPerPieceUsd) : null,
     weightGramPerMeter: m.weightGramPerMeter != null ? num(m.weightGramPerMeter) : null,
     weightGramPerPiece: m.weightGramPerPiece != null ? num(m.weightGramPerPiece) : null,
+    priceUnit: (m.priceUnit as PlatformMasterMaterialRow['priceUnit']) ?? null,
+    unitPriceUsd: m.unitPriceUsd != null ? usd(m.unitPriceUsd) : null,
     laminationRecipe: m.laminationRecipe ?? null,
     isTenantOnly: Boolean(m.isTenantOnly),
   };
@@ -95,6 +99,12 @@ export function buildTenantMaterialPayload(row: PlatformMasterMaterialRow) {
           costPerPieceUsd: row.costPerPieceUsd != null ? usd(row.costPerPieceUsd) : null,
           weightGramPerMeter: row.weightGramPerMeter != null ? Number(row.weightGramPerMeter) : null,
           weightGramPerPiece: row.weightGramPerPiece != null ? Number(row.weightGramPerPiece) : null,
+        }
+      : {}),
+    ...(row.type === 'packaging'
+      ? {
+          priceUnit: row.priceUnit ?? null,
+          unitPriceUsd: row.unitPriceUsd != null ? usd(row.unitPriceUsd) : null,
         }
       : {}),
   };
@@ -129,6 +139,9 @@ export function canEditTenantMaterialRow(
   }
   // Manual solvents always editable; PEBI-linked solvents: density always, price when not live PEBI.
   if (row.type === 'solvent' && !(row.externalSource === 'pebi' && row.priceSource === 'pebi')) {
+    return true;
+  }
+  if (row.type === 'packaging' && !(row.externalSource === 'pebi' && row.priceSource === 'pebi')) {
     return true;
   }
   if (

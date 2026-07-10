@@ -28,6 +28,13 @@ import { seedSleeveDimensionPatch } from '../lib/sleeveConfiguratorCatalog';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { runClientCalculation } from '../lib/estimateCalc';
+import {
+  DEFAULT_LOAD_PER_PALLET_KG,
+  DEFAULT_CARTONS_PER_PALLET,
+  DEFAULT_PCS_PER_CARTON,
+  mergePackagingConfigDefaults,
+  type PackagingConfig,
+} from '@es/engine';
 import { usdToDisplay, usdToDisplayPrecise } from '../lib/currency';
 import { formatMicronDisplay } from '../lib/formatMicron';
 import { layerFieldsFromMaterial } from '../lib/materialNominalMicron';
@@ -89,6 +96,8 @@ interface MaterialItem {
   costPerPieceUsd?: string | null;
   weightGramPerMeter?: string | null;
   weightGramPerPiece?: string | null;
+  priceUnit?: string | null;
+  unitPriceUsd?: string | null;
 }
 
 interface LayerItem {
@@ -315,6 +324,14 @@ const EstimateEditor = ({
   const [needsConfiguration, setNeedsConfiguration] = useState(false);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [solventDetailsExpanded, setSolventDetailsExpanded] = useState(false);
+  const [packagingDetailsExpanded, setPackagingDetailsExpanded] = useState(false);
+  const [packagingConfig, setPackagingConfig] = useState<PackagingConfig>(() =>
+    mergePackagingConfigDefaults({
+      loadPerPalletKg: DEFAULT_LOAD_PER_PALLET_KG,
+      cartonsPerPallet: DEFAULT_CARTONS_PER_PALLET,
+      pcsPerCarton: DEFAULT_PCS_PER_CARTON,
+    })
+  );
   const structureTableRef = useRef<HTMLDivElement>(null);
   const [structureTableHeight, setStructureTableHeight] = useState<number | null>(null);
 
@@ -459,6 +476,23 @@ const EstimateEditor = ({
       setCleaningSolventKgPerJob(defaultCleaningKg);
     }
   }, [id, defaultCleaningKg, estimate?.cleaningSolventKgPerJob]);
+
+  useEffect(() => {
+    if (id) return; // loaded estimate applies its own packagingConfig
+    const cd = masterReference.costingDefaults;
+    setPackagingConfig((prev) =>
+      mergePackagingConfigDefaults({
+        ...prev,
+        loadPerPalletKg: cd?.loadPerPalletKg ?? prev.loadPerPalletKg,
+        cartonsPerPallet: cd?.cartonsPerPallet ?? prev.cartonsPerPallet,
+        pcsPerCarton: cd?.pcsPerCarton ?? prev.pcsPerCarton,
+        ldWrapPasses: cd?.ldWrapPasses ?? prev.ldWrapPasses,
+        ldWrapFilmWidthMm: cd?.ldWrapFilmWidthMm ?? prev.ldWrapFilmWidthMm,
+        ldWrapGsm: cd?.ldWrapGsm ?? prev.ldWrapGsm,
+        stretchWrapLayers: cd?.stretchWrapLayers ?? prev.stretchWrapLayers,
+      })
+    );
+  }, [id, masterReference.costingDefaults]);
 
   useEffect(() => {
     if (!needsSolventMix || solventMaterialOptions.length === 0) return;
@@ -1151,6 +1185,22 @@ const EstimateEditor = ({
       } else {
         setSleeveSeamingSolventGsm(DEFAULT_SLEEVE_SEAMING_SOLVENT_GSM);
       }
+      if (data.packagingConfig && typeof data.packagingConfig === 'object') {
+        setPackagingConfig(mergePackagingConfigDefaults(data.packagingConfig as PackagingConfig));
+      } else {
+        const cd = masterReference.costingDefaults;
+        setPackagingConfig(
+          mergePackagingConfigDefaults({
+            loadPerPalletKg: cd?.loadPerPalletKg,
+            cartonsPerPallet: cd?.cartonsPerPallet,
+            pcsPerCarton: cd?.pcsPerCarton,
+            ldWrapPasses: cd?.ldWrapPasses,
+            ldWrapFilmWidthMm: cd?.ldWrapFilmWidthMm,
+            ldWrapGsm: cd?.ldWrapGsm,
+            stretchWrapLayers: cd?.stretchWrapLayers,
+          })
+        );
+      }
       if (data.laminationRecipeOverrides && typeof data.laminationRecipeOverrides === 'object') {
         setLaminationRecipeOverrides(data.laminationRecipeOverrides as Record<string, LaminationRecipe>);
       } else {
@@ -1330,6 +1380,7 @@ const EstimateEditor = ({
         Object.keys(laminationRecipeOverrides).length > 0 ? laminationRecipeOverrides : undefined,
       cleaningSolventKgPerJob: needsSolventMix ? cleaningSolventKgPerJob : undefined,
       sleeveSeamingSolventGsm: hasSleeveSubstrate ? sleeveSeamingSolventGsm : undefined,
+      packagingConfig,
       inkPrintingProcess: hasSbInk ? effectiveInkPrintingProcess : undefined,
       // Persist the ratio only when the user explicitly bypassed it. When it's
       // process-derived we omit it so reopening keeps the Flexo/Roto toggle live.
@@ -1366,7 +1417,7 @@ const EstimateEditor = ({
       if (slabs.length > 0) payload.slabs = slabs;
     }
     return sanitizeEstimateSavePayload(payload);
-  }, [isPriceCheck, multiOnQuote, jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, estimate?.quoteId, quoteIdFromUrl, productType, productTypeOptions, productSubtype, needsSolventMix, hasSleeveSubstrate, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, cormPerKgPlain, moqKg, toolingChargeUsd, skuLabel, brand, specsCode, printColorCount, costPerColor, toolingBillingMode, toolingScenario, billableColorCount, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, sleeveSeamingSolventGsm, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
+  }, [isPriceCheck, multiOnQuote, jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, estimate?.quoteId, quoteIdFromUrl, productType, productTypeOptions, productSubtype, needsSolventMix, hasSleeveSubstrate, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, cormPerKgPlain, moqKg, toolingChargeUsd, skuLabel, brand, specsCode, printColorCount, costPerColor, toolingBillingMode, toolingScenario, billableColorCount, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, sleeveSeamingSolventGsm, packagingConfig, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   /** Link estimate to a customer row — create customer record if user typed a new name. */
   const ensureCustomerForSave = async (): Promise<string | undefined> => {
@@ -1449,6 +1500,7 @@ const EstimateEditor = ({
         laminationRecipeOverrides,
         cleaningSolventKgPerJob,
         sleeveSeamingSolventGsm: hasSleeveSubstrate ? sleeveSeamingSolventGsm : undefined,
+        packagingConfig,
         inkPrintingProcess: hasSbInk ? effectiveInkPrintingProcess : undefined,
         inkSolventRatio: hasSbInk ? effectiveInkSolventRatio : undefined,
         pricingMethod,
@@ -1487,7 +1539,7 @@ const EstimateEditor = ({
     markupPercent, platesPerKg, deliveryPerKg, slabQuantitiesKey,
     estimate?.displayCurrency, estimate?.exchangeRateUsdToDisplay,
     solventMaterialId, resolvedSolventCostPerKgUsd, resolvedSeamingSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob,
-    sleeveSeamingSolventGsm, hasSleeveSubstrate, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, layers.length, accessories,
+    sleeveSeamingSolventGsm, packagingConfig, hasSleeveSubstrate, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, layers.length, accessories,
     orderQuantity, orderQuantityUnit, masterReference, wasteBands,
     pricingMethod, marginValuePerKgUsd, baseCormDisplay, cormScaleWithWaste, toolingChargeUsd,
     printColorCount, costPerColor, toolingBillingMode, toolingScenario, billableColorCount,
@@ -1537,6 +1589,12 @@ const EstimateEditor = ({
     return solventCostLines.reduce((sum, line) => sum + line.perM2Usd, 0);
   }, [solventCostLines, clientCalcResult]);
 
+  const packagingCostLines = clientCalcResult?.estimate.packagingCostLines ?? [];
+  const packagingTotalPerKgUsd = clientCalcResult?.estimate.packagingCostPerKg ?? 0;
+  const packagingTotalPerM2Usd = clientCalcResult?.estimate.packagingCostPerM2 ?? 0;
+  const packagingNeedsReview = clientCalcResult?.estimate.packagingNeedsReview ?? false;
+  const showPackagingCosting = Boolean(productType);
+
   const rmTotals = useMemo(() => {
     const e = clientCalcResult?.estimate;
     if (!e) return null;
@@ -1545,10 +1603,11 @@ const EstimateEditor = ({
       e.layers?.reduce((sum, layer) => sum + (layer.costPerM2 ?? 0), 0) ??
       0;
     const solventPerM2 = e.solventMixCostPerM2 ?? solventTotalPerM2Usd;
+    const packagingPerM2 = e.packagingCostPerM2 ?? packagingTotalPerM2Usd;
     const rmPerKg = e.materialCostPerKg ?? 0;
-    const rmPerM2 = e.rmCostPerM2 ?? layerPerM2 + solventPerM2;
-    return { rmPerKg, rmPerM2, layerPerM2, solventPerM2 };
-  }, [clientCalcResult, solventTotalPerM2Usd]);
+    const rmPerM2 = e.rmCostPerM2 ?? layerPerM2 + solventPerM2 + packagingPerM2;
+    return { rmPerKg, rmPerM2, layerPerM2, solventPerM2, packagingPerM2 };
+  }, [clientCalcResult, solventTotalPerM2Usd, packagingTotalPerM2Usd]);
 
   const structureMetrics = useMemo(() => {
     const e = clientCalcResult?.estimate;
@@ -2987,6 +3046,116 @@ const EstimateEditor = ({
                       )}
                     </div>
                   )}
+                  {showPackagingCosting && (
+                    <div
+                      id="packaging-costing"
+                      className="border border-border rounded-lg overflow-hidden bg-surface-raised"
+                    >
+                      {packagingNeedsReview && (
+                        <div className="px-3 py-2 bg-warning/20 text-warning text-xs font-medium border-b border-warning/30">
+                          Packaging unpriced — sync PACKAGING from PEBI before sending quote
+                        </div>
+                      )}
+                      <div className="px-3 py-2.5 border-b border-border flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+                        {(productType === 'roll') && (
+                          <label className="inline-flex items-center gap-1 shrink-0">
+                            <span className="text-xs text-mist">Load/pallet</span>
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              className="input py-1 px-2 w-20 text-xs font-mono"
+                              value={packagingConfig.loadPerPalletKg ?? DEFAULT_LOAD_PER_PALLET_KG}
+                              onChange={(e) => {
+                                const v = parseFloat(e.target.value);
+                                setPackagingConfig((c) => ({
+                                  ...c,
+                                  loadPerPalletKg: Number.isFinite(v) && v > 0 ? v : DEFAULT_LOAD_PER_PALLET_KG,
+                                }));
+                              }}
+                              onFocus={selectOnFocus}
+                            />
+                            <span className="text-xs text-mist">kg</span>
+                          </label>
+                        )}
+                        {(productType === 'sleeve' || productType === 'pouch' || productType === 'bag') && (
+                          <label className="inline-flex items-center gap-1 shrink-0">
+                            <span className="text-xs text-mist">Cartons/pallet</span>
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              className="input py-1 px-2 w-16 text-xs font-mono"
+                              value={packagingConfig.cartonsPerPallet ?? DEFAULT_CARTONS_PER_PALLET}
+                              onChange={(e) => {
+                                const v = parseFloat(e.target.value);
+                                setPackagingConfig((c) => ({
+                                  ...c,
+                                  cartonsPerPallet: Number.isFinite(v) && v > 0 ? v : DEFAULT_CARTONS_PER_PALLET,
+                                }));
+                              }}
+                              onFocus={selectOnFocus}
+                            />
+                          </label>
+                        )}
+                        {(productType === 'pouch' || productType === 'bag') && (
+                          <label className="inline-flex items-center gap-1 shrink-0">
+                            <span className="text-xs text-mist">Pcs/carton</span>
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              className="input py-1 px-2 w-20 text-xs font-mono"
+                              value={packagingConfig.pcsPerCarton ?? DEFAULT_PCS_PER_CARTON}
+                              onChange={(e) => {
+                                const v = parseFloat(e.target.value);
+                                setPackagingConfig((c) => ({
+                                  ...c,
+                                  pcsPerCarton: Number.isFinite(v) && v > 0 ? v : DEFAULT_PCS_PER_CARTON,
+                                }));
+                              }}
+                              onFocus={selectOnFocus}
+                            />
+                          </label>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="w-full flex items-center justify-between px-3 py-2.5 text-sm"
+                        onClick={() => setPackagingDetailsExpanded((v) => !v)}
+                      >
+                        <span className="inline-flex items-center gap-2 font-medium text-navy">
+                          {packagingDetailsExpanded ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                          Packaging
+                        </span>
+                        {showStructureCosts && (
+                          <span className="font-mono text-xs font-semibold text-navy">
+                            {usdToDisplayPrecise(packagingTotalPerKgUsd, fxRate).toFixed(4)}/kg ·{' '}
+                            {usdToDisplayPrecise(packagingTotalPerM2Usd, fxRate).toFixed(4)}/m²
+                          </span>
+                        )}
+                      </button>
+                      {packagingDetailsExpanded && showStructureCosts && (
+                        <div className="divide-y divide-border bg-slate/30 text-sm">
+                          {packagingCostLines.length === 0 && (
+                            <div className="px-3 py-2 pl-8 text-mist">No packaging lines</div>
+                          )}
+                          {packagingCostLines.map((line) => (
+                            <div key={line.role} className="flex justify-between px-3 py-2 pl-8 text-mist">
+                              <span>
+                                {line.label}
+                                {line.needsReview ? ' · needs review' : ''}
+                              </span>
+                              <span className="font-mono text-navy">
+                                {usdToDisplayPrecise(line.costPerKgUsd, fxRate).toFixed(4)}/kg ·{' '}
+                                {usdToDisplayPrecise(line.costPerM2Usd, fxRate).toFixed(4)}/m²
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Desktop structure grid — one column definition for header + every row */}
@@ -3369,6 +3538,154 @@ const EstimateEditor = ({
                                     </div>
                                     <div className="structure-grid__cell font-mono text-[11px] tabular-nums" role="cell">
                                       {usdToDisplayPrecise(line.perM2Usd, fxRate).toFixed(4)}
+                                    </div>
+                                  </>
+                                )}
+                                {showLayerControlsCol && <div className="structure-grid__cell" role="cell" />}
+                              </div>
+                            ))}
+                        </>
+                      )}
+                      {showPackagingCosting && (
+                        <>
+                          {packagingNeedsReview && (
+                            <div className="structure-grid__row bg-warning/20" role="row">
+                              <div
+                                className="structure-grid__cell py-2 text-xs font-medium text-warning"
+                                style={{ gridColumn: '1 / -1' }}
+                                role="cell"
+                              >
+                                Packaging unpriced — sync PACKAGING from PEBI before sending quote
+                              </div>
+                            </div>
+                          )}
+                          <div className="structure-grid__row bg-slate/20" role="row">
+                            <div
+                              className="structure-grid__cell py-2"
+                              style={{ gridColumn: '1 / -1' }}
+                              role="cell"
+                            >
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+                                {productType === 'roll' && (
+                                  <label className="inline-flex items-center gap-1">
+                                    <span className="text-xs text-mist">Load/pallet</span>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      className="input py-1 px-2 w-20 text-xs font-mono"
+                                      value={packagingConfig.loadPerPalletKg ?? DEFAULT_LOAD_PER_PALLET_KG}
+                                      onChange={(e) => {
+                                        const v = parseFloat(e.target.value);
+                                        setPackagingConfig((c) => ({
+                                          ...c,
+                                          loadPerPalletKg:
+                                            Number.isFinite(v) && v > 0 ? v : DEFAULT_LOAD_PER_PALLET_KG,
+                                        }));
+                                      }}
+                                      onFocus={selectOnFocus}
+                                    />
+                                    <span className="text-xs text-mist">kg</span>
+                                  </label>
+                                )}
+                                {(productType === 'sleeve' ||
+                                  productType === 'pouch' ||
+                                  productType === 'bag') && (
+                                  <label className="inline-flex items-center gap-1">
+                                    <span className="text-xs text-mist">Cartons/pallet</span>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      className="input py-1 px-2 w-16 text-xs font-mono"
+                                      value={packagingConfig.cartonsPerPallet ?? DEFAULT_CARTONS_PER_PALLET}
+                                      onChange={(e) => {
+                                        const v = parseFloat(e.target.value);
+                                        setPackagingConfig((c) => ({
+                                          ...c,
+                                          cartonsPerPallet:
+                                            Number.isFinite(v) && v > 0 ? v : DEFAULT_CARTONS_PER_PALLET,
+                                        }));
+                                      }}
+                                      onFocus={selectOnFocus}
+                                    />
+                                  </label>
+                                )}
+                                {(productType === 'pouch' || productType === 'bag') && (
+                                  <label className="inline-flex items-center gap-1">
+                                    <span className="text-xs text-mist">Pcs/carton</span>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      className="input py-1 px-2 w-20 text-xs font-mono"
+                                      value={packagingConfig.pcsPerCarton ?? DEFAULT_PCS_PER_CARTON}
+                                      onChange={(e) => {
+                                        const v = parseFloat(e.target.value);
+                                        setPackagingConfig((c) => ({
+                                          ...c,
+                                          pcsPerCarton:
+                                            Number.isFinite(v) && v > 0 ? v : DEFAULT_PCS_PER_CARTON,
+                                        }));
+                                      }}
+                                      onFocus={selectOnFocus}
+                                    />
+                                  </label>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="structure-grid__row bg-slate/20" role="row">
+                            <div className="structure-grid__cell" role="cell" />
+                            <div className="structure-grid__cell" role="cell">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate text-navy">Pack</span>
+                            </div>
+                            <div className="structure-grid__cell text-mist text-xs" role="cell">—</div>
+                            <div className="structure-grid__cell" role="cell">
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1 text-xs font-medium text-navy hover:text-gold"
+                                onClick={() => setPackagingDetailsExpanded((v) => !v)}
+                                aria-expanded={packagingDetailsExpanded}
+                              >
+                                {packagingDetailsExpanded ? (
+                                  <Minus className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                                ) : (
+                                  <Plus className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                                )}
+                                Packaging
+                              </button>
+                            </div>
+                            <div className="structure-grid__cell text-mist text-[10px]" role="cell">—</div>
+                            <div className="structure-grid__cell text-mist" role="cell">—</div>
+                            {showStructureCosts && (
+                              <>
+                                <div className="structure-grid__cell font-mono text-[11px] font-semibold text-navy tabular-nums" role="cell">
+                                  {usdToDisplayPrecise(packagingTotalPerKgUsd, fxRate).toFixed(4)}
+                                </div>
+                                <div className="structure-grid__cell font-mono text-[11px] font-semibold text-navy tabular-nums" role="cell">
+                                  {usdToDisplayPrecise(packagingTotalPerM2Usd, fxRate).toFixed(4)}
+                                </div>
+                              </>
+                            )}
+                            {showLayerControlsCol && <div className="structure-grid__cell" role="cell" />}
+                          </div>
+                          {packagingDetailsExpanded &&
+                            packagingCostLines.map((line) => (
+                              <div key={line.role} className="structure-grid__row bg-slate/30" role="row">
+                                <div className="structure-grid__cell" role="cell" />
+                                <div className="structure-grid__cell" role="cell" />
+                                <div className="structure-grid__cell" role="cell" />
+                                <div className="structure-grid__cell pl-4 text-[11px] text-mist truncate" role="cell">
+                                  {line.label}
+                                  {line.needsReview ? ' · needs review' : ''}
+                                </div>
+                                <div className="structure-grid__cell text-mist text-[10px]" role="cell">—</div>
+                                <div className="structure-grid__cell text-mist" role="cell">—</div>
+                                {showStructureCosts && (
+                                  <>
+                                    <div className="structure-grid__cell font-mono text-[11px] tabular-nums" role="cell">
+                                      {usdToDisplayPrecise(line.costPerKgUsd, fxRate).toFixed(4)}
+                                    </div>
+                                    <div className="structure-grid__cell font-mono text-[11px] tabular-nums" role="cell">
+                                      {usdToDisplayPrecise(line.costPerM2Usd, fxRate).toFixed(4)}
                                     </div>
                                   </>
                                 )}

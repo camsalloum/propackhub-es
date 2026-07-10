@@ -12,6 +12,7 @@
 |-----|------|
 | [MATERIALS_CATALOG_UNIFICATION_PLAN.md](./MATERIALS_CATALOG_UNIFICATION_PLAN.md) | **Planned:** remove Raw Materials page; single Materials UX; PEBI RM sync for IP/FP |
 | [PEBI_ES_RM_SYNC_SPEC.md](./PEBI_ES_RM_SYNC_SPEC.md) | **Spec:** PEBI→ES RM mapping (family, grade, crosswalk, price roll-up) |
+| [../../platform/docs/PACKAGING_COST.md](../../platform/docs/PACKAGING_COST.md) | **Done v1:** outbound packaging costing (PEBI↔ES) — phases 1–6 + sleeve 600 OD carton |
 | [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md) | Build PRD **v3.4** (V1 implemented — see Appendix A.1) |
 | [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) | **Phased build plan** (audit findings, P0–G, DoD) |
 | [MULTI_SKU_QUOTE_EXPLORER_PLAN.md](./MULTI_SKU_QUOTE_EXPLORER_PLAN.md) | **Planned:** multi-SKU quotes, customer folders, explorer, combined price list |
@@ -58,6 +59,21 @@
 - **Adhesive SB** for lamination (duplex default + Alu insert)
 - **Solvent Base** optional row for solvent math
 - **Solvent-Mix:** global cost/kg + GSM ratio — when stack has SB ink and/or SB adhesive
+
+### Outbound packaging (logistics — not laminate layers)
+
+Separate costing block (same UX pattern as solvents). Inside **Total RM** with markup. Plan: [`platform/docs/PACKAGING_COST.md`](../../../platform/docs/PACKAGING_COST.md).
+
+| Product | Lines |
+|---------|--------|
+| **Roll** | Core + LD wrap + stretch + pallet (`loadPerPalletKg`, default **800**) |
+| **Sleeve** | Core @ **600 mm OD** + carton (1 roll/carton) + stretch + pallet (`cartonsPerPallet`, default **20**) |
+| **Pouch / Bag** | Carton + stretch + pallet (`pcsPerCarton`, `cartonsPerPallet` **20**) |
+
+- Prices: PEBI `family=PACKAGING` **combined weighted average** only — **no numeric fallback** (missing → `$0` + `needs_review` + estimate banner).
+- Core length = **reel width × rolls** (m), not film running metres.
+- Sleeve carton: `packaging-carton-sleeve-600` (PB SKUs side ≥600 mm); pouch/bag: `packaging-carton-default`.
+- Engine: `packages/engine/src/packaging-costing.ts`; estimate `packagingConfig`.
 
 ### Microns
 
@@ -1230,6 +1246,51 @@ Not every company subscribes to both PEBI and ES. **IP/FP (Interplast) is linked
 | Individual / self-managed tenant | Master Data (tenant scope) |
 | PEBI-linked company (Phase 4) | PEBI MES — ES read-only for synced rows **except** PE films without live PEBI price (manual $/kg editable) |
 | Custom tenant-only rows | Always editable in tenant Master Data (`is_tenant_only`) |
+
+### 2026-07-10 — Packaging costing Phases 1–6 + sleeve 600 OD carton (complete)
+
+**Plan:** `platform/docs/PACKAGING_COST.md` (owner rules locked; PB combined_avg only).
+
+**Phase 1 — PEBI**
+- Fixture `apps/pph/server/fixtures/pebi-es-packaging-crosswalk.json`
+- Catalog `pebi-es-packaging-catalog.js` (`combined_avg` + `priceUnit`)
+- `GET /api/integration/es/materials?family=PACKAGING`
+- Smoke: `apps/pph/server/scripts/smoke-packaging-catalog.js`
+
+**Phase 2 — ES schema / sync**
+- Migrations `0019` (`type: packaging`), `0020` (`price_unit`, `unit_price_usd`), `0021` (`packaging_config` jsonb)
+- Seed packaging rows; retire legacy substrate placeholders (`packaging-wraping-film`, etc.)
+- `ensurePackagingCatalogSeeded()` on boot; `PEBI_SYNC_FAMILIES` includes `PACKAGING`
+- Sync **skips unpriced** (no $1.54-style fallback)
+- `PEBI_ES_RM_SYNC_SPEC`: `packing_materials` → `family=PACKAGING` (not skip v1)
+
+**Phase 3 — Engine**
+- `packages/engine/src/packaging-costing.ts` wired in `calculator.ts` → packaging inside Total RM
+- Recipes: Roll / Sleeve / Pouch|Bag; core m = reel width × rolls
+- Helpers: `defaultPackagingConfig`, `mergePackagingConfigDefaults`, `cartonPlatformKeyForOd`
+- Tests: `packaging-costing.test.ts` (11) + calculator Total RM packaging case
+
+**Phase 4 — UI / API**
+- Estimate save/load `packagingConfig`; EstimateEditor packaging block + needs-review banner
+- `estimateCalc` / `material-map` pass `priceUnit` / `unitPriceUsd`
+
+**Phase 5 — Defaults**
+- `costingDefaults`: loadPerPalletKg **800**, cartonsPerPallet **20**, pcsPerCarton, LD/stretch defaults
+- Create/update estimates + editor seed via `mergePackagingConfigDefaults`
+
+**Phase 6 — Master Data**
+- Packaging tab: `type=packaging`; Unit + Unit price columns
+- PEBI missing-materials review for `family=PACKAGING`
+- API schemas accept `packaging` + `priceUnit` / `unitPriceUsd`
+
+**Follow-on (same day) — Sleeve carton 600 OD**
+- New key `packaging-carton-sleeve-600` (PB: `FXXPKCTN2929600`, `BPK6140*`, `BPKGB*` — side ≥600 mm)
+- Pouch/bag keep `packaging-carton-default` (smaller cartons)
+- Owner confirmed `cartonsPerPallet` **20**
+
+**ES catalog keys (8):** `packaging-ld-wrap-film`, `packaging-stretch-wrap-roll`, `packaging-core-76|77|152`, `packaging-pallet-wood`, `packaging-carton-sleeve-600`, `packaging-carton-default`
+
+**Ops (user):** restart ES (+ PEBI) → migrate if needed → sync `family=PACKAGING` → test Roll / Sleeve / Pouch estimates + Master Data Packaging tab.
 
 ### 2026-07-10 — SOLVENT sync + sleeve seaming costing
 

@@ -25,6 +25,7 @@ export const PEBI_SYNC_FAMILIES = [
   'INK',
   'ADHESIVE',
   'SOLVENT',
+  'PACKAGING',
 ] as const;
 export type PebiSyncFamily = (typeof PEBI_SYNC_FAMILIES)[number];
 
@@ -52,6 +53,7 @@ const CATALOG_MODULES: Record<PebiSyncFamily, { file: string; exportName: string
   INK: { file: 'pebi-es-ink-catalog.js', exportName: 'buildInkMaterialsCatalog' },
   ADHESIVE: { file: 'pebi-es-adhesive-catalog.js', exportName: 'buildAdhesiveMaterialsCatalog' },
   SOLVENT: { file: 'pebi-es-solvent-catalog.js', exportName: 'buildSolventMaterialsCatalog' },
+  PACKAGING: { file: 'pebi-es-packaging-catalog.js', exportName: 'buildPackagingMaterialsCatalog' },
 };
 
 const catalogBuilderCache = new Map<PebiSyncFamily, CatalogBuilder>();
@@ -100,6 +102,10 @@ export type PebiMaterialRow = {
   }> | null;
   substrateHoover?: string | null;
   nominalGsm?: number | null;
+  /** Packaging: kgs | mtr | rol | pcs */
+  priceUnit?: string | null;
+  unitPriceUsd?: number | null;
+  packagingRole?: string | null;
   compositionUnparsedDescriptions?: string[] | null;
 };
 
@@ -311,6 +317,25 @@ function shouldHoldPlatformPrice(family: PebiSyncFamily, platformMasterKey: stri
 
 function allowsManualPriceFallback(family: PebiSyncFamily): boolean {
   return family === 'PE' || family === 'INK' || family === 'ADHESIVE' || family === 'SOLVENT';
+}
+
+function packagingUnitPriceUsd(row: PebiMaterialRow): number | null {
+  return (
+    positivePriceOrNull(row.unitPriceUsd) ??
+    positivePriceOrNull(row.costPerKgUsd) ??
+    positivePriceOrNull(row.marketPriceUsd)
+  );
+}
+
+function packagingPriceFields(row: PebiMaterialRow, unitPriceUsd: number) {
+  const unit = String(row.priceUnit || 'kgs').toLowerCase();
+  return {
+    priceUnit: unit,
+    unitPriceUsd: toDecimalString(unitPriceUsd, '0', 4),
+    costPerKgUsd: unit === 'kgs' ? toDecimalString(unitPriceUsd, '0') : '0',
+    costPerMeterUsd: unit === 'mtr' ? toDecimalString(unitPriceUsd, '0', 4) : null,
+    costPerPieceUsd: unit === 'pcs' || unit === 'rol' ? toDecimalString(unitPriceUsd, '0', 4) : null,
+  };
 }
 
 function positivePriceOrNull(value: number | null | undefined): number | null {
@@ -586,7 +611,8 @@ async function applyCatalogToTenant(
     const isInkFamily = family === 'INK';
     const isAdhesiveFamily = family === 'ADHESIVE';
     const isSolventFamily = family === 'SOLVENT';
-    const preservePhysical = isInkFamily || isAdhesiveFamily || isSolventFamily;
+    const isPackagingFamily = family === 'PACKAGING';
+    const preservePhysical = isInkFamily || isAdhesiveFamily || isSolventFamily || isPackagingFamily;
 
     // INK/ADHESIVE/SOLVENT: never overwrite ES solid% / density from PEBI (catalog sends null).
     const defaultDensity =
@@ -610,7 +636,9 @@ async function applyCatalogToTenant(
                         ? 1.1
                         : family === 'SOLVENT'
                           ? 0.9
-                          : 1.4;
+                          : family === 'PACKAGING'
+                            ? 1
+                            : 1.4;
 
     let solidPercent: number;
     let density: number;
@@ -702,6 +730,14 @@ async function applyCatalogToTenant(
           continue;
         }
       }
+    } else if (isPackagingFamily) {
+      const unitPrice = packagingUnitPriceUsd(row);
+      if (!hasPositivePrice(unitPrice, unitPrice)) {
+        skipped++;
+        continue;
+      }
+      effectiveMarketUsd = unitPrice;
+      effectiveCostUsd = unitPrice;
     } else {
       const marketUsd = positivePriceOrNull(row.marketPriceUsd);
       const costUsd = positivePriceOrNull(row.costPerKgUsd);
@@ -737,12 +773,15 @@ async function applyCatalogToTenant(
 
     const resolvedCost = effectiveCostUsd ?? effectiveMarketUsd ?? 0;
     const resolvedMarket = effectiveMarketUsd ?? effectiveCostUsd ?? resolvedCost;
+    const packagingFields = isPackagingFamily
+      ? packagingPriceFields(row, resolvedCost)
+      : null;
 
     const patch: Record<string, unknown> = {
       substrateFamily: row.substrateFamily,
       substrateGrade: row.substrateGrade,
       marketPriceUsd: toDecimalString(resolvedMarket, toDecimalString(resolvedCost, '0')),
-      costPerKgUsd: toDecimalString(resolvedCost, '0'),
+      costPerKgUsd: packagingFields?.costPerKgUsd ?? toDecimalString(resolvedCost, '0'),
       density: toDensityString(density, toDensityString(defaultDensity, '1.40')),
       solidPercent,
       priceSource,
@@ -750,8 +789,9 @@ async function applyCatalogToTenant(
       platformSyncedAt: now,
       externalId: row.pebiGradeKey,
       externalSource: PEBI_MATERIAL_SOURCE,
-      ...(row.substrateHoover ? { hoover: row.substrateHoover } : {}),
+      ...(row.packagingRole || row.substrateHoover ? { hoover: row.packagingRole ?? row.substrateHoover } : {}),
       ...(laminationRecipe ? { laminationRecipe } : {}),
+      ...(packagingFields ?? {}),
       updatedAt: now,
     };
 
@@ -769,10 +809,12 @@ async function applyCatalogToTenant(
             ? 'adhesive'
             : isSolventFamily
               ? 'solvent'
-              : 'substrate',
+              : isPackagingFamily
+                ? 'packaging'
+                : 'substrate',
         solidPercent: solidPercent,
         density: toDensityString(density, toDensityString(defaultDensity, '1.40')),
-        costPerKgUsd: toDecimalString(resolvedCost, '0'),
+        costPerKgUsd: packagingFields?.costPerKgUsd ?? toDecimalString(resolvedCost, '0'),
         marketPriceUsd: toDecimalString(resolvedMarket, toDecimalString(resolvedCost, '0')),
         substrateFamily: row.substrateFamily,
         substrateGrade: row.substrateGrade,
@@ -781,8 +823,9 @@ async function applyCatalogToTenant(
         platformSyncedAt: now,
         externalId: row.pebiGradeKey,
         externalSource: PEBI_MATERIAL_SOURCE,
-        ...(row.substrateHoover ? { hoover: row.substrateHoover } : {}),
+        ...(row.packagingRole ? { hoover: row.packagingRole } : row.substrateHoover ? { hoover: row.substrateHoover } : {}),
         ...(laminationRecipe ? { laminationRecipe } : {}),
+        ...(packagingFields ?? {}),
         updatedAt: now,
       });
       inserted++;
@@ -874,6 +917,10 @@ export async function syncAdhesiveMaterialsFromPebiForTenant(tenantId: string): 
 
 export async function syncSolventMaterialsFromPebiForTenant(tenantId: string): Promise<MaterialSyncResult> {
   return syncFamilyMaterialsFromPebiForTenant(tenantId, 'SOLVENT');
+}
+
+export async function syncPackagingMaterialsFromPebiForTenant(tenantId: string): Promise<MaterialSyncResult> {
+  return syncFamilyMaterialsFromPebiForTenant(tenantId, 'PACKAGING');
 }
 
 /**
@@ -980,6 +1027,7 @@ export async function getMaterialsMissingForTenant(
       family !== 'INK' &&
       family !== 'ADHESIVE' &&
       family !== 'SOLVENT' &&
+      family !== 'PACKAGING' &&
       !hasPositivePrice(marketUsd, costUsd)
         ? deriveFormulaFallbackPrice(row, catalog.materials, family, aedPerUsd)
         : null;
@@ -987,17 +1035,23 @@ export async function getMaterialsMissingForTenant(
     const effectiveMarketUsd =
       family === 'INK' || family === 'ADHESIVE' || family === 'SOLVENT'
         ? liquidUsd ?? marketUsd
-        : marketUsd ?? formulaFallback?.marketUsd ?? null;
+        : family === 'PACKAGING'
+          ? packagingUnitPriceUsd(row)
+          : marketUsd ?? formulaFallback?.marketUsd ?? null;
     const effectiveCostUsd =
       family === 'INK' || family === 'ADHESIVE' || family === 'SOLVENT'
         ? liquidUsd ?? marketUsd ?? costUsd
-        : costUsd ?? formulaFallback?.costUsd ?? null;
+        : family === 'PACKAGING'
+          ? packagingUnitPriceUsd(row)
+          : costUsd ?? formulaFallback?.costUsd ?? null;
 
     if (!hasPositivePrice(effectiveMarketUsd, effectiveCostUsd)) {
       const noPebiPrice =
         family === 'INK' || family === 'ADHESIVE' || family === 'SOLVENT'
           ? !hasPositivePrice(liquidUsd, marketUsd)
-          : !hasPositivePrice(marketUsd, costUsd) && formulaFallback == null;
+          : family === 'PACKAGING'
+            ? !hasPositivePrice(packagingUnitPriceUsd(row), packagingUnitPriceUsd(row))
+            : !hasPositivePrice(marketUsd, costUsd) && formulaFallback == null;
       if (shouldHoldPlatformPrice(family, row.esPlatformMasterKey) && noPebiPrice) {
         const existing = await findTenantMaterial(tenantId, row);
         const platformFallback = await loadPlatformMaterialFallback(row.esPlatformMasterKey);

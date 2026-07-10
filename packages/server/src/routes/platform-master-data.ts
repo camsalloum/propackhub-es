@@ -65,7 +65,7 @@ function auditActorFromRequest(request: FastifyRequest): AuditActor {
 const MaterialBodySchema = z.object({
   key: z.string().min(1).max(128),
   name: z.string().min(1).max(255),
-  type: z.enum(['substrate', 'ink', 'adhesive', 'solvent', 'accessory']),
+  type: z.enum(['substrate', 'ink', 'adhesive', 'solvent', 'accessory', 'packaging']),
   solidPercent: z.number().int().min(0).max(100),
   density: z.number().positive(),
   costPerKgUsd: z.number().min(0),
@@ -85,6 +85,8 @@ const MaterialBodySchema = z.object({
   costPerPieceUsd: z.number().min(0).nullable().optional(),
   weightGramPerMeter: z.number().min(0).nullable().optional(),
   weightGramPerPiece: z.number().min(0).nullable().optional(),
+  priceUnit: z.enum(['kgs', 'mtr', 'rol', 'pcs']).nullable().optional(),
+  unitPriceUsd: z.number().min(0).nullable().optional(),
 });
 
 const ReferenceCategorySchema = z.enum([
@@ -140,6 +142,8 @@ export async function registerPlatformMasterDataRoutes(fastify: FastifyInstance)
           costPerPieceUsd: r.costPerPieceUsd != null ? Number(r.costPerPieceUsd) : null,
           weightGramPerMeter: r.weightGramPerMeter != null ? Number(r.weightGramPerMeter) : null,
           weightGramPerPiece: r.weightGramPerPiece != null ? Number(r.weightGramPerPiece) : null,
+          priceUnit: r.priceUnit ?? null,
+          unitPriceUsd: r.unitPriceUsd != null ? Number(r.unitPriceUsd) : null,
         }))
       );
     } catch (error: unknown) {

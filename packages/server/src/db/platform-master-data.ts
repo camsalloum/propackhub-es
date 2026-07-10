@@ -131,7 +131,8 @@ function placeholderCost(type: string, family: string | null): number {
   if (type === 'ink') return 12;
   if (type === 'adhesive') return 8;
   if (type === 'solvent') return 1.54;
-  if (family === 'Packaging') return 2.5;
+  if (type === 'packaging') return 0;
+  if (family === 'Packaging') return 0;
   return 0;
 }
 
@@ -162,6 +163,8 @@ function rowToMasterMaterial(row: typeof schema.platformMasterMaterials.$inferSe
     costPerPieceUsd: row.costPerPieceUsd != null ? Number(row.costPerPieceUsd) : null,
     weightGramPerMeter: row.weightGramPerMeter != null ? Number(row.weightGramPerMeter) : null,
     weightGramPerPiece: row.weightGramPerPiece != null ? Number(row.weightGramPerPiece) : null,
+    priceUnit: row.priceUnit ?? null,
+    unitPriceUsd: row.unitPriceUsd != null ? Number(row.unitPriceUsd) : null,
   };
 }
 
@@ -173,7 +176,7 @@ export function masterMaterialInputToDbValues(
   return {
     key: m.key,
     name: m.name,
-    type: m.type as 'substrate' | 'ink' | 'adhesive' | 'solvent' | 'accessory',
+    type: m.type as 'substrate' | 'ink' | 'adhesive' | 'solvent' | 'accessory' | 'packaging',
     solidPercent: m.solidPercent,
     density: m.density.toString(),
     costPerKgUsd: cost.toFixed(2),
@@ -195,6 +198,8 @@ export function masterMaterialInputToDbValues(
     costPerPieceUsd: m.costPerPieceUsd != null ? Number(m.costPerPieceUsd).toString() : null,
     weightGramPerMeter: m.weightGramPerMeter != null ? Number(m.weightGramPerMeter).toString() : null,
     weightGramPerPiece: m.weightGramPerPiece != null ? Number(m.weightGramPerPiece).toString() : null,
+    priceUnit: m.priceUnit ?? null,
+    unitPriceUsd: m.unitPriceUsd != null ? Number(m.unitPriceUsd).toFixed(4) : null,
     updatedAt: new Date(),
   };
 }
@@ -609,6 +614,13 @@ export async function buildMasterDataReferenceFromDb(): Promise<MasterDataRefere
     processRows,
     costingDefaults: {
       cleaningSolventKgPerJob: cleaningFromMeta,
+      loadPerPalletKg: jsonRef.costingDefaults?.loadPerPalletKg ?? 800,
+      cartonsPerPallet: jsonRef.costingDefaults?.cartonsPerPallet ?? 20,
+      pcsPerCarton: jsonRef.costingDefaults?.pcsPerCarton ?? 1000,
+      ldWrapPasses: jsonRef.costingDefaults?.ldWrapPasses ?? 2,
+      ldWrapFilmWidthMm: jsonRef.costingDefaults?.ldWrapFilmWidthMm ?? 500,
+      ldWrapGsm: jsonRef.costingDefaults?.ldWrapGsm ?? 25,
+      stretchWrapLayers: jsonRef.costingDefaults?.stretchWrapLayers ?? 4,
     },
     wasteBandsByPrintMode: await getPlatformWasteBandsByPrintMode(),
     cormScaleWithWaste: await getPlatformCormScaleWithWaste(),
@@ -1013,6 +1025,62 @@ export async function ensureSolventCatalogSeeded(): Promise<{ materials: number;
   }
 
   return { materials: materialsAdded, rmType: rmTypeAdded };
+}
+
+const LEGACY_PACKAGING_KEYS = [
+  'packaging-wraping-film',
+  'packaging-paper-sheet',
+  'packaging-pallet',
+] as const;
+
+/** Idempotent — inserts packaging catalog rows; retires legacy substrate placeholders. */
+export async function ensurePackagingCatalogSeeded(): Promise<{ materials: number; retired: number }> {
+  const db = getDatabase();
+  const seed = loadSeedMaterialsFromJson().filter((m) => m.type === 'packaging');
+  const existingRows = await db.select().from(schema.platformMasterMaterials);
+  const byKey = new Map(existingRows.map((r) => [r.key, r]));
+
+  let materialsAdded = 0;
+  let materialsUpdated = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const m = seed[i]!;
+    const match = byKey.get(m.key);
+    const values = masterMaterialInputToDbValues({ ...m, sortOrder: match?.sortOrder ?? 950 + i });
+    if (match) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set(values)
+        .where(eq(schema.platformMasterMaterials.id, match.id));
+      materialsUpdated++;
+    } else {
+      await db.insert(schema.platformMasterMaterials).values(values);
+      materialsAdded++;
+    }
+  }
+
+  let retired = 0;
+  for (const key of LEGACY_PACKAGING_KEYS) {
+    const row = byKey.get(key);
+    if (row?.active) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set({ active: false, updatedAt: new Date() })
+        .where(eq(schema.platformMasterMaterials.id, row.id));
+      retired++;
+    }
+  }
+
+  if (materialsAdded > 0 || materialsUpdated > 0 || retired > 0) {
+    await incrementMasterDataVersion();
+    const materials = await listPlatformMasterMaterials();
+    const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);
+    for (const t of tenants) {
+      await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
+    }
+    log.info({ added: materialsAdded, updated: materialsUpdated, retired }, 'Packaging catalog seeded');
+  }
+
+  return { materials: materialsAdded + materialsUpdated, retired };
 }
 
 const LAMINATION_ADHESIVE_KEYS = [

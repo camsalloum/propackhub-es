@@ -103,7 +103,7 @@ Maps Oracle `category` → PEBI `material_class` (`substrates`, `inks`, `adhesiv
 | `inks` | `ink` |
 | `adhesives` | `adhesive` |
 | `solvents` | `solvent` |
-| `packing_materials` | `substrate` (`substrateFamily = Packaging`) or skip v1 |
+| `packing_materials` | `packaging` via `family=PACKAGING` (UOM-aware: kgs/mtr/rol/pcs) |
 | `resins` | skip v1 (not in ES laminate editor) |
 
 ### 3.5 PEBI substrate taxonomy (not a spreadsheet)

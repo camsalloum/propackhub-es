@@ -79,7 +79,7 @@ function normalizeMaterialPrices<T extends { costPerKgUsd?: number; marketPriceU
 
 const MaterialSchema = z.object({
   name: z.string().min(1),
-  type: z.enum(['substrate', 'ink', 'adhesive', 'solvent', 'accessory']),
+  type: z.enum(['substrate', 'ink', 'adhesive', 'solvent', 'accessory', 'packaging']),
   solidPercent: z.number().min(0).max(100),
   density: z.number().positive(),
   costPerKgUsd: z.number().nonnegative(),
@@ -96,6 +96,8 @@ const MaterialSchema = z.object({
   costPerPieceUsd: z.number().nonnegative().nullable().optional(),
   weightGramPerMeter: z.number().nonnegative().nullable().optional(),
   weightGramPerPiece: z.number().nonnegative().nullable().optional(),
+  priceUnit: z.enum(['kgs', 'mtr', 'rol', 'pcs']).nullable().optional(),
+  unitPriceUsd: z.number().nonnegative().nullable().optional(),
 });
 
 export async function getMaterialsRoute(
@@ -176,12 +178,14 @@ export async function createMaterialRoute(
         substrateGrade: data.substrateGrade ?? null,
         hoover: data.hoover ?? null,
         marketPriceUsd: String(roundUsd(data.marketPriceUsd ?? data.costPerKgUsd)),
-        itemClass: data.itemClass ?? (data.type === 'accessory' ? 'accessory' : null),
+        itemClass: data.itemClass ?? (data.type === 'accessory' ? 'accessory' : data.type === 'packaging' ? 'packaging' : null),
         accessoryKind: data.accessoryKind ?? null,
         costPerMeterUsd: data.costPerMeterUsd != null ? String(data.costPerMeterUsd) : null,
         costPerPieceUsd: data.costPerPieceUsd != null ? String(data.costPerPieceUsd) : null,
         weightGramPerMeter: data.weightGramPerMeter != null ? String(data.weightGramPerMeter) : null,
         weightGramPerPiece: data.weightGramPerPiece != null ? String(data.weightGramPerPiece) : null,
+        priceUnit: data.priceUnit ?? null,
+        unitPriceUsd: data.unitPriceUsd != null ? String(data.unitPriceUsd) : null,
         priceSource: 'manual',
         isTenantOnly: true,
       })
@@ -294,7 +298,7 @@ export async function updateMaterialRoute(
         .send(errorBody('FORBIDDEN', CATALOG_READ_ONLY_MESSAGE, { catalogAccess }));
     }
 
-    const { marketPriceUsd, costPerKgUsd, costPerMeterUsd, costPerPieceUsd, weightGramPerMeter, weightGramPerPiece, ...rest } = data;
+    const { marketPriceUsd, costPerKgUsd, costPerMeterUsd, costPerPieceUsd, weightGramPerMeter, weightGramPerPiece, unitPriceUsd, ...rest } = data;
     const patch: Record<string, unknown> = { ...rest, updatedAt: new Date() };
     if (marketPriceUsd !== undefined) {
       patch.marketPriceUsd = marketPriceUsd;
@@ -306,7 +310,7 @@ export async function updateMaterialRoute(
         isInkManualEdit ||
         isAdhesiveManualEdit ||
         canMutateMaterialRow(catalogAccess, existing.isTenantOnly)) &&
-      (costPerKgUsd !== undefined || marketPriceUsd !== undefined)
+      (costPerKgUsd !== undefined || marketPriceUsd !== undefined || unitPriceUsd !== undefined)
     ) {
       patch.priceSource = 'manual';
     }
@@ -337,6 +341,7 @@ export async function updateMaterialRoute(
     if (costPerPieceUsd !== undefined) patch.costPerPieceUsd = costPerPieceUsd != null ? String(costPerPieceUsd) : null;
     if (weightGramPerMeter !== undefined) patch.weightGramPerMeter = weightGramPerMeter != null ? String(weightGramPerMeter) : null;
     if (weightGramPerPiece !== undefined) patch.weightGramPerPiece = weightGramPerPiece != null ? String(weightGramPerPiece) : null;
+    if (unitPriceUsd !== undefined) patch.unitPriceUsd = unitPriceUsd != null ? String(unitPriceUsd) : null;
 
     const [material] = await db
       .update(schema.materials)
@@ -504,7 +509,7 @@ export async function registerMaterialRoutes(fastify: FastifyInstance) {
             ).length,
             inkCount: materials.filter((m) => m.type === 'ink').length,
             adhesiveCount: materials.filter((m) => m.type === 'adhesive').length,
-            packagingCount: materials.filter((m) => m.substrateFamily === 'Packaging').length,
+            packagingCount: materials.filter((m) => m.type === 'packaging').length,
           });
         }
 

@@ -7,6 +7,7 @@ export function itemClassForMasterMaterial(m: MasterMaterial): string {
   if (m.type === 'ink') return 'ink';
   if (m.type === 'adhesive') return 'adhesive';
   if (m.type === 'solvent') return 'solvent';
+  if (m.type === 'packaging') return 'packaging';
   if (m.type === 'substrate' && m.substrateFamily === PACKAGING_FAMILY) return 'packaging';
   if (m.type === 'substrate') return 'substrate';
   return m.type;

@@ -32,6 +32,8 @@ function row(partial: Partial<DbMaterial> & Pick<DbMaterial, 'id' | 'type' | 'na
     costPerPieceUsd: null,
     weightGramPerMeter: null,
     weightGramPerPiece: null,
+    priceUnit: null,
+    unitPriceUsd: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...partial,

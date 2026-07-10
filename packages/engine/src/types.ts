@@ -7,7 +7,7 @@ import type { PouchAccessorySelection } from './pouch-accessories';
 import type { UnitDef } from './unit-conversion';
 import type { WasteBand } from './waste-bands';
 
-export type LayerType = 'substrate' | 'ink' | 'adhesive' | 'solvent';
+export type LayerType = 'substrate' | 'ink' | 'adhesive' | 'solvent' | 'packaging';
 
 export interface Material {
   id: string;
@@ -22,14 +22,16 @@ export interface Material {
   substrateGrade?: string | null; // e.g. BOPP Transparent, PET Metalized HB
   hoover?: string | null; // Description / grade notes
   marketPriceUsd?: number | null; // Market reference price
+  /** Platform master key (e.g. packaging-pallet-wood) — used to resolve packaging defaults. */
+  platformMasterKey?: string | null;
   /** GP/MP/HP lamination formula (binder + hardener + EA parts). */
   laminationRecipe?: LaminationRecipe | null;
   laminationTier?: string | null;
   // Accessory pricing (zipper / spout / valve / handle / window). Only populated
   // for accessory rows (itemClass='accessory'); null on film/ink/adhesive rows.
-  /** USD per linear metre — zipper tape. */
+  /** USD per linear metre — zipper tape / paper core. */
   costPerMeterUsd?: number | null;
-  /** USD per piece — spout / valve / handle. */
+  /** USD per piece — spout / valve / handle / carton / pallet / stretch roll. */
   costPerPieceUsd?: number | null;
   /** Grams per linear metre — zipper tape. */
   weightGramPerMeter?: number | null;
@@ -37,6 +39,10 @@ export interface Material {
   weightGramPerPiece?: number | null;
   /** Accessory class: 'zipper' | 'spout' | 'valve' | 'handle' | 'window'. */
   accessoryKind?: string | null;
+  /** Packaging purchase unit from PB: kgs | mtr | rol | pcs. */
+  priceUnit?: string | null;
+  /** Packaging unit price (USD per priceUnit) — PB combined avg. */
+  unitPriceUsd?: number | null;
 }
 
 export interface Layer {
@@ -97,6 +103,13 @@ export interface EstimateDimensions {
   // Common
   /** Derived metadata for DB/reporting — not used in costing formulas. */
   printingWebClass?: 'wide_web' | 'narrow_web';
+  /** Roll/sleeve core ID (mm) — packaging + rollSpec. */
+  coreInsideDiameterMm?: number;
+  coreThicknessMm?: number;
+  requiredRollWeightKg?: number;
+  rollOutsideDiameterMm?: number;
+  /** 1 = OD-driven rollSpec, 0 = weight-driven. */
+  rollSpecOdDriven?: number;
 }
 
 export interface Slab {
@@ -226,6 +239,9 @@ export interface Estimate {
   /** Per-layer recipe overrides keyed by layer id (estimate-only, option B). */
   laminationRecipeOverrides?: Record<string, LaminationRecipe>;
 
+  /** Outbound packaging config (load/pallet, cartons/pallet, material picks). */
+  packagingConfig?: import('./packaging-costing').PackagingConfig;
+
   // Currency
   displayCurrencyCode: string;
   exchangeRateUsdToDisplay: number;
@@ -276,6 +292,12 @@ export interface Estimate {
   solventMixRatio?: number;
   inkPrintingProcessResolved?: InkPrintingProcess;
   inkSolventRatioResolved?: number;
+
+  // Packaging (outbound — separate from laminate)
+  packagingCostPerKg?: number;
+  packagingCostPerM2?: number;
+  packagingNeedsReview?: boolean;
+  packagingCostLines?: import('./packaging-costing').PackagingCostLine[];
 
   // Order quantities
   orderQuantityKg: number;

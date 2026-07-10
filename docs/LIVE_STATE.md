@@ -1,23 +1,34 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-10 (SOLVENT family + sleeve seaming)
-**Session focus:** PEBI→ES solvent sync; sleeve seaming mix (75% THF / 25% Dioxolane) @ 0.25 g/m².
+**Last updated:** 2026-07-10 (Packaging costing v1 complete)  
+**Session focus:** Outbound packaging PEBI↔ES — Phases 1–6 + sleeve carton 600 OD.
 
 ---
 
 ## Where we stopped (read this first next session)
 
-### **Last completed:** SOLVENT sync + sleeve seaming costing
+### **Last completed:** Packaging costing Phases 1–6 + sleeve 600 OD carton
 
-1. Sync `family=SOLVENT`: EA, Methoxy Propanol, Ethoxy Propanol, Methoxy Propyl Acetate, THF; Dioxolane mirrors THF price.
-2. PB typo fixed: `FXXOTSNTMPACET` description MITHOXY → **Methoxy** Propyl Acetate.
-3. Estimate: when any **SLEEVE** substrate is in the stack → Seaming g/m² input (default **0.25**); blend price from THF/Dioxolane.
-4. Migration: `drizzle/0018_sleeve_seaming_solvent_gsm.sql` — run `npm run db:migrate` in ES server.
-5. Restart ES (ensureSolventCatalogSeeded upserts new grades) + PEBI; sync SOLVENT.
+Plan: **`platform/docs/PACKAGING_COST.md`**. Separate block (like solvents), inside Total RM. PB **combined_avg** only — no hardcoded prices.
 
-### **NEXT:** Packaging costing — plan reviewed (PB avg cost rule)
+| Phase | Shipped |
+|-------|---------|
+| **1** | PEBI crosswalk + catalog + `family=PACKAGING` |
+| **2** | Migrations `0019`–`0021`; packaging seeds; sync skips unpriced |
+| **3** | `packaging-costing.ts` — Roll / Sleeve / Pouch\|Bag → Total RM |
+| **4** | EstimateEditor packaging UI + needs-review banner; `packagingConfig` |
+| **5** | Defaults: load **800** kg/pallet, **20** cartons/pallet; merge on create/UI; tests |
+| **6** | Master Data Packaging tab (unit/unit-price) + PEBI review panel |
+| **+** | `packaging-carton-sleeve-600` (side ≥600 mm); pouch → `packaging-carton-default` |
 
-See **`platform/docs/PACKAGING_COST.md`** (v4). **Mandatory:** estimation uses PB **combined weighted average** per SKU cluster (not audit snapshots / legacy seeds). Mixed UOM (kg/m/rol/pcs) → needs `priceUnit` + `unitPriceUsd`. Agent review §15 before Phase 1.
+Owner locks: `cartonsPerPallet` **20**; sleeve carton matched to 600 OD.
+
+### **NEXT:** User E2E test packaging
+
+1. Restart ES (+ PEBI if needed); ensure migrations `0019`–`0021` applied.
+2. Sync `family=PACKAGING` (or wait for delayed coordinator).
+3. Master Data → Packaging: 8 keys + unit prices; review list if unpriced.
+4. Estimate Roll / Sleeve / Pouch — packaging in Total RM; banner if needs review.
 
 ### **Solvent policy**
 

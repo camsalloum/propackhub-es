@@ -943,4 +943,135 @@ describe('Engine calculator — golden tests', () => {
 
     expect(() => calculateEstimate(estimate, materials)).toThrow(/Missing material data/);
   });
+
+  it('includes packaging cost in Total RM (materialCostPerKg)', () => {
+    const materials = new Map<string, Material>([
+      [
+        'pet',
+        {
+          id: 'pet',
+          name: 'PET',
+          type: 'substrate',
+          solidPercent: 100,
+          density: 1.4,
+          costPerKgUsd: 2,
+          wastePercent: 0,
+        },
+      ],
+      [
+        'pl',
+        {
+          id: 'pl',
+          name: 'Pallet',
+          type: 'packaging',
+          solidPercent: 100,
+          density: 1,
+          costPerKgUsd: 0,
+          wastePercent: 0,
+          platformMasterKey: 'packaging-pallet-wood',
+          priceUnit: 'pcs',
+          unitPriceUsd: 7.53,
+          costPerPieceUsd: 7.53,
+        },
+      ],
+      [
+        'st',
+        {
+          id: 'st',
+          name: 'Stretch',
+          type: 'packaging',
+          solidPercent: 100,
+          density: 1,
+          costPerKgUsd: 0,
+          wastePercent: 0,
+          platformMasterKey: 'packaging-stretch-wrap-roll',
+          priceUnit: 'rol',
+          unitPriceUsd: 7.9,
+          costPerPieceUsd: 7.9,
+        },
+      ],
+      [
+        'c76',
+        {
+          id: 'c76',
+          name: 'Core 76',
+          type: 'packaging',
+          solidPercent: 100,
+          density: 1,
+          costPerKgUsd: 0,
+          wastePercent: 0,
+          platformMasterKey: 'packaging-core-76',
+          priceUnit: 'mtr',
+          unitPriceUsd: 1.88,
+          costPerMeterUsd: 1.88,
+        },
+      ],
+      [
+        'ld',
+        {
+          id: 'ld',
+          name: 'LD wrap',
+          type: 'packaging',
+          solidPercent: 100,
+          density: 1,
+          costPerKgUsd: 1.37,
+          wastePercent: 0,
+          platformMasterKey: 'packaging-ld-wrap-film',
+          priceUnit: 'kgs',
+          unitPriceUsd: 1.37,
+        },
+      ],
+    ]);
+
+    const estimate: Estimate = {
+      id: 'est-pkg',
+      tenantId: 't1',
+      jobName: 'pkg rm',
+      status: 'draft',
+      layers: [{ id: 'l1', materialId: 'pet', micron: 12, position: 0 }],
+      dimensions: {
+        productType: 'roll',
+        reelWidthMm: 800,
+        cutoffMm: 600,
+        numberOfUps: 1,
+        rollSpecOdDriven: 1,
+        rollOutsideDiameterMm: 600,
+        coreInsideDiameterMm: 76.2,
+        coreThicknessMm: 12,
+      },
+      markupPercent: 0,
+      platesPerKg: 0,
+      deliveryPerKg: 0,
+      processes: [],
+      slabs: [{ quantityKg: 800, pricePerKg: 0 }],
+      displayCurrencyCode: 'USD',
+      exchangeRateUsdToDisplay: 1,
+      orderQuantityKg: 800,
+      packagingConfig: {
+        loadPerPalletKg: 800,
+        coreMaterialId: 'c76',
+        ldWrapMaterialId: 'ld',
+        stretchMaterialId: 'st',
+        palletMaterialId: 'pl',
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const withoutPkg = calculateEstimate(
+      { ...estimate, packagingConfig: { loadPerPalletKg: 800 } },
+      new Map([['pet', materials.get('pet')!]])
+    );
+    const withPkg = calculateEstimate(estimate, materials);
+
+    expect(withPkg.estimate.packagingCostPerKg ?? 0).toBeGreaterThan(0);
+    expect(withPkg.estimate.packagingNeedsReview).toBe(false);
+    expect(withPkg.estimate.materialCostPerKg ?? 0).toBeGreaterThan(
+      withoutPkg.estimate.materialCostPerKg ?? 0
+    );
+    expect(withPkg.estimate.materialCostPerKg ?? 0).toBeCloseTo(
+      (withoutPkg.estimate.layerRmCostPerKg ?? 0) + (withPkg.estimate.packagingCostPerKg ?? 0),
+      5
+    );
+  });
 });

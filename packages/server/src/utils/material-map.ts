@@ -27,6 +27,9 @@ export function toEngineMaterial(m: MaterialRow): Material {
     costPerPieceUsd: m.costPerPieceUsd != null ? parseFloat(m.costPerPieceUsd) : null,
     weightGramPerMeter: m.weightGramPerMeter != null ? parseFloat(m.weightGramPerMeter) : null,
     weightGramPerPiece: m.weightGramPerPiece != null ? parseFloat(m.weightGramPerPiece) : null,
+    platformMasterKey: m.platformMasterKey ?? null,
+    priceUnit: m.priceUnit ?? null,
+    unitPriceUsd: m.unitPriceUsd != null ? parseFloat(m.unitPriceUsd) : null,
   };
 }
 
@@ -50,6 +53,17 @@ export async function loadTenantMaterialsByIds(
 
 const SEAMING_SOLVENT_KEYS = ['solvent-thf', 'solvent-dioxolane'] as const;
 
+const PACKAGING_PLATFORM_KEYS = [
+  'packaging-ld-wrap-film',
+  'packaging-stretch-wrap-roll',
+  'packaging-core-76',
+  'packaging-core-77',
+  'packaging-core-152',
+  'packaging-pallet-wood',
+  'packaging-carton-sleeve-600',
+  'packaging-carton-default',
+] as const;
+
 /** THF + Dioxolane rows for sleeve seaming blend price. */
 export async function loadTenantSeamingSolventMaterials(
   tenantId: string
@@ -66,16 +80,31 @@ export async function loadTenantSeamingSolventMaterials(
     );
 }
 
-/** Merge layer/solvent materials with seaming solvents (dedupe by id). */
+/** Packaging catalog rows for outbound costing. */
+export async function loadTenantPackagingMaterials(tenantId: string): Promise<MaterialRow[]> {
+  const db = getDatabase();
+  return db
+    .select()
+    .from(schema.materials)
+    .where(
+      and(
+        eq(schema.materials.tenantId, tenantId),
+        inArray(schema.materials.platformMasterKey, [...PACKAGING_PLATFORM_KEYS])
+      )
+    );
+}
+
+/** Merge layer/solvent materials with seaming solvents + packaging (dedupe by id). */
 export async function loadTenantMaterialsForEstimate(
   tenantId: string,
   materialIds: Iterable<string | null | undefined>
 ): Promise<MaterialRow[]> {
-  const [byId, seaming] = await Promise.all([
+  const [byId, seaming, packaging] = await Promise.all([
     loadTenantMaterialsByIds(tenantId, materialIds),
     loadTenantSeamingSolventMaterials(tenantId),
+    loadTenantPackagingMaterials(tenantId),
   ]);
   const map = new Map<string, MaterialRow>();
-  for (const row of [...byId, ...seaming]) map.set(row.id, row);
+  for (const row of [...byId, ...seaming, ...packaging]) map.set(row.id, row);
   return [...map.values()];
 }

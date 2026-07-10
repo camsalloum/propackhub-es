@@ -92,11 +92,12 @@ function accessoryBasis(kind: string | null | undefined): 'per_meter' | 'per_pie
 }
 
 /** Map an RM type to the DB type field used for new rows */
-function dbTypeForRmCode(code: string): 'substrate' | 'ink' | 'adhesive' | 'solvent' | 'accessory' {
+function dbTypeForRmCode(code: string): 'substrate' | 'ink' | 'adhesive' | 'solvent' | 'accessory' | 'packaging' {
   if (code === 'ink') return 'ink';
   if (code === 'adhesive') return 'adhesive';
   if (code === 'solvent') return 'solvent';
   if (code === 'accessory') return 'accessory';
+  if (code === 'packaging') return 'packaging';
   return 'substrate'; // custom types map to substrate with substrateFamily = label
 }
 
@@ -147,7 +148,7 @@ function filterMaterialsForTab(
   allRmTabs: { id: string; label: string }[]
 ): PlatformMasterMaterialRow[] {
   if (tabCode === 'packaging') {
-    return rows.filter((m) => m.type === 'substrate' && m.substrateFamily === PACKAGING_FAMILY);
+    return rows.filter((m) => m.type === 'packaging');
   }
   if (tabCode === 'substrate') {
     const customFamilies = allRmTabs
@@ -207,7 +208,7 @@ function newMaterialRow(tabCode: string, tabLabel: string): PlatformMasterMateri
     type: dbType,
     solidPercent: tabCode === 'solvent' ? 0 : 100,
     density: tabCode === 'solvent' ? 0.85 : 0.91,
-    costPerKgUsd: tabCode === 'solvent' ? 1.54 : defaultCost,
+    costPerKgUsd: tabCode === 'solvent' ? 1.54 : tabCode === 'packaging' ? 0 : defaultCost,
     liquidCostUsd: defaultCost,
     wastePercent: 0,
     isSolventBased: tabCode === 'ink' || tabCode === 'adhesive',
@@ -217,6 +218,9 @@ function newMaterialRow(tabCode: string, tabLabel: string): PlatformMasterMateri
     marketPriceUsd: null,
     externalId: null,
     externalSource: null,
+    ...(tabCode === 'packaging'
+      ? { priceUnit: 'pcs' as const, unitPriceUsd: 0 }
+      : {}),
   };
 }
 
@@ -503,8 +507,10 @@ const MasterData = () => {
   }, [tab, loadReference]);
 
   useEffect(() => {
-    const pebiFamily = PEBI_REVIEW_FAMILY_BY_TAB[substrateFamilyTab];
-    const shouldLoad = tab === 'substrate' && Boolean(pebiFamily) && pebiReviewEligible;
+    const substrateFamily = PEBI_REVIEW_FAMILY_BY_TAB[substrateFamilyTab];
+    const pebiFamily =
+      tab === 'packaging' ? 'PACKAGING' : tab === 'substrate' ? substrateFamily : null;
+    const shouldLoad = Boolean(pebiFamily) && pebiReviewEligible;
 
     if (!shouldLoad) {
       setPebiMissing(null);
@@ -516,7 +522,7 @@ const MasterData = () => {
     setPebiMissingError(null);
 
     apiClient
-      .getPebiMissingMaterials({ family: pebiFamily })
+      .getPebiMissingMaterials({ family: pebiFamily! })
       .then((res) => {
         setPebiMissing(res);
       })
@@ -1338,10 +1344,13 @@ const MasterData = () => {
               countsByFamily={substrateFamilyCounts}
             />
           )}
-          {tab === 'substrate' && PEBI_REVIEW_FAMILY_BY_TAB[substrateFamilyTab] && pebiReviewEligible && (
+          {((tab === 'substrate' && PEBI_REVIEW_FAMILY_BY_TAB[substrateFamilyTab]) ||
+            tab === 'packaging') &&
+            pebiReviewEligible && (
             <div className="px-3 py-2 border-b border-border bg-slate/15">
               <div className="text-sm font-medium text-mist">
-                PEBI review ({PEBI_REVIEW_FAMILY_BY_TAB[substrateFamilyTab]})
+                PEBI review (
+                {tab === 'packaging' ? 'PACKAGING' : PEBI_REVIEW_FAMILY_BY_TAB[substrateFamilyTab]})
               </div>
               {pebiMissingLoading && <div className="text-xs text-mist mt-1">Loading…</div>}
               {pebiMissingError && <div className="text-xs text-danger mt-1">{pebiMissingError}</div>}
@@ -1349,11 +1358,19 @@ const MasterData = () => {
                 <>
                   {pebiMissing.missing.length === 0 ? (
                     <div className="text-xs text-mist mt-1">
-                      No {PEBI_REVIEW_FAMILY_BY_TAB[substrateFamilyTab]} grades missing live price after fallback rules.
+                      No{' '}
+                      {tab === 'packaging'
+                        ? 'PACKAGING'
+                        : PEBI_REVIEW_FAMILY_BY_TAB[substrateFamilyTab]}{' '}
+                      grades missing live price after fallback rules.
                     </div>
                   ) : (
                     <div className="text-xs text-mist mt-1">
-                      {pebiMissing.missing.length} {PEBI_REVIEW_FAMILY_BY_TAB[substrateFamilyTab]} grade(s) need review:
+                      {pebiMissing.missing.length}{' '}
+                      {tab === 'packaging'
+                        ? 'PACKAGING'
+                        : PEBI_REVIEW_FAMILY_BY_TAB[substrateFamilyTab]}{' '}
+                      grade(s) need review:
                       <ul className="list-disc ml-5 mt-1">
                         {pebiMissing.missing.map((m) => (
                           <li key={m.pbGradeKey}>
@@ -1473,6 +1490,86 @@ const MasterData = () => {
                   })}
                   {visibleMaterials.length === 0 && (
                     <tr><td colSpan={7} className="text-center text-mist py-4 text-sm">No accessories yet — click “Add row”. Used by the Pouch configurator (zipper/spout/valve/window/handle).</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : tab === 'packaging' ? (
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Grade</th>
+                    <th>Unit</th>
+                    <th className="text-right">Unit price ($)</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleMaterials.map((row) => (
+                    <tr key={row.id}>
+                      <td>
+                        <input
+                          className="cell-input w-full min-w-0"
+                          value={row.name}
+                          disabled={!materialRowEditable(row)}
+                          onChange={(e) => updateMaterialRow(row.id, { name: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="cell-input w-full min-w-0"
+                          value={row.substrateGrade ?? ''}
+                          disabled={!materialRowEditable(row)}
+                          onChange={(e) => updateMaterialRow(row.id, { substrateGrade: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <select
+                          className="cell-input w-full"
+                          value={row.priceUnit ?? 'pcs'}
+                          disabled={!materialRowEditable(row)}
+                          onChange={(e) =>
+                            updateMaterialRow(row.id, {
+                              priceUnit: e.target.value as PlatformMasterMaterialRow['priceUnit'],
+                            })
+                          }
+                        >
+                          <option value="kgs">kgs</option>
+                          <option value="mtr">mtr</option>
+                          <option value="rol">rol</option>
+                          <option value="pcs">pcs</option>
+                        </select>
+                      </td>
+                      <td>
+                        <UsdPriceInput
+                          className="cell-input cell-num w-[88px]"
+                          value={row.unitPriceUsd ?? 0}
+                          disabled={!materialRowEditable(row)}
+                          onChange={(v) => updateMaterialRow(row.id, { unitPriceUsd: v })}
+                        />
+                      </td>
+                      <td className="text-center">
+                        {materialRowEditable(row) && (
+                          <button
+                            type="button"
+                            className="p-1.5 text-danger hover:bg-danger/10 rounded transition-colors duration-micro ease-micro"
+                            onClick={() => removeMaterialRow(row)}
+                            aria-label="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {visibleMaterials.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="text-center text-mist py-4 text-sm">
+                        No packaging rows
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>

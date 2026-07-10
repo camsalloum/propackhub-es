@@ -21,7 +21,12 @@ export interface ClientCalcMaterial {
   wastePercent: number;
   isSolventBased?: boolean;
   substrateFamily?: string | null;
+  platformMasterKey?: string | null;
   laminationRecipe?: LaminationRecipe | null;
+  costPerMeterUsd?: number | string | null;
+  costPerPieceUsd?: number | string | null;
+  priceUnit?: string | null;
+  unitPriceUsd?: number | string | null;
 }
 
 export interface ClientCalcProcess {
@@ -54,6 +59,7 @@ export interface ClientCalcInput {
   laminationRecipeOverrides?: Record<string, LaminationRecipe>;
   cleaningSolventKgPerJob?: number;
   sleeveSeamingSolventGsm?: number;
+  packagingConfig?: import('@es/engine').PackagingConfig;
   inkPrintingProcess?: 'flexo' | 'rotogravure' | null;
   inkSolventRatio?: number;
   orderQuantityKg?: number;
@@ -86,10 +92,16 @@ function toMaterial(m: ClientCalcMaterial): Material {
     if (lower === 'ink' || lower.includes('ink')) return 'ink';
     if (lower === 'adhesive' || lower.includes('adhesive')) return 'adhesive';
     if (lower === 'solvent') return 'solvent';
+    if (lower === 'packaging' || lower.includes('packaging')) return 'packaging';
     return 'substrate';
   };
   const density = typeof m.density === 'string' ? parseFloat(m.density) : m.density;
   const costPerKgUsd = typeof m.costPerKgUsd === 'string' ? parseFloat(m.costPerKgUsd) : m.costPerKgUsd;
+  const parseOpt = (v: number | string | null | undefined): number | null => {
+    if (v == null || v === '') return null;
+    const n = typeof v === 'string' ? parseFloat(v) : v;
+    return Number.isFinite(n) ? n : null;
+  };
   return {
     id: m.id,
     name: m.name,
@@ -100,8 +112,13 @@ function toMaterial(m: ClientCalcMaterial): Material {
     wastePercent: m.wastePercent,
     isSolventBased: m.isSolventBased,
     substrateFamily: m.substrateFamily ?? null,
+    platformMasterKey: m.platformMasterKey ?? null,
     laminationRecipe: m.laminationRecipe ?? null,
     laminationTier: m.laminationRecipe?.tier ?? null,
+    costPerMeterUsd: parseOpt(m.costPerMeterUsd),
+    costPerPieceUsd: parseOpt(m.costPerPieceUsd),
+    priceUnit: m.priceUnit ?? null,
+    unitPriceUsd: parseOpt(m.unitPriceUsd),
   };
 }
 
@@ -170,6 +187,7 @@ export function runClientCalculation(input: ClientCalcInput) {
     laminationRecipeOverrides: input.laminationRecipeOverrides,
     cleaningSolventKgPerJob: input.cleaningSolventKgPerJob ?? DEFAULT_CLEANING_SOLVENT_KG_PER_JOB,
     sleeveSeamingSolventGsm: input.sleeveSeamingSolventGsm ?? DEFAULT_SLEEVE_SEAMING_SOLVENT_GSM,
+    packagingConfig: input.packagingConfig,
     inkPrintingProcess: input.inkPrintingProcess ?? undefined,
     inkSolventRatio: input.inkSolventRatio,
     pricingMethod: input.pricingMethod,

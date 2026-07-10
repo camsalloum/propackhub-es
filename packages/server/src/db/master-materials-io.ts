@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 export interface MasterMaterial {
   key: string;
   name: string;
-  type: 'substrate' | 'ink' | 'adhesive' | 'solvent' | 'accessory';
+  type: 'substrate' | 'ink' | 'adhesive' | 'solvent' | 'accessory' | 'packaging';
   solidPercent: number;
   density: number;
   costPerKgUsd: number;
@@ -35,6 +35,9 @@ export interface MasterMaterial {
   costPerPieceUsd?: number | null;
   weightGramPerMeter?: number | null;
   weightGramPerPiece?: number | null;
+  /** Packaging: kgs | mtr | rol | pcs */
+  priceUnit?: string | null;
+  unitPriceUsd?: number | null;
 }
 
 export interface ProductTypeRow {
@@ -100,6 +103,13 @@ export interface MasterDataReference {
   }>;
   costingDefaults?: {
     cleaningSolventKgPerJob?: number;
+    loadPerPalletKg?: number;
+    cartonsPerPallet?: number;
+    pcsPerCarton?: number;
+    ldWrapPasses?: number;
+    ldWrapFilmWidthMm?: number;
+    ldWrapGsm?: number;
+    stretchWrapLayers?: number;
   };
   /** Platform-wide waste bands by print mode (Printed vs Plain). */
   wasteBandsByPrintMode?: {

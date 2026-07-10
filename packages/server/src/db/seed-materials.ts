@@ -108,6 +108,8 @@ function mapMasterToDbRow(tenantId: string, material: MasterMaterial) {
     costPerPieceUsd: material.costPerPieceUsd != null ? material.costPerPieceUsd.toString() : null,
     weightGramPerMeter: material.weightGramPerMeter != null ? material.weightGramPerMeter.toString() : null,
     weightGramPerPiece: material.weightGramPerPiece != null ? material.weightGramPerPiece.toString() : null,
+    priceUnit: material.priceUnit ?? null,
+    unitPriceUsd: material.unitPriceUsd != null ? material.unitPriceUsd.toString() : null,
   };
 }
 
@@ -366,6 +368,8 @@ export async function syncMaterialsForTenant(
       patch.costPerPieceUsd = row.costPerPieceUsd;
       patch.weightGramPerMeter = row.weightGramPerMeter;
       patch.weightGramPerPiece = row.weightGramPerPiece;
+      patch.priceUnit = row.priceUnit;
+      patch.unitPriceUsd = row.unitPriceUsd;
 
       // Single source of truth: platform master always overwrites tenant prices.
       // Temporary overrides live only in estimate layer unit_cost_snapshot_usd, not in the library.

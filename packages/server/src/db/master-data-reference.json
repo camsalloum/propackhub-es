@@ -84,6 +84,13 @@
     }
   ],
   "costingDefaults": {
-    "cleaningSolventKgPerJob": 20
+    "cleaningSolventKgPerJob": 20,
+    "loadPerPalletKg": 800,
+    "cartonsPerPallet": 20,
+    "pcsPerCarton": 1000,
+    "ldWrapPasses": 2,
+    "ldWrapFilmWidthMm": 500,
+    "ldWrapGsm": 25,
+    "stretchWrapLayers": 4
   }
 }

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
 import { eq, and, desc, sql, isNull, asc, count as drizzleCount } from 'drizzle-orm';
-import { type VisibilityProfile, derivePrintingWebClass, defaultOrderQuantityUnit } from '@es/engine';
+import { type VisibilityProfile, derivePrintingWebClass, defaultOrderQuantityUnit, mergePackagingConfigDefaults } from '@es/engine';
 import { getEffectiveProfile, stripEstimateRow, stripCalculationResult } from '../utils/visibility';
 import { calculateAndPersistEstimate, buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
 import { loadTenantMaterialsForEstimate } from '../utils/material-map';
@@ -160,6 +160,25 @@ const EstimateCreateSchema = z.object({
   laminationRecipeOverrides: z.record(z.string(), LaminationRecipeSchema).optional(),
   cleaningSolventKgPerJob: z.coerce.number().nonnegative().optional(),
   sleeveSeamingSolventGsm: z.coerce.number().nonnegative().optional(),
+  packagingConfig: z
+    .object({
+      loadPerPalletKg: z.coerce.number().positive().optional(),
+      cartonsPerPallet: z.coerce.number().positive().optional(),
+      pcsPerCarton: z.coerce.number().positive().optional(),
+      ldWrapPasses: z.coerce.number().positive().optional(),
+      ldWrapFilmWidthMm: z.coerce.number().positive().optional(),
+      ldWrapGsm: z.coerce.number().positive().optional(),
+      stretchWrapLayers: z.coerce.number().positive().optional(),
+      palletFootprintLm: z.coerce.number().positive().optional(),
+      palletFootprintWm: z.coerce.number().positive().optional(),
+      coreMaterialId: z.string().uuid().optional().nullable(),
+      ldWrapMaterialId: z.string().uuid().optional().nullable(),
+      stretchMaterialId: z.string().uuid().optional().nullable(),
+      palletMaterialId: z.string().uuid().optional().nullable(),
+      cartonMaterialId: z.string().uuid().optional().nullable(),
+    })
+    .optional()
+    .nullable(),
   inkPrintingProcess: z.enum(['flexo', 'rotogravure']).optional().nullable(),
   status: z.enum(['draft', 'sent', 'won', 'lost']).optional(),
   notes: z.string().optional(),
@@ -454,6 +473,7 @@ export async function createEstimateRoute(
           data.cleaningSolventKgPerJob != null ? String(data.cleaningSolventKgPerJob) : undefined,
         sleeveSeamingSolventGsm:
           data.sleeveSeamingSolventGsm != null ? String(data.sleeveSeamingSolventGsm) : undefined,
+        packagingConfig: mergePackagingConfigDefaults(data.packagingConfig ?? null),
         inkPrintingProcess: data.inkPrintingProcess ?? undefined,
       })
       .returning()) as EstimateRow[];
@@ -833,6 +853,9 @@ async function updateEstimateRoute(
     }
     if (data.sleeveSeamingSolventGsm !== undefined) {
       updates.sleeveSeamingSolventGsm = String(data.sleeveSeamingSolventGsm);
+    }
+    if (data.packagingConfig !== undefined) {
+      updates.packagingConfig = mergePackagingConfigDefaults(data.packagingConfig);
     }
     if (data.inkPrintingProcess !== undefined) {
       updates.inkPrintingProcess = data.inkPrintingProcess;

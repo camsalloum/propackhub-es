@@ -17,7 +17,7 @@ import { relations } from 'drizzle-orm';
 // Enums
 export const userRoleEnum = pgEnum('user_role', ['user', 'tenant_admin', 'platform_admin']);
 export const estimateStatusEnum = pgEnum('estimate_status', ['draft', 'sent', 'won', 'lost']);
-export const layerTypeEnum = pgEnum('layer_type', ['substrate', 'ink', 'adhesive', 'solvent', 'accessory']);
+export const layerTypeEnum = pgEnum('layer_type', ['substrate', 'ink', 'adhesive', 'solvent', 'accessory', 'packaging']);
 export const productTypeEnum = pgEnum('product_type', ['roll', 'sleeve', 'pouch', 'bag']);
 export const tenantTypeEnum = pgEnum('tenant_type', ['individual', 'company']);
 export const operatingCostMethodEnum = pgEnum('operating_cost_method', ['process_per_kg', 'markup_over_rm', 'fixed_per_group']);
@@ -74,6 +74,9 @@ export const platformMasterMaterials = pgTable(
     weightGramPerMeter: decimal('weight_g_per_meter', { precision: 10, scale: 4 }),
     weightGramPerPiece: decimal('weight_g_per_piece', { precision: 10, scale: 4 }),
     accessoryKind: varchar('accessory_kind', { length: 32 }),
+    /** PB purchase unit: kgs | mtr | rol | pcs — packaging rows */
+    priceUnit: varchar('price_unit', { length: 16 }),
+    unitPriceUsd: decimal('unit_price_usd', { precision: 12, scale: 4 }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
@@ -314,6 +317,9 @@ export const materials = pgTable('materials', {
   weightGramPerMeter: decimal('weight_g_per_meter', { precision: 10, scale: 4 }),
   weightGramPerPiece: decimal('weight_g_per_piece', { precision: 10, scale: 4 }),
   accessoryKind: varchar('accessory_kind', { length: 32 }),
+  /** PB purchase unit: kgs | mtr | rol | pcs — packaging rows */
+  priceUnit: varchar('price_unit', { length: 16 }),
+  unitPriceUsd: decimal('unit_price_usd', { precision: 12, scale: 4 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
@@ -473,6 +479,8 @@ export const estimates = pgTable('estimates', {
   cleaningSolventKgPerJob: decimal('cleaning_solvent_kg_per_job', { precision: 12, scale: 4 }).default('20'),
   /** Sleeve seaming solvent g/m² when SLEEVE substrate present (default 0.25). */
   sleeveSeamingSolventGsm: decimal('sleeve_seaming_solvent_gsm', { precision: 12, scale: 4 }).default('0.25'),
+  /** Outbound packaging: load/pallet, cartons/pallet, material IDs. */
+  packagingConfig: jsonb('packaging_config'),
   /** flexo | rotogravure — on-press SB ink makeup; null = infer from stack (PE→flexo). */
   inkPrintingProcess: varchar('ink_printing_process', { length: 16 }),
   orderQuantityKg: decimal('order_quantity_kg', { precision: 12, scale: 2 }),

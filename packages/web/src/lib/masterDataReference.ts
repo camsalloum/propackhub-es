@@ -62,6 +62,13 @@ export interface MasterDataReferenceState {
   }>;
   costingDefaults?: {
     cleaningSolventKgPerJob?: number;
+    loadPerPalletKg?: number;
+    cartonsPerPallet?: number;
+    pcsPerCarton?: number;
+    ldWrapPasses?: number;
+    ldWrapFilmWidthMm?: number;
+    ldWrapGsm?: number;
+    stretchWrapLayers?: number;
   };
   /** Platform-wide waste bands by print mode (Printed vs Plain). */
   wasteBandsByPrintMode?: {
@@ -160,7 +167,7 @@ export const DEFAULT_MASTER_REFERENCE: MasterDataReferenceState = {
   productSubtypeOptions: DEFAULT_PRODUCT_SUBTYPE_OPTIONS,
   processOptions: DEFAULT_PROCESS_OPTIONS,
   processRows: [],
-  costingDefaults: { cleaningSolventKgPerJob: 20 },
+  costingDefaults: { cleaningSolventKgPerJob: 20, loadPerPalletKg: 800, cartonsPerPallet: 20, pcsPerCarton: 1000 },
   wasteBandsByPrintMode: {
     printed: DEFAULT_WASTE_BANDS_BY_PRINT_MODE.printed.map((b) => ({ ...b })),
     plain: DEFAULT_WASTE_BANDS_BY_PRINT_MODE.plain.map((b) => ({ ...b })),

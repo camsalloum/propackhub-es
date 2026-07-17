@@ -1,10 +1,20 @@
 import { Check, Minus, Plus } from 'lucide-react';
-import type { PackagingConfig, PackagingCostLine, PackagingRole } from '@es/engine';
+import type { ReactNode } from 'react';
+import type {
+  PackagingConfig,
+  PackagingCostLine,
+  PackagingRole,
+  ConsumablesConfig,
+  ConsumablesCostLine,
+  ConsumablesRole,
+} from '@es/engine';
 import {
   DEFAULT_CARTONS_PER_PALLET,
   DEFAULT_LOAD_PER_PALLET_KG,
   DEFAULT_PCS_PER_CARTON,
   DEFAULT_STRETCH_WRAP_LAYERS,
+  DEFAULT_MOUNT_WIDTH_M,
+  DEFAULT_REPEAT_M,
 } from '@es/engine';
 import { usdToDisplay, usdToDisplayPrecise } from '../../lib/currency';
 import { selectOnFocus } from '../../lib/inputs';
@@ -67,22 +77,305 @@ type Props = {
   productType: 'roll' | 'sleeve' | 'pouch' | 'bag';
   packagingConfig: PackagingConfig;
   onPackagingConfigChange: (patch: Partial<PackagingConfig>) => void;
-  /** Prepress placeholder */
-  prepressExpanded: boolean;
-  onPrepressExpandedChange: (v: boolean) => void;
+  /** Consumables (mounting tape + other) */
+  consumablesExpanded: boolean;
+  onConsumablesExpandedChange: (v: boolean) => void;
+  consumablesTotalPerKgUsd: number;
+  consumablesTotalPerM2Usd: number;
+  consumablesNeedsReview: boolean;
+  consumablesCostLines: ConsumablesCostLine[];
+  consumablesConfig: ConsumablesConfig;
+  onConsumablesConfigChange: (patch: Partial<ConsumablesConfig>) => void;
 };
 
 function EmptyCell() {
   return <div className="structure-grid__cell" role="cell" />;
 }
 
-function TypeBadge({ label, tone }: { label: string; tone: 'solvent' | 'pack' | 'prepress' }) {
-  const cls =
-    tone === 'prepress' ? 'bg-mist/20 text-mist' : 'bg-slate text-navy';
+/** Section type label — plain text (no pill). */
+function TypeBadge({ label }: { label: string }) {
   return (
-    <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded-md whitespace-nowrap ${cls}`}>
-      {label}
+    <span className="text-[10px] font-medium text-navy whitespace-nowrap">{label}</span>
+  );
+}
+
+/**
+ * ONE grid for every Solvent / Pack / Consumables detail row.
+ * Fixed tracks — AED and inputs share the same vertical columns.
+ * 1 label | 2 qty/primary | 3 mid (select/hint/2nd config) | 4 price
+ */
+const DETAIL_COLS = '11.5rem 7.5rem minmax(8rem, 1fr) 9.75rem';
+
+const CELL_NUM =
+  'cell-input font-mono text-[11px] text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none';
+const QTY_INPUT_CLS = `${CELL_NUM} !w-[4.75rem] !max-w-[4.75rem]`;
+const PRICE_INPUT_CLS = `${CELL_NUM} !w-[4.5rem] !max-w-[4.5rem] shrink-0`;
+const CONFIG_INPUT_CLS = QTY_INPUT_CLS;
+
+function DetailStrip({
+  label,
+  qty,
+  mid,
+  price,
+}: {
+  label: ReactNode;
+  qty?: ReactNode;
+  mid?: ReactNode;
+  price?: ReactNode;
+}) {
+  return (
+    <div
+      className="grid w-full items-center gap-x-3"
+      style={{ gridTemplateColumns: DETAIL_COLS }}
+    >
+      <div className="min-w-0 overflow-hidden">{label}</div>
+      <div className="min-w-0">{qty ?? null}</div>
+      <div className="min-w-0">{mid ?? null}</div>
+      <div className="min-w-0">{price ?? null}</div>
+    </div>
+  );
+}
+
+function DetailRow({
+  strip,
+  gsm,
+  showStructureCosts,
+  perKg,
+  perM2,
+  fxRate,
+  showLayerControlsCol,
+  tip,
+  emptyCosts,
+}: {
+  strip: ReactNode;
+  gsm?: ReactNode;
+  showStructureCosts: boolean;
+  perKg?: number;
+  perM2?: number;
+  fxRate: number;
+  showLayerControlsCol: boolean;
+  tip?: string;
+  /** Config rows: keep cost columns blank instead of 0.0000 */
+  emptyCosts?: boolean;
+}) {
+  return (
+    <div className="structure-grid__row bg-slate/10" role="row">
+      <EmptyCell />
+      <div
+        className="structure-grid__cell py-1.5"
+        style={{ gridColumn: '2 / 6' }}
+        role="cell"
+      >
+        {strip}
+      </div>
+      {gsm ?? (
+        <div className="structure-grid__cell text-mist text-[10px]" role="cell">
+          —
+        </div>
+      )}
+      {showStructureCosts && emptyCosts ? (
+        <>
+          <EmptyCell />
+          <EmptyCell />
+        </>
+      ) : (
+        <CostCells
+          show={showStructureCosts}
+          perKg={perKg ?? 0}
+          perM2={perM2 ?? 0}
+          fxRate={fxRate}
+          title={tip}
+        />
+      )}
+      {showLayerControlsCol && <EmptyCell />}
+    </div>
+  );
+}
+
+function StripLabel({ children, title }: { children: ReactNode; title?: string }) {
+  return (
+    <span
+      className="text-[11px] text-navy font-medium whitespace-nowrap overflow-hidden text-ellipsis block"
+      title={title}
+    >
+      {children}
     </span>
+  );
+}
+
+function QtyField({
+  value,
+  unit,
+  step = 0.01,
+  decimals = 2,
+  ariaLabel,
+  tip,
+  disabled,
+  readOnly,
+  onChange,
+}: {
+  value: number;
+  unit: string;
+  step?: number;
+  decimals?: number;
+  ariaLabel: string;
+  tip?: string;
+  disabled?: boolean;
+  readOnly?: boolean;
+  onChange?: (v: number) => void;
+}) {
+  return (
+    <label className="inline-flex items-center gap-1.5" title={tip}>
+      <input
+        type="number"
+        min="0"
+        step={step}
+        aria-label={ariaLabel}
+        className={QTY_INPUT_CLS}
+        value={Number(value.toFixed(decimals))}
+        onChange={(e) => {
+          if (!onChange) return;
+          const v = parseFloat(e.target.value);
+          onChange(Number.isFinite(v) ? v : 0);
+        }}
+        onFocus={selectOnFocus}
+        disabled={disabled || readOnly || !onChange}
+        readOnly={readOnly || !onChange}
+      />
+      <span className="text-[10px] text-mist shrink-0 whitespace-nowrap">{unit}</span>
+    </label>
+  );
+}
+
+function PriceField({
+  currency,
+  value,
+  unit,
+  step = '0.01',
+  ariaLabel,
+  tip,
+  disabled,
+  onChange,
+}: {
+  currency: string;
+  value: string;
+  unit: string;
+  step?: string;
+  ariaLabel: string;
+  tip?: string;
+  disabled?: boolean;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label className="inline-flex items-center gap-1.5" title={tip}>
+      <span className="text-[10px] text-mist shrink-0 w-7">{currency}</span>
+      <input
+        type="number"
+        min="0"
+        step={step}
+        aria-label={ariaLabel}
+        className={PRICE_INPUT_CLS}
+        value={value}
+        placeholder="—"
+        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        onFocus={selectOnFocus}
+        disabled={disabled}
+      />
+      <span className="text-[10px] text-mist shrink-0 whitespace-nowrap">/{unit}</span>
+    </label>
+  );
+}
+
+function CostStripRow({
+  label,
+  needsReview,
+  qty,
+  qtyUnit,
+  qtyStep = 0.01,
+  qtyDecimals = 2,
+  qtyReadOnly,
+  onQtyChange,
+  priceDisplay,
+  priceUnit,
+  priceStep = '0.01',
+  onPriceChange,
+  tip,
+  showStructureCosts,
+  perKg,
+  perM2,
+  fxRate,
+  showLayerControlsCol,
+  canConfigure,
+  displayCurrency,
+  mid,
+}: {
+  label: string;
+  needsReview?: boolean;
+  qty: number;
+  qtyUnit: string;
+  qtyStep?: number;
+  qtyDecimals?: number;
+  qtyReadOnly?: boolean;
+  onQtyChange?: (v: number) => void;
+  priceDisplay: string;
+  priceUnit: string;
+  priceStep?: string;
+  onPriceChange: (v: number) => void;
+  tip?: string;
+  showStructureCosts: boolean;
+  perKg: number;
+  perM2: number;
+  fxRate: number;
+  showLayerControlsCol: boolean;
+  canConfigure: boolean;
+  displayCurrency: string;
+  mid?: ReactNode;
+}) {
+  return (
+    <DetailRow
+      showStructureCosts={showStructureCosts}
+      perKg={perKg}
+      perM2={perM2}
+      fxRate={fxRate}
+      showLayerControlsCol={showLayerControlsCol}
+      tip={tip}
+      strip={
+        <DetailStrip
+          label={
+            <StripLabel title={label}>
+              {label}
+              {needsReview ? ' · review' : ''}
+            </StripLabel>
+          }
+          qty={
+            <QtyField
+              value={qty}
+              unit={qtyUnit}
+              step={qtyStep}
+              decimals={qtyDecimals}
+              ariaLabel={`${label} quantity`}
+              tip={tip}
+              disabled={!canConfigure}
+              readOnly={qtyReadOnly}
+              onChange={onQtyChange}
+            />
+          }
+          mid={mid}
+          price={
+            <PriceField
+              currency={displayCurrency}
+              value={priceDisplay}
+              unit={priceUnit}
+              step={priceStep}
+              ariaLabel={`${label} unit price`}
+              tip={tip}
+              disabled={!canConfigure}
+              onChange={onPriceChange}
+            />
+          }
+        />
+      }
+    />
   );
 }
 
@@ -197,8 +490,14 @@ export function StructureCostingBlocks(props: Props) {
     productType,
     packagingConfig,
     onPackagingConfigChange,
-    prepressExpanded,
-    onPrepressExpandedChange,
+    consumablesExpanded,
+    onConsumablesExpandedChange,
+    consumablesTotalPerKgUsd,
+    consumablesTotalPerM2Usd,
+    consumablesNeedsReview,
+    consumablesCostLines,
+    consumablesConfig,
+    onConsumablesConfigChange,
   } = props;
 
   const setOverride = (role: PackagingRole, displayVal: number) => {
@@ -218,6 +517,21 @@ export function StructureCostingBlocks(props: Props) {
     }
     onPackagingConfigChange({ qtyOverrides: prev });
   };
+
+  const setConsumablesOverride = (role: ConsumablesRole, displayVal: number) => {
+    const usd = fxRate > 0 ? displayVal / fxRate : displayVal;
+    const prev = { ...(consumablesConfig.unitPriceOverridesUsd ?? {}) };
+    if (usd > 0) prev[role] = usd;
+    else delete prev[role];
+    onConsumablesConfigChange({ unitPriceOverridesUsd: prev });
+  };
+
+  const mountWidthM = consumablesConfig.mountWidthM ?? DEFAULT_MOUNT_WIDTH_M;
+  const tapeLine = consumablesCostLines.find((l) => l.role === 'mounting_tape');
+  const repeatM =
+    consumablesConfig.repeatM ??
+    tapeLine?.detail?.repeatM ??
+    DEFAULT_REPEAT_M;
 
   const printMethodButtons = hasSbInk && canConfigure && (
     <div className="inline-flex rounded overflow-hidden border border-border bg-surface-raised h-7 shrink-0">
@@ -242,20 +556,27 @@ export function StructureCostingBlocks(props: Props) {
     </div>
   );
 
+  const printProcessBar = hasSbInk && (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-[11px] font-medium text-navy">Print</span>
+      {printMethodButtons}
+    </div>
+  );
+
   /** Ink:solvent parts — shown as 1:N (flexo 1:1, roto 1:2). Same editable highlight as other cells. */
   const ratioInput = hasSbInk && canConfigure && (
     <label
-      className="cell-input !flex !w-auto !max-w-none items-center gap-1 shrink-0 cursor-help !py-0 px-2"
+      className="cell-input !flex !w-[4.75rem] !max-w-[4.75rem] items-center justify-center gap-0.5 shrink-0 cursor-help !py-0 px-1"
       title={inkMakeupRatioTooltip}
     >
-      <span className="font-mono text-[11px] tabular-nums text-navy whitespace-nowrap leading-none">1 :</span>
+      <span className="font-mono text-[11px] tabular-nums text-navy whitespace-nowrap leading-none">1:</span>
       <input
         type="number"
         min="0.01"
         step="0.1"
         aria-label="Solvent parts per 1 part dry ink (ink:solvent ratio)"
         title={inkMakeupRatioTooltip}
-        className="font-mono text-[11px] text-center w-10 h-7 py-0 border-0 bg-transparent outline-none tabular-nums text-navy leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="font-mono text-[11px] text-center w-8 h-7 py-0 border-0 bg-transparent outline-none tabular-nums text-navy leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         value={inkSolventRatio}
         onChange={(e) => {
           const v = parseFloat(e.target.value);
@@ -268,7 +589,7 @@ export function StructureCostingBlocks(props: Props) {
 
   const solventPick = needsSolventMix && canConfigure && (
     <select
-      className="cell-input text-[11px] w-full min-w-0 h-7 py-0"
+      className="cell-input text-[11px] h-7 py-0 w-full min-w-0"
       aria-label="Solvent"
       value={solventMaterialId ?? ''}
       onChange={(e) => onSolventMaterialIdChange(e.target.value || null)}
@@ -283,22 +604,16 @@ export function StructureCostingBlocks(props: Props) {
   );
 
   const solventPriceInput = needsSolventMix && canConfigure && (
-    <label className="inline-flex items-center gap-0.5 shrink-0 h-7">
-      <input
-        type="number"
-        min="0"
-        step="0.01"
-        aria-label="Solvent per kg"
-        className="cell-input font-mono text-[11px] text-right w-14 h-7 py-0"
-        value={usdToDisplay(solventCostPerKgUsd, fxRate).toFixed(2)}
-        onChange={(e) => {
-          const displayVal = parseFloat(e.target.value) || 0;
-          onSolventCostPerKgUsdChange(fxRate > 0 ? displayVal / fxRate : displayVal);
-        }}
-        onFocus={selectOnFocus}
-      />
-      <span className="text-[10px] text-mist shrink-0">{displayCurrency}/kg</span>
-    </label>
+    <PriceField
+      currency={displayCurrency}
+      value={usdToDisplay(solventCostPerKgUsd, fxRate).toFixed(2)}
+      unit="kg"
+      ariaLabel="Solvent per kg"
+      disabled={!canConfigure}
+      onChange={(displayVal) =>
+        onSolventCostPerKgUsdChange(fxRate > 0 ? displayVal / fxRate : displayVal)
+      }
+    />
   );
 
   /** Qty + unit in the GSM column when Value is used for an editable price. */
@@ -326,6 +641,11 @@ export function StructureCostingBlocks(props: Props) {
   if (variant === 'mobile') {
     return (
       <div className="space-y-3">
+        {hasSbInk && (
+          <div className="border border-border rounded-lg px-3 py-2.5 bg-surface-raised">
+            {printProcessBar}
+          </div>
+        )}
         {showSolvent && (
           <div className="border border-border rounded-lg overflow-hidden bg-surface-raised">
             <button
@@ -361,7 +681,6 @@ export function StructureCostingBlocks(props: Props) {
                       )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      {printMethodButtons}
                       {ratioInput}
                     </div>
                     <div className="grid grid-cols-[1fr_auto] gap-2">
@@ -601,19 +920,148 @@ export function StructureCostingBlocks(props: Props) {
         )}
 
         <div className="border border-border rounded-lg overflow-hidden bg-surface-raised">
+          {consumablesNeedsReview && (
+            <div className="px-3 py-2 bg-warning/20 text-warning text-xs font-medium border-b border-warning/30">
+              Consumables unpriced — sync CONSUMABLES from PEBI before sending quote
+            </div>
+          )}
           <button
             type="button"
             className="w-full flex items-center justify-between px-3 py-2.5 text-sm"
-            onClick={() => onPrepressExpandedChange(!prepressExpanded)}
+            onClick={() => onConsumablesExpandedChange(!consumablesExpanded)}
           >
             <span className="inline-flex items-center gap-2 font-medium text-navy">
-              {prepressExpanded ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-              Prepress
+              {consumablesExpanded ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              Consumables
             </span>
-            {showStructureCosts && <span className="font-mono text-xs text-mist">—</span>}
+            {showStructureCosts && (
+              <span className="font-mono text-xs font-semibold text-navy">
+                {usdToDisplayPrecise(consumablesTotalPerKgUsd, fxRate).toFixed(4)}/kg ·{' '}
+                {usdToDisplayPrecise(consumablesTotalPerM2Usd, fxRate).toFixed(4)}/m²
+              </span>
+            )}
           </button>
-          {prepressExpanded && (
-            <div className="px-3 py-2 text-xs text-mist">Coming soon</div>
+          {consumablesExpanded && (
+            <div className="border-t border-border">
+              {tapeLine && (
+                <div className="px-3 py-2 space-y-2 border-b border-border/60">
+                  <div className="text-xs font-medium text-navy">
+                    Mounting tape
+                    {tapeLine.needsReview ? ' · needs review' : ''}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-[10px] text-mist font-medium">
+                    <span>Width</span>
+                    <span>Repeat</span>
+                    <span>Cost/m²</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 items-center">
+                    <label className="inline-flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        className="input py-1 px-2 w-full text-xs font-mono"
+                        value={Math.round(mountWidthM * 1000)}
+                        onChange={(e) => {
+                          const mm = parseFloat(e.target.value);
+                          onConsumablesConfigChange({
+                            mountWidthM:
+                              Number.isFinite(mm) && mm > 0 ? mm / 1000 : DEFAULT_MOUNT_WIDTH_M,
+                          });
+                        }}
+                        onFocus={selectOnFocus}
+                        disabled={!canConfigure}
+                      />
+                      <span className="text-mist shrink-0">mm</span>
+                    </label>
+                    <label className="inline-flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="100"
+                        step="1"
+                        className="input py-1 px-2 w-full text-xs font-mono"
+                        value={Math.round(repeatM * 1000)}
+                        onChange={(e) => {
+                          const mm = parseFloat(e.target.value);
+                          onConsumablesConfigChange({
+                            repeatM:
+                              Number.isFinite(mm) && mm > 0 ? mm / 1000 : DEFAULT_REPEAT_M,
+                          });
+                        }}
+                        onFocus={selectOnFocus}
+                        disabled={!canConfigure}
+                      />
+                      <span className="text-mist shrink-0">mm</span>
+                    </label>
+                    <label className="inline-flex items-center gap-1">
+                      <span className="text-mist shrink-0">{displayCurrency}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="input py-1 px-2 w-full text-xs font-mono"
+                        value={
+                          tapeLine.unitPriceUsd != null
+                            ? usdToDisplay(tapeLine.unitPriceUsd, fxRate).toFixed(2)
+                            : ''
+                        }
+                        placeholder="—"
+                        onChange={(e) =>
+                          setConsumablesOverride('mounting_tape', parseFloat(e.target.value) || 0)
+                        }
+                        onFocus={selectOnFocus}
+                        disabled={!canConfigure}
+                      />
+                    </label>
+                  </div>
+                  {showStructureCosts && (
+                    <div className="font-mono text-xs text-navy text-right">
+                      {usdToDisplayPrecise(tapeLine.costPerKgUsd, fxRate).toFixed(4)}/kg ·{' '}
+                      {usdToDisplayPrecise(tapeLine.costPerM2Usd, fxRate).toFixed(4)}/m²
+                    </div>
+                  )}
+                </div>
+              )}
+              {consumablesCostLines
+                .filter((l) => l.role === 'other')
+                .map((line) => (
+                  <div key={line.role} className="px-3 py-2 space-y-1">
+                    <div className="text-xs font-medium text-navy">
+                      {line.label}
+                      {line.needsReview ? ' · needs review' : ''}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="inline-flex items-center gap-1">
+                        <span className="text-[10px] text-mist">{displayCurrency}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.0001"
+                          className="input py-1 px-2 w-24 text-xs font-mono"
+                          value={
+                            line.unitPriceUsd != null
+                              ? usdToDisplayPrecise(line.unitPriceUsd, fxRate).toFixed(4)
+                              : ''
+                          }
+                          placeholder="—"
+                          onChange={(e) =>
+                            setConsumablesOverride('other', parseFloat(e.target.value) || 0)
+                          }
+                          onFocus={selectOnFocus}
+                          disabled={!canConfigure}
+                        />
+                        <span className="text-xs text-mist">/kg</span>
+                      </label>
+                      {showStructureCosts && (
+                        <span className="font-mono text-xs text-navy ml-auto">
+                          {usdToDisplayPrecise(line.costPerKgUsd, fxRate).toFixed(4)}/kg ·{' '}
+                          {usdToDisplayPrecise(line.costPerM2Usd, fxRate).toFixed(4)}/m²
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+            </div>
           )}
         </div>
       </div>
@@ -623,12 +1071,43 @@ export function StructureCostingBlocks(props: Props) {
   /* ── Desktop structure-grid rows ── */
   return (
     <>
+      {hasSbInk && (
+        <div className="structure-grid__row bg-slate/10" role="row">
+          <EmptyCell />
+          <div className="structure-grid__cell" role="cell">
+            <TypeBadge label="Print" />
+          </div>
+          <div className="structure-grid__cell text-mist text-xs" role="cell">
+            —
+          </div>
+          <div className="structure-grid__cell" role="cell">
+            {printProcessBar}
+          </div>
+          <div className="structure-grid__cell text-mist text-[10px]" role="cell">
+            —
+          </div>
+          <div className="structure-grid__cell text-mist" role="cell">
+            —
+          </div>
+          {showStructureCosts && (
+            <>
+              <div className="structure-grid__cell font-mono text-[11px] text-mist" role="cell">
+                —
+              </div>
+              <div className="structure-grid__cell font-mono text-[11px] text-mist" role="cell">
+                —
+              </div>
+            </>
+          )}
+          {showLayerControlsCol && <EmptyCell />}
+        </div>
+      )}
       {showSolvent && (
         <>
           <div className="structure-grid__row" role="row">
             <EmptyCell />
             <div className="structure-grid__cell" role="cell">
-              <TypeBadge label="Solvent" tone="solvent" />
+              <TypeBadge label="Solvent" />
             </div>
             <div className="structure-grid__cell text-mist text-xs" role="cell">
               —
@@ -657,183 +1136,138 @@ export function StructureCostingBlocks(props: Props) {
           </div>
 
           {solventExpanded && hasSbInk && (
-            <div className="structure-grid__row bg-slate/20" role="row">
-              <EmptyCell />
-              <div
-                className="structure-grid__cell py-1.5"
-                style={{ gridColumn: '2 / 6' }}
-                role="cell"
-              >
-                <div
-                  className="grid w-full items-center gap-x-2 gap-y-1"
-                  style={{
-                    gridTemplateColumns: '6.25rem auto 3.75rem minmax(6.5rem, 1fr) auto',
-                  }}
-                >
-                  <span className="text-[11px] text-navy font-medium whitespace-nowrap">
-                    Ink dilution
-                  </span>
-                  {printMethodButtons}
-                  {ratioInput}
-                  {solventPick}
-                  {solventPriceInput}
-                </div>
-              </div>
-              {qtyInGsmCell(lineFor(solventCostLines, 'ink-makeup'))}
-              <CostCells
-                show={showStructureCosts}
-                perKg={lineFor(solventCostLines, 'ink-makeup')?.perKgUsd ?? 0}
-                perM2={lineFor(solventCostLines, 'ink-makeup')?.perM2Usd ?? 0}
-                fxRate={fxRate}
-                title={lineFor(solventCostLines, 'ink-makeup')?.calcHint}
-              />
-              {showLayerControlsCol && <EmptyCell />}
-            </div>
+            <DetailRow
+              showStructureCosts={showStructureCosts}
+              perKg={lineFor(solventCostLines, 'ink-makeup')?.perKgUsd ?? 0}
+              perM2={lineFor(solventCostLines, 'ink-makeup')?.perM2Usd ?? 0}
+              fxRate={fxRate}
+              showLayerControlsCol={showLayerControlsCol}
+              tip={lineFor(solventCostLines, 'ink-makeup')?.calcHint}
+              gsm={qtyInGsmCell(lineFor(solventCostLines, 'ink-makeup'))}
+              strip={
+                <DetailStrip
+                  label={<StripLabel>Ink dilution</StripLabel>}
+                  qty={ratioInput}
+                  mid={solventPick}
+                  price={solventPriceInput}
+                />
+              }
+            />
           )}
 
           {solventExpanded && lineFor(solventCostLines, 'lamination') && (
-            <div className="structure-grid__row bg-slate/20" role="row">
-              <EmptyCell />
-              <div
-                className="structure-grid__cell py-1.5"
-                style={{ gridColumn: '2 / 6' }}
-                role="cell"
-              >
-                <div
-                  className="grid w-full items-center gap-x-2"
-                  style={{ gridTemplateColumns: '6.25rem minmax(0, 1fr) auto' }}
-                >
-                  <span className="text-[11px] text-navy font-medium whitespace-nowrap">
-                    Lamination dilution
-                  </span>
-                  <span
-                    className="text-[10px] text-mist truncate cursor-help"
-                    title={lineFor(solventCostLines, 'lamination')?.calcHint}
-                  >
-                    SB adhesive · EA recipe
-                  </span>
-                  <span
-                    className="font-mono text-[11px] tabular-nums text-navy cursor-help whitespace-nowrap"
-                    title={lineFor(solventCostLines, 'lamination')?.calcHint}
-                  >
-                    {lineFor(solventCostLines, 'lamination')?.qty != null
-                      ? `${lineFor(solventCostLines, 'lamination')!.qty!.toFixed(2)} g/m²`
-                      : '—'}
-                  </span>
-                </div>
-              </div>
-              <div className="structure-grid__cell text-mist text-[10px]" role="cell">
-                —
-              </div>
-              <CostCells
-                show={showStructureCosts}
-                perKg={lineFor(solventCostLines, 'lamination')!.perKgUsd}
-                perM2={lineFor(solventCostLines, 'lamination')!.perM2Usd}
-                fxRate={fxRate}
-                title={lineFor(solventCostLines, 'lamination')?.calcHint}
-              />
-              {showLayerControlsCol && <EmptyCell />}
-            </div>
+            <DetailRow
+              showStructureCosts={showStructureCosts}
+              perKg={lineFor(solventCostLines, 'lamination')!.perKgUsd}
+              perM2={lineFor(solventCostLines, 'lamination')!.perM2Usd}
+              fxRate={fxRate}
+              showLayerControlsCol={showLayerControlsCol}
+              tip={lineFor(solventCostLines, 'lamination')?.calcHint}
+              strip={
+                <DetailStrip
+                  label={<StripLabel>Lamination dilution</StripLabel>}
+                  qty={
+                    <span
+                      className="font-mono text-[11px] tabular-nums text-navy cursor-help whitespace-nowrap"
+                      title={lineFor(solventCostLines, 'lamination')?.calcHint}
+                    >
+                      {lineFor(solventCostLines, 'lamination')?.qty != null
+                        ? `${lineFor(solventCostLines, 'lamination')!.qty!.toFixed(2)} g/m²`
+                        : '—'}
+                    </span>
+                  }
+                  mid={
+                    <span
+                      className="text-[10px] text-mist truncate cursor-help block"
+                      title={lineFor(solventCostLines, 'lamination')?.calcHint}
+                    >
+                      SB adhesive · EA recipe
+                    </span>
+                  }
+                />
+              }
+            />
           )}
 
           {solventExpanded && needsSolventMix && (
-            <div className="structure-grid__row bg-slate/20" role="row">
-              <EmptyCell />
-              <div
-                className="structure-grid__cell py-1.5"
-                style={{ gridColumn: '2 / 6' }}
-                role="cell"
-              >
-                <div
-                  className="grid w-full items-center gap-x-2"
-                  style={{ gridTemplateColumns: '6.25rem minmax(0, 1fr) auto' }}
-                >
-                  <span className="text-[11px] text-navy font-medium whitespace-nowrap">
-                    Press cleaning
-                  </span>
-                  <span className="text-[11px] text-mist truncate">
-                    {solventMaterialOptions.find((m) => m.id === solventMaterialId)?.name ?? 'Solvent'}
-                  </span>
-                  <label
-                    className="inline-flex items-center gap-1 shrink-0"
-                    title={lineFor(solventCostLines, 'cleaning')?.calcHint}
-                  >
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      aria-label="Cleaning kg per job"
-                      className="cell-input font-mono text-[11px] text-right w-14 h-7 py-0"
-                      value={cleaningSolventKgPerJob}
-                      onChange={(e) => onCleaningSolventKgPerJobChange(Number(e.target.value) || 0)}
-                      onFocus={selectOnFocus}
-                      disabled={!canConfigure}
-                    />
-                    <span className="text-[10px] text-mist">kg/job</span>
-                  </label>
-                </div>
-              </div>
-              <div className="structure-grid__cell text-mist text-[10px]" role="cell">
-                —
-              </div>
-              <CostCells
-                show={showStructureCosts}
-                perKg={lineFor(solventCostLines, 'cleaning')?.perKgUsd ?? 0}
-                perM2={lineFor(solventCostLines, 'cleaning')?.perM2Usd ?? 0}
-                fxRate={fxRate}
-                title={lineFor(solventCostLines, 'cleaning')?.calcHint}
-              />
-              {showLayerControlsCol && <EmptyCell />}
-            </div>
+            <DetailRow
+              showStructureCosts={showStructureCosts}
+              perKg={lineFor(solventCostLines, 'cleaning')?.perKgUsd ?? 0}
+              perM2={lineFor(solventCostLines, 'cleaning')?.perM2Usd ?? 0}
+              fxRate={fxRate}
+              showLayerControlsCol={showLayerControlsCol}
+              tip={lineFor(solventCostLines, 'cleaning')?.calcHint}
+              strip={
+                <DetailStrip
+                  label={<StripLabel>Press cleaning</StripLabel>}
+                  qty={
+                    <label
+                      className="inline-flex items-center gap-1.5"
+                      title={lineFor(solventCostLines, 'cleaning')?.calcHint}
+                    >
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        aria-label="Cleaning kg per job"
+                        className={CONFIG_INPUT_CLS}
+                        value={cleaningSolventKgPerJob}
+                        onChange={(e) =>
+                          onCleaningSolventKgPerJobChange(Number(e.target.value) || 0)
+                        }
+                        onFocus={selectOnFocus}
+                        disabled={!canConfigure}
+                      />
+                      <span className="text-[10px] text-mist whitespace-nowrap">kg/job</span>
+                    </label>
+                  }
+                  mid={
+                    <span className="text-[11px] text-mist truncate block">
+                      {solventMaterialOptions.find((m) => m.id === solventMaterialId)?.name ??
+                        'Solvent'}
+                    </span>
+                  }
+                />
+              }
+            />
           )}
 
           {solventExpanded && hasSleeveSubstrate && (
-            <div className="structure-grid__row bg-slate/20" role="row">
-              <EmptyCell />
-              <div
-                className="structure-grid__cell py-1.5"
-                style={{ gridColumn: '2 / 6' }}
-                role="cell"
-              >
-                <div
-                  className="grid w-full items-center gap-x-2"
-                  style={{ gridTemplateColumns: '6.25rem minmax(0, 1fr) auto' }}
-                >
-                  <span className="text-[11px] text-navy font-medium whitespace-nowrap">
-                    Seaming
-                  </span>
-                  <span className="text-[11px] text-mist truncate">THF / Dioxolane</span>
-                  <label
-                    className="inline-flex items-center gap-1 shrink-0"
-                    title={lineFor(solventCostLines, 'seaming')?.calcHint}
-                  >
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      aria-label="Seaming solvent g per m2"
-                      className="cell-input font-mono text-[11px] text-right w-14 h-7 py-0"
-                      value={sleeveSeamingSolventGsm}
-                      onChange={(e) => onSleeveSeamingSolventGsmChange(Number(e.target.value) || 0)}
-                      onFocus={selectOnFocus}
-                      disabled={!canConfigure}
-                    />
-                    <span className="text-[10px] text-mist">g/m²</span>
-                  </label>
-                </div>
-              </div>
-              <div className="structure-grid__cell text-mist text-[10px]" role="cell">
-                —
-              </div>
-              <CostCells
-                show={showStructureCosts}
-                perKg={lineFor(solventCostLines, 'seaming')?.perKgUsd ?? 0}
-                perM2={lineFor(solventCostLines, 'seaming')?.perM2Usd ?? 0}
-                fxRate={fxRate}
-                title={lineFor(solventCostLines, 'seaming')?.calcHint}
-              />
-              {showLayerControlsCol && <EmptyCell />}
-            </div>
+            <DetailRow
+              showStructureCosts={showStructureCosts}
+              perKg={lineFor(solventCostLines, 'seaming')?.perKgUsd ?? 0}
+              perM2={lineFor(solventCostLines, 'seaming')?.perM2Usd ?? 0}
+              fxRate={fxRate}
+              showLayerControlsCol={showLayerControlsCol}
+              tip={lineFor(solventCostLines, 'seaming')?.calcHint}
+              strip={
+                <DetailStrip
+                  label={<StripLabel>Seaming</StripLabel>}
+                  qty={
+                    <label
+                      className="inline-flex items-center gap-1.5"
+                      title={lineFor(solventCostLines, 'seaming')?.calcHint}
+                    >
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        aria-label="Seaming solvent g per m2"
+                        className={CONFIG_INPUT_CLS}
+                        value={sleeveSeamingSolventGsm}
+                        onChange={(e) =>
+                          onSleeveSeamingSolventGsmChange(Number(e.target.value) || 0)
+                        }
+                        onFocus={selectOnFocus}
+                        disabled={!canConfigure}
+                      />
+                      <span className="text-[10px] text-mist whitespace-nowrap">g/m²</span>
+                    </label>
+                  }
+                  mid={<span className="text-[11px] text-mist truncate block">THF / Dioxolane</span>}
+                />
+              }
+            />
           )}
         </>
       )}
@@ -854,7 +1288,7 @@ export function StructureCostingBlocks(props: Props) {
           <div className="structure-grid__row" role="row">
             <EmptyCell />
             <div className="structure-grid__cell" role="cell">
-              <TypeBadge label="Pack" tone="pack" />
+              <TypeBadge label="Pack" />
             </div>
             <div className="structure-grid__cell text-mist text-xs" role="cell">
               —
@@ -883,104 +1317,109 @@ export function StructureCostingBlocks(props: Props) {
           </div>
 
           {packagingExpanded && (
-            <div className="structure-grid__row bg-slate/10" role="row">
-              <EmptyCell />
-              <div
-                className="structure-grid__cell py-1.5"
-                style={{ gridColumn: '2 / 6' }}
-                role="cell"
-              >
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                  {productType === 'roll' && (
-                    <label className="inline-flex items-center gap-1.5">
-                      <span className="text-[11px] text-mist whitespace-nowrap">Load/pallet</span>
-                      <input
-                        type="number"
-                        min="1"
-                        className="cell-input font-mono text-[11px] !w-16 text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        value={packagingConfig.loadPerPalletKg ?? DEFAULT_LOAD_PER_PALLET_KG}
-                        onChange={(e) => {
-                          const v = parseFloat(e.target.value);
-                          onPackagingConfigChange({
-                            loadPerPalletKg: Number.isFinite(v) && v > 0 ? v : DEFAULT_LOAD_PER_PALLET_KG,
-                          });
-                        }}
-                        onFocus={selectOnFocus}
-                        disabled={!canConfigure}
-                      />
-                      <span className="text-[10px] text-mist">kg</span>
-                    </label>
-                  )}
-                  {(productType === 'sleeve' || productType === 'pouch' || productType === 'bag') && (
-                    <label className="inline-flex items-center gap-1.5">
-                      <span className="text-[11px] text-mist whitespace-nowrap">Cartons/pallet</span>
-                      <input
-                        type="number"
-                        min="1"
-                        className="cell-input font-mono text-[11px] !w-14 text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        value={packagingConfig.cartonsPerPallet ?? DEFAULT_CARTONS_PER_PALLET}
-                        onChange={(e) => {
-                          const v = parseFloat(e.target.value);
-                          onPackagingConfigChange({
-                            cartonsPerPallet:
-                              Number.isFinite(v) && v > 0 ? v : DEFAULT_CARTONS_PER_PALLET,
-                          });
-                        }}
-                        onFocus={selectOnFocus}
-                        disabled={!canConfigure}
-                      />
-                    </label>
-                  )}
-                  {(productType === 'pouch' || productType === 'bag') && (
-                    <label className="inline-flex items-center gap-1.5">
-                      <span className="text-[11px] text-mist whitespace-nowrap">Pcs/carton</span>
-                      <input
-                        type="number"
-                        min="1"
-                        className="cell-input font-mono text-[11px] !w-16 text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        value={packagingConfig.pcsPerCarton ?? DEFAULT_PCS_PER_CARTON}
-                        onChange={(e) => {
-                          const v = parseFloat(e.target.value);
-                          onPackagingConfigChange({
-                            pcsPerCarton: Number.isFinite(v) && v > 0 ? v : DEFAULT_PCS_PER_CARTON,
-                          });
-                        }}
-                        onFocus={selectOnFocus}
-                        disabled={!canConfigure}
-                      />
-                    </label>
-                  )}
-                  <label className="inline-flex items-center gap-1.5">
-                    <span className="text-[11px] text-mist whitespace-nowrap">Stretch layers</span>
-                    <input
-                      type="number"
-                      min="1"
-                      className="cell-input font-mono text-[11px] !w-12 text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      value={packagingConfig.stretchWrapLayers ?? DEFAULT_STRETCH_WRAP_LAYERS}
-                      onChange={(e) => {
-                        const v = parseFloat(e.target.value);
-                        onPackagingConfigChange({
-                          stretchWrapLayers:
-                            Number.isFinite(v) && v > 0 ? v : DEFAULT_STRETCH_WRAP_LAYERS,
-                        });
-                      }}
-                      onFocus={selectOnFocus}
-                      disabled={!canConfigure}
-                    />
-                  </label>
-                </div>
-              </div>
-              <div className="structure-grid__cell text-mist text-[10px]" role="cell">
-                —
-              </div>
-              {showStructureCosts && (
-                <>
-                  <EmptyCell />
-                  <EmptyCell />
-                </>
-              )}
-              {showLayerControlsCol && <EmptyCell />}
-            </div>
+            <DetailRow
+              showStructureCosts={showStructureCosts}
+              fxRate={fxRate}
+              showLayerControlsCol={showLayerControlsCol}
+              emptyCosts
+              strip={
+                <DetailStrip
+                  label={
+                    <StripLabel>
+                      {productType === 'roll'
+                        ? 'Load/pallet'
+                        : productType === 'sleeve' || productType === 'pouch' || productType === 'bag'
+                          ? 'Cartons/pallet'
+                          : 'Config'}
+                    </StripLabel>
+                  }
+                  qty={
+                    productType === 'roll' ? (
+                      <label className="inline-flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min="1"
+                          className={CONFIG_INPUT_CLS}
+                          value={packagingConfig.loadPerPalletKg ?? DEFAULT_LOAD_PER_PALLET_KG}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value);
+                            onPackagingConfigChange({
+                              loadPerPalletKg:
+                                Number.isFinite(v) && v > 0 ? v : DEFAULT_LOAD_PER_PALLET_KG,
+                            });
+                          }}
+                          onFocus={selectOnFocus}
+                          disabled={!canConfigure}
+                        />
+                        <span className="text-[10px] text-mist">kg</span>
+                      </label>
+                    ) : productType === 'sleeve' ||
+                      productType === 'pouch' ||
+                      productType === 'bag' ? (
+                      <label className="inline-flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min="1"
+                          className={CONFIG_INPUT_CLS}
+                          value={packagingConfig.cartonsPerPallet ?? DEFAULT_CARTONS_PER_PALLET}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value);
+                            onPackagingConfigChange({
+                              cartonsPerPallet:
+                                Number.isFinite(v) && v > 0 ? v : DEFAULT_CARTONS_PER_PALLET,
+                            });
+                          }}
+                          onFocus={selectOnFocus}
+                          disabled={!canConfigure}
+                        />
+                      </label>
+                    ) : undefined
+                  }
+                  mid={
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      {(productType === 'pouch' || productType === 'bag') && (
+                        <label className="inline-flex items-center gap-1.5">
+                          <span className="text-[11px] text-mist whitespace-nowrap">Pcs/carton</span>
+                          <input
+                            type="number"
+                            min="1"
+                            className={CONFIG_INPUT_CLS}
+                            value={packagingConfig.pcsPerCarton ?? DEFAULT_PCS_PER_CARTON}
+                            onChange={(e) => {
+                              const v = parseFloat(e.target.value);
+                              onPackagingConfigChange({
+                                pcsPerCarton:
+                                  Number.isFinite(v) && v > 0 ? v : DEFAULT_PCS_PER_CARTON,
+                              });
+                            }}
+                            onFocus={selectOnFocus}
+                            disabled={!canConfigure}
+                          />
+                        </label>
+                      )}
+                      <label className="inline-flex items-center gap-1.5">
+                        <span className="text-[11px] text-mist whitespace-nowrap">Stretch layers</span>
+                        <input
+                          type="number"
+                          min="1"
+                          className={CONFIG_INPUT_CLS}
+                          value={packagingConfig.stretchWrapLayers ?? DEFAULT_STRETCH_WRAP_LAYERS}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value);
+                            onPackagingConfigChange({
+                              stretchWrapLayers:
+                                Number.isFinite(v) && v > 0 ? v : DEFAULT_STRETCH_WRAP_LAYERS,
+                            });
+                          }}
+                          onFocus={selectOnFocus}
+                          disabled={!canConfigure}
+                        />
+                      </label>
+                    </div>
+                  }
+                />
+              }
+            />
           )}
 
           {packagingExpanded &&
@@ -993,110 +1432,64 @@ export function StructureCostingBlocks(props: Props) {
               const qtyStep = line.qtyUnit === 'roll' ? 0.001 : line.qtyUnit === 'm' || line.qtyUnit === 'kg' ? 0.01 : 1;
               const qtyDecimals = line.qtyUnit === 'roll' ? 3 : line.qtyUnit === 'pc' || line.qtyUnit === 'pcs' ? 0 : 2;
               const priceTip = [
-                `${line.label}`,
-                `Qty default (calculated): ${calcQty.toFixed(qtyDecimals)} ${line.qtyUnit}`,
+                line.calcHint ??
+                  `${line.label}\nQty default (calculated): ${calcQty.toFixed(qtyDecimals)} ${line.qtyUnit}`,
                 unitPriceDisplay
                   ? `Unit ${displayCurrency} ${unitPriceDisplay}/${line.priceUnit ?? 'u'}`
                   : 'Unit price missing — sync PACKAGING or enter price',
                 `Job cost → $/kg ${usdToDisplayPrecise(line.costPerKgUsd, fxRate).toFixed(4)}, $/m² ${usdToDisplayPrecise(line.costPerM2Usd, fxRate).toFixed(4)}`,
               ].join('\n');
               return (
-                <div key={line.role} className="structure-grid__row bg-slate/10" role="row">
-                  <EmptyCell />
-                  <div
-                    className="structure-grid__cell py-1.5"
-                    style={{ gridColumn: '2 / 6' }}
-                    role="cell"
-                  >
-                    <div
-                      className="grid w-full items-center gap-x-3"
-                      style={{
-                        gridTemplateColumns: '7.5rem minmax(8rem, auto) minmax(9rem, 1fr)',
-                      }}
-                    >
-                      <span className="text-[11px] text-navy font-medium truncate" title={line.label}>
-                        {line.label}
-                        {line.needsReview ? ' · review' : ''}
-                      </span>
-                      <label
-                        className="inline-flex items-center gap-1.5 shrink-0"
-                        title={priceTip}
-                      >
-                        <input
-                          type="number"
-                          min="0"
-                          step={qtyStep}
-                          aria-label={`${line.label} quantity`}
-                          className="cell-input font-mono text-[11px] text-right !w-[4.75rem] !max-w-[4.75rem] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={Number(line.qty.toFixed(qtyDecimals))}
-                          onChange={(e) => {
-                            const v = parseFloat(e.target.value);
-                            setQtyOverride(
-                              line.role,
-                              Number.isFinite(v) ? v : 0,
-                              calcQty
-                            );
-                          }}
-                          onFocus={selectOnFocus}
-                          disabled={!canConfigure}
-                        />
-                        <span className="text-[10px] text-mist shrink-0 whitespace-nowrap">
-                          {line.qtyUnit}
-                        </span>
-                      </label>
-                      <label
-                        className="inline-flex items-center gap-1.5 min-w-0 justify-end sm:justify-start"
-                        title={priceTip}
-                      >
-                        <span className="text-[10px] text-mist shrink-0">{displayCurrency}</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          aria-label={`${line.label} unit price`}
-                          className="cell-input font-mono text-[11px] text-right !w-[4.5rem] !max-w-[4.5rem] shrink-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={unitPriceDisplay}
-                          placeholder="—"
-                          onChange={(e) => setOverride(line.role, parseFloat(e.target.value) || 0)}
-                          onFocus={selectOnFocus}
-                          disabled={!canConfigure}
-                        />
-                        <span className="text-[10px] text-mist shrink-0 whitespace-nowrap">
-                          /{line.priceUnit ?? 'u'}
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                  <div className="structure-grid__cell text-mist text-[10px]" role="cell">
-                    —
-                  </div>
-                  <CostCells
-                    show={showStructureCosts}
-                    perKg={line.costPerKgUsd}
-                    perM2={line.costPerM2Usd}
-                    fxRate={fxRate}
-                    title={priceTip}
-                  />
-                  {showLayerControlsCol && <EmptyCell />}
-                </div>
+                <CostStripRow
+                  key={line.role}
+                  label={line.label}
+                  needsReview={line.needsReview}
+                  qty={line.qty}
+                  qtyUnit={line.qtyUnit}
+                  qtyStep={qtyStep}
+                  qtyDecimals={qtyDecimals}
+                  onQtyChange={(v) => setQtyOverride(line.role, v, calcQty)}
+                  priceDisplay={unitPriceDisplay}
+                  priceUnit={line.priceUnit ?? 'u'}
+                  onPriceChange={(v) => setOverride(line.role, v)}
+                  tip={priceTip}
+                  showStructureCosts={showStructureCosts}
+                  perKg={line.costPerKgUsd}
+                  perM2={line.costPerM2Usd}
+                  fxRate={fxRate}
+                  showLayerControlsCol={showLayerControlsCol}
+                  canConfigure={canConfigure}
+                  displayCurrency={displayCurrency}
+                />
               );
             })}
         </>
       )}
 
-      <div className="structure-grid__row bg-slate/10" role="row">
+      {consumablesNeedsReview && (
+        <div className="structure-grid__row bg-warning/20" role="row">
+          <div
+            className="structure-grid__cell py-2 text-xs font-medium text-warning"
+            style={{ gridColumn: '1 / -1' }}
+            role="cell"
+          >
+            Consumables unpriced — sync CONSUMABLES from PEBI before sending quote
+          </div>
+        </div>
+      )}
+      <div className="structure-grid__row" role="row">
         <EmptyCell />
         <div className="structure-grid__cell" role="cell">
-          <TypeBadge label="Prepress" tone="prepress" />
+          <TypeBadge label="Consumables" />
         </div>
         <div className="structure-grid__cell text-mist text-xs" role="cell">
           —
         </div>
         <div className="structure-grid__cell" role="cell">
           <SummaryToggle
-            expanded={prepressExpanded}
-            label="Prepress"
-            onToggle={() => onPrepressExpandedChange(!prepressExpanded)}
+            expanded={consumablesExpanded}
+            label="Consumables"
+            onToggle={() => onConsumablesExpandedChange(!consumablesExpanded)}
           />
         </div>
         <div className="structure-grid__cell text-mist text-[10px]" role="cell">
@@ -1105,28 +1498,179 @@ export function StructureCostingBlocks(props: Props) {
         <div className="structure-grid__cell text-mist" role="cell">
           —
         </div>
-        {showStructureCosts && (
-          <>
-            <div className="structure-grid__cell font-mono text-[11px] text-mist" role="cell">
-              —
-            </div>
-            <div className="structure-grid__cell font-mono text-[11px] text-mist" role="cell">
-              —
-            </div>
-          </>
-        )}
+        <CostCells
+          show={showStructureCosts}
+          perKg={consumablesTotalPerKgUsd}
+          perM2={consumablesTotalPerM2Usd}
+          fxRate={fxRate}
+          bold
+        />
         {showLayerControlsCol && <EmptyCell />}
       </div>
-      {prepressExpanded && (
-        <div className="structure-grid__row bg-slate/10" role="row">
-          <div
-            className="structure-grid__cell py-2 text-xs text-mist pl-4"
-            style={{ gridColumn: '1 / -1' }}
-            role="cell"
-          >
-            Coming soon
-          </div>
-        </div>
+      {consumablesExpanded && (
+        <>
+          {tapeLine && (() => {
+            const calcQty = tapeLine.calculatedQty ?? tapeLine.qty;
+            const unitPriceDisplay =
+              tapeLine.unitPriceUsd != null
+                ? usdToDisplay(tapeLine.unitPriceUsd, fxRate).toFixed(2)
+                : '';
+            const widthMm = Math.round(mountWidthM * 1000);
+            const repeatMm = Math.round(repeatM * 1000);
+            const tapePriceTip = [
+              'Mounting tape (flexo plate area)',
+              `Area = colors × width × cylinder repeat = ${calcQty.toFixed(2)} m²`,
+              `Cylinder repeat defaults to 500–600 mm average (not product cutoff)`,
+              unitPriceDisplay
+                ? `Unit ${displayCurrency} ${unitPriceDisplay}/m²`
+                : 'Unit price missing — sync CONSUMABLES or enter price',
+            ].join('\n');
+            return (
+              <>
+                <DetailRow
+                  showStructureCosts={showStructureCosts}
+                  fxRate={fxRate}
+                  showLayerControlsCol={showLayerControlsCol}
+                  emptyCosts
+                  strip={
+                    <DetailStrip
+                      label={<span className="text-[10px] text-mist"> </span>}
+                      qty={
+                        <span className="text-[10px] text-mist font-medium">Width</span>
+                      }
+                      mid={
+                        <span className="text-[10px] text-mist font-medium">Repeat</span>
+                      }
+                      price={
+                        <span className="text-[10px] text-mist font-medium">Cost/m²</span>
+                      }
+                    />
+                  }
+                />
+                <DetailRow
+                  showStructureCosts={showStructureCosts}
+                  perKg={tapeLine.costPerKgUsd}
+                  perM2={tapeLine.costPerM2Usd}
+                  fxRate={fxRate}
+                  showLayerControlsCol={showLayerControlsCol}
+                  tip={tapePriceTip}
+                  strip={
+                    <DetailStrip
+                      label={
+                        <StripLabel title={tapePriceTip}>
+                          Mounting tape
+                          {tapeLine.needsReview ? ' · review' : ''}
+                        </StripLabel>
+                      }
+                      qty={
+                        <label className="inline-flex items-center gap-1.5" title={tapePriceTip}>
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            aria-label="Mount width mm"
+                            className={CONFIG_INPUT_CLS}
+                            value={widthMm}
+                            onChange={(e) => {
+                              const mm = parseFloat(e.target.value);
+                              onConsumablesConfigChange({
+                                mountWidthM:
+                                  Number.isFinite(mm) && mm > 0
+                                    ? mm / 1000
+                                    : DEFAULT_MOUNT_WIDTH_M,
+                              });
+                            }}
+                            onFocus={selectOnFocus}
+                            disabled={!canConfigure}
+                          />
+                          <span className="text-[10px] text-mist">mm</span>
+                        </label>
+                      }
+                      mid={
+                        <label
+                          className="inline-flex items-center gap-1.5"
+                          title="Cylinder circumference (typical 500–600 mm)"
+                        >
+                          <input
+                            type="number"
+                            min="100"
+                            step="1"
+                            aria-label="Cylinder repeat mm"
+                            className={CONFIG_INPUT_CLS}
+                            value={repeatMm}
+                            onChange={(e) => {
+                              const mm = parseFloat(e.target.value);
+                              onConsumablesConfigChange({
+                                repeatM:
+                                  Number.isFinite(mm) && mm > 0
+                                    ? mm / 1000
+                                    : DEFAULT_REPEAT_M,
+                              });
+                            }}
+                            onFocus={selectOnFocus}
+                            disabled={!canConfigure}
+                          />
+                          <span className="text-[10px] text-mist">mm</span>
+                        </label>
+                      }
+                      price={
+                        <PriceField
+                          currency={displayCurrency}
+                          value={unitPriceDisplay}
+                          unit="m²"
+                          ariaLabel="Mounting tape unit price"
+                          tip={tapePriceTip}
+                          disabled={!canConfigure}
+                          onChange={(v) => setConsumablesOverride('mounting_tape', v)}
+                        />
+                      }
+                    />
+                  }
+                />
+              </>
+            );
+          })()}
+          {consumablesCostLines
+            .filter((l) => l.role === 'other')
+            .map((line) => {
+              const unitPriceDisplay =
+                line.unitPriceUsd != null
+                  ? usdToDisplayPrecise(line.unitPriceUsd, fxRate).toFixed(4)
+                  : '';
+              const priceTip = [
+                line.label,
+                'Allowance rate applied per kg of finished product',
+                unitPriceDisplay
+                  ? `Unit ${displayCurrency} ${unitPriceDisplay}/kg`
+                  : 'Unit price missing — sync CONSUMABLES or enter price',
+                `Job cost → $/kg ${usdToDisplayPrecise(line.costPerKgUsd, fxRate).toFixed(4)}, $/m² ${usdToDisplayPrecise(line.costPerM2Usd, fxRate).toFixed(4)}`,
+              ].join('\n');
+              return (
+                <CostStripRow
+                  key={line.role}
+                  label={line.label}
+                  needsReview={line.needsReview}
+                  qty={line.qty}
+                  qtyUnit={line.qtyUnit}
+                  qtyStep={1}
+                  qtyDecimals={0}
+                  qtyReadOnly
+                  priceDisplay={unitPriceDisplay}
+                  priceUnit={line.priceUnit ?? 'kg'}
+                  priceStep="0.0001"
+                  onPriceChange={(v) => setConsumablesOverride('other', v)}
+                  tip={priceTip}
+                  showStructureCosts={showStructureCosts}
+                  perKg={line.costPerKgUsd}
+                  perM2={line.costPerM2Usd}
+                  fxRate={fxRate}
+                  showLayerControlsCol={showLayerControlsCol}
+                  canConfigure={canConfigure}
+                  displayCurrency={displayCurrency}
+                />
+              );
+            })}
+        </>
       )}
     </>
   );

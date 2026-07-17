@@ -1448,5 +1448,38 @@
     "substrateGrade": "Corrugated Carton",
     "hoover": "carton",
     "marketPriceUsd": 0
+  },
+  {
+    "key": "consumables-mounting-tape",
+    "name": "Mounting Tape",
+    "type": "packaging",
+    "solidPercent": 100,
+    "density": 1,
+    "costPerKgUsd": 0,
+    "priceUnit": "m2",
+    "unitPriceUsd": 0,
+    "costPerPieceUsd": 0,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "Consumables",
+    "substrateGrade": "Mounting Tape",
+    "hoover": "mounting_tape",
+    "marketPriceUsd": 0
+  },
+  {
+    "key": "consumables-other",
+    "name": "Other Consumables",
+    "type": "packaging",
+    "solidPercent": 100,
+    "density": 1,
+    "costPerKgUsd": 0,
+    "priceUnit": "kgs",
+    "unitPriceUsd": 0,
+    "wastePercent": 0,
+    "isSolventBased": false,
+    "substrateFamily": "Consumables",
+    "substrateGrade": "Other Consumables",
+    "hoover": "other",
+    "marketPriceUsd": 0
   }
 ]

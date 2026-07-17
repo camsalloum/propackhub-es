@@ -51,6 +51,7 @@ type ExplorerQuote = {
   status: string;
   updatedAt: string;
   notes?: string | null;
+  versionNumber?: number | null;
   estimates: ExplorerEstimate[];
 };
 
@@ -306,7 +307,11 @@ const CustomerExplorer = () => {
     }
   };
 
-  const downloadQuotePdf = async (quoteId: string, refNumber: string) => {
+  const downloadQuotePdf = async (
+    quoteId: string,
+    refNumber: string,
+    versionNumber?: number | null
+  ) => {
     if (pdfQuoteId) return;
     setPdfQuoteId(quoteId);
     try {
@@ -314,7 +319,11 @@ const CustomerExplorer = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${refNumber || 'quote'}-proposal.pdf`;
+      const d = new Date();
+      const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const ref = (refNumber || 'quote').replace(/[^\w.-]+/g, '_');
+      const ver = versionNumber != null && versionNumber > 1 ? `_rev${versionNumber}` : '';
+      a.download = `${ref}_${ymd}${ver}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -698,7 +707,9 @@ const CustomerExplorer = () => {
                     type="button"
                     className="btn-secondary text-xs py-1 px-2 inline-flex items-center gap-1"
                     disabled={pdfQuoteId === quote.id}
-                    onClick={() => void downloadQuotePdf(quote.id, quote.refNumber)}
+                    onClick={() =>
+                      void downloadQuotePdf(quote.id, quote.refNumber, quote.versionNumber)
+                    }
                   >
                     {pdfQuoteId === quote.id ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />

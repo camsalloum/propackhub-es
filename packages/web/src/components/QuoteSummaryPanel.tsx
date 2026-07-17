@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { apiClient } from '../lib/api';
+import {
+  DELIVERY_TERM_OPTIONS,
+  paymentTermSelectOptions,
+} from '../lib/commercialTerms';
 
 type Props = {
   quoteId: string;
@@ -13,6 +17,13 @@ type Props = {
   onUpdated?: () => void;
 };
 
+function deliveryTermSelectOptions(current?: string | null): string[] {
+  const set = new Set<string>(DELIVERY_TERM_OPTIONS);
+  const trimmed = current?.trim();
+  if (trimmed) set.add(trimmed);
+  return Array.from(set);
+}
+
 export default function QuoteSummaryPanel({
   quoteId,
   locked = false,
@@ -24,41 +35,55 @@ export default function QuoteSummaryPanel({
   onUpdated,
 }: Props) {
   const [rfqNumber, setRfqNumber] = useState(initialRfq ?? '');
-  const [deliveryTerm, setDeliveryTerm] = useState(initialDelivery ?? '');
+  const [deliveryTerm, setDeliveryTerm] = useState(initialDelivery ?? 'EXW');
   const [paymentTerms, setPaymentTerms] = useState(initialPayment ?? '');
   const [remarks, setRemarks] = useState(initialRemarks ?? '');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setRfqNumber(initialRfq ?? '');
-    setDeliveryTerm(initialDelivery ?? '');
+    setDeliveryTerm(initialDelivery ?? 'EXW');
     setPaymentTerms(initialPayment ?? '');
     setRemarks(initialRemarks ?? '');
   }, [initialRfq, initialDelivery, initialPayment, initialRemarks]);
 
-  const save = useCallback(async () => {
-    if (locked || saving) return;
-    setSaving(true);
-    try {
-      await apiClient.updateQuote(quoteId, {
-        rfqNumber: rfqNumber.trim() || null,
-        deliveryTerm: deliveryTerm.trim() || null,
-        paymentTerms: paymentTerms.trim() || null,
-        remarks: remarks.trim() || null,
-      });
-      onUpdated?.();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to save quote terms');
-    } finally {
-      setSaving(false);
-    }
-  }, [locked, saving, quoteId, rfqNumber, deliveryTerm, paymentTerms, remarks, onUpdated]);
+  const save = useCallback(
+    async (patch?: {
+      rfqNumber?: string;
+      deliveryTerm?: string;
+      paymentTerms?: string;
+      remarks?: string;
+    }) => {
+      if (locked || saving) return;
+      setSaving(true);
+      const nextRfq = patch?.rfqNumber ?? rfqNumber;
+      const nextDelivery = patch?.deliveryTerm ?? deliveryTerm;
+      const nextPayment = patch?.paymentTerms ?? paymentTerms;
+      const nextRemarks = patch?.remarks ?? remarks;
+      try {
+        await apiClient.updateQuote(quoteId, {
+          rfqNumber: nextRfq.trim() || null,
+          deliveryTerm: nextDelivery.trim() || null,
+          paymentTerms: nextPayment.trim() || null,
+          remarks: nextRemarks.trim() || null,
+        });
+        onUpdated?.();
+      } catch (err) {
+        alert(err instanceof Error ? err.message : 'Failed to save quote terms');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [locked, saving, quoteId, rfqNumber, deliveryTerm, paymentTerms, remarks, onUpdated]
+  );
 
   const validLabel = validUntil
     ? new Date(validUntil).toLocaleDateString()
     : null;
 
   const showRfq = Boolean(rfqNumber.trim());
+  const deliveryOptions = deliveryTermSelectOptions(deliveryTerm);
+  const paymentOptions = paymentTermSelectOptions(paymentTerms);
 
   return (
     <div className="card py-3 px-4 sm:px-5">
@@ -78,25 +103,42 @@ export default function QuoteSummaryPanel({
         )}
         <label className="flex flex-col gap-1 text-xs text-mist min-w-[5rem]">
           Incoterm
-          <input
-            type="text"
+          <select
             className="input input-compact text-sm w-24"
-            value={deliveryTerm}
+            value={deliveryTerm || 'EXW'}
             disabled={locked}
-            onChange={(e) => setDeliveryTerm(e.target.value)}
-            onBlur={() => void save()}
-          />
+            onChange={(e) => {
+              const next = e.target.value;
+              setDeliveryTerm(next);
+              void save({ deliveryTerm: next });
+            }}
+          >
+            {deliveryOptions.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="flex flex-col gap-1 text-xs text-mist flex-1 min-w-[8rem]">
           Payment terms
-          <input
-            type="text"
+          <select
             className="input input-compact text-sm w-full"
             value={paymentTerms}
             disabled={locked}
-            onChange={(e) => setPaymentTerms(e.target.value)}
-            onBlur={() => void save()}
-          />
+            onChange={(e) => {
+              const next = e.target.value;
+              setPaymentTerms(next);
+              void save({ paymentTerms: next });
+            }}
+          >
+            <option value="">—</option>
+            {paymentOptions.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
         </label>
         {validLabel && (
           <p className="text-xs text-mist pb-1.5 shrink-0">Valid until {validLabel}</p>

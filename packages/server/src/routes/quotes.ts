@@ -17,6 +17,7 @@ import {
   type QuoteStatus,
   type ToolingBillingMode,
 } from '../services/quote-helpers';
+import { commercialDefaultsFromCustomer } from '../utils/customer-address';
 import { logQuoteStatusTransition } from '../utils/quote-audit';
 
 const QuoteStatusSchema = z.enum(['draft', 'saved', 'sent', 'archived']);
@@ -24,12 +25,22 @@ const ToolingBillingModeSchema = z.enum(['amortized', 'separate', 'not_billed'])
 
 const PriceListDisplayPrefsSchema = z
   .object({
-    v: z.literal(1),
+    v: z.union([z.literal(1), z.literal(2)]),
     unit: z.enum(['kg', 'm2', 'lm', 'roll', 'pc', 'kpcs']).optional(),
     currency: z.string().length(3).optional(),
     slabMode: z.enum(['predefined', 'custom']).optional(),
     selectedBandKeys: z.array(z.string().min(1)).optional(),
     customSlabs: z.array(z.coerce.number().positive()).optional(),
+    rounding: z
+      .object({
+        enabled: z.boolean(),
+        mode: z.enum(['step', 'half', 'decimals']),
+        step: z.union([z.literal(0.05), z.literal(0.1), z.literal(0.5), z.literal(1)]).optional(),
+        decimals: z
+          .union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4)])
+          .optional(),
+      })
+      .optional(),
   })
   .nullable();
 
@@ -259,14 +270,19 @@ async function createQuoteRoute(
       .where(eq(schema.tenants.id, tenantId));
     if (!tenant) return reply.status(404).send({ error: 'Tenant not found' });
 
+    let customerDefaults = commercialDefaultsFromCustomer(null);
     if (data.customerId) {
       const [customer] = await db
-        .select({ id: schema.customers.id })
+        .select({
+          id: schema.customers.id,
+          paymentTerms: schema.customers.paymentTerms,
+        })
         .from(schema.customers)
         .where(
           and(eq(schema.customers.id, data.customerId), eq(schema.customers.tenantId, tenantId))
         );
       if (!customer) return reply.status(404).send({ error: 'Customer not found' });
+      customerDefaults = commercialDefaultsFromCustomer(customer);
     }
 
     if (data.isPriceCheck && data.customerId) {
@@ -281,8 +297,8 @@ async function createQuoteRoute(
       exchangeRateUsdToDisplay:
         data.exchangeRateUsdToDisplay ?? tenant.exchangeRateUsdToDisplay,
       status: data.status,
-      deliveryTerm: data.deliveryTerm,
-      paymentTerms: data.paymentTerms,
+      deliveryTerm: data.deliveryTerm ?? customerDefaults.deliveryTerm,
+      paymentTerms: data.paymentTerms ?? customerDefaults.paymentTerms,
       remarks: data.remarks,
       notes: data.notes,
       rfqNumber: data.rfqNumber?.trim() || null,
@@ -385,12 +401,22 @@ async function updateQuoteRoute(
     if (data.customerId !== undefined) {
       if (data.customerId) {
         const [customer] = await db
-          .select({ id: schema.customers.id })
+          .select({
+            id: schema.customers.id,
+            paymentTerms: schema.customers.paymentTerms,
+          })
           .from(schema.customers)
           .where(
             and(eq(schema.customers.id, data.customerId), eq(schema.customers.tenantId, tenantId))
           );
         if (!customer) return reply.status(404).send({ error: 'Customer not found' });
+        // Refresh commercial defaults when customer changes (unless explicitly sent).
+        if (data.paymentTerms === undefined) {
+          updates.paymentTerms = customer.paymentTerms?.trim() || null;
+        }
+        if (data.deliveryTerm === undefined && !existing.deliveryTerm) {
+          updates.deliveryTerm = 'EXW';
+        }
       }
       updates.customerId = data.customerId;
     }
@@ -713,17 +739,19 @@ async function getQuoteProposalPdfRoute(
     if (!quote) return reply.status(404).send({ error: 'Quote not found' });
 
     const { buildQuoteProposalPdfBuffer } = await import('../services/proposal-pdf');
+    const { quoteProposalDownloadFilename } = await import('../utils/commercial-quotation-pdf');
     const pdfBuffer = await buildQuoteProposalPdfBuffer(
       db,
       quote.id,
       tenantId,
       user.userId
     );
+    const filename = quoteProposalDownloadFilename({
+      refNumber: quote.refNumber,
+      versionNumber: quote.versionNumber,
+    });
     reply.header('Content-Type', 'application/pdf');
-    reply.header(
-      'Content-Disposition',
-      `attachment; filename="${quote.refNumber || 'quote'}-proposal.pdf"`
-    );
+    reply.header('Content-Disposition', `attachment; filename="${filename}"`);
     return reply.send(pdfBuffer);
   } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('not available')) {

@@ -47,6 +47,7 @@ async function updateTenantSettingsRoute(
       operatingCostMethod?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
       quotationValidDays?: number;
       defaultSlabTemplate?: string;
+      quotationFormat?: unknown;
     };
   }>,
   reply: FastifyReply
@@ -90,6 +91,10 @@ async function updateTenantSettingsRoute(
     }
     if (request.body.defaultSlabTemplate !== undefined) {
       updates.defaultSlabTemplate = request.body.defaultSlabTemplate;
+    }
+    if (request.body.quotationFormat !== undefined) {
+      const { parseQuotationFormat } = await import('@es/engine');
+      updates.quotationFormat = parseQuotationFormat(request.body.quotationFormat);
     }
 
     const [updated] = await db

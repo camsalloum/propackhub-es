@@ -4,6 +4,7 @@ import type { ProductTypeOption, UnitOption } from '../lib/masterDataReference';
 import type { DimensionFieldDef } from '../lib/productCatalog';
 import { selectOnFocus } from '../lib/inputs';
 import type { ToolingScenario } from '../lib/tooling';
+import { DELIVERY_TERM_OPTIONS } from '../lib/commercialTerms';
 
 const fieldClass = 'input input-compact w-full min-w-0';
 const numFieldClass = `${fieldClass} tabular-nums text-center`;
@@ -459,7 +460,7 @@ export function JobHeaderFields({
                     if (isExwDelivery(next)) onDeliveryChargeUsdChange?.(0);
                   }}
                 >
-                  {['EXW', 'FOB', 'CIF', 'CFR', 'DAP', 'DDP', 'Other'].map((t) => (
+                  {DELIVERY_TERM_OPTIONS.map((t) => (
                     <option key={t} value={t}>
                       {t}
                     </option>

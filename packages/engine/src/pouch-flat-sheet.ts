@@ -1,82 +1,136 @@
 import type { EstimateDimensions } from './types';
 
 /**
- * Pouch flat-sheet area model — 6 subtypes.
- * Reference: docs/POUCH_COSTING_RESEARCH.md (sister to BAG_COSTING_RESEARCH.md).
+ * Pouch flat-sheet area model — Premade Pouch Selector v4.
  *
+ * Classification: Family (forming process) × Variant (shape modifier).
+ * Costing keys: webCount, flatWidth, flatHeight, extraPanelArea, separateBottomWeb.
+ *
+ * Reference: docs/POUCH_CLASSIFICATION_v4.md (from pouch.zip).
  * piecesPerKg = 1000 / (flatSheetAreaM2 × totalGsm)
- *
- * Conventions (kept consistent with bag-flat-sheet.ts):
- * - `W` = one finished face width — **seal-inclusive** (equal to slit/layflat
- *   web width; cross-direction side seals lie within W).
- * - `H` = finished usable height — seal-exclusive; the sealed top lip is added
- *   separately via `SA` (and similarly for any other machine-direction seal).
- * - `BG` / `SG` are FORMED depths (bag/pouch stands BG tall; each side gusset
- *   folds inward by SG → unfolds flat to 2×SG wide → two sides = +4SG to width).
- * - `SA` is added on **machine-direction** edges only (top after fill, side-
- *   gusset bottom). It is NOT added on cross-direction (slit-width) side seals
- *   or on folds. The 4-side seal is the one exception — its two plies are
- *   separate die-cuts, so `SA` is added on both axes.
- * - Box-pouch bottom panel: the bottom seal allowance is treated as **absorbed
- *   into the empirical bottom-depth `D`**, not as an additive `SA`, because
- *   that junction's geometry is converter-specific (see docs §4.6/§8).
  */
 
+/** Canonical configurator keys: `{family}-{variant}`. */
 export type PouchConfiguratorType =
+  | 'three-side-seal-flat'
+  | 'three-side-seal-standing'
+  | 'center-fold-seal-flat'
+  | 'center-fold-seal-side-gusset'
+  | 'center-fold-seal-standing'
+  | 'half-fold-fusion-flat'
+  | 'half-fold-fusion-standing'
+  | 'side-weld-flat'
+  | 'side-weld-side-gusset'
+  | 'oblique-side-weld-trapezoid'
+  | 'oblique-side-weld-triangle'
+  | 'flat-bottom-box-standing';
+
+/** Forming-process families (axis 1). */
+export type PouchFamily =
   | 'three-side-seal'
-  | 'center-seal'
-  | 'four-side-seal'
-  | 'stand-up'
-  | 'side-gusset'
-  | 'flat-bottom';
+  | 'center-fold-seal'
+  | 'half-fold-fusion'
+  | 'side-weld'
+  | 'oblique-side-weld'
+  | 'flat-bottom-box';
+
+export interface PouchFlatGeom {
+  flatWidth: number;
+  flatHeight: number;
+  webCount: number;
+  extraPanelArea: number;
+  separateBottomWeb: boolean;
+}
 
 /**
  * Maps estimate.productSubtype codes (stored in DB) → configurator type.
- * Single source of truth — web/server import this to avoid drift.
+ * Includes v4 codes + legacy aliases so existing estimates keep resolving.
  */
 export const POUCH_SUBTYPE_TO_CONFIGURATOR: Record<string, PouchConfiguratorType> = {
-  // Canonical codes
-  pouch_three_side_seal: 'three-side-seal',
-  pouch_center_seal: 'center-seal',
-  pouch_four_side_seal: 'four-side-seal',
-  pouch_stand_up: 'stand-up',
-  pouch_side_gusset: 'side-gusset',
-  pouch_flat_bottom: 'flat-bottom',
-  // Existing DB codes (web productCatalog / Master-Data defaults)
-  pouch_3_side_seal: 'three-side-seal',
-  pouch_3_side_seal_zip: 'three-side-seal',
-  pouch_stand_up_zip: 'stand-up',
-  pouch_kseal_stand_up: 'stand-up',
-  pouch_kseal_stand_up_zip: 'stand-up',
-  pouch_gusset: 'side-gusset',
-  pouch_4_side_seal: 'four-side-seal',
-  // Legacy aliases
-  pouch_pillow: 'center-seal',
-  pouch_doypack: 'stand-up',
-  pouch_box: 'flat-bottom',
+  // v4 canonical codes
+  pouch_tss_flat: 'three-side-seal-flat',
+  pouch_tss_standing: 'three-side-seal-standing',
+  /** K-seal = standing bottom-weld style (same film formula as TSS standing). */
+  pouch_tss_standing_kseal: 'three-side-seal-standing',
+  pouch_cfs_flat: 'center-fold-seal-flat',
+  pouch_cfs_side_gusset: 'center-fold-seal-side-gusset',
+  pouch_cfs_standing: 'center-fold-seal-standing',
+  pouch_hff_flat: 'half-fold-fusion-flat',
+  pouch_hff_standing: 'half-fold-fusion-standing',
+  pouch_sw_flat: 'side-weld-flat',
+  pouch_sw_side_gusset: 'side-weld-side-gusset',
+  pouch_osw_trapezoid: 'oblique-side-weld-trapezoid',
+  pouch_osw_triangle: 'oblique-side-weld-triangle',
+  pouch_fbb_standing: 'flat-bottom-box-standing',
+
+  // Legacy productSubtype codes → nearest v4 type (by label intent)
+  pouch_three_side_seal: 'three-side-seal-flat',
+  pouch_3_side_seal: 'three-side-seal-flat',
+  pouch_3_side_seal_zip: 'three-side-seal-flat',
+  pouch_stand_up: 'three-side-seal-standing',
+  pouch_stand_up_zip: 'three-side-seal-standing',
+  /** Legacy K-seal stand-up → TSS standing (K-seal is bottom weld style, same area). */
+  pouch_kseal_stand_up: 'three-side-seal-standing',
+  pouch_kseal_stand_up_zip: 'three-side-seal-standing',
+  pouch_doypack: 'three-side-seal-standing',
+  pouch_center_seal: 'center-fold-seal-flat',
+  pouch_pillow: 'center-fold-seal-flat',
+  pouch_four_side_seal: 'center-fold-seal-flat',
+  pouch_4_side_seal: 'center-fold-seal-flat',
+  pouch_gusset: 'center-fold-seal-side-gusset',
+  pouch_side_gusset: 'center-fold-seal-side-gusset',
+  pouch_flat_bottom: 'flat-bottom-box-standing',
+  pouch_box: 'flat-bottom-box-standing',
 };
 
-export const DEFAULT_POUCH_SEAL_ALLOWANCE_MM = 10;
-
-export interface PouchFlatSheetResult {
-  /** Flat blank area in m² (separate bottom-panel area added where applicable). */
-  areaM2: number;
-  /** Blank width in mm (cross-direction — the web width). */
-  blankWidthMm: number;
-  /** Blank length in mm (machine-direction — the cut length). */
-  blankLengthMm: number;
-  /** Resolved configurator type, or null if unresolvable. */
-  type: PouchConfiguratorType | null;
-}
+/** Old dimensions.pouchSubtype strings → v4 keys. */
+const LEGACY_POUCH_SUBTYPE_STRINGS: Record<string, PouchConfiguratorType> = {
+  'three-side-seal': 'three-side-seal-flat',
+  'center-seal': 'center-fold-seal-flat',
+  'four-side-seal': 'center-fold-seal-flat',
+  'stand-up': 'three-side-seal-standing',
+  'side-gusset': 'center-fold-seal-side-gusset',
+  'flat-bottom': 'flat-bottom-box-standing',
+};
 
 const POUCH_SUBTYPE_VALUES = new Set<PouchConfiguratorType>([
-  'three-side-seal',
-  'center-seal',
-  'four-side-seal',
-  'stand-up',
-  'side-gusset',
-  'flat-bottom',
+  'three-side-seal-flat',
+  'three-side-seal-standing',
+  'center-fold-seal-flat',
+  'center-fold-seal-side-gusset',
+  'center-fold-seal-standing',
+  'half-fold-fusion-flat',
+  'half-fold-fusion-standing',
+  'side-weld-flat',
+  'side-weld-side-gusset',
+  'oblique-side-weld-trapezoid',
+  'oblique-side-weld-triangle',
+  'flat-bottom-box-standing',
 ]);
+
+export function familyForPouchType(type: PouchConfiguratorType): PouchFamily {
+  if (type.startsWith('three-side-seal')) return 'three-side-seal';
+  if (type.startsWith('center-fold-seal')) return 'center-fold-seal';
+  if (type.startsWith('half-fold-fusion')) return 'half-fold-fusion';
+  if (type.startsWith('side-weld')) return 'side-weld';
+  if (type.startsWith('oblique-side-weld')) return 'oblique-side-weld';
+  return 'flat-bottom-box';
+}
+
+export interface PouchFlatSheetResult {
+  /** Total film area in m² (webCount × flat panel + extra panels). */
+  areaM2: number;
+  /** Per-web flat width in mm (cross-direction). */
+  blankWidthMm: number;
+  /** Per-web flat height in mm (machine-direction). */
+  blankLengthMm: number;
+  webCount: number;
+  /** Extra panel area in mm² (gusset/bottom insert) added outside the main webs. */
+  extraPanelAreaMm2: number;
+  /** When true, bottom/gusset panel may use a different laminate (flag for costing). */
+  separateBottomWeb: boolean;
+  type: PouchConfiguratorType | null;
+}
 
 /**
  * Resolve the pouch configurator type from dimensions.
@@ -86,14 +140,117 @@ export function resolvePouchConfiguratorType(
   dimensions: EstimateDimensions
 ): PouchConfiguratorType | null {
   if (dimensions.pouchSubtype) {
-    const t = dimensions.pouchSubtype as PouchConfiguratorType;
-    if (POUCH_SUBTYPE_VALUES.has(t)) return t;
+    const raw = dimensions.pouchSubtype;
+    if (POUCH_SUBTYPE_VALUES.has(raw as PouchConfiguratorType)) {
+      return raw as PouchConfiguratorType;
+    }
+    const legacy = LEGACY_POUCH_SUBTYPE_STRINGS[raw];
+    if (legacy) return legacy;
   }
   if (dimensions.productSubtype) {
     const mapped = POUCH_SUBTYPE_TO_CONFIGURATOR[dimensions.productSubtype];
     if (mapped) return mapped;
   }
   return null;
+}
+
+/** v4 flat-geometry formulas (mm). Seal process defaults are outside this base model. */
+export function calculatePouchFlatGeom(
+  type: PouchConfiguratorType,
+  d: {
+    W: number;
+    L: number;
+    G: number;
+    S1: number;
+    D: number;
+  }
+): PouchFlatGeom {
+  const { W, L, G, S1, D } = d;
+
+  switch (type) {
+    case 'three-side-seal-flat':
+      return { flatWidth: W, flatHeight: L, webCount: 2, extraPanelArea: 0, separateBottomWeb: false };
+
+    case 'three-side-seal-standing':
+      return {
+        flatWidth: W,
+        flatHeight: L,
+        webCount: 2,
+        extraPanelArea: W * G,
+        separateBottomWeb: true,
+      };
+
+    case 'center-fold-seal-flat':
+      return {
+        flatWidth: W,
+        flatHeight: L + S1,
+        webCount: 1,
+        extraPanelArea: 0,
+        separateBottomWeb: false,
+      };
+
+    case 'center-fold-seal-side-gusset':
+      return {
+        flatWidth: W + 2 * G,
+        flatHeight: L + S1,
+        webCount: 1,
+        extraPanelArea: 0,
+        separateBottomWeb: false,
+      };
+
+    case 'center-fold-seal-standing':
+      return {
+        flatWidth: W,
+        flatHeight: L + G / 2,
+        webCount: 1,
+        extraPanelArea: 0,
+        separateBottomWeb: false,
+      };
+
+    case 'half-fold-fusion-flat':
+      return {
+        flatWidth: W * 2,
+        flatHeight: L,
+        webCount: 1,
+        extraPanelArea: 0,
+        separateBottomWeb: false,
+      };
+
+    case 'half-fold-fusion-standing':
+      return {
+        flatWidth: W * 2,
+        flatHeight: L - G,
+        webCount: 1,
+        extraPanelArea: W * G,
+        separateBottomWeb: true,
+      };
+
+    case 'side-weld-flat':
+      return { flatWidth: W, flatHeight: L, webCount: 1, extraPanelArea: 0, separateBottomWeb: false };
+
+    case 'side-weld-side-gusset':
+      return {
+        flatWidth: W + 2 * G,
+        flatHeight: L - G,
+        webCount: 1,
+        extraPanelArea: 0,
+        separateBottomWeb: false,
+      };
+
+    case 'oblique-side-weld-trapezoid':
+    case 'oblique-side-weld-triangle':
+      // Angled trim is scrap, not base flat area.
+      return { flatWidth: W, flatHeight: L, webCount: 1, extraPanelArea: 0, separateBottomWeb: false };
+
+    case 'flat-bottom-box-standing':
+      return {
+        flatWidth: W + D,
+        flatHeight: L,
+        webCount: 3,
+        extraPanelArea: W * D,
+        separateBottomWeb: true,
+      };
+  }
 }
 
 /**
@@ -105,102 +262,40 @@ export function calculatePouchFlatSheetAreaM2(
   dimensions: EstimateDimensions
 ): PouchFlatSheetResult {
   const type = resolvePouchConfiguratorType(dimensions);
-
-  const W = dimensions.openWidthMm ?? 0;
-  const H = dimensions.openHeightMm ?? 0;
-  const BG = dimensions.bottomGussetMm ?? 0;
-  const SG = dimensions.sideGussetMm ?? 0;
-  const D = dimensions.bottomDepthMm ?? 0;
-  const OV = dimensions.centerSealOverlapMm ?? 0;
-  const SA = dimensions.sealAllowanceMm ?? DEFAULT_POUCH_SEAL_ALLOWANCE_MM;
-
-  let area = 0; // total film area in mm²
-  let blankWidth = 0;
-  let blankLength = 0;
-
-  switch (type) {
-    case 'three-side-seal': {
-      // Single web folded in half: bottom is the fold, top sealed after fill,
-      // sides sealed within the slit width.
-      //   blankWidth  = W                    (cross-dir: side seals lie within W)
-      //   blankLength = 2H + SA              (front + back via fold + top seal)
-      blankWidth = W;
-      blankLength = 2 * H + SA;
-      area = blankWidth * blankLength;
-      break;
-    }
-
-    case 'center-seal': {
-      // Pillow / fin-seal (VFFS): single web wrapped into a tube. The two web
-      // edges meet at the back and are joined with a fin/lap seal of overlap OV.
-      // Top and bottom are crimp end seals.
-      //   blankWidth  = 2W + OV              (tube circumference + back-seal overlap)
-      //   blankLength = H + 2·SA             (top + bottom end seals)
-      blankWidth = 2 * W + OV;
-      blankLength = H + 2 * SA;
-      area = blankWidth * blankLength;
-      break;
-    }
-
-    case 'four-side-seal': {
-      // Two separate webs (front + back die-cut plies) sealed on all four edges.
-      // Each ply takes SA on both axes (the exception — separate die-cuts, not a
-      // continuous slit web).
-      //   blankWidth  = W + 2·SA
-      //   blankLength = H + 2·SA
-      //   flatSheetArea = 2 × blankWidth × blankLength    (two plies)
-      blankWidth = W + 2 * SA;
-      blankLength = H + 2 * SA;
-      area = 2 * blankWidth * blankLength;
-      break;
-    }
-
-    case 'stand-up': {
-      // Doypack: front + back + W-shaped bottom gusset (formed depth BG).
-      // Two-web construction: gusset film W×2BG spread across 2W → +BG to length.
-      //   blankWidth  = 2W
-      //   blankLength = H + BG + SA          (no bottom seal — gusset apex is a fold)
-      blankWidth = 2 * W;
-      blankLength = H + BG + SA;
-      area = blankWidth * blankLength;
-      break;
-    }
-
-    case 'side-gusset': {
-      // Front + back + two side gussets (formed depth SG, full-height) +
-      // top + bottom seals.
-      //   blankWidth  = 2W + 4·SG            (each side unfolds to 2SG)
-      //   blankLength = H + 2·SA
-      blankWidth = 2 * W + 4 * SG;
-      blankLength = H + 2 * SA;
-      area = blankWidth * blankLength;
-      break;
-    }
-
-    case 'flat-bottom': {
-      // Box pouch (5-panel): side-gusset body + folded rectangular bottom panel.
-      //   blankWidth  = 2W + 4·SG            (side-gusset body)
-      //   blankLength = H + SA               (top seal only; box bottom allowance
-      //                                       absorbed into D, see POUCH_COSTING_RESEARCH §4.6/§8)
-      //   bottomPanel = W × D                (folded flat base ≈ W wide × D deep)
-      //   flatSheetArea = body + bottomPanel
-      blankWidth = 2 * W + 4 * SG;
-      blankLength = H + SA;
-      const bodyArea = blankWidth * blankLength;
-      const bottomPanelArea = W * D;
-      area = bodyArea + bottomPanelArea;
-      break;
-    }
-
-    default:
-      // Unknown — caller should fall back to legacy pouch face area
-      return { areaM2: 0, blankWidthMm: 0, blankLengthMm: 0, type: null };
+  if (!type) {
+    return {
+      areaM2: 0,
+      blankWidthMm: 0,
+      blankLengthMm: 0,
+      webCount: 0,
+      extraPanelAreaMm2: 0,
+      separateBottomWeb: false,
+      type: null,
+    };
   }
 
+  const W = dimensions.openWidthMm ?? 0;
+  const L = dimensions.openHeightMm ?? 0;
+  // Bottom gusset (standing) and side gusset share formed-depth fields by variant.
+  const usesSideGusset =
+    type === 'center-fold-seal-side-gusset' || type === 'side-weld-side-gusset';
+  const G = usesSideGusset
+    ? (dimensions.sideGussetMm ?? 0)
+    : (dimensions.bottomGussetMm ?? 0);
+  const S1 = dimensions.bottomSealWidthMm ?? dimensions.sealAllowanceMm ?? 12;
+  const D = dimensions.bottomDepthMm ?? 0;
+
+  const geom = calculatePouchFlatGeom(type, { W, L, G, S1, D });
+  const mainMm2 = geom.flatWidth * geom.flatHeight * geom.webCount;
+  const areaMm2 = mainMm2 + geom.extraPanelArea;
+
   return {
-    areaM2: area / 1e6,
-    blankWidthMm: blankWidth,
-    blankLengthMm: blankLength,
+    areaM2: areaMm2 / 1e6,
+    blankWidthMm: geom.flatWidth,
+    blankLengthMm: geom.flatHeight,
+    webCount: geom.webCount,
+    extraPanelAreaMm2: geom.extraPanelArea,
+    separateBottomWeb: geom.separateBottomWeb,
     type,
   };
 }

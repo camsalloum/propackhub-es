@@ -38,6 +38,7 @@ type QuotePayload = {
   remarks?: string | null;
   customerId?: string | null;
   isPriceCheck?: boolean;
+  versionNumber?: number | null;
   priceListDisplayPrefs?: unknown;
   estimates: QuoteEstimate[];
 };
@@ -197,7 +198,14 @@ const QuoteWorkspace = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${quote?.refNumber || 'quote'}-proposal.pdf`;
+      const d = new Date();
+      const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const ref = (quote?.refNumber || 'quote').replace(/[^\w.-]+/g, '_');
+      const ver =
+        quote?.versionNumber != null && quote.versionNumber > 1
+          ? `_rev${quote.versionNumber}`
+          : '';
+      a.download = `${ref}_${ymd}${ver}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();

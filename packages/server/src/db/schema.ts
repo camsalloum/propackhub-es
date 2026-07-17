@@ -189,6 +189,8 @@ export const tenants = pgTable('tenants', {
   operatingCostMethod: operatingCostMethodEnum('operating_cost_method').notNull().default('markup_over_rm'),
   defaultSlabTemplate: varchar('default_slab_template', { length: 50 }).default('standard'),
   quotationValidDays: integer('quotation_valid_days').notNull().default(30),
+  /** Which meta fields appear on commercial quotation PDF */
+  quotationFormat: jsonb('quotation_format'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
@@ -338,6 +340,14 @@ export const customers = pgTable('customers', {
   email: varchar('email', { length: 255 }),
   phone: varchar('phone', { length: 20 }),
   notes: text('notes'),
+  /** PEBI fp_customer_unified.payment_terms */
+  paymentTerms: varchar('payment_terms', { length: 255 }),
+  addressLine1: varchar('address_line1', { length: 255 }),
+  addressLine2: varchar('address_line2', { length: 255 }),
+  city: varchar('city', { length: 128 }),
+  state: varchar('state', { length: 128 }),
+  country: varchar('country', { length: 128 }),
+  postalCode: varchar('postal_code', { length: 32 }),
   /** PEBI fp_customer_unified.customer_id when synced from CRM */
   externalId: varchar('external_id', { length: 128 }),
   externalSource: varchar('external_source', { length: 64 }),
@@ -481,6 +491,8 @@ export const estimates = pgTable('estimates', {
   sleeveSeamingSolventGsm: decimal('sleeve_seaming_solvent_gsm', { precision: 12, scale: 4 }).default('0.25'),
   /** Outbound packaging: load/pallet, cartons/pallet, material IDs. */
   packagingConfig: jsonb('packaging_config'),
+  /** Process consumables: qty/unit overrides for mounting tape + other. */
+  consumablesConfig: jsonb('consumables_config'),
   /** flexo | rotogravure — on-press SB ink makeup; null = infer from stack (PE→flexo). */
   inkPrintingProcess: varchar('ink_printing_process', { length: 16 }),
   orderQuantityKg: decimal('order_quantity_kg', { precision: 12, scale: 2 }),

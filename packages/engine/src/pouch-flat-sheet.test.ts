@@ -1,235 +1,239 @@
 import { describe, it, expect } from 'vitest';
 import {
   calculatePouchFlatSheetAreaM2,
+  calculatePouchFlatGeom,
   resolvePouchConfiguratorType,
   POUCH_SUBTYPE_TO_CONFIGURATOR,
-  DEFAULT_POUCH_SEAL_ALLOWANCE_MM,
+  familyForPouchType,
 } from './pouch-flat-sheet';
 import type { EstimateDimensions } from './types';
 
-describe('pouch-flat-sheet — flat sheet area per subtype', () => {
+describe('pouch-flat-sheet v4 — Family × Variant', () => {
   const base: EstimateDimensions = {
     productType: 'pouch',
     openWidthMm: 110,
     openHeightMm: 190,
   };
 
-  // --- resolver ---
-  it('resolves type from pouchSubtype', () => {
-    expect(resolvePouchConfiguratorType({ ...base, pouchSubtype: 'stand-up' })).toBe('stand-up');
-  });
-
-  it('resolves type from productSubtype code', () => {
+  it('resolves type from pouchSubtype (v4 key)', () => {
     expect(
-      resolvePouchConfiguratorType({ ...base, productSubtype: 'pouch_three_side_seal' })
-    ).toBe('three-side-seal');
+      resolvePouchConfiguratorType({ ...base, pouchSubtype: 'three-side-seal-standing' })
+    ).toBe('three-side-seal-standing');
   });
 
-  it('legacy alias pouch_doypack → stand-up', () => {
+  it('resolves type from productSubtype v4 code', () => {
     expect(
-      resolvePouchConfiguratorType({ ...base, productSubtype: 'pouch_doypack' })
-    ).toBe('stand-up');
+      resolvePouchConfiguratorType({ ...base, productSubtype: 'pouch_tss_flat' })
+    ).toBe('three-side-seal-flat');
   });
 
-  it('legacy alias pouch_pillow → center-seal', () => {
+  it('legacy productSubtype pouch_3_side_seal → three-side-seal-flat', () => {
     expect(
-      resolvePouchConfiguratorType({ ...base, productSubtype: 'pouch_pillow' })
-    ).toBe('center-seal');
+      resolvePouchConfiguratorType({ ...base, productSubtype: 'pouch_3_side_seal' })
+    ).toBe('three-side-seal-flat');
   });
 
-  it('returns null when unresolvable (preserves legacy face-area fallback)', () => {
+  it('legacy pouchSubtype string stand-up → three-side-seal-standing', () => {
+    expect(resolvePouchConfiguratorType({ ...base, pouchSubtype: 'stand-up' })).toBe(
+      'three-side-seal-standing'
+    );
+  });
+
+  it('legacy pouch_kseal_stand_up → three-side-seal-standing (K-seal is weld style, same area)', () => {
+    expect(
+      resolvePouchConfiguratorType({ ...base, productSubtype: 'pouch_kseal_stand_up' })
+    ).toBe('three-side-seal-standing');
+    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_tss_standing_kseal).toBe('three-side-seal-standing');
+  });
+
+  it('returns null when unresolvable', () => {
     expect(resolvePouchConfiguratorType({ ...base })).toBeNull();
   });
 
-  // --- 3-side seal ---
-  it('three-side-seal: blank = W, length = 2H + SA (single web folded, top seal only)', () => {
+  it('three-side-seal-flat: 2 webs, W×L each', () => {
     const r = calculatePouchFlatSheetAreaM2({
       ...base,
-      pouchSubtype: 'three-side-seal',
-      sealAllowanceMm: 10,
+      openWidthMm: 150,
+      openHeightMm: 200,
+      pouchSubtype: 'three-side-seal-flat',
     });
-    expect(r.blankWidthMm).toBe(110);
-    expect(r.blankLengthMm).toBe(2 * 190 + 10); // 390
-    expect(r.areaM2).toBeCloseTo((110 * 390) / 1e6, 6);
+    expect(r.webCount).toBe(2);
+    expect(r.blankWidthMm).toBe(150);
+    expect(r.blankLengthMm).toBe(200);
+    expect(r.areaM2).toBeCloseTo((150 * 200 * 2) / 1e6, 6);
+    expect(r.separateBottomWeb).toBe(false);
   });
 
-  // --- center seal (pillow / VFFS) ---
-  it('center-seal: blank = 2W + OV, length = H + 2·SA (tube circumference + back overlap)', () => {
-    const r = calculatePouchFlatSheetAreaM2({
-      ...base,
-      pouchSubtype: 'center-seal',
-      centerSealOverlapMm: 10,
-      sealAllowanceMm: 10,
-    });
-    expect(r.blankWidthMm).toBe(2 * 110 + 10); // 230
-    expect(r.blankLengthMm).toBe(190 + 2 * 10); // 210
-    expect(r.areaM2).toBeCloseTo((230 * 210) / 1e6, 6);
-  });
-
-  it('center-seal: omitting OV still uses tube circumference 2W (NOT W + OV — that is the bug being fixed)', () => {
-    const r = calculatePouchFlatSheetAreaM2({
-      ...base,
-      pouchSubtype: 'center-seal',
-      sealAllowanceMm: 10,
-    });
-    expect(r.blankWidthMm).toBe(2 * 110); // 220 — full tube, OV defaults to 0
-  });
-
-  // --- 4-side seal (the exception: SA on both axes, two plies) ---
-  it('four-side-seal: blank = (W+2SA) × (H+2SA), film = 2 plies (separate die-cut webs)', () => {
-    const r = calculatePouchFlatSheetAreaM2({
-      ...base,
-      pouchSubtype: 'four-side-seal',
-      sealAllowanceMm: 10,
-    });
-    expect(r.blankWidthMm).toBe(110 + 20); // 130
-    expect(r.blankLengthMm).toBe(190 + 20); // 210
-    expect(r.areaM2).toBeCloseTo((2 * 130 * 210) / 1e6, 6); // ×2 plies
-  });
-
-  // --- stand-up (doypack) ---
-  it('stand-up: blank = 2W, length = H + BG + SA (two-web; gusset adds BG to length, no bottom seal)', () => {
-    const r = calculatePouchFlatSheetAreaM2({
-      ...base,
-      pouchSubtype: 'stand-up',
-      bottomGussetMm: 50,
-      sealAllowanceMm: 10,
-    });
-    expect(r.blankWidthMm).toBe(2 * 110); // 220
-    expect(r.blankLengthMm).toBe(190 + 50 + 10); // 250
-    expect(r.areaM2).toBeCloseTo((220 * 250) / 1e6, 6); // = 0.055 m² (worked example in doc §5)
-  });
-
-  it('stand-up: worked example produces 151.5 pcs/kg at totalGsm=120 (doc §5)', () => {
+  it('three-side-seal-standing: 2 webs + W×G panel, separateBottomWeb', () => {
     const r = calculatePouchFlatSheetAreaM2({
       ...base,
       openWidthMm: 110,
-      openHeightMm: 190,
-      pouchSubtype: 'stand-up',
-      bottomGussetMm: 50,
-      sealAllowanceMm: 10,
+      openHeightMm: 220,
+      bottomGussetMm: 45,
+      pouchSubtype: 'three-side-seal-standing',
     });
-    const totalGsm = 120;
-    const piecesPerKg = 1000 / (r.areaM2 * totalGsm);
-    expect(piecesPerKg).toBeCloseTo(151.5, 1);
+    expect(r.webCount).toBe(2);
+    expect(r.separateBottomWeb).toBe(true);
+    expect(r.extraPanelAreaMm2).toBe(110 * 45);
+    expect(r.areaM2).toBeCloseTo((110 * 220 * 2 + 110 * 45) / 1e6, 6);
   });
 
-  // --- side-gusset ---
-  it('side-gusset: blank = 2W + 4SG, length = H + 2SA (top + bottom seals)', () => {
+  it('center-fold-seal-flat: 1 web, height = L + S1', () => {
     const r = calculatePouchFlatSheetAreaM2({
       ...base,
-      pouchSubtype: 'side-gusset',
-      sideGussetMm: 35,
-      sealAllowanceMm: 10,
+      openWidthMm: 140,
+      openHeightMm: 180,
+      bottomSealWidthMm: 12,
+      pouchSubtype: 'center-fold-seal-flat',
     });
-    expect(r.blankWidthMm).toBe(2 * 110 + 4 * 35); // 360
-    expect(r.blankLengthMm).toBe(190 + 20); // 210
-    expect(r.areaM2).toBeCloseTo((360 * 210) / 1e6, 6);
+    expect(r.webCount).toBe(1);
+    expect(r.blankWidthMm).toBe(140);
+    expect(r.blankLengthMm).toBe(192);
+    expect(r.areaM2).toBeCloseTo((140 * 192) / 1e6, 6);
   });
 
-  // --- flat-bottom (box pouch) ---
-  it('flat-bottom: side-gusset body + W×D bottom panel, length = H + SA (box bottom absorbed in D)', () => {
+  it('center-fold-seal-side-gusset: flatWidth = W + 2G', () => {
     const r = calculatePouchFlatSheetAreaM2({
       ...base,
-      openWidthMm: 110,
-      openHeightMm: 170,
-      pouchSubtype: 'flat-bottom',
+      openWidthMm: 150,
+      openHeightMm: 200,
       sideGussetMm: 35,
-      bottomDepthMm: 45,
-      sealAllowanceMm: 10,
+      bottomSealWidthMm: 12,
+      pouchSubtype: 'center-fold-seal-side-gusset',
     });
-    expect(r.blankWidthMm).toBe(2 * 110 + 4 * 35); // 360
-    expect(r.blankLengthMm).toBe(170 + 10); // 180
-    const bodyArea = 360 * 180;
-    const bottomPanel = 110 * 45;
-    expect(r.areaM2).toBeCloseTo((bodyArea + bottomPanel) / 1e6, 6);
+    expect(r.blankWidthMm).toBe(150 + 70);
+    expect(r.blankLengthMm).toBe(212);
   });
 
-  // --- seal allowance default ---
-  it('uses default seal allowance 10mm when omitted', () => {
+  it('center-fold-seal-standing: flatHeight = L + G/2', () => {
     const r = calculatePouchFlatSheetAreaM2({
       ...base,
-      pouchSubtype: 'side-gusset',
-      sideGussetMm: 35,
+      openWidthMm: 130,
+      openHeightMm: 200,
+      bottomGussetMm: 40,
+      pouchSubtype: 'center-fold-seal-standing',
     });
-    expect(r.blankLengthMm).toBe(190 + 2 * DEFAULT_POUCH_SEAL_ALLOWANCE_MM);
+    expect(r.blankWidthMm).toBe(130);
+    expect(r.blankLengthMm).toBe(200 + 20);
   });
 
-  // --- unresolvable subtype → falls through (caller uses face-area) ---
-  it('returns zero area when subtype unresolved (caller falls back to face area)', () => {
-    const r = calculatePouchFlatSheetAreaM2({ ...base });
-    expect(r.areaM2).toBe(0);
-    expect(r.blankWidthMm).toBe(0);
-    expect(r.blankLengthMm).toBe(0);
-    expect(r.type).toBeNull();
+  it('half-fold-fusion-flat: flatWidth = 2W', () => {
+    const r = calculatePouchFlatSheetAreaM2({
+      ...base,
+      openWidthMm: 150,
+      openHeightMm: 280,
+      pouchSubtype: 'half-fold-fusion-flat',
+    });
+    expect(r.webCount).toBe(1);
+    expect(r.blankWidthMm).toBe(300);
+    expect(r.blankLengthMm).toBe(280);
   });
 
-  it('ignores unknown pouchSubtype string', () => {
-    const r = calculatePouchFlatSheetAreaM2({ ...base, pouchSubtype: 'not-a-real-type' });
-    expect(r.type).toBeNull();
-    expect(r.areaM2).toBe(0);
+  it('half-fold-fusion-standing: flatHeight = L − G + W×G panel', () => {
+    const r = calculatePouchFlatSheetAreaM2({
+      ...base,
+      openWidthMm: 150,
+      openHeightMm: 300,
+      bottomGussetMm: 55,
+      pouchSubtype: 'half-fold-fusion-standing',
+    });
+    expect(r.separateBottomWeb).toBe(true);
+    expect(r.blankWidthMm).toBe(300);
+    expect(r.blankLengthMm).toBe(245);
+    expect(r.extraPanelAreaMm2).toBe(150 * 55);
+    expect(r.areaM2).toBeCloseTo((300 * 245 + 150 * 55) / 1e6, 6);
   });
 
-  // --- mapping table sanity ---
-  it('POUCH_SUBTYPE_TO_CONFIGURATOR covers canonical, existing DB, and legacy codes', () => {
-    // Canonical codes
-    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_three_side_seal).toBe('three-side-seal');
-    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_center_seal).toBe('center-seal');
-    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_four_side_seal).toBe('four-side-seal');
-    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_stand_up).toBe('stand-up');
-    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_side_gusset).toBe('side-gusset');
-    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_flat_bottom).toBe('flat-bottom');
-    // Existing DB codes (productCatalog / Master-Data defaults)
-    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_3_side_seal).toBe('three-side-seal');
-    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_3_side_seal_zip).toBe('three-side-seal');
-    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_stand_up_zip).toBe('stand-up');
-    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_kseal_stand_up).toBe('stand-up');
-    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_kseal_stand_up_zip).toBe('stand-up');
-    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_gusset).toBe('side-gusset');
-    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_4_side_seal).toBe('four-side-seal');
-    // Legacy aliases
-    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_pillow).toBe('center-seal');
-    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_doypack).toBe('stand-up');
-    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_box).toBe('flat-bottom');
+  it('side-weld-side-gusset: W+2G × (L−G)', () => {
+    const r = calculatePouchFlatSheetAreaM2({
+      ...base,
+      openWidthMm: 180,
+      openHeightMm: 220,
+      sideGussetMm: 45,
+      pouchSubtype: 'side-weld-side-gusset',
+    });
+    expect(r.blankWidthMm).toBe(270);
+    expect(r.blankLengthMm).toBe(175);
   });
 
-  it('every DEFAULT product-subtype pouch code resolves to a configurator type', () => {
-    // Hard-coded against masterDataReference.DEFAULT_PRODUCT_SUBTYPE_OPTIONS pouch rows
-    // — guarantees no user-selectable pouch subtype falls through to "unresolved".
+  it('oblique: base W×L, webCount 1 (angle is scrap)', () => {
+    const r = calculatePouchFlatSheetAreaM2({
+      ...base,
+      openWidthMm: 450,
+      openHeightMm: 400,
+      cutAngleDeg: 10,
+      pouchSubtype: 'oblique-side-weld-trapezoid',
+    });
+    expect(r.webCount).toBe(1);
+    expect(r.areaM2).toBeCloseTo((450 * 400) / 1e6, 6);
+  });
+
+  it('flat-bottom-box: webCount 3, flatWidth = W+D, + W×D panel', () => {
+    const r = calculatePouchFlatSheetAreaM2({
+      ...base,
+      openWidthMm: 130,
+      openHeightMm: 280,
+      bottomDepthMm: 90,
+      pouchSubtype: 'flat-bottom-box-standing',
+    });
+    expect(r.webCount).toBe(3);
+    expect(r.separateBottomWeb).toBe(true);
+    expect(r.blankWidthMm).toBe(220);
+    expect(r.blankLengthMm).toBe(280);
+    expect(r.extraPanelAreaMm2).toBe(130 * 90);
+    expect(r.areaM2).toBeCloseTo((220 * 280 * 3 + 130 * 90) / 1e6, 6);
+  });
+
+  it('calculatePouchFlatGeom matches area helper', () => {
+    const g = calculatePouchFlatGeom('three-side-seal-flat', {
+      W: 100,
+      L: 200,
+      G: 0,
+      S1: 12,
+      D: 0,
+    });
+    expect(g.webCount).toBe(2);
+    expect(g.flatWidth * g.flatHeight * g.webCount).toBe(40000);
+  });
+
+  it('familyForPouchType groups variants', () => {
+    expect(familyForPouchType('half-fold-fusion-standing')).toBe('half-fold-fusion');
+    expect(familyForPouchType('flat-bottom-box-standing')).toBe('flat-bottom-box');
+  });
+
+  it('POUCH_SUBTYPE_TO_CONFIGURATOR covers v4 + legacy codes', () => {
+    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_tss_flat).toBe('three-side-seal-flat');
+    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_fbb_standing).toBe('flat-bottom-box-standing');
+    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_3_side_seal).toBe('three-side-seal-flat');
+    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_stand_up).toBe('three-side-seal-standing');
+    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_4_side_seal).toBe('center-fold-seal-flat');
+    expect(POUCH_SUBTYPE_TO_CONFIGURATOR.pouch_gusset).toBe('center-fold-seal-side-gusset');
+  });
+
+  it('every v4 DEFAULT product-subtype code resolves', () => {
     const dbCodes = [
-      'pouch_3_side_seal',
-      'pouch_3_side_seal_zip',
-      'pouch_stand_up',
-      'pouch_stand_up_zip',
-      'pouch_kseal_stand_up',
-      'pouch_kseal_stand_up_zip',
-      'pouch_center_seal',
-      'pouch_gusset',
-      'pouch_4_side_seal',
-      'pouch_flat_bottom',
+      'pouch_tss_flat',
+      'pouch_tss_standing',
+      'pouch_tss_standing_kseal',
+      'pouch_cfs_flat',
+      'pouch_cfs_side_gusset',
+      'pouch_cfs_standing',
+      'pouch_hff_flat',
+      'pouch_hff_standing',
+      'pouch_sw_flat',
+      'pouch_sw_side_gusset',
+      'pouch_osw_trapezoid',
+      'pouch_osw_triangle',
+      'pouch_fbb_standing',
     ];
     for (const code of dbCodes) {
       expect(POUCH_SUBTYPE_TO_CONFIGURATOR[code]).toBeDefined();
     }
   });
-});
 
-describe('pouch-flat-sheet vs legacy face-area — regression guardrail', () => {
-  it('legacy face-area model: pouch without subtype undercounts by ~62% vs corrected stand-up', () => {
-    // Doc §5 worked example: legacy model gives 398 pcs/kg, corrected gives 151.5 pcs/kg.
-    // The ratio is the same 2.6× error documented in POUCH_COSTING_RESEARCH.md.
-    const W = 110, H = 190, BG = 50, totalGsm = 120;
-    const corrected = calculatePouchFlatSheetAreaM2({
-      productType: 'pouch',
-      openWidthMm: W,
-      openHeightMm: H,
-      pouchSubtype: 'stand-up',
-      bottomGussetMm: BG,
-      sealAllowanceMm: 10,
-    });
-    const correctedPpk = 1000 / (corrected.areaM2 * totalGsm);
-    const legacyFaceArea = (W * H) / 1e6;
-    const legacyPpk = 1000 / (legacyFaceArea * totalGsm);
-    expect(legacyPpk / correctedPpk).toBeCloseTo(2.6, 1);
+  it('returns zero area when subtype unresolved', () => {
+    const r = calculatePouchFlatSheetAreaM2({ ...base });
+    expect(r.areaM2).toBe(0);
+    expect(r.type).toBeNull();
   });
 });

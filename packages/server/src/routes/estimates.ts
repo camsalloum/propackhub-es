@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
 import { eq, and, desc, sql, isNull, asc, count as drizzleCount } from 'drizzle-orm';
-import { type VisibilityProfile, derivePrintingWebClass, defaultOrderQuantityUnit, mergePackagingConfigDefaults } from '@es/engine';
+import { type VisibilityProfile, derivePrintingWebClass, defaultOrderQuantityUnit, mergePackagingConfigDefaults, mergeConsumablesConfigDefaults } from '@es/engine';
 import { getEffectiveProfile, stripEstimateRow, stripCalculationResult } from '../utils/visibility';
 import { calculateAndPersistEstimate, buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
 import { loadTenantMaterialsForEstimate } from '../utils/material-map';
@@ -43,10 +43,12 @@ import {
   isQuoteLocked,
   loadQuoteForEstimate,
   mapEstimateStatusToQuoteStatus,
+  maybeCopyDeliveryTermToQuote,
   nextEstimateSortOrder,
   syncQuoteStatusFromEstimates,
   validateEstimateSaveRefs,
 } from '../services/quote-helpers';
+import { commercialDefaultsFromCustomer } from '../utils/customer-address';
 import { logQuoteStatusTransition } from '../utils/quote-audit';
 
 export { generateRefNumber };
@@ -176,6 +178,20 @@ const EstimateCreateSchema = z.object({
       stretchMaterialId: z.string().uuid().optional().nullable(),
       palletMaterialId: z.string().uuid().optional().nullable(),
       cartonMaterialId: z.string().uuid().optional().nullable(),
+      unitPriceOverridesUsd: z.record(z.string(), z.coerce.number().nonnegative()).optional(),
+      qtyOverrides: z.record(z.string(), z.coerce.number().nonnegative()).optional(),
+    })
+    .optional()
+    .nullable(),
+  consumablesConfig: z
+    .object({
+      mountingTapeMaterialId: z.string().uuid().optional().nullable(),
+      otherMaterialId: z.string().uuid().optional().nullable(),
+      mountWidthM: z.coerce.number().positive().optional(),
+      repeatM: z.coerce.number().positive().optional(),
+      colors: z.coerce.number().int().nonnegative().optional(),
+      tapeM2Override: z.coerce.number().nonnegative().optional().nullable(),
+      unitPriceOverridesUsd: z.record(z.string(), z.coerce.number().nonnegative()).optional(),
     })
     .optional()
     .nullable(),
@@ -353,6 +369,21 @@ export async function createEstimateRoute(
         sortOrder = await nextEstimateSortOrder(db, quote.id);
       }
     } else {
+      let paymentTerms: string | null = null;
+      let deliveryTerm = data.deliveryTerm ?? 'EXW';
+      if (customerId) {
+        const [customer] = await db
+          .select({ paymentTerms: schema.customers.paymentTerms })
+          .from(schema.customers)
+          .where(
+            and(eq(schema.customers.id, customerId), eq(schema.customers.tenantId, tenantId))
+          )
+          .limit(1);
+        paymentTerms = commercialDefaultsFromCustomer(customer).paymentTerms;
+        if (!data.deliveryTerm) {
+          deliveryTerm = commercialDefaultsFromCustomer(customer).deliveryTerm ?? 'EXW';
+        }
+      }
       const quote = await createQuote(db, {
         tenantId,
         customerId,
@@ -360,7 +391,8 @@ export async function createEstimateRoute(
         displayCurrency,
         exchangeRateUsdToDisplay,
         status: mapEstimateStatusToQuoteStatus(data.status),
-        deliveryTerm: data.deliveryTerm,
+        deliveryTerm,
+        paymentTerms,
         defaultPrintColorCount: printColorCount,
         defaultCostPerColor: costPerColor,
         defaultToolingBillingMode: toolingBillingMode,
@@ -474,6 +506,7 @@ export async function createEstimateRoute(
         sleeveSeamingSolventGsm:
           data.sleeveSeamingSolventGsm != null ? String(data.sleeveSeamingSolventGsm) : undefined,
         packagingConfig: mergePackagingConfigDefaults(data.packagingConfig ?? null),
+        consumablesConfig: mergeConsumablesConfigDefaults(data.consumablesConfig ?? null),
         inkPrintingProcess: data.inkPrintingProcess ?? undefined,
       })
       .returning()) as EstimateRow[];
@@ -524,6 +557,7 @@ export async function createEstimateRoute(
     }
 
     if (quoteId) {
+      await maybeCopyDeliveryTermToQuote(db, tenantId, quoteId, data.deliveryTerm);
       await syncQuoteStatusFromEstimates(db, quoteId, tenantId);
     }
 
@@ -857,6 +891,9 @@ async function updateEstimateRoute(
     if (data.packagingConfig !== undefined) {
       updates.packagingConfig = mergePackagingConfigDefaults(data.packagingConfig);
     }
+    if (data.consumablesConfig !== undefined) {
+      updates.consumablesConfig = mergeConsumablesConfigDefaults(data.consumablesConfig);
+    }
     if (data.inkPrintingProcess !== undefined) {
       updates.inkPrintingProcess = data.inkPrintingProcess;
     }
@@ -1155,6 +1192,14 @@ async function updateEstimateRoute(
     // Quote status sync: all estimates non-draft → quote saved (never auto-sent).
     const quoteIdForSync = responseRow?.quoteId ?? existing.quoteId;
     if (quoteIdForSync) {
+      if (data.deliveryTerm !== undefined) {
+        await maybeCopyDeliveryTermToQuote(
+          db,
+          tenantId,
+          quoteIdForSync,
+          data.deliveryTerm
+        );
+      }
       const [quoteBefore] = await db
         .select({
           status: schema.quotes.status,

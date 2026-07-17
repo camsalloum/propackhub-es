@@ -768,7 +768,7 @@
      DENSITY presets
      ============================================================ */
   :root[data-density="comfortable"] { --density-scale: 1; }
-  :root[data-density="compact"]     { --density-scale: 0.88; }
+  :root[data-density="compact"]     { --density-scale: 0.82; }
   :root[data-density="spacious"]    { --density-scale: 1.12; }
 
   html {
@@ -776,6 +776,8 @@
     -webkit-text-size-adjust: 100%;
     font-size: calc(95% * var(--density-scale));
     scroll-behavior: smooth;
+    overflow-x: hidden;
+    max-width: 100%;
   }
 
   body {
@@ -788,6 +790,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+    max-width: 100%;
     transition: background-color var(--motion-theme-swap) var(--ease-micro),
                 color var(--motion-theme-swap) var(--ease-micro);
     /* Ambient dot grid background — soft, premium */

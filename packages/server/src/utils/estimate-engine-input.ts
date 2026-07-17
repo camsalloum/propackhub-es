@@ -176,8 +176,11 @@ export function buildEngineEstimateFromRows(opts: {
       : DEFAULT_SLEEVE_SEAMING_SOLVENT_GSM,
     seamingSolventCostPerKgUsd: resolveSeamingSolventCostPerKgUsd(materials),
     packagingConfig: (estimate.packagingConfig as EngineEstimate['packagingConfig']) ?? undefined,
+    consumablesConfig: (estimate.consumablesConfig as EngineEstimate['consumablesConfig']) ?? undefined,
     inkPrintingProcess:
       (estimate.inkPrintingProcess as EngineEstimate['inkPrintingProcess']) ?? undefined,
+    printColorCount:
+      estimate.printColorCount != null ? Number(estimate.printColorCount) : undefined,
     inkSolventRatio: estimate.solventRatio
       ? parseFloat(estimate.solventRatio)
       : undefined,

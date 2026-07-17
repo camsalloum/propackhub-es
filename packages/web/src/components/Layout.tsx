@@ -20,12 +20,28 @@ import Overlay from './Overlay';
 import RouteTransition from './RouteTransition';
 
 const SIDEBAR_COLLAPSE_KEY = 'es:sidebarCollapsed';
+const NARROW_SHELL_MQ = '(max-width: 1535px)';
+
+function useNarrowShell(): boolean {
+  const [narrow, setNarrow] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(NARROW_SHELL_MQ).matches : false,
+  );
+  useEffect(() => {
+    const mql = window.matchMedia(NARROW_SHELL_MQ);
+    const onChange = () => setNarrow(mql.matches);
+    onChange();
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+  return narrow;
+}
 
 const Layout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const isNarrowShell = useNarrowShell();
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -53,16 +69,16 @@ const Layout = () => {
     return window.localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1';
   });
 
-  // Auto-collapse on the estimate editor (where horizontal space matters most);
-  // restore the saved preference elsewhere. The manual toggle still overrides
-  // while the user stays on the page.
+  // Auto-collapse on the estimate editor (where horizontal space matters most)
+  // and on laptop-width viewports; restore the saved preference on wide shell
+  // pages. The manual toggle still overrides while the user stays on the page.
   useEffect(() => {
-    if (isEstimateEditor) {
+    if (isEstimateEditor || isNarrowShell) {
       setCollapsed(true);
     } else {
       setCollapsed(window.localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1');
     }
-  }, [isEstimateEditor]);
+  }, [isEstimateEditor, isNarrowShell]);
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -277,7 +293,7 @@ const Layout = () => {
         </aside>
 
         <div
-          className={`flex-1 flex flex-col min-h-screen transition-[padding] duration-200 ease-out ${
+          className={`flex-1 flex flex-col min-h-screen min-w-0 transition-[padding] duration-200 ease-out ${
             collapsed ? 'lg:pl-16' : 'lg:pl-56'
           }`}
         >
@@ -325,7 +341,7 @@ const Layout = () => {
             </div>
           </header>
 
-          <main className={`flex-1 p-4 lg:p-8 ${hideMobileBottomNav ? '' : 'pb-20 lg:pb-8'} relative`}>
+          <main className={`flex-1 min-w-0 overflow-x-hidden p-3 sm:p-4 lg:p-5 xl:p-8 ${hideMobileBottomNav ? '' : 'pb-20 lg:pb-8'} relative`}>
             <RouteTransition />
           </main>
 

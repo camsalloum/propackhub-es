@@ -16,7 +16,7 @@
  *   - Subtypes are Master-Data-managed (reference category `product_subtype`);
  *     this file is the built-in default catalog + the field-schema source of truth.
  *
- * See docs/POUCH_COSTING_RESEARCH.md and docs/BAG_COSTING_RESEARCH.md.
+ * See docs/POUCH_CLASSIFICATION_v4.md and docs/BAG_COSTING_RESEARCH.md.
  */
 
 /** Canonical product type stored in DB / engine / templates. */
@@ -126,19 +126,36 @@ const BAG_BASE: DimensionFieldDef[] = [F.bagWidth, F.bagHeight, F.numberOfUps, F
 // Subtype catalog
 // ---------------------------------------------------------------------------
 
+/** Premade pouch v4 — Family × Variant. Accessories are never separate subtypes. */
 export const POUCH_SUBTYPES: ProductSubtype[] = [
-  { key: 'pouch_3_side_seal', label: '3-Side Seal', family: 'pouch', dimensionFields: POUCH_BASE },
-  { key: 'pouch_stand_up', label: 'Stand-up Pouch', family: 'pouch', dimensionFields: [...POUCH_BASE, F.bottomGusset] },
-  { key: 'pouch_kseal_stand_up', label: 'K-Seal Stand-up Pouch', family: 'pouch', dimensionFields: [...POUCH_BASE, F.bottomGusset] },
-  { key: 'pouch_center_seal', label: 'Center-Seal Pouch', family: 'pouch', dimensionFields: POUCH_BASE },
-  { key: 'pouch_gusset', label: 'Gusset Pouch', family: 'pouch', dimensionFields: [...POUCH_BASE, F.sideGusset] },
-  { key: 'pouch_4_side_seal', label: '4-Side Seal Pouch', family: 'pouch', dimensionFields: POUCH_BASE },
-  { key: 'pouch_flat_bottom', label: 'Flat-Bottom (Box) Pouch', family: 'pouch', dimensionFields: [...POUCH_BASE, F.sideGusset] },
+  { key: 'pouch_tss_flat', label: 'Three-Side-Seal — Flat', family: 'pouch', group: 'Three-Side-Seal', dimensionFields: POUCH_BASE },
+  { key: 'pouch_tss_standing', label: 'Three-Side-Seal — Standing (Doyen)', family: 'pouch', group: 'Three-Side-Seal', dimensionFields: [...POUCH_BASE, F.bottomGusset] },
+  { key: 'pouch_tss_standing_kseal', label: 'Three-Side-Seal — Standing (K-Seal)', family: 'pouch', group: 'Three-Side-Seal', dimensionFields: [...POUCH_BASE, F.bottomGusset] },
+  { key: 'pouch_cfs_flat', label: 'Center-Fold-Seal — Flat (Quad)', family: 'pouch', group: 'Center-Fold-Seal', dimensionFields: POUCH_BASE },
+  { key: 'pouch_cfs_side_gusset', label: 'Center-Fold-Seal — Side Gusset', family: 'pouch', group: 'Center-Fold-Seal', dimensionFields: [...POUCH_BASE, F.sideGusset] },
+  { key: 'pouch_cfs_standing', label: 'Center-Fold-Seal — Standing', family: 'pouch', group: 'Center-Fold-Seal', dimensionFields: [...POUCH_BASE, F.bottomGusset] },
+  { key: 'pouch_hff_flat', label: 'Half-Fold-Fusion — Flat', family: 'pouch', group: 'Half-Fold-Fusion', dimensionFields: POUCH_BASE },
+  { key: 'pouch_hff_standing', label: 'Half-Fold-Fusion — Standing', family: 'pouch', group: 'Half-Fold-Fusion', dimensionFields: [...POUCH_BASE, F.bottomGusset] },
+  { key: 'pouch_sw_flat', label: 'Side-Weld — Flat', family: 'pouch', group: 'Side-Weld', dimensionFields: POUCH_BASE },
+  { key: 'pouch_sw_side_gusset', label: 'Side-Weld — Side Gusset', family: 'pouch', group: 'Side-Weld', dimensionFields: [...POUCH_BASE, F.sideGusset] },
+  { key: 'pouch_osw_trapezoid', label: 'Oblique — Trapezoid', family: 'pouch', group: 'Oblique-Side-Weld', dimensionFields: POUCH_BASE },
+  { key: 'pouch_osw_triangle', label: 'Oblique — Triangle', family: 'pouch', group: 'Oblique-Side-Weld', dimensionFields: POUCH_BASE },
+  { key: 'pouch_fbb_standing', label: 'Flat-Bottom Box — Standing', family: 'pouch', group: 'Flat-Bottom Box', dimensionFields: POUCH_BASE },
 ];
-// NOTE: Zipper is no longer a separate subtype. It (and spout/valve/window/handle)
-// is now an Accessory toggle in the PouchConfigurator that adds real weight + cost
-// via the engine (pouch-accessories.ts). Legacy `_zip` subtype codes are migrated
-// to their base subtype + a zipper accessory by 0008/migrate-pouch-zip-accessory.
+
+/** Legacy pouch subtypes — still resolvable for old estimates; hidden from picker. */
+export const LEGACY_POUCH_SUBTYPES: ProductSubtype[] = [
+  { key: 'pouch_3_side_seal', label: '3-Side Seal (legacy)', family: 'pouch', dimensionFields: POUCH_BASE },
+  { key: 'pouch_stand_up', label: 'Stand-up Pouch (legacy)', family: 'pouch', dimensionFields: [...POUCH_BASE, F.bottomGusset] },
+  { key: 'pouch_kseal_stand_up', label: 'K-Seal Stand-up (legacy → TSS Standing K-Seal)', family: 'pouch', dimensionFields: [...POUCH_BASE, F.bottomGusset] },
+  { key: 'pouch_center_seal', label: 'Center-Seal (legacy)', family: 'pouch', dimensionFields: POUCH_BASE },
+  { key: 'pouch_gusset', label: 'Gusset Pouch (legacy)', family: 'pouch', dimensionFields: [...POUCH_BASE, F.sideGusset] },
+  { key: 'pouch_4_side_seal', label: '4-Side Seal (legacy)', family: 'pouch', dimensionFields: POUCH_BASE },
+  { key: 'pouch_flat_bottom', label: 'Flat-Bottom (legacy)', family: 'pouch', dimensionFields: [...POUCH_BASE, F.sideGusset] },
+];
+
+/** Codes shown in the estimate pouch-type picker (v4 only). */
+export const POUCH_PICKER_SUBTYPE_CODES = new Set(POUCH_SUBTYPES.map((s) => s.key));
 
 export const BAG_SUBTYPES: ProductSubtype[] = [
   // Commercial bags
@@ -162,7 +179,12 @@ export const LEGACY_BAG_SUBTYPES: ProductSubtype[] = [
   { key: 'bag_bottom_gusset_shopping', label: 'Bottom-Gusset Shopping Bag', family: 'bag', group: 'Commercial Bags', dimensionFields: [...BAG_BASE, F.bottomGusset] },
 ];
 
-export const ALL_SUBTYPES: ProductSubtype[] = [...POUCH_SUBTYPES, ...BAG_SUBTYPES, ...LEGACY_BAG_SUBTYPES];
+export const ALL_SUBTYPES: ProductSubtype[] = [
+  ...POUCH_SUBTYPES,
+  ...LEGACY_POUCH_SUBTYPES,
+  ...BAG_SUBTYPES,
+  ...LEGACY_BAG_SUBTYPES,
+];
 
 const SUBTYPE_BY_KEY = new Map<string, ProductSubtype>(ALL_SUBTYPES.map((s) => [s.key, s]));
 

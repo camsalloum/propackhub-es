@@ -1036,7 +1036,9 @@ const LEGACY_PACKAGING_KEYS = [
 /** Idempotent — inserts packaging catalog rows; retires legacy substrate placeholders. */
 export async function ensurePackagingCatalogSeeded(): Promise<{ materials: number; retired: number }> {
   const db = getDatabase();
-  const seed = loadSeedMaterialsFromJson().filter((m) => m.type === 'packaging');
+  const seed = loadSeedMaterialsFromJson().filter(
+    (m) => m.type === 'packaging' && m.substrateFamily === 'Packaging'
+  );
   const existingRows = await db.select().from(schema.platformMasterMaterials);
   const byKey = new Map(existingRows.map((r) => [r.key, r]));
 
@@ -1081,6 +1083,46 @@ export async function ensurePackagingCatalogSeeded(): Promise<{ materials: numbe
   }
 
   return { materials: materialsAdded + materialsUpdated, retired };
+}
+
+/** Idempotent — inserts process consumables catalog rows (mounting tape + other). */
+export async function ensureConsumablesCatalogSeeded(): Promise<{ materials: number }> {
+  const db = getDatabase();
+  const seed = loadSeedMaterialsFromJson().filter(
+    (m) => m.type === 'packaging' && m.substrateFamily === 'Consumables'
+  );
+  const existingRows = await db.select().from(schema.platformMasterMaterials);
+  const byKey = new Map(existingRows.map((r) => [r.key, r]));
+
+  let materialsAdded = 0;
+  let materialsUpdated = 0;
+  for (let i = 0; i < seed.length; i++) {
+    const m = seed[i]!;
+    const match = byKey.get(m.key);
+    const values = masterMaterialInputToDbValues({ ...m, sortOrder: match?.sortOrder ?? 970 + i });
+    if (match) {
+      await db
+        .update(schema.platformMasterMaterials)
+        .set(values)
+        .where(eq(schema.platformMasterMaterials.id, match.id));
+      materialsUpdated++;
+    } else {
+      await db.insert(schema.platformMasterMaterials).values(values);
+      materialsAdded++;
+    }
+  }
+
+  if (materialsAdded > 0 || materialsUpdated > 0) {
+    await incrementMasterDataVersion();
+    const materials = await listPlatformMasterMaterials();
+    const tenants = await db.select({ id: schema.tenants.id }).from(schema.tenants);
+    for (const t of tenants) {
+      await syncMaterialsForTenant(t.id, materials, { pruneOrphans: false });
+    }
+    log.info({ added: materialsAdded, updated: materialsUpdated }, 'Consumables catalog seeded');
+  }
+
+  return { materials: materialsAdded + materialsUpdated };
 }
 
 const LAMINATION_ADHESIVE_KEYS = [

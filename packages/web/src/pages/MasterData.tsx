@@ -33,6 +33,7 @@ import {
   tenantMaterialToPlatformRow,
 } from '../features/master-data/tenantMaterialBridge';
 import { SubstrateFamilyNav } from '../features/master-data/SubstrateFamilyNav';
+import { EstimationAssumptionsPanel } from '../features/master-data/EstimationAssumptionsPanel';
 import {
   ES_FAMILY_TO_PB,
   filterSubstrateMaterialsByFamilyTab,
@@ -50,7 +51,15 @@ import {
 } from '../lib/substratePbTaxonomy';
 
 type MaterialTab = string; // now dynamic — any rm_type code can be a material tab
-type RefTab = 'product_type' | 'product_subtype' | 'unit' | 'rm_type' | 'process' | 'waste_bands' | 'templates';
+type RefTab =
+  | 'product_type'
+  | 'product_subtype'
+  | 'unit'
+  | 'rm_type'
+  | 'process'
+  | 'waste_bands'
+  | 'templates'
+  | 'assumptions';
 type Tab = MaterialTab | RefTab;
 
 // Static ref tabs — these never change
@@ -61,10 +70,20 @@ const REF_TABS: { id: RefTab; label: string }[] = [
   { id: 'process', label: 'Processes' },
   { id: 'waste_bands', label: 'Waste Bands' },
   { id: 'templates', label: 'CoRM' },
+  { id: 'assumptions', label: 'Assumptions' },
 ];
 
 // Static reference tab IDs — used to distinguish material tabs from ref tabs
-const REF_TAB_IDS = new Set<string>(['product_type', 'product_subtype', 'unit', 'rm_type', 'process', 'waste_bands', 'templates']);
+const REF_TAB_IDS = new Set<string>([
+  'product_type',
+  'product_subtype',
+  'unit',
+  'rm_type',
+  'process',
+  'waste_bands',
+  'templates',
+  'assumptions',
+]);
 
 const PACKAGING_FAMILY = 'Packaging';
 
@@ -84,7 +103,11 @@ const ACCESSORY_KIND_OPTIONS: { value: string; label: string; basis: 'per_meter'
   { value: 'spout', label: 'Spout + cap', basis: 'per_piece' },
   { value: 'valve', label: 'Degassing valve', basis: 'per_piece' },
   { value: 'handle', label: 'Handle', basis: 'per_piece' },
+  { value: 'hanging_hole', label: 'Hanging hole', basis: 'per_piece' },
   { value: 'window', label: 'Window patch', basis: 'per_piece' },
+  { value: 'tear_notch', label: 'Tear notch', basis: 'per_piece' },
+  { value: 'laser_score', label: 'Laser score', basis: 'per_piece' },
+  { value: 'easy_peel', label: 'Easy peel seal', basis: 'per_piece' },
 ];
 
 function accessoryBasis(kind: string | null | undefined): 'per_meter' | 'per_piece' {
@@ -148,7 +171,7 @@ function filterMaterialsForTab(
   allRmTabs: { id: string; label: string }[]
 ): PlatformMasterMaterialRow[] {
   if (tabCode === 'packaging') {
-    return rows.filter((m) => m.type === 'packaging');
+    return rows.filter((m) => m.type === 'packaging' && m.substrateFamily === PACKAGING_FAMILY);
   }
   if (tabCode === 'substrate') {
     const customFamilies = allRmTabs
@@ -431,9 +454,11 @@ const MasterData = () => {
     scope === 'platform' ? user?.role === 'platform_admin' : canEditAdmin && isMaterialTab(tab);
 
   const showSaveButton =
-    scope === 'platform'
-      ? user?.role === 'platform_admin'
-      : canEditAdmin && isMaterialTab(tab);
+    tab === 'assumptions'
+      ? false
+      : scope === 'platform'
+        ? user?.role === 'platform_admin'
+        : canEditAdmin && isMaterialTab(tab);
 
   const materialRowEditable = (row: PlatformMasterMaterialRow & { isTenantOnly?: boolean; priceSource?: string | null }) =>
     scope === 'platform'
@@ -1302,13 +1327,13 @@ const MasterData = () => {
         <div className="card bg-success/10 border-success/30 mb-4 text-success text-sm">{status}</div>
       )}
 
-      <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
+      <div className="flex flex-wrap gap-1.5 mb-4">
         {[REF_TABS[0], ...rmTypeTabs, ...REF_TABS.slice(1)].map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors duration-micro ease-micro shrink-0 ${
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors duration-micro ease-micro ${
               tab === t.id ? 'bg-gold/15 text-gold' : 'bg-surface-raised text-ink hover:bg-slate'
             }`}
           >
@@ -1743,6 +1768,8 @@ const MasterData = () => {
           </div>
           )}
         </div>
+      ) : tab === 'assumptions' ? (
+        <EstimationAssumptionsPanel />
       ) : tab === 'product_type' ? (
         <div className="card p-3 space-y-3">
           <div className="flex justify-between items-center">
@@ -2310,13 +2337,13 @@ const MasterData = () => {
               <strong>Code</strong> sets the family + dimension fields: prefix{' '}
               <code className="bg-slate rounded px-1">pouch_</code> for pouches,{' '}
               <code className="bg-slate rounded px-1">bag_</code> for bags (e.g.{' '}
-              <code className="bg-slate rounded px-1">pouch_stand_up</code>,{' '}
+              <code className="bg-slate rounded px-1">pouch_tss_standing</code>,{' '}
               <code className="bg-slate rounded px-1">bag_wicket</code>). Known codes map to specific
               dimension fields; custom codes get the base width/height/ups/trim set.
             </p>
           )}
-          <div className="table-wrap">
-            <table className="data-table min-w-[420px]">
+          <div className={tab === 'unit' ? 'table-wrap' : 'w-full overflow-hidden'}>
+            <table className={`data-table w-full ${tab === 'unit' ? 'min-w-0' : ''}`}>
               <thead>
                 <tr>
                   <th>Label</th>
@@ -2338,9 +2365,9 @@ const MasterData = () => {
               <tbody>
                 {refItems.map((item, i) => (
                   <tr key={i}>
-                    <td>
+                    <td className="w-[45%]">
                       <input
-                        className="cell-input w-full min-w-[160px]"
+                        className="cell-input w-full min-w-0"
                         placeholder="Label"
                         value={item.label}
                         disabled={!canEdit}
@@ -2352,9 +2379,9 @@ const MasterData = () => {
                       />
                     </td>
                     {(tab === 'rm_type' || tab === 'product_subtype') && (
-                      <td>
+                      <td className="w-[45%]">
                         <input
-                          className="cell-input w-full min-w-[120px] font-mono"
+                          className="cell-input w-full min-w-0 font-mono"
                           placeholder={tab === 'rm_type' ? 'e.g. substrate, ink, plate' : 'code'}
                           value={item.code ?? ''}
                           disabled={!canEdit}
@@ -2370,7 +2397,7 @@ const MasterData = () => {
                       <>
                         <td>
                           <select
-                            className="cell-input w-full min-w-[150px]"
+                            className="cell-input w-full min-w-0"
                             value={(item.metadata?.basis as string) ?? 'kg'}
                             disabled={!canEdit}
                             onChange={(e) => {
@@ -2393,7 +2420,7 @@ const MasterData = () => {
                             type="number"
                             step="any"
                             min={0}
-                            className="cell-input w-24 text-right font-mono"
+                            className="cell-input w-full max-w-[6rem] ml-auto text-right font-mono min-w-0"
                             title={
                               item.metadata?.variableMultiplier
                                 ? 'Fallback default until the user enters a length on the estimate'
@@ -2428,7 +2455,7 @@ const MasterData = () => {
                         </td>
                       </>
                     )}
-                    <td className="text-center">
+                    <td className="text-center w-10">
                       <button
                         type="button"
                         className="p-1.5 text-danger hover:bg-danger/10 rounded transition-colors duration-micro ease-micro"

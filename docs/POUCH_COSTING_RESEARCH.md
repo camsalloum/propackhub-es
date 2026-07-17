@@ -1,15 +1,21 @@
-# Pouch Classification & Material-Cost Calculation
+# Pouch Classification & Material-Cost Calculation (superseded)
 
-> Compiled 2026-06-27. Companion to `BAG_COSTING_RESEARCH.md` (which covers
-> carrier/shopping **bags**). This document covers **pouches** — the six
-> laminate-film subtypes in `pouch_configurator_v2.html`:
+> **Superseded 2026-07-17** by Premade Pouch Selector **v4**.
+> Design taxonomy + formulas: **[`POUCH_CLASSIFICATION_v4.md`](./POUCH_CLASSIFICATION_v4.md)**.  
+> **App as-built:** **[`POUCH_SOURCE_OF_TRUTH.md`](./POUCH_SOURCE_OF_TRUTH.md)**.
+> Engine: `packages/engine/src/pouch-flat-sheet.ts` (Family × Variant, `webCount`).
+>
+> The text below is retained as historical research for the pre-v4 six-subtype model.
+> Do not implement new costing against §4 formulas here.
+
+---
+
+# (Archive) Pre-v4 research — 2026-06-27
+
+> Companion to `BAG_COSTING_RESEARCH.md` (carrier/shopping **bags**). Historically
+> covered six laminate-film subtypes in `pouch_configurator_v2.html`:
 > 3-side seal, center seal (pillow), 4-side seal, stand-up (doypack),
 > side-gusset, and flat-bottom (box).
->
-> Conventions are kept identical to the engine's bag model
-> (`packages/engine/src/bag-flat-sheet.ts`) so the two share one costing spine:
-> formed-depth gussets, **two-web** lay-flat construction, a default **10 mm**
-> seal allowance, and `piecesPerKg = 1000 / (flatSheetArea_m2 × totalGsm)`.
 
 ---
 

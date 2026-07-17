@@ -210,6 +210,7 @@ export function buildVariantPricingContext(
       materials: patchedMaterials,
       processes,
       productType: engineType,
+      productSubtype: typeof data.productSubtype === 'string' ? data.productSubtype : null,
       dimensions: { ...dimensions, accessories },
       markupPercent: parseFloat(String(data.markupPercent)) || 15,
       platesPerKg: parseFloat(String(data.platesPerKg)) || 0,

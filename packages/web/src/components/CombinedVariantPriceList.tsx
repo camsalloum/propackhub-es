@@ -7,6 +7,7 @@ import { useQuotePriceListPrefs } from '../hooks/useQuotePriceListPrefs';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
 import { buildVariantPricingContext, type VariantPricingContext } from '../lib/variantPricingContext';
 import type { ClientCalcMaterial } from '../lib/estimateCalc';
+import { formatCommercialPrice, roundCommercialPrice } from '@es/engine';
 import {
   activeWasteBands,
   bandKey,
@@ -25,8 +26,17 @@ import {
 } from '../lib/priceListPricing';
 import PriceListSlabControls from './PriceListSlabControls';
 import PriceListCellHints from './PriceListCellHints';
+import { structureDisplayLines } from '../lib/structureDisplay';
+import {
+  collectQuotationExtraCharges,
+  formatExtraChargeAmount,
+  type QuotationExtraCharge,
+} from '../lib/quotationExtraCharges';
+import { resolveBillableColorCount } from '../lib/tooling';
 import {
   parseQuotePriceListDisplayPrefs,
+  roundingFromSelectValue,
+  roundingSelectValue,
   type QuotePriceListDisplayPrefs,
 } from '../lib/quotePriceListPrefs';
 
@@ -58,6 +68,7 @@ export default function CombinedVariantPriceList({
   const { user, tenant } = useAuth();
   const { reference: masterReference } = useMasterDataReference();
   const [contexts, setContexts] = useState<VariantPricingContext[]>([]);
+  const [extraCharges, setExtraCharges] = useState<QuotationExtraCharge[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -76,6 +87,8 @@ export default function CombinedVariantPriceList({
     clearSelectedBands,
     customSlabs,
     setCustomSlabs,
+    rounding,
+    setRounding,
   } = useQuotePriceListPrefs({
     quoteId,
     initialPrefs: priceListDisplayPrefs,
@@ -95,6 +108,7 @@ export default function CombinedVariantPriceList({
   const load = useCallback(async () => {
     if (estimateIds.length === 0) {
       setContexts([]);
+      setExtraCharges([]);
       setLoading(false);
       return;
     }
@@ -122,6 +136,34 @@ export default function CombinedVariantPriceList({
           structureSummary: summaries[c.id] ?? c.structureSummary,
         }));
       setContexts(built);
+      if (!priceCheckMode) {
+        setExtraCharges(
+          collectQuotationExtraCharges(
+            estimates.map((est) => {
+              const e = est as Record<string, unknown>;
+              const id = String(e.id ?? '');
+              return {
+                skuLabel: labels[id]?.trim() || (e.skuLabel as string) || (e.jobName as string),
+                jobName: e.jobName as string,
+                refNumber: e.refNumber as string,
+                toolingBillingMode: e.toolingBillingMode as string,
+                printColorCount: e.printColorCount as number,
+                billableColorCount: e.billableColorCount as number,
+                toolingScenario: e.toolingScenario as string,
+                costPerColor: e.costPerColor as string | number,
+                deliveryTerm: e.deliveryTerm as string,
+                deliveryChargeUsd: e.deliveryChargeUsd as string | number,
+                displayCurrency: e.displayCurrency as string,
+              };
+            }),
+            {
+              resolveBillableColors: resolveBillableColorCount,
+            }
+          )
+        );
+      } else {
+        setExtraCharges([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load comparison');
     } finally {
@@ -137,6 +179,7 @@ export default function CombinedVariantPriceList({
     structureSummariesKey,
     rowLabels,
     structureSummaries,
+    priceCheckMode,
   ]);
 
   useEffect(() => {
@@ -260,7 +303,10 @@ export default function CombinedVariantPriceList({
   const tableRows = useMemo(() => {
     if (!ready || !unit || !currency) return [];
     return contexts.map((ctx) => {
-      const prices = new Map<string, { price: string; kgHint: string | null; belowMoq: boolean }>();
+      const prices = new Map<
+        string,
+        { price: string; priceNum: number | null; kgHint: string | null; belowMoq: boolean }
+      >();
       if (slabMode === 'custom') {
         for (const qty of customSlabs) {
           const row = buildCustomSlabPrice(ctx, qty, unit, currency);
@@ -268,8 +314,12 @@ export default function CombinedVariantPriceList({
             row.quantityKg != null && unit !== 'kg'
               ? `${Math.round(row.quantityKg).toLocaleString()} kg`
               : null;
+          const priceNum =
+            row.priceNum == null ? null : roundCommercialPrice(row.priceNum, rounding);
           prices.set(customSlabKey(qty), {
-            price: row.price,
+            price:
+              row.priceNum == null ? '—' : formatCommercialPrice(row.priceNum, rounding),
+            priceNum,
             kgHint,
             belowMoq: row.belowMoq,
           });
@@ -278,12 +328,18 @@ export default function CombinedVariantPriceList({
         for (const band of selectedBands) {
           const match = findMatchingBand(ctx.wasteBands, band) ?? band;
           const rows = buildPriceListRows(ctx, unit, currency, new Set([bandKey(match)]));
-          prices.set(bandKey(band), { price: rows[0]?.price ?? '—', kgHint: null, belowMoq: false });
+          const raw = rows[0]?.priceNum ?? null;
+          prices.set(bandKey(band), {
+            price: raw == null ? '—' : formatCommercialPrice(raw, rounding),
+            priceNum: raw == null ? null : roundCommercialPrice(raw, rounding),
+            kgHint: null,
+            belowMoq: false,
+          });
         }
       }
       return { ctx, prices };
     });
-  }, [ready, unit, currency, contexts, slabMode, customSlabs, selectedBands]);
+  }, [ready, unit, currency, contexts, slabMode, customSlabs, selectedBands, rounding]);
 
   const exportExcel = async () => {
     if (!ready || !unit || !currency || tableRows.length === 0 || exporting) return;
@@ -309,10 +365,21 @@ export default function CombinedVariantPriceList({
           ...columnKeys.map((key) => {
             const p = prices.get(key);
             if (p == null || p.price === '—') return '';
-            const n = Number(String(p.price).replace(/,/g, ''));
-            return Number.isFinite(n) ? n : p.price;
+            return p.priceNum ?? p.price;
           }),
         ]);
+      }
+      if (extraCharges.length > 0) {
+        const chargesSheet = workbook.addWorksheet('Additional charges');
+        chargesSheet.addRow(['Description', 'Detail', 'Amount', 'Currency']);
+        for (const c of extraCharges) {
+          chargesSheet.addRow([
+            c.description,
+            c.detail || '',
+            c.amount,
+            c.currency,
+          ]);
+        }
       }
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
@@ -411,6 +478,22 @@ export default function CombinedVariantPriceList({
           unitConversion={slabLabelContext}
         />
 
+        <label className="flex flex-col gap-1 text-xs text-mist">
+          Round
+          <select
+            value={roundingSelectValue(rounding)}
+            onChange={(e) => setRounding(roundingFromSelectValue(e.target.value))}
+            className="input input-compact text-xs w-auto min-w-[7rem]"
+            title="Nearest step: 5.73→5.75, 4.61→4.60, 4.63→4.65"
+          >
+            <option value="off">Off</option>
+            <option value="0.05">0.05</option>
+            <option value="0.1">0.10</option>
+            <option value="0.5">0.50</option>
+            <option value="1">1</option>
+          </select>
+        </label>
+
         {ready && (
           <button
             type="button"
@@ -436,18 +519,18 @@ export default function CombinedVariantPriceList({
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed min-w-[48rem]">
             <thead>
               <tr className="border-b border-border bg-surface-raised/50 text-xs text-mist">
-                <th className="text-left py-2 px-3 font-medium">{variantColumnLabel}</th>
-                <th className="text-left py-2 px-3 font-medium">Structure</th>
+                <th className="text-left py-2 px-2 font-medium w-[5.5rem]">{variantColumnLabel}</th>
+                <th className="text-left py-2 px-2 font-medium w-[8.5rem]">Structure</th>
                 {columnHeaders.map((h, i) => (
                   <th
                     key={columnKeys[i] ?? i}
-                    className="text-right py-2 px-3 font-medium whitespace-nowrap"
+                    className="text-center py-2 px-1.5 font-medium leading-snug"
                   >
-                    {h}
-                    <span className="block text-[10px] font-normal text-mist/80">
+                    <span className="block break-words whitespace-normal">{h}</span>
+                    <span className="block text-[10px] font-normal text-mist/80 whitespace-nowrap">
                       {unit ? `${UNIT_LABELS[unit]} · ${currency}` : currency}
                     </span>
                   </th>
@@ -457,6 +540,7 @@ export default function CombinedVariantPriceList({
             <tbody>
               {tableRows.map(({ ctx, prices }) => {
                 const active = ctx.id === activeEstimateId;
+                const structureLines = structureDisplayLines(ctx.structureSummary);
                 return (
                   <tr
                     key={ctx.id}
@@ -465,16 +549,24 @@ export default function CombinedVariantPriceList({
                     }`}
                     onClick={() => onSelectEstimate?.(ctx.id)}
                   >
-                    <td className="py-2 px-3 font-medium whitespace-nowrap">{ctx.label}</td>
-                    <td className="py-2 px-3 text-mist max-w-[10rem] truncate" title={ctx.structureSummary}>
-                      {ctx.structureSummary || '—'}
+                    <td className="py-2 px-2 align-top font-medium break-words whitespace-normal leading-snug">
+                      {ctx.label || '—'}
+                    </td>
+                    <td className="py-2 px-2 align-top text-mist text-xs leading-snug break-words whitespace-normal">
+                      {structureLines.length > 0
+                        ? structureLines.map((line, i) => (
+                            <span key={`${i}-${line}`} className="block">
+                              {line}
+                            </span>
+                          ))
+                        : '—'}
                     </td>
                     {columnKeys.map((key) => {
                       const cell = prices.get(key);
                       return (
                         <td
                           key={key}
-                          className="py-2 px-3 text-right font-mono font-semibold text-navy tabular-nums whitespace-nowrap"
+                          className="py-2 px-1.5 text-center font-mono font-semibold text-navy tabular-nums whitespace-nowrap align-top"
                         >
                           <span>{cell?.price ?? '—'}</span>
                           <PriceListCellHints kgHint={cell?.kgHint} belowMoq={cell?.belowMoq} />
@@ -486,6 +578,33 @@ export default function CombinedVariantPriceList({
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {!priceCheckMode && extraCharges.length > 0 && (
+        <div className="mt-3 rounded-lg border border-border bg-surface-raised/30 px-3 py-2.5 space-y-1.5">
+          <p className="text-xs font-medium text-brand">
+            Additional charges (invoiced separately)
+          </p>
+          <p className="text-[11px] text-mist">Not included in film unit prices above.</p>
+          <ul className="space-y-1.5">
+            {extraCharges.map((c, i) => (
+              <li
+                key={`${c.kind}-${c.skuLabel}-${i}`}
+                className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-sm"
+              >
+                <div className="min-w-0">
+                  <p className="text-navy font-medium leading-snug">{c.description}</p>
+                  {c.detail && (
+                    <p className="text-xs text-mist leading-snug">{c.detail}</p>
+                  )}
+                </div>
+                <p className="font-mono font-semibold text-navy tabular-nums shrink-0">
+                  {formatExtraChargeAmount(c.amount, c.currency)}
+                </p>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

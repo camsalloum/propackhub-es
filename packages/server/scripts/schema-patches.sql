@@ -623,3 +623,15 @@ DO $$ BEGIN
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
+
+-- Quotation PDF field visibility (tenant Settings → Proposal)
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS quotation_format JSONB;
+
+-- Customer commercial fields (PEBI CRM / Oracle-backed via fp_customer_unified)
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS payment_terms VARCHAR(255);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS address_line1 VARCHAR(255);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS address_line2 VARCHAR(255);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS city VARCHAR(128);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS state VARCHAR(128);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS country VARCHAR(128);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS postal_code VARCHAR(32);

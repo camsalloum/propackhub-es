@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { useVisibilityProfile } from '../hooks/useVisibilityProfile';
 import { saleUsdToDisplayAmount } from '../lib/currency';
+import { structureDisplayLines } from '../lib/structureDisplay';
 
 type PriceListRow = {
   id: string;
@@ -290,6 +291,7 @@ export default function CombinedPriceListPanel({
                   saleUsdToDisplayAmount(s.pricePerKg, fx),
                 ])
               );
+              const structureLines = structureDisplayLines(r.structureSummary);
               return (
                 <tr
                   key={r.id}
@@ -298,17 +300,27 @@ export default function CombinedPriceListPanel({
                   }`}
                   onClick={() => onSelectEstimate?.(r.id)}
                 >
-                  <td className="py-2 px-3 font-medium whitespace-nowrap">
+                  <td className="py-2 px-2 align-top font-medium break-words whitespace-normal leading-snug max-w-[6rem]">
                     {priceCheckMode ? r.jobName || '—' : r.skuLabel || r.jobName || '—'}
                   </td>
                   {!priceCheckMode && (
                     <>
-                      <td className="py-2 px-3 font-mono text-xs">{r.specsCode || '—'}</td>
-                      <td className="py-2 px-3">{r.brand || '—'}</td>
+                      <td className="py-2 px-2 align-top font-mono text-xs break-words whitespace-normal">
+                        {r.specsCode || '—'}
+                      </td>
+                      <td className="py-2 px-2 align-top break-words whitespace-normal max-w-[5rem]">
+                        {r.brand || '—'}
+                      </td>
                     </>
                   )}
-                  <td className="py-2 px-3 text-mist max-w-[10rem] truncate" title={r.structureSummary || ''}>
-                    {r.structureSummary || '—'}
+                  <td className="py-2 px-2 align-top text-mist text-xs leading-snug break-words whitespace-normal max-w-[8.5rem]">
+                    {structureLines.length > 0
+                      ? structureLines.map((line, i) => (
+                          <span key={`${i}-${line}`} className="block">
+                            {line}
+                          </span>
+                        ))
+                      : '—'}
                   </td>
                   {showDev && (
                     <>

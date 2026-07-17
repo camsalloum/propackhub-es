@@ -134,6 +134,13 @@
       "when": 1783300000000,
       "tag": "0021_packaging_config",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "5",
+      "when": 1783700000000,
+      "tag": "0022_consumables_config",
+      "breakpoints": true
     }
   ]
 }

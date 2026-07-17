@@ -82,6 +82,8 @@ export interface PackagingCostLine {
   costPerM2Usd: number;
   needsReview: boolean;
   detail?: Record<string, number>;
+  /** Human-readable formula for estimate hover / Assumptions page. */
+  calcHint?: string;
 }
 
 export interface PackagingCostDetail {
@@ -187,7 +189,8 @@ function lineCost(
   orderKg: number,
   totalGsm: number,
   cfg: PackagingConfig,
-  detail?: Record<string, number>
+  detail?: Record<string, number>,
+  calcHint?: string
 ): PackagingCostLine {
   const calculatedQty = qty;
   const qtyOverride = positive(cfg.qtyOverrides?.[role] ?? null);
@@ -214,6 +217,7 @@ function lineCost(
     costPerM2Usd,
     needsReview: needsReview || (effectiveQty > 0 && (unitPriceUsd == null || unitPriceUsd <= 0)),
     detail,
+    calcHint,
   };
 }
 
@@ -462,23 +466,77 @@ function costRoll(
   const stretchQty = stretchFrac * palletsInOrder;
 
   const lines: PackagingCostLine[] = [
-    lineCost('core', 'Core', coreQty, 'm', coreM, opts.orderQuantityKg, opts.totalGsm, cfg, {
-      rollsInOrder,
-      reelWidthMm,
-    }),
-    lineCost('ld_wrap', 'Roll wrap (LD)', wrapKg, 'kg', ldM, opts.orderQuantityKg, opts.totalGsm, cfg, {
-      wrapKgPerRoll: wrap.kg,
-      wrapAreaM2PerRoll: wrap.areaM2,
-      rollOdMm: rollSpec.rollOutsideDiameterMm,
-    }),
-    lineCost('stretch', 'Stretch wrap', stretchQty, 'roll', stretchM, opts.orderQuantityKg, opts.totalGsm, cfg, {
-      stretchFraction: stretchFrac,
+    lineCost(
+      'core',
+      'Core',
+      coreQty,
+      'm',
+      coreM,
+      opts.orderQuantityKg,
+      opts.totalGsm,
+      cfg,
+      { rollsInOrder, reelWidthMm },
+      [
+        'Core tube length (m) = (reel width mm ÷ 1000) × rolls in order',
+        `= (${reelWidthMm} ÷ 1000) × ${rollsInOrder.toFixed(3)} = ${coreQty.toFixed(2)} m`,
+        `Rolls in order = order kg ÷ roll weight = ${opts.orderQuantityKg.toFixed(1)} ÷ ${rollWeightKg.toFixed(3)} kg`,
+        'Priced as $/m of tube axis (finished reel width), not film running metres.',
+      ].join('\n')
+    ),
+    lineCost(
+      'ld_wrap',
+      'Roll wrap (LD)',
+      wrapKg,
+      'kg',
+      ldM,
+      opts.orderQuantityKg,
+      opts.totalGsm,
+      cfg,
+      {
+        wrapKgPerRoll: wrap.kg,
+        wrapAreaM2PerRoll: wrap.areaM2,
+        rollOdMm: rollSpec.rollOutsideDiameterMm,
+      },
+      [
+        'LD wrap kg = rolls × (π × OD_mm / 1000 × passes × filmWidth_mm / 1000 × GSM / 1000)',
+        `OD ${rollSpec.rollOutsideDiameterMm.toFixed(0)} mm · passes ${num(cfg.ldWrapPasses, DEFAULT_LD_WRAP_PASSES)} · film ${num(cfg.ldWrapFilmWidthMm, DEFAULT_LD_WRAP_FILM_WIDTH_MM)} mm · GSM ${num(cfg.ldWrapGsm, DEFAULT_LD_WRAP_GSM)}`,
+        `= ${rollsInOrder.toFixed(3)} rolls × ${wrap.kg.toFixed(4)} kg/roll = ${wrapKg.toFixed(2)} kg`,
+      ].join('\n')
+    ),
+    lineCost(
+      'stretch',
+      'Stretch wrap',
+      stretchQty,
+      'roll',
+      stretchM,
+      opts.orderQuantityKg,
+      opts.totalGsm,
+      cfg,
+      { stretchFraction: stretchFrac, palletsInOrder },
+      [
+        'Stretch rolls = pallets × film length per pallet ÷ stretch roll length',
+        `Film/pallet = (2(L+W)+L) × layers; L×W footprint ${num(cfg.palletFootprintLm, DEFAULT_PALLET_FOOTPRINT_L_M)}×${num(cfg.palletFootprintWm, DEFAULT_PALLET_FOOTPRINT_W_M)} m; layers ${num(cfg.stretchWrapLayers, DEFAULT_STRETCH_WRAP_LAYERS)}; roll ${STRETCH_ROLL_LENGTH_M} m`,
+        `= ${palletsInOrder} pallets × ${stretchFrac.toFixed(4)} = ${stretchQty.toFixed(3)} roll`,
+      ].join('\n')
+    ),
+    lineCost(
+      'pallet',
+      'Pallet',
       palletsInOrder,
-    }),
-    lineCost('pallet', 'Pallet', palletsInOrder, 'pc', palletM, opts.orderQuantityKg, opts.totalGsm, cfg, {
-      loadPerPalletKg: loadPerPallet,
-      rollsPerPallet: Math.floor(loadPerPallet / rollWeightKg),
-    }),
+      'pc',
+      palletM,
+      opts.orderQuantityKg,
+      opts.totalGsm,
+      cfg,
+      {
+        loadPerPalletKg: loadPerPallet,
+        rollsPerPallet: Math.floor(loadPerPallet / rollWeightKg),
+      },
+      [
+        'Pallets = ceil(order kg ÷ load per pallet)',
+        `= ceil(${opts.orderQuantityKg.toFixed(1)} ÷ ${loadPerPallet}) = ${palletsInOrder} pc`,
+      ].join('\n')
+    ),
   ];
 
   return finalize(lines, {
@@ -525,22 +583,73 @@ function costSleeve(
   const stretchQty = stretchFrac * palletsInOrder;
 
   const lines: PackagingCostLine[] = [
-    lineCost('core', 'Core', coreQty, 'm', coreM, opts.orderQuantityKg, opts.totalGsm, cfg, {
-      sleeveRollsInOrder,
-      packOdMm: SLEEVE_PACK_TARGET_OD_MM,
-    }),
-    lineCost('carton', 'Carton', cartonsNeeded, 'pc', cartonM, opts.orderQuantityKg, opts.totalGsm, cfg, {
-      rollsPerCarton: 1,
-      sleeveRollWeightKg: rollWeightKg,
-      cartonOdMm: SLEEVE_PACK_TARGET_OD_MM,
-    }),
-    lineCost('stretch', 'Stretch wrap', stretchQty, 'roll', stretchM, opts.orderQuantityKg, opts.totalGsm, cfg, {
-      stretchFraction: stretchFrac,
+    lineCost(
+      'core',
+      'Core',
+      coreQty,
+      'm',
+      coreM,
+      opts.orderQuantityKg,
+      opts.totalGsm,
+      cfg,
+      { sleeveRollsInOrder, packOdMm: SLEEVE_PACK_TARGET_OD_MM },
+      [
+        'Core tube length (m) = (lay-flat mm ÷ 1000) × sleeve rolls in order',
+        `= (${layFlatMm} ÷ 1000) × ${sleeveRollsInOrder} = ${coreQty.toFixed(2)} m`,
+        `Sleeve rolls = ceil(order kg ÷ roll weight at ${SLEEVE_PACK_TARGET_OD_MM} mm pack OD)`,
+        'Priced as $/m of tube axis, not film running metres.',
+      ].join('\n')
+    ),
+    lineCost(
+      'carton',
+      'Carton',
+      cartonsNeeded,
+      'pc',
+      cartonM,
+      opts.orderQuantityKg,
+      opts.totalGsm,
+      cfg,
+      {
+        rollsPerCarton: 1,
+        sleeveRollWeightKg: rollWeightKg,
+        cartonOdMm: SLEEVE_PACK_TARGET_OD_MM,
+      },
+      [
+        'Cartons = sleeve rolls (1 roll / carton)',
+        `= ${cartonsNeeded} pc at pack OD ${SLEEVE_PACK_TARGET_OD_MM} mm`,
+      ].join('\n')
+    ),
+    lineCost(
+      'stretch',
+      'Stretch wrap',
+      stretchQty,
+      'roll',
+      stretchM,
+      opts.orderQuantityKg,
+      opts.totalGsm,
+      cfg,
+      { stretchFraction: stretchFrac, palletsInOrder },
+      [
+        'Stretch rolls = pallets × film length per pallet ÷ stretch roll length',
+        `Pallets = ceil(cartons ÷ cartons/pallet) = ceil(${cartonsNeeded} ÷ ${cartonsPerPallet}) = ${palletsInOrder}`,
+        `= ${palletsInOrder} × ${stretchFrac.toFixed(4)} = ${stretchQty.toFixed(3)} roll`,
+      ].join('\n')
+    ),
+    lineCost(
+      'pallet',
+      'Pallet',
       palletsInOrder,
-    }),
-    lineCost('pallet', 'Pallet', palletsInOrder, 'pc', palletM, opts.orderQuantityKg, opts.totalGsm, cfg, {
-      cartonsPerPallet,
-    }),
+      'pc',
+      palletM,
+      opts.orderQuantityKg,
+      opts.totalGsm,
+      cfg,
+      { cartonsPerPallet },
+      [
+        'Pallets = ceil(cartons ÷ cartons per pallet)',
+        `= ceil(${cartonsNeeded} ÷ ${cartonsPerPallet}) = ${palletsInOrder} pc`,
+      ].join('\n')
+    ),
   ];
 
   return finalize(lines, {
@@ -574,17 +683,52 @@ function costPouchBag(
   const stretchQty = stretchFrac * palletsInOrder;
 
   const lines: PackagingCostLine[] = [
-    lineCost('carton', 'Carton', cartonsNeeded, 'pc', cartonM, opts.orderQuantityKg, opts.totalGsm, cfg, {
-      pcsPerCarton,
-      piecesInOrder,
-    }),
-    lineCost('stretch', 'Stretch wrap', stretchQty, 'roll', stretchM, opts.orderQuantityKg, opts.totalGsm, cfg, {
-      stretchFraction: stretchFrac,
+    lineCost(
+      'carton',
+      'Carton',
+      cartonsNeeded,
+      'pc',
+      cartonM,
+      opts.orderQuantityKg,
+      opts.totalGsm,
+      cfg,
+      { pcsPerCarton, piecesInOrder },
+      [
+        'Cartons = ceil(pieces in order ÷ pcs per carton)',
+        `Pieces = order kg × pcs/kg = ${opts.orderQuantityKg.toFixed(1)} × ${piecesPerKg.toFixed(2)} = ${piecesInOrder.toFixed(0)}`,
+        `= ceil(${piecesInOrder.toFixed(0)} ÷ ${pcsPerCarton}) = ${cartonsNeeded} pc`,
+      ].join('\n')
+    ),
+    lineCost(
+      'stretch',
+      'Stretch wrap',
+      stretchQty,
+      'roll',
+      stretchM,
+      opts.orderQuantityKg,
+      opts.totalGsm,
+      cfg,
+      { stretchFraction: stretchFrac, palletsInOrder },
+      [
+        'Stretch rolls = pallets × film length per pallet ÷ stretch roll length',
+        `= ${palletsInOrder} × ${stretchFrac.toFixed(4)} = ${stretchQty.toFixed(3)} roll`,
+      ].join('\n')
+    ),
+    lineCost(
+      'pallet',
+      'Pallet',
       palletsInOrder,
-    }),
-    lineCost('pallet', 'Pallet', palletsInOrder, 'pc', palletM, opts.orderQuantityKg, opts.totalGsm, cfg, {
-      cartonsPerPallet,
-    }),
+      'pc',
+      palletM,
+      opts.orderQuantityKg,
+      opts.totalGsm,
+      cfg,
+      { cartonsPerPallet },
+      [
+        'Pallets = ceil(cartons ÷ cartons per pallet)',
+        `= ceil(${cartonsNeeded} ÷ ${cartonsPerPallet}) = ${palletsInOrder} pc`,
+      ].join('\n')
+    ),
   ];
 
   return finalize(lines, {

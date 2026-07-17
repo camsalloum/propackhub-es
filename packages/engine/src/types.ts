@@ -75,13 +75,30 @@ export interface EstimateDimensions {
   openWidthMm?: number;
   openHeightMm?: number;
   layFlatValue?: number;
-  /** Pouch configurator type: 'three-side-seal' | 'center-seal' | 'four-side-seal' | 'stand-up' | 'side-gusset' | 'flat-bottom'. */
+  /**
+   * Premade pouch v4 configurator key: `{family}-{variant}`
+   * e.g. 'three-side-seal-flat' | 'half-fold-fusion-standing' | 'flat-bottom-box-standing'.
+   * Legacy short keys ('stand-up', 'three-side-seal', …) still resolve via pouch-flat-sheet.
+   */
   pouchSubtype?: string;
-  /** Center-seal (pillow / VFFS) back/fin overlap (mm). Added to blank width. */
+  /** @deprecated VFFS pillow overlap — unused in v4 Center-Fold-Seal model; kept for old JSON. */
   centerSealOverlapMm?: number;
-  /** Flat-bottom (box) pouch bottom-panel depth (mm). Adds a separate W×D panel. */
+  /** Center-Fold-Seal bottom seal width S1 (mm). */
+  bottomSealWidthMm?: number;
+  /** Flat-bottom box pouch bottom-panel depth D (mm). */
   bottomDepthMm?: number;
-  /** Pouch accessories (zipper / spout / valve / window / handle). Empty/undefined = none. */
+  /** Oblique-Side-Weld cut angle (degrees, 0–20). Scrap factor only — not in base flat area. */
+  cutAngleDeg?: number;
+  /**
+   * Stand-up bottom seal style (visual/tooling). Does not change flat film area.
+   * 0/omit = Doyen (U/round gusset), 1 = K-seal (angled K corner seals).
+   * Industry: K-seal vs Doyen differ in bottom weld pattern, not webCount.
+   */
+  bottomSealKseal?: number;
+  /** Corner style tooling: 1 = rounded, 0/omit = square — does not change flat area. */
+  cornerRounded?: number;
+  cornerRadiusMm?: number;
+  /** Pouch accessories (zipper / spout / valve / window / …). Empty/undefined = none. */
   accessories?: PouchAccessorySelection[];
   // Bag fields (flat-sheet area model — see bag-flat-sheet.ts)
   /** Configurator type: 'bottom-gusset' | 'side-gusset' | 'courier' | 'diaper' | 'industrial' | 'loop' | 'patch' | 'punch' | 'wicket'. */
@@ -235,7 +252,9 @@ export interface Estimate {
   /** On-press ink makeup: flexo (less EA) vs rotogravure (more EA). Null → infer PE→flexo. */
   inkPrintingProcess?: InkPrintingProcess | null;
   /** Override dry-ink÷ratio; null → from inkPrintingProcess (flexo 1.5, roto 1.0). */
-  inkSolventRatio?: number;
+  inkSolventRatio?: number | null;
+  /** Print colors — used for flexo mounting-tape area. */
+  printColorCount?: number | null;
   cleaningSolventKgPerJob?: number; // EA kg per job for press cleaning (default 20)
   /** Sleeve seaming solvent coat weight g/m² (default 0.25) when SLEEVE substrate in stack. */
   sleeveSeamingSolventGsm?: number;
@@ -246,6 +265,8 @@ export interface Estimate {
 
   /** Outbound packaging config (load/pallet, cartons/pallet, material picks). */
   packagingConfig?: import('./packaging-costing').PackagingConfig;
+  /** Process consumables (mounting tape + other) — averaged PB groups. */
+  consumablesConfig?: import('./consumables-costing').ConsumablesConfig;
 
   // Currency
   displayCurrencyCode: string;
@@ -303,6 +324,10 @@ export interface Estimate {
   packagingCostPerM2?: number;
   packagingNeedsReview?: boolean;
   packagingCostLines?: import('./packaging-costing').PackagingCostLine[];
+  consumablesCostPerKg?: number;
+  consumablesCostPerM2?: number;
+  consumablesNeedsReview?: boolean;
+  consumablesCostLines?: import('./consumables-costing').ConsumablesCostLine[];
 
   // Order quantities
   orderQuantityKg: number;

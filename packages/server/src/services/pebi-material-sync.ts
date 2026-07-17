@@ -27,6 +27,7 @@ export const PEBI_SYNC_FAMILIES = [
   'ADHESIVE',
   'SOLVENT',
   'PACKAGING',
+  'CONSUMABLES',
 ] as const;
 export type PebiSyncFamily = (typeof PEBI_SYNC_FAMILIES)[number];
 
@@ -55,6 +56,10 @@ const CATALOG_MODULES: Record<PebiSyncFamily, { file: string; exportName: string
   ADHESIVE: { file: 'pebi-es-adhesive-catalog.js', exportName: 'buildAdhesiveMaterialsCatalog' },
   SOLVENT: { file: 'pebi-es-solvent-catalog.js', exportName: 'buildSolventMaterialsCatalog' },
   PACKAGING: { file: 'pebi-es-packaging-catalog.js', exportName: 'buildPackagingMaterialsCatalog' },
+  CONSUMABLES: {
+    file: 'pebi-es-consumables-catalog.js',
+    exportName: 'buildConsumablesMaterialsCatalog',
+  },
 };
 
 const catalogBuilderCache = new Map<PebiSyncFamily, CatalogBuilder>();
@@ -335,8 +340,15 @@ function packagingPriceFields(row: PebiMaterialRow, unitPriceUsd: number) {
     unitPriceUsd: toDecimalString(unitPriceUsd, '0', 4),
     costPerKgUsd: unit === 'kgs' ? toDecimalString(unitPriceUsd, '0') : '0',
     costPerMeterUsd: unit === 'mtr' ? toDecimalString(unitPriceUsd, '0', 4) : null,
-    costPerPieceUsd: unit === 'pcs' || unit === 'rol' ? toDecimalString(unitPriceUsd, '0', 4) : null,
+    costPerPieceUsd:
+      unit === 'pcs' || unit === 'rol' || unit === 'pkt' || unit === 'ltr' || unit === 'm2'
+        ? toDecimalString(unitPriceUsd, '0', 4)
+        : null,
   };
+}
+
+function isUnitPriceFamily(family: PebiSyncFamily): boolean {
+  return family === 'PACKAGING' || family === 'CONSUMABLES';
 }
 
 function positivePriceOrNull(value: number | null | undefined): number | null {
@@ -612,7 +624,7 @@ async function applyCatalogToTenant(
     const isInkFamily = family === 'INK';
     const isAdhesiveFamily = family === 'ADHESIVE';
     const isSolventFamily = family === 'SOLVENT';
-    const isPackagingFamily = family === 'PACKAGING';
+    const isPackagingFamily = isUnitPriceFamily(family);
     const preservePhysical = isInkFamily || isAdhesiveFamily || isSolventFamily || isPackagingFamily;
 
     // INK/ADHESIVE/SOLVENT: never overwrite ES solid% / density from PEBI (catalog sends null).
@@ -637,7 +649,7 @@ async function applyCatalogToTenant(
                         ? 1.1
                         : family === 'SOLVENT'
                           ? 0.9
-                          : family === 'PACKAGING'
+                          : isUnitPriceFamily(family)
                             ? 1
                             : 1.4;
 
@@ -924,6 +936,12 @@ export async function syncPackagingMaterialsFromPebiForTenant(tenantId: string):
   return syncFamilyMaterialsFromPebiForTenant(tenantId, 'PACKAGING');
 }
 
+export async function syncConsumablesMaterialsFromPebiForTenant(
+  tenantId: string
+): Promise<MaterialSyncResult> {
+  return syncFamilyMaterialsFromPebiForTenant(tenantId, 'CONSUMABLES');
+}
+
 /**
  * After SOLVENT price sync, recompute tenant Solvent Common from dilution peers only
  * (Ethyl Acetate, Ethanol, Methoxy Propanol, Ethoxy Propanol).
@@ -1027,6 +1045,7 @@ export async function getMaterialsMissingForTenant(
       family !== 'ADHESIVE' &&
       family !== 'SOLVENT' &&
       family !== 'PACKAGING' &&
+      family !== 'CONSUMABLES' &&
       !hasPositivePrice(marketUsd, costUsd)
         ? deriveFormulaFallbackPrice(row, catalog.materials, family, aedPerUsd)
         : null;
@@ -1034,13 +1053,13 @@ export async function getMaterialsMissingForTenant(
     const effectiveMarketUsd =
       family === 'INK' || family === 'ADHESIVE' || family === 'SOLVENT'
         ? liquidUsd ?? marketUsd
-        : family === 'PACKAGING'
+        : isUnitPriceFamily(family)
           ? packagingUnitPriceUsd(row)
           : marketUsd ?? formulaFallback?.marketUsd ?? null;
     const effectiveCostUsd =
       family === 'INK' || family === 'ADHESIVE' || family === 'SOLVENT'
         ? liquidUsd ?? marketUsd ?? costUsd
-        : family === 'PACKAGING'
+        : isUnitPriceFamily(family)
           ? packagingUnitPriceUsd(row)
           : costUsd ?? formulaFallback?.costUsd ?? null;
 
@@ -1048,7 +1067,7 @@ export async function getMaterialsMissingForTenant(
       const noPebiPrice =
         family === 'INK' || family === 'ADHESIVE' || family === 'SOLVENT'
           ? !hasPositivePrice(liquidUsd, marketUsd)
-          : family === 'PACKAGING'
+          : isUnitPriceFamily(family)
             ? !hasPositivePrice(packagingUnitPriceUsd(row), packagingUnitPriceUsd(row))
             : !hasPositivePrice(marketUsd, costUsd) && formulaFallback == null;
       if (shouldHoldPlatformPrice(family, row.esPlatformMasterKey) && noPebiPrice) {

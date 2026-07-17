@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Copy, Download } from 'lucide-react';
 import ExcelJS from 'exceljs';
-import type { WasteBand } from '@es/engine';
+import {
+  formatCommercialPrice,
+  roundCommercialPrice,
+  type CommercialRoundingPrefs,
+  type WasteBand,
+} from '@es/engine';
 import { useAuth } from '../hooks/useAuth';
 import { usePriceListCustomSlabs } from '../hooks/usePriceListCustomSlabs';
 import {
@@ -19,6 +24,7 @@ import {
 import type { PriceListPricingInput } from '../lib/priceListPricing';
 import PriceListSlabControls from './PriceListSlabControls';
 import PriceListCellHints from './PriceListCellHints';
+import { roundingFromSelectValue, roundingSelectValue } from '../lib/quotePriceListPrefs';
 
 export type { PriceListUnit } from '../lib/priceListPricing';
 
@@ -38,6 +44,12 @@ interface PriceListRow {
   price: string;
   priceNum: number | null;
 }
+
+const DEFAULT_ROUNDING: CommercialRoundingPrefs = {
+  enabled: false,
+  mode: 'step',
+  step: 0.05,
+};
 
 export default function PriceListPanel({
   wasteBands,
@@ -79,6 +91,7 @@ export default function PriceListPanel({
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const { customSlabs, setCustomSlabs } = usePriceListCustomSlabs(user?.id, slabMode, unit);
   const [copyDone, setCopyDone] = useState(false);
+  const [rounding, setRounding] = useState<CommercialRoundingPrefs>(DEFAULT_ROUNDING);
 
   useEffect(() => {
     setSelectedKeys((prev) => {
@@ -129,31 +142,39 @@ export default function PriceListPanel({
     };
 
     if (slabMode === 'custom') {
-      return buildCustomSlabPrices(input, unit, currency, customSlabs).map((r) => ({
-        slab: r.slab,
-        kgHint:
-          r.quantityKg != null && unit !== 'kg'
-            ? `${Math.round(r.quantityKg).toLocaleString()} kg`
-            : null,
-        belowMoq: r.belowMoq,
-        meters: null,
-        unit: unitLabel,
-        currency,
-        price: r.price,
-        priceNum: r.priceNum,
-      }));
+      return buildCustomSlabPrices(input, unit, currency, customSlabs).map((r) => {
+        const priceNum =
+          r.priceNum == null ? null : roundCommercialPrice(r.priceNum, rounding);
+        return {
+          slab: r.slab,
+          kgHint:
+            r.quantityKg != null && unit !== 'kg'
+              ? `${Math.round(r.quantityKg).toLocaleString()} kg`
+              : null,
+          belowMoq: r.belowMoq,
+          meters: null,
+          unit: unitLabel,
+          currency,
+          price: r.priceNum == null ? '—' : formatCommercialPrice(r.priceNum, rounding),
+          priceNum,
+        };
+      });
     }
 
-    return buildPriceListRows(input, unit, currency, selectedKeys).map((r) => ({
-      slab: r.slab,
-      kgHint: null,
-      belowMoq: false,
-      meters: r.meters,
-      unit: unitLabel,
-      currency,
-      price: r.price,
-      priceNum: r.priceNum,
-    }));
+    return buildPriceListRows(input, unit, currency, selectedKeys).map((r) => {
+      const priceNum =
+        r.priceNum == null ? null : roundCommercialPrice(r.priceNum, rounding);
+      return {
+        slab: r.slab,
+        kgHint: null,
+        belowMoq: false,
+        meters: r.meters,
+        unit: unitLabel,
+        currency,
+        price: r.priceNum == null ? '—' : formatCommercialPrice(r.priceNum, rounding),
+        priceNum,
+      };
+    });
   }, [
     unit,
     currency,
@@ -179,6 +200,7 @@ export default function PriceListPanel({
     baseCormDisplay,
     cormScaleWithWaste,
     moqKg,
+    rounding,
   ]);
 
   const toggleBand = (key: string) => {
@@ -436,6 +458,22 @@ export default function PriceListPanel({
             rollLengthLm,
           }}
         />
+
+        <label className="flex flex-col gap-1 text-xs text-mist">
+          Round
+          <select
+            value={roundingSelectValue(rounding)}
+            onChange={(e) => setRounding(roundingFromSelectValue(e.target.value))}
+            className="input input-compact text-xs w-auto min-w-[7rem]"
+            title="Nearest step: 5.73→5.75, 4.61→4.60, 4.63→4.65"
+          >
+            <option value="off">Off</option>
+            <option value="0.05">0.05</option>
+            <option value="0.1">0.10</option>
+            <option value="0.5">0.50</option>
+            <option value="1">1</option>
+          </select>
+        </label>
 
         {ready && (
           <div className="flex items-center gap-2 ml-auto">

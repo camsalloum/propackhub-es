@@ -24,7 +24,10 @@ export type PouchAccessoryKind =
   | 'valve'
   | 'window'
   | 'handle'
-  | 'tear_notch';
+  | 'tear_notch'
+  | 'laser_score'
+  | 'easy_peel'
+  | 'hanging_hole';
 
 export interface PouchAccessorySelection {
   kind: PouchAccessoryKind;
@@ -61,6 +64,12 @@ export interface PouchAccessorySelection {
    *  Cosmetic only — affects where the patch is drawn, not cost/weight. */
   windowPosXPct?: number;
   windowPosYPct?: number;
+  /** Zipper: distance from open/fill end (mm). Visual + machine clearance; cost still ≈ open width. */
+  positionFromTopMm?: number;
+  /** Zipper: Push-Pull | Slider (stored as label string in UI; optional). */
+  zipType?: string;
+  /** Zipper profile width (mm). */
+  zipWidthMm?: number;
 }
 
 export interface PouchAccessoryResult {
@@ -115,7 +124,8 @@ export function calculatePouchAccessories(
       }
       case 'spout':
       case 'valve':
-      case 'handle': {
+      case 'handle':
+      case 'hanging_hole': {
         weightGramPerPiece += count * perPieceWeight;
         costUsdPerPiece += count * perPieceCost;
         break;
@@ -139,8 +149,15 @@ export function calculatePouchAccessories(
         break;
       }
       case 'tear_notch':
+      case 'laser_score':
+      case 'easy_peel':
+        // Tooling / process — optional per-piece rate when material is linked.
+        if (perPieceCost > 0 || perPieceWeight > 0) {
+          weightGramPerPiece += count * perPieceWeight;
+          costUsdPerPiece += count * perPieceCost;
+        }
+        break;
       default:
-        // Negligible (die/punch) — no cost or weight contribution.
         break;
     }
   }

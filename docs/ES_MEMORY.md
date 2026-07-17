@@ -11,9 +11,12 @@
 | Doc | Role |
 |-----|------|
 | [LIVE_STATE.md](./LIVE_STATE.md) | **Source of truth** for what works today (prefer over plans) |
+| [POUCH_SOURCE_OF_TRUTH.md](./POUCH_SOURCE_OF_TRUTH.md) | **Pouch as-built:** types, formulas, accessories, UI, gaps — matches code |
+| [POUCH_CLASSIFICATION_v4.md](./POUCH_CLASSIFICATION_v4.md) | Premade Selector v4 design reference (zip) — formulas origin |
 | [MATERIALS_CATALOG_UNIFICATION_PLAN.md](./MATERIALS_CATALOG_UNIFICATION_PLAN.md) | Phases 1–5 done (Raw Materials removed); **Phase 4 PEBI cutover** still workshop-blocked |
 | [PEBI_ES_RM_SYNC_SPEC.md](./PEBI_ES_RM_SYNC_SPEC.md) | **Spec:** PEBI→ES RM mapping (family, grade, crosswalk, price roll-up) — families sync in code; cutover flags may lag |
 | [../../platform/docs/PACKAGING_COST.md](../../platform/docs/PACKAGING_COST.md) | **Code done v1** (phases 1–6 + sleeve 600 OD); **user E2E** still pending |
+| [../../platform/docs/CONSUMABLES_COST.md](../../platform/docs/CONSUMABLES_COST.md) | **Code done v1** — 2 averaged lines (mounting tape + other) in Total RM; sync E2E pending |
 | [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md) | Build PRD **v3.4** — product intent; not every § is current UI |
 | [ES_IMPLEMENTATION_PLAN.md](./ES_IMPLEMENTATION_PLAN.md) | **Historical** 2026-06-15 audit plan — §1–2 state is obsolete; use LIVE_STATE |
 | [MULTI_SKU_QUOTE_EXPLORER_PLAN.md](./MULTI_SKU_QUOTE_EXPLORER_PLAN.md) | Phases 1–4 **shipped**; Phase 5 optional |
@@ -191,6 +194,30 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 ---
 
 ## Session log
+
+### 2026-07-17 — Quote commercial fields linked to PEBI / estimate
+
+- Quote **Incoterm** = same dropdown as estimate; empty quote term filled from estimate on create/update.
+- Quote **Payment terms** = dropdown; prefilled from `customers.payment_terms` (PEBI CRM).
+- ES customers gained address + payment columns; PEBI sync + integration API return them for Interplast.
+- Quotation PDF address from structured fields; format default Address = Show.
+- **Ops:** re-sync customers after PEBI restart.
+
+## Session log
+
+### 2026-07-17 — Quote commercial fields linked to PEBI / estimate
+
+- Quote **Incoterm** = same dropdown as estimate; empty quote term filled from estimate on create/update.
+- Quote **Payment terms** = dropdown; prefilled from `customers.payment_terms` (PEBI CRM).
+- ES customers gained address + payment columns; PEBI sync + integration API return them for Interplast.
+- Quotation PDF address from structured fields; format default Address = Show.
+- **Ops:** re-sync customers after PEBI restart.
+
+### 2026-07-17 — Assumptions tab + packaging formula tips + cylinder repeat
+
+- Master Data **Assumptions** tab (read-only catalog from `estimation-assumptions.ts`).
+- Packaging lines carry live `calcHint` (Core = reel×rolls, LD wrap, stretch, pallet, carton).
+- Mounting tape Repeat defaults to **550 mm** cylinder average (not product cutoff); UI Width | Repeat | Cost/m².
 
 ### 2026-07-10 — Structure costing blocks UI (Solvent / Packaging / Prepress)
 
@@ -1257,6 +1284,33 @@ Not every company subscribes to both PEBI and ES. **IP/FP (Interplast) is linked
 | PEBI-linked company (Phase 4) | PEBI MES — ES read-only for synced rows **except** PE films without live PEBI price (manual $/kg editable) |
 | Custom tenant-only rows | Always editable in tenant Master Data (`is_tenant_only`) |
 
+### 2026-07-12 — Laptop fit: Auto density (permanent)
+
+- **Problem:** UI required browser zoom on laptop; designed for large desktops.
+- **Default density = Auto:** compact when viewport ≤1399px, comfortable when wider. Settings: Auto / Compact / Comfortable / Spacious.
+- **Shell:** sidebar auto-collapses under 1400px (and on estimate editor); main `min-w-0` + tighter padding `lg:p-5 xl:p-8`.
+- **Master Data tabs:** horizontal scroll with thin scrollbar (no clipped CoRM).
+- **Files:** densityStore, useDensity, DensityProvider, index.html, Layout, Settings, MasterData, index.css.
+
+### 2026-07-12 — Laptop fit: Auto density (permanent)
+
+- **Problem:** UI required browser zoom on laptop; designed for large desktops.
+- **Default density = Auto:** compact when viewport ≤1535px, comfortable when wider. Settings: Auto / Compact / Comfortable / Spacious. One-time `es.density.v2` migrates stale Comfortable → Auto.
+- **Compact scale:** 0.82 (was 0.88). Shell: sidebar auto-collapse ≤1535px; main `overflow-x-hidden` + tighter padding.
+- **No horizontal tab scroll:** Master Data / Settings / SubstrateFamilyNav use **flex-wrap**; RM Types table drops min-widths (no sideways scrollbar).
+- **Files:** densityStore, useDensity, DensityProvider, index.html, Layout, Settings, MasterData, SubstrateFamilyNav, index.css.
+
+### 2026-07-12 — Consumables v1 (2 averaged lines)
+
+**Plan:** `platform/docs/CONSUMABLES_COST.md`.
+
+- Structure **Prepress** placeholder → **Consumables**
+- Lines: **Mounting tape** + **Other consumables** (PEBI group combined avg; excl. DM water / plates / marketing)
+- Inside **Total RM**; header **PrePress** stays plates + amortized tooling
+- PEBI `family=CONSUMABLES`; ES migration `0022` `consumables_config`; engine `consumables-costing.ts`
+- Default qty = 1 unit/job (editable); no silent price fallback
+- Live catalog smoke: mounting ~$196/pkt avg (20 SKUs), other ~$12.20/pcs (4 SKUs)
+
 ### 2026-07-10 — Solvent Common peer set (dilution only)
 
 - **Solvent Common** = average of **Ethyl Acetate, Ethanol, Methoxy Propanol, Ethoxy Propanol** only.
@@ -1531,3 +1585,54 @@ Not every company subscribes to both PEBI and ES. **IP/FP (Interplast) is linked
 - **PEBI API:** `GET /api/integration/es/customers`, `POST /api/integration/es/mes-intake` (stub 202). Header `X-PPH-Integration-Key` = `PEBI_ES_INTEGRATION_SECRET` (both apps).
 - **ES push:** `POST /api/v1/integration/pebi/push-quote/:id/mes` → PEBI mes-intake (full job-card creation = next phase).
 - **Flow target:** PEBI request → ES estimate/quote → approval → ES push → MES order.
+
+### 2026-07-17 — Price list commercial rounding + quotation PDF
+
+**Rounding (commercial layer only — engine stays precise):**
+- `@es/engine`: `roundToHalf`, `roundCommercialPrice`, `formatCommercialPrice`, `quotationPageOrientation`.
+- Quote prefs **v2**: `{ rounding: { enabled, mode: 'half'|'decimals', decimals?: 0–4 } }`. v1 payloads still parse → v2.
+- UI: **Round** select on combined quote price list (+ Excel) and per-estimate `PriceListPanel`. Default when on = **0.5 step**.
+
+**Quotation PDF:**
+- Replaces multi-SKU fallback layout for quote PDF path (`buildQuoteProposalPdfBuffer`).
+- Header/footer placeholders: `packages/server/assets/quotation/{header,footer}-placeholder.png` (Interplast letterhead + Harwal strip) — drawn every page.
+- Orientation: ≤3 slab columns → portrait; 4+ → landscape.
+- Meta block Interplast-inspired (Date / M/S / Attn / Ref / Currency / Validity); SKU × slab price matrix from prefs + rounding.
+- Smoke: `npx tsx packages/server/scripts/smoke-quotation-pdf.ts` → `packages/server/uploads/smoke-quotation-*.pdf`.
+- After pull: `npm run build` in `packages/engine` so server/web see new exports.
+
+### 2026-07-17 — Quotation PDF layout fixes
+- Header/footer: dashed **placeholders** with pt sizes (80 / 48); no Interplast/Harwal images. Drop files later in `uploads/branding/` (README).
+- Filename: `{ref}_{YYYY-MM-DD}[_revN].pdf`.
+- Description wraps (SKU + structure lines); slab headers wrap + sorted by minKg; no ellipsis overlap.
+
+### 2026-07-17 — Pouch audit: only MUST FIX shipped
+- Audit vs estimation principles: geometry/K-seal/accessories/seal-on-finished-W×L → KEEP; dual-structure/oblique scrap/family yield → FUTURE (not V1).
+- **MUST FIX shipped:** client `runClientCalculation` did not inject estimate `productSubtype` into engine dimensions (server already did). Live preview + quote variant pricing fell back to 1-face area → ~50% low film for 2-web TSS. Fixed in `estimateCalc.ts` + EstimateEditor + variantPricingContext; regression test `estimateCalc.test.ts`.
+
+### 2026-07-17 — Pouch app source-of-truth doc
+- Added `docs/POUCH_SOURCE_OF_TRUTH.md` — full as-built pouch behaviour (picker codes, dims, flat-area formulas, weight/pcs/kg, accessories, K-seal, legacy maps, gaps, code map). Prefer this over classification zip when asking “what does the app do?”
+
+### 2026-07-17 — Premade pouch v4 (Family × Variant) adopted
+- **Design reference:** `docs/POUCH_CLASSIFICATION_v4.md` (from `docs/pouch.zip`). **App SoT:** `docs/POUCH_SOURCE_OF_TRUTH.md`. Pre-v4 research archived under banner in `POUCH_COSTING_RESEARCH.md`.
+- **Axes:** Family (forming process) × Variant (shape). Cost keys: `webCount`, `flatWidth`/`flatHeight`, `extraPanelArea`, `separateBottomWeb`.
+- **12 types** in engine + UI: TSS flat/standing, CFS flat/side-gusset/standing, HFF flat/standing, Side-Weld flat/side-gusset, Oblique trapezoid/triangle, Flat-Bottom Box standing.
+- **Critical correction vs old ES:** “3-Side Seal” is **2 webs** (not 1-web fold). 1-web V-fold is **Half-Fold-Fusion**. Quad-seal look from 1 web is **Center-Fold-Seal** (do not classify by seal count).
+- **Legacy:** old subtype codes / `pouchSubtype` strings still resolve via map (e.g. `pouch_3_side_seal` → TSS flat, `pouch_stand_up` → TSS standing, `pouch_4_side_seal` → CFS flat).
+- **Accessories:** zipper/spout/valve/window/handle + tear_notch / laser_score / easy_peel / hanging_hole; applicability by Family. Corner Square/Rounded (`cornerRounded` + `cornerRadiusMm`) — tooling only.
+- **Ops:** `npm run build` in `packages/engine`; seed/repair product catalog for v4 subtype rows (legacy pouch MD rows deactivated).
+
+### 2026-07-17 — Pouch v4 correction pass (after screenshot review)
+- **Honest gap:** first ship said “finished” while picker still showed legacy MD names, K-seal was mislabeled, TSS open view drew a top seal, zipper glyph was wrong after landscape rotate.
+- **Research (industry):** K-seal vs Doyen = **bottom weld style** on stand-up (angled K vs U/round). Same W/L/G film area — not a separate Family. Sources: Eagle Flexible, howtobuypackaging, Constantia FFP. TSS flat = left+right+bottom sealed, **top open for fill**.
+- **Fixes:**
+  1. Pouch picker **always** uses static v4 `POUCH_SUBTYPES` (ignores stale MD names).
+  2. `pouch_tss_standing_kseal` + `bottomSealKseal` flag; legacy `pouch_kseal_*` → that code; drawing shows angled K welds + “K-seal” label.
+  3. TSS Flat open view: bottom + side seals only; dashed **open (fill)** top; zipper drawn in local coords across W near open end.
+  4. Zipper UI: Push-Pull/Slider, position from top, zip width (cost still ≈ open width).
+- **Still later (not blocking):** dual-structure price when `separateBottomWeb` uses different film; oblique scrap %; seal-allowance config table.
+
+### 2026-07-17 — Quotation format + PDF alignment
+- PDF slab cells use `lineBreak: false` (fixes header/price drift); table header default `#3D6B9F`.
+- Tenant `quotation_format` JSONB — Settings → Proposal Branding → field Show/Hide + header color; PDF reads it.
+- Address uses customer `notes` until a dedicated address field exists.

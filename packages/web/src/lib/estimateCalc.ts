@@ -4,6 +4,7 @@ import {
   stackNeedsSolventMix,
   DEFAULT_CLEANING_SOLVENT_KG_PER_JOB,
   DEFAULT_SLEEVE_SEAMING_SOLVENT_GSM,
+  BAG_SUBTYPE_TO_CONFIGURATOR,
   type Estimate,
   type Material,
   type LaminationRecipe,
@@ -48,6 +49,12 @@ export interface ClientCalcInput {
   processes?: ClientCalcProcess[];
   productType: 'roll' | 'sleeve' | 'pouch' | 'bag';
   dimensions: Record<string, unknown>;
+  /**
+   * Estimate-level subtype code (e.g. pouch_tss_flat). Must be injected into
+   * engine dimensions — same as server `buildEngineEstimateFromRows` — or pouch/bag
+   * flat-sheet formulas never resolve and film falls back to understated face area.
+   */
+  productSubtype?: string | null;
   markupPercent: number;
   platesPerKg: number;
   deliveryPerKg: number;
@@ -60,7 +67,9 @@ export interface ClientCalcInput {
   cleaningSolventKgPerJob?: number;
   sleeveSeamingSolventGsm?: number;
   packagingConfig?: import('@es/engine').PackagingConfig;
+  consumablesConfig?: import('@es/engine').ConsumablesConfig;
   inkPrintingProcess?: 'flexo' | 'rotogravure' | null;
+  printColorCount?: number | null;
   inkSolventRatio?: number;
   orderQuantityKg?: number;
   /** Manufacturing & Operating method (tenant setting): process_per_kg | markup_over_rm | fixed_per_group. */
@@ -154,6 +163,15 @@ export function runClientCalculation(input: ClientCalcInput) {
       productType: input.productType,
       printingWebClass,
       ...input.dimensions,
+      // Mirror server estimate-engine-input: productSubtype lives on the estimate
+      // row, not in the numeric dimensions map. Without this, pouch/bag client
+      // preview uses the legacy one-face fallback (~50% low for 2-web TSS).
+      ...(input.productSubtype
+        ? {
+            productSubtype: input.productSubtype,
+            bagSubtype: BAG_SUBTYPE_TO_CONFIGURATOR[input.productSubtype],
+          }
+        : {}),
     },
     markupPercent: input.markupPercent,
     platesPerKg: toUsd(input.platesPerKg),
@@ -188,7 +206,9 @@ export function runClientCalculation(input: ClientCalcInput) {
     cleaningSolventKgPerJob: input.cleaningSolventKgPerJob ?? DEFAULT_CLEANING_SOLVENT_KG_PER_JOB,
     sleeveSeamingSolventGsm: input.sleeveSeamingSolventGsm ?? DEFAULT_SLEEVE_SEAMING_SOLVENT_GSM,
     packagingConfig: input.packagingConfig,
+    consumablesConfig: input.consumablesConfig,
     inkPrintingProcess: input.inkPrintingProcess ?? undefined,
+    printColorCount: input.printColorCount ?? undefined,
     inkSolventRatio: input.inkSolventRatio,
     pricingMethod: input.pricingMethod,
     marginValuePerKgUsd:

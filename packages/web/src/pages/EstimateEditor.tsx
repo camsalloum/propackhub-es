@@ -20,7 +20,7 @@ import {
 } from '../lib/bagConfiguratorCatalog';
 import {
   configuratorTypeForPouchSubtype,
-  seedPouchDimensionPatch,
+  seedPouchDimensionPatchForSubtype,
   canonicalPouchSubtype,
 } from '../lib/pouchConfiguratorCatalog';
 import { seedRollDimensionPatch, isLabelsRollContext, defaultOrderQuantityUnit } from '../lib/rollConfiguratorCatalog';
@@ -33,7 +33,9 @@ import {
   DEFAULT_CARTONS_PER_PALLET,
   DEFAULT_PCS_PER_CARTON,
   mergePackagingConfigDefaults,
+  mergeConsumablesConfigDefaults,
   type PackagingConfig,
+  type ConsumablesConfig,
 } from '@es/engine';
 import { usdToDisplay, usdToDisplayPrecise } from '../lib/currency';
 import { useBeforeUnloadGuard } from '../hooks/useBeforeUnloadGuard';
@@ -85,6 +87,7 @@ import {
   defaultSubtypeForFamily,
   engineTypeForFamily,
   ALL_SUBTYPES,
+  POUCH_SUBTYPES,
   PRODUCT_FAMILY_LABELS,
   type ProductFamily,
 } from '../lib/productCatalog';
@@ -337,13 +340,16 @@ const EstimateEditor = ({
   const [cleanSnapshot, setCleanSnapshot] = useState<string | null>(null);
   const [solventDetailsExpanded, setSolventDetailsExpanded] = useState(false);
   const [packagingDetailsExpanded, setPackagingDetailsExpanded] = useState(false);
-  const [prepressDetailsExpanded, setPrepressDetailsExpanded] = useState(false);
+  const [consumablesDetailsExpanded, setConsumablesDetailsExpanded] = useState(false);
   const [packagingConfig, setPackagingConfig] = useState<PackagingConfig>(() =>
     mergePackagingConfigDefaults({
       loadPerPalletKg: DEFAULT_LOAD_PER_PALLET_KG,
       cartonsPerPallet: DEFAULT_CARTONS_PER_PALLET,
       pcsPerCarton: DEFAULT_PCS_PER_CARTON,
     })
+  );
+  const [consumablesConfig, setConsumablesConfig] = useState<ConsumablesConfig>(() =>
+    mergeConsumablesConfigDefaults(null)
   );
   const structureTableRef = useRef<HTMLDivElement>(null);
   const [structureTableHeight, setStructureTableHeight] = useState<number | null>(null);
@@ -678,13 +684,25 @@ const EstimateEditor = ({
     [materials]
   );
 
-  // Subtype list — driven by Master Data (productSubtypeOptions), not the static catalog.
-  // Fall back to static catalog only when Master Data hasn't loaded yet.
+  // Pouch picker: always v4 catalog (ignore stale Master Data legacy names).
+  // Bags/other families still prefer Master Data when present.
   const availableSubtypes: Array<{ code: string; label: string; parent: string; group?: string | null }> = (() => {
-    const mdSubtypes = (masterReference.productSubtypeOptions ?? []).filter(s => s.parent === productFamily);
+    if (productFamily === 'pouch') {
+      return POUCH_SUBTYPES.map((s) => ({
+        code: s.key,
+        label: s.label,
+        parent: s.family,
+        group: s.group ?? null,
+      }));
+    }
+    const mdSubtypes = (masterReference.productSubtypeOptions ?? []).filter((s) => s.parent === productFamily);
     if (mdSubtypes.length > 0) return mdSubtypes;
-    // Static fallback
-    return subtypesForFamily(productFamily).map(s => ({ code: s.key, label: s.label, parent: s.family, group: null }));
+    return subtypesForFamily(productFamily).map((s) => ({
+      code: s.key,
+      label: s.label,
+      parent: s.family,
+      group: s.group ?? null,
+    }));
   })();
 
   const subtypeParentByCode = new Map(
@@ -710,7 +728,7 @@ const EstimateEditor = ({
   useEffect(() => {
     if (!pouchConfiguratorActive || !pouchConfiguratorType) return;
     setDimensions((prev) => {
-      const patch = seedPouchDimensionPatch(pouchConfiguratorType, prev);
+      const patch = seedPouchDimensionPatchForSubtype(productSubtype, prev);
       if (Object.keys(patch).length === 0) return prev;
       return { ...prev, ...patch };
     });
@@ -1214,6 +1232,13 @@ const EstimateEditor = ({
           })
         );
       }
+      if (data.consumablesConfig && typeof data.consumablesConfig === 'object') {
+        setConsumablesConfig(
+          mergeConsumablesConfigDefaults(data.consumablesConfig as ConsumablesConfig)
+        );
+      } else {
+        setConsumablesConfig(mergeConsumablesConfigDefaults(null));
+      }
       if (data.laminationRecipeOverrides && typeof data.laminationRecipeOverrides === 'object') {
         setLaminationRecipeOverrides(data.laminationRecipeOverrides as Record<string, LaminationRecipe>);
       } else {
@@ -1394,6 +1419,7 @@ const EstimateEditor = ({
       cleaningSolventKgPerJob: needsSolventMix ? cleaningSolventKgPerJob : undefined,
       sleeveSeamingSolventGsm: hasSleeveSubstrate ? sleeveSeamingSolventGsm : undefined,
       packagingConfig,
+      consumablesConfig,
       inkPrintingProcess: hasSbInk ? effectiveInkPrintingProcess : undefined,
       // Persist the ratio only when the user explicitly bypassed it. When it's
       // process-derived we omit it so reopening keeps the Flexo/Roto toggle live.
@@ -1430,7 +1456,7 @@ const EstimateEditor = ({
       if (slabs.length > 0) payload.slabs = slabs;
     }
     return sanitizeEstimateSavePayload(payload);
-  }, [isPriceCheck, multiOnQuote, jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, estimate?.quoteId, quoteIdFromUrl, productType, productTypeOptions, productSubtype, needsSolventMix, hasSleeveSubstrate, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, cormPerKgPlain, moqKg, toolingChargeUsd, skuLabel, brand, specsCode, printColorCount, costPerColor, toolingBillingMode, toolingScenario, billableColorCount, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, sleeveSeamingSolventGsm, packagingConfig, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
+  }, [isPriceCheck, multiOnQuote, jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, estimate?.quoteId, quoteIdFromUrl, productType, productTypeOptions, productSubtype, needsSolventMix, hasSleeveSubstrate, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, cormPerKgPlain, moqKg, toolingChargeUsd, skuLabel, brand, specsCode, printColorCount, costPerColor, toolingBillingMode, toolingScenario, billableColorCount, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, sleeveSeamingSolventGsm, packagingConfig, consumablesConfig, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   /** Link estimate to a customer row — create customer record if user typed a new name. */
   const ensureCustomerForSave = async (): Promise<string | undefined> => {
@@ -1483,6 +1509,7 @@ const EstimateEditor = ({
         layers: layerMaterialIds,
         materials: patchedMaterials,
         productType: productType as 'roll' | 'sleeve' | 'pouch' | 'bag',
+        productSubtype,
         dimensions: { ...dimensions, accessories },
         markupPercent,
         platesPerKg,
@@ -1514,7 +1541,9 @@ const EstimateEditor = ({
         cleaningSolventKgPerJob,
         sleeveSeamingSolventGsm: hasSleeveSubstrate ? sleeveSeamingSolventGsm : undefined,
         packagingConfig,
+        consumablesConfig,
         inkPrintingProcess: hasSbInk ? effectiveInkPrintingProcess : undefined,
+        printColorCount: printColorCount ?? undefined,
         inkSolventRatio: hasSbInk ? effectiveInkSolventRatio : undefined,
         pricingMethod,
         marginValuePerKgUsd,
@@ -1548,11 +1577,11 @@ const EstimateEditor = ({
       return null;
     }
   }, [
-    loading, materials, layerInputsKey, productType, dimensions,
+    loading, materials, layerInputsKey, productType, productSubtype, dimensions,
     markupPercent, platesPerKg, deliveryPerKg, slabQuantitiesKey,
     estimate?.displayCurrency, estimate?.exchangeRateUsdToDisplay,
     solventMaterialId, resolvedSolventCostPerKgUsd, resolvedSeamingSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob,
-    sleeveSeamingSolventGsm, packagingConfig, hasSleeveSubstrate, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, layers.length, accessories,
+    sleeveSeamingSolventGsm, packagingConfig, consumablesConfig, hasSleeveSubstrate, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, layers.length, accessories,
     orderQuantity, orderQuantityUnit, masterReference, wasteBands,
     pricingMethod, marginValuePerKgUsd, baseCormDisplay, cormScaleWithWaste, toolingChargeUsd,
     printColorCount, costPerColor, toolingBillingMode, toolingScenario, billableColorCount,
@@ -1699,6 +1728,10 @@ const EstimateEditor = ({
   const packagingTotalPerKgUsd = clientCalcResult?.estimate.packagingCostPerKg ?? 0;
   const packagingTotalPerM2Usd = clientCalcResult?.estimate.packagingCostPerM2 ?? 0;
   const packagingNeedsReview = clientCalcResult?.estimate.packagingNeedsReview ?? false;
+  const consumablesCostLines = clientCalcResult?.estimate.consumablesCostLines ?? [];
+  const consumablesTotalPerKgUsd = clientCalcResult?.estimate.consumablesCostPerKg ?? 0;
+  const consumablesTotalPerM2Usd = clientCalcResult?.estimate.consumablesCostPerM2 ?? 0;
+  const consumablesNeedsReview = clientCalcResult?.estimate.consumablesNeedsReview ?? false;
   const showPackagingCosting = Boolean(productType);
 
   const rmTotals = useMemo(() => {
@@ -2162,6 +2195,7 @@ const EstimateEditor = ({
         dimensions,
         accessories,
         packagingConfig,
+        consumablesConfig,
       }),
     [
       jobName,
@@ -2185,6 +2219,7 @@ const EstimateEditor = ({
       dimensions,
       accessories,
       packagingConfig,
+      consumablesConfig,
     ]
   );
 
@@ -2390,8 +2425,8 @@ const EstimateEditor = ({
   /** Single source of truth for structure columns — header and every body row map this. */
   const structureColumns: Array<{ key: string; track: string; label: ReactNode }> = [
     { key: 'idx', track: '2rem', label: '#' },
-    // Wide enough for "Substrate" badge at text-xs + px-1.5 (was 4.75rem → "Substr…")
-    { key: 'type', track: '6.5rem', label: 'Type' },
+    // Wide enough for "Consumables" / "Substrate" badge at text-[10px] + px-1.5
+    { key: 'type', track: '8rem', label: 'Type' },
     // Family names are short (PET, PE); grade truncates in-cell and expands in the menu.
     { key: 'family', track: 'minmax(0,0.85fr)', label: 'Family' },
     { key: 'grade', track: 'minmax(0,1fr)', label: 'Grade' },
@@ -2690,8 +2725,15 @@ const EstimateEditor = ({
     packagingConfig,
     onPackagingConfigChange: (patch: Partial<PackagingConfig>) =>
       setPackagingConfig((c) => ({ ...c, ...patch })),
-    prepressExpanded: prepressDetailsExpanded,
-    onPrepressExpandedChange: setPrepressDetailsExpanded,
+    consumablesExpanded: consumablesDetailsExpanded,
+    onConsumablesExpandedChange: setConsumablesDetailsExpanded,
+    consumablesTotalPerKgUsd,
+    consumablesTotalPerM2Usd,
+    consumablesNeedsReview,
+    consumablesCostLines,
+    consumablesConfig,
+    onConsumablesConfigChange: (patch: Partial<ConsumablesConfig>) =>
+      setConsumablesConfig((c) => ({ ...c, ...patch })),
   };
 
   return (
@@ -2929,7 +2971,7 @@ const EstimateEditor = ({
             if (productFamily === 'pouch' && nextPouchType) {
               setDimensions((prev) => ({
                 ...prev,
-                ...seedPouchDimensionPatch(nextPouchType, prev),
+                ...seedPouchDimensionPatchForSubtype(next, prev),
               }));
             }
           }}
@@ -3803,7 +3845,8 @@ const EstimateEditor = ({
                     { label: 'Substrates', kgVal: substratesKg, m2Val: subM2 },
                     { label: 'Ink, Solvent, Adhesive & Coating', kgVal: inkAdhKg, m2Val: inkAdhM2 },
                     { label: 'Waste', kgVal: wasteKg, m2Val: wasteM2 },
-                    { label: 'Packaging', kgVal: packagingKg, m2Val: pkgM2, show: packagingKg > 0 },
+                    { label: 'Packaging', kgVal: packagingTotalPerKgUsd || packagingKg, m2Val: packagingTotalPerM2Usd || pkgM2, show: (packagingTotalPerKgUsd || packagingKg) > 0 },
+                    { label: 'Consumables', kgVal: consumablesTotalPerKgUsd, m2Val: consumablesTotalPerM2Usd, show: consumablesTotalPerKgUsd > 0 },
                     { label: 'Total RM', kgVal: totalRmKg, m2Val: totalRmM2, strong: true },
                     { label: 'Manufacturing & Operating', kgVal: mfgOpKg, m2Val: kgToM2(mfgOpKg) },
                     { label: 'PrePress', kgVal: prepressKg, m2Val: kgToM2(prepressKg), show: prepressKg > 0 },

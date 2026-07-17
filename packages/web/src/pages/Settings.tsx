@@ -1,17 +1,23 @@
 import { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Users, DollarSign, FileText, Globe } from 'lucide-react';
+import {
+  DEFAULT_QUOTATION_FORMAT,
+  parseQuotationFormat,
+  type QuotationFormatPrefs,
+} from '@es/engine';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { useVisibilityProfile, VISIBILITY_KEYS } from '../hooks/useVisibilityProfile';
 import { ThemeSwitcher } from '../theme/ThemeSwitcher';
 import { useEntrance } from '../hooks/useEntrance';
-import { useDensity } from '../hooks/useDensity';
+import { useDensity } from '../preferences/DensityProvider';
+import { QuotationFormatCard } from '../features/settings/QuotationFormatCard';
 
 const Settings = () => {
   const { user } = useAuth();
   // Single-play mount entrance for the settings content; no-op under reduced motion (R23.5).
   const { ref: entranceRef } = useEntrance<HTMLDivElement>();
-  // Density preference (Comfortable / Compact / Spacious); persisted in PreferenceStore.
+  // Density preference (Auto / Compact / Comfortable / Spacious); Auto is default.
   const { density, densities, setDensity } = useDensity();
   const isAdmin = user?.role === 'tenant_admin' || user?.role === 'platform_admin';
   const [activeTab, setActiveTab] = useState<'general' | 'team' | 'currency' | 'proposal'>('general');
@@ -38,6 +44,8 @@ const Settings = () => {
   const [brandPrimaryColor, setBrandPrimaryColor] = useState('#0F1F3D');
   const [termsAndConditions, setTermsAndConditions] = useState('');
   const [footerText, setFooterText] = useState('');
+  const [quotationFormat, setQuotationFormat] =
+    useState<QuotationFormatPrefs>(DEFAULT_QUOTATION_FORMAT);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [fxRefreshError, setFxRefreshError] = useState<string | null>(null);
   const [teamError, setTeamError] = useState<string | null>(null);
@@ -64,6 +72,7 @@ const Settings = () => {
       setBrandPrimaryColor(settings.primaryColor || '#0F1F3D');
       setTermsAndConditions(settings.termsAndConditions || '');
       setFooterText((settings.footerText as string) || (settings.footer as string) || '');
+      setQuotationFormat(parseQuotationFormat(settings.quotationFormat));
       // BUG-7: load defaultMarkup so Save doesn't overwrite with hardcoded default
       setDefaultMarkup(Number(settings.defaultMarkupPercent) || 15);
       setOperatingCostMethod(
@@ -132,6 +141,7 @@ const Settings = () => {
         primaryColor: brandPrimaryColor,
         termsAndConditions,
         footerText,
+        quotationFormat,
         defaultMarkupPercent: defaultMarkup,
         operatingCostMethod,
       });
@@ -170,7 +180,7 @@ const Settings = () => {
       </div>
 
       <nav
-        className="flex gap-1.5 mb-6 overflow-x-auto pb-1"
+        className="flex flex-wrap gap-1.5 mb-6"
         role="tablist"
         aria-label="Settings sections"
       >
@@ -184,7 +194,7 @@ const Settings = () => {
               role="tab"
               aria-selected={isActive}
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors duration-micro ease-micro shrink-0 ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors duration-micro ease-micro ${
                 isActive
                   ? 'bg-accent/10 text-accent-text'
                   : 'bg-surface-raised text-text-primary hover:bg-surface-base'
@@ -263,9 +273,9 @@ const Settings = () => {
                 <div className="pt-6 border-t border-border">
                   <h3 className="font-display font-semibold text-brand mb-2">Density</h3>
                   <p className="text-sm text-text-secondary mb-4">
-                    Adjust how tightly the interface packs information. Applies app-wide and persists across sessions.
+                    Auto fits laptop screens without browser zoom. Override only if you prefer a fixed size.
                   </p>
-                  <div className="inline-flex rounded-lg border border-border p-1 bg-surface-base" role="radiogroup" aria-label="Interface density">
+                  <div className="inline-flex flex-wrap rounded-lg border border-border p-1 bg-surface-base" role="radiogroup" aria-label="Interface density">
                     {densities.map((d) => {
                       const active = density === d;
                       const label = d.charAt(0).toUpperCase() + d.slice(1);
@@ -276,7 +286,7 @@ const Settings = () => {
                           role="radio"
                           aria-checked={active}
                           onClick={() => { void setDensity(d); }}
-                          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-micro ease-micro min-w-[7rem] ${
+                          className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-micro ease-micro min-w-[5.5rem] ${
                             active
                               ? 'bg-surface-raised text-brand shadow-sm'
                               : 'text-text-secondary hover:text-text-primary'
@@ -552,6 +562,10 @@ const Settings = () => {
                     rows={3}
                     className="input w-full"
                   />
+                </div>
+
+                <div className="pt-6 border-t border-border">
+                  <QuotationFormatCard value={quotationFormat} onChange={setQuotationFormat} />
                 </div>
 
                 <div className="pt-6 border-t border-border">

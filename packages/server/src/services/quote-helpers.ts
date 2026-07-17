@@ -114,6 +114,33 @@ export type CreateQuoteInput = {
   isPriceCheck?: boolean;
 };
 
+/** If quote has no delivery term yet, copy from estimate (first write wins). */
+export async function maybeCopyDeliveryTermToQuote(
+  db: Database,
+  tenantId: string,
+  quoteId: string | null | undefined,
+  deliveryTerm: string | null | undefined
+): Promise<void> {
+  const term = deliveryTerm?.trim();
+  if (!quoteId || !term) return;
+  const [quote] = await db
+    .select({ id: schema.quotes.id, deliveryTerm: schema.quotes.deliveryTerm })
+    .from(schema.quotes)
+    .where(
+      and(
+        eq(schema.quotes.id, quoteId),
+        eq(schema.quotes.tenantId, tenantId),
+        isNull(schema.quotes.deletedAt)
+      )
+    )
+    .limit(1);
+  if (!quote || quote.deliveryTerm?.trim()) return;
+  await db
+    .update(schema.quotes)
+    .set({ deliveryTerm: term, updatedAt: new Date() })
+    .where(and(eq(schema.quotes.id, quote.id), eq(schema.quotes.tenantId, tenantId)));
+}
+
 export async function createQuote(
   db: Database,
   input: CreateQuoteInput

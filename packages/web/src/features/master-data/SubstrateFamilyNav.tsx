@@ -8,7 +8,7 @@ type Props = {
 
 export function SubstrateFamilyNav({ activeId, onChange, countsByFamily }: Props) {
   return (
-    <div className="flex gap-1 px-3 py-2 border-b border-border bg-surface-raised overflow-x-auto">
+    <div className="flex flex-wrap gap-1 px-3 py-2 border-b border-border bg-surface-raised">
       {SUBSTRATE_FAMILY_TABS.map((tab) => {
         const count = countsByFamily[tab.id] ?? 0;
         if (count === 0) return null;
@@ -17,7 +17,7 @@ export function SubstrateFamilyNav({ activeId, onChange, countsByFamily }: Props
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-micro ease-micro shrink-0 ${
+            className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-colors duration-micro ease-micro ${
               activeId === tab.id ? 'bg-navy/10 text-navy' : 'text-mist hover:bg-slate hover:text-ink'
             }`}
           >

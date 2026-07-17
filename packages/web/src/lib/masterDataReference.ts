@@ -111,16 +111,21 @@ export const DEFAULT_RM_TYPE_OPTIONS: RmTypeOption[] = [
 
 /** Fallback subtype list when Master Data has none yet. Field schemas live in productCatalog. */
 export const DEFAULT_PRODUCT_SUBTYPE_OPTIONS: ProductSubtypeOption[] = [
-  { label: '3-Side Seal', code: 'pouch_3_side_seal', parent: 'pouch' },
-  { label: '3-Side Seal + Zipper', code: 'pouch_3_side_seal_zip', parent: 'pouch' },
-  { label: 'Stand-up Pouch', code: 'pouch_stand_up', parent: 'pouch' },
-  { label: 'Stand-up Pouch + Zipper', code: 'pouch_stand_up_zip', parent: 'pouch' },
-  { label: 'K-Seal Stand-up Pouch', code: 'pouch_kseal_stand_up', parent: 'pouch' },
-  { label: 'K-Seal Stand-up Pouch + Zipper', code: 'pouch_kseal_stand_up_zip', parent: 'pouch' },
-  { label: 'Center-Seal Pouch', code: 'pouch_center_seal', parent: 'pouch' },
-  { label: 'Gusset Pouch', code: 'pouch_gusset', parent: 'pouch' },
-  { label: '4-Side Seal Pouch', code: 'pouch_4_side_seal', parent: 'pouch' },
-  { label: 'Flat-Bottom (Box) Pouch', code: 'pouch_flat_bottom', parent: 'pouch' },
+  // Premade pouch v4 — Family × Variant
+  { label: 'Three-Side-Seal — Flat', code: 'pouch_tss_flat', parent: 'pouch', group: 'Three-Side-Seal' },
+  { label: 'Three-Side-Seal — Standing (Doyen)', code: 'pouch_tss_standing', parent: 'pouch', group: 'Three-Side-Seal' },
+  { label: 'Three-Side-Seal — Standing (K-Seal)', code: 'pouch_tss_standing_kseal', parent: 'pouch', group: 'Three-Side-Seal' },
+  { label: 'Center-Fold-Seal — Flat (Quad)', code: 'pouch_cfs_flat', parent: 'pouch', group: 'Center-Fold-Seal' },
+  { label: 'Center-Fold-Seal — Side Gusset', code: 'pouch_cfs_side_gusset', parent: 'pouch', group: 'Center-Fold-Seal' },
+  { label: 'Center-Fold-Seal — Standing', code: 'pouch_cfs_standing', parent: 'pouch', group: 'Center-Fold-Seal' },
+  { label: 'Half-Fold-Fusion — Flat', code: 'pouch_hff_flat', parent: 'pouch', group: 'Half-Fold-Fusion' },
+  { label: 'Half-Fold-Fusion — Standing', code: 'pouch_hff_standing', parent: 'pouch', group: 'Half-Fold-Fusion' },
+  { label: 'Side-Weld — Flat', code: 'pouch_sw_flat', parent: 'pouch', group: 'Side-Weld' },
+  { label: 'Side-Weld — Side Gusset', code: 'pouch_sw_side_gusset', parent: 'pouch', group: 'Side-Weld' },
+  { label: 'Oblique — Trapezoid', code: 'pouch_osw_trapezoid', parent: 'pouch', group: 'Oblique-Side-Weld' },
+  { label: 'Oblique — Triangle', code: 'pouch_osw_triangle', parent: 'pouch', group: 'Oblique-Side-Weld' },
+  { label: 'Flat-Bottom Box — Standing', code: 'pouch_fbb_standing', parent: 'pouch', group: 'Flat-Bottom Box' },
+  // Bags
   { label: 'Punch Handle', code: 'bag_punch_handle', parent: 'bag', group: 'Commercial Bags' },
   { label: 'Loop Handle', code: 'bag_loop_handle', parent: 'bag', group: 'Commercial Bags' },
   { label: 'Patch Handle', code: 'bag_patch_handle', parent: 'bag', group: 'Commercial Bags' },

@@ -4,6 +4,7 @@ import {
 } from './types';
 import { calculateSolventCosts } from './solvent-costing';
 import { calculatePackagingCosts } from './packaging-costing';
+import { calculateConsumablesCosts } from './consumables-costing';
 import {
   calculateSubstrateGaugeMicron,
   calculateTotalConstructionMicron,
@@ -102,6 +103,14 @@ export function calculateEstimate(
   });
   const packagingCostPerKg = packagingDetail.totalCostPerKg;
 
+  // Step 7c: Process consumables (mounting tape + other — PB group averages)
+  const consumablesDetail = calculateConsumablesCosts(estimate, materials, {
+    orderQuantityKg: trueOrderQuantityKg,
+    totalGsm,
+    printColorCount: estimate.printColorCount,
+  });
+  const consumablesCostPerKg = consumablesDetail.totalCostPerKg;
+
   // Step 8: Manufacturing & Operating (M&O) — sales-level model (no machine time).
   // process_per_kg : Σ(process.costPerKgUsd × processQuantity) for enabled rows.
   // markup_over_rm : Total RM/kg × markupPercent% (computed inside the price build-up).
@@ -109,11 +118,16 @@ export function calculateEstimate(
   const mfg = computeMfgProcessCosts(estimate.processes, trueOrderQuantityKg);
 
   // ── Step 9: Pricing ──────────────────────────────────────────────────────
-  const materialCost = layerRmCostPerKg + solventCostPerKg + packagingCostPerKg;
-  const rmCostPerM2 = totalCostM2 + solventDetail.totalCostPerM2 + packagingDetail.totalCostPerM2;
+  const materialCost =
+    layerRmCostPerKg + solventCostPerKg + packagingCostPerKg + consumablesCostPerKg;
+  const rmCostPerM2 =
+    totalCostM2 +
+    solventDetail.totalCostPerM2 +
+    packagingDetail.totalCostPerM2 +
+    consumablesDetail.totalCostPerM2;
 
   // Unified final-price breakup (single model — no legacy/per-hour branch):
-  //   Total RM  = material × (1 + band waste%)         (substrates + ink/adh/solvent + packaging + waste)
+  //   Total RM  = material × (1 + band waste%)         (substrates + ink/adh/solvent + packaging + consumables + waste)
   //   M&O       = markup over Total RM  OR  Σ process cost/kg  OR  fixed CoRM  (the ONLY markup)
   //   PrePress  = plates + tooling(amortized)          (development charge)
   //   Transport = deliveryPerKg + delivery(amortized)  (as defined)
@@ -207,6 +221,10 @@ export function calculateEstimate(
     inkSolventRatioResolved: solventDetail.inkSolventRatio,
     packagingCostPerKg,
     packagingCostPerM2: packagingDetail.totalCostPerM2,
+    consumablesCostPerKg,
+    consumablesCostPerM2: consumablesDetail.totalCostPerM2,
+    consumablesCostLines: consumablesDetail.lines,
+    consumablesNeedsReview: consumablesDetail.needsReview,
     packagingNeedsReview: packagingDetail.needsReview,
     packagingCostLines: packagingDetail.lines,
     // Product metrics

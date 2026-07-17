@@ -1,5 +1,8 @@
 # Flexible Packaging Pouches — Classification Reference
 
+> **App as-built (what ES code does today):** [`POUCH_SOURCE_OF_TRUTH.md`](./POUCH_SOURCE_OF_TRUTH.md)  
+> This file is the Premade Pouch Selector **v4 design reference** (formulas origin). Prefer the SoT doc when documenting live behaviour.
+
 **Purpose:** Reference document for ProPackHub costing/estimation modules (VERA and related). Defines pouch families, variants, required dimensions, accessories, and the geometry logic needed to calculate flat film area for material costing.
 
 **Revision:** v4. See §8 for what changed vs. v3 — the Family/Variant taxonomy, dimensions, flat-area formulas, `webCount`, and `separateBottomWeb` logic are **unchanged**. This revision only extends §4 (Accessories) and adds §3A (Corner Style), per the Premade Pouch Selector refinement notes.

@@ -1,7 +1,47 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-10 (structure costing blocks UI reorg)
-**Session focus:** Solvent → Packaging → Prepress as expandable structure-table rows under substrate/inks.
+**Last updated:** 2026-07-17 (pouch client productSubtype fix)
+**Session focus:** Fixed live pouch/bag preview understating film when subtype not injected into engine dims.
+
+---
+
+## Where we stopped (read this first next session)
+
+### Quote commercial fields ↔ PEBI (2026-07-17)
+
+| Piece | Status |
+|-------|--------|
+| Quote Incoterm | Same dropdown as estimate (`EXW`…`Other`); PDF uses `quotes.delivery_term` |
+| Estimate → quote Incoterm | Copies to quote when quote term empty (create/update estimate) |
+| Payment terms | Quote dropdown (Net 30/45/60/90…); prefilled from customer on create / customer change |
+| Customer address + payment | ES `customers` columns; PEBI sync + `/api/integration/es/customers` return them |
+| PDF address | Structured address (fallback notes); format default Address = **Show** |
+
+**Ops:** `db:patch` applied; rebuild `@es/engine`; restart PEBI + ES; **re-sync customers** for Interplast so payment/address populate; hard-refresh.
+
+**PDF slab align (same day):** prices are centered under slab headers via manual `widthOfString` positioning (PDFKit `align` ignored with `lineBreak:false`). Re-download quote PDF to verify.
+
+**PDF polish:** T&C spaced lower; footer note “system-generated… no signature”; ADDR no longer falls back to PEBI sync notes (`PEBI CUST-…`).
+
+**Extra charges (same day):** Quotation PDF + combined price list show **Additional charges (invoiced separately)** for Dev when billing = separate, and Freight when charge > 0 and term ≠ EXW. Film slab prices stay film-only.
+
+### Premade pouch v4 — Family × Variant (2026-07-17)
+
+| Piece | Status |
+|-------|--------|
+| **App source of truth** | `docs/POUCH_SOURCE_OF_TRUTH.md` (types, calc, accessories — as code does today) |
+| Classification + formulas (design) | `docs/POUCH_CLASSIFICATION_v4.md` (from `docs/pouch.zip`) |
+| Engine flat sheet | `pouch-flat-sheet.ts` — 12 types, `webCount` / `extraPanelArea` / `separateBottomWeb` |
+| Subtypes (picker) | **Forced v4** `POUCH_SUBTYPES` in EstimateEditor (stale MD ignored for pouch) |
+| K-Seal | `pouch_tss_standing_kseal` — same film as TSS Standing; `bottomSealKseal` + angled K drawing |
+| Open view | TSS Flat = top **open**; zipper in local coords across W |
+| Zipper fields | Push-Pull/Slider, from-top mm, zip width |
+| Tests | `pouch-flat-sheet.test.ts` + `estimateCalc.test.ts` (productSubtype injection) |
+| Client calc | `runClientCalculation` injects `productSubtype` (parity with server) — **fixed 2026-07-17** |
+
+**Ops:** hard-refresh web after pull (no engine rebuild required for this fix).
+
+**Still open (pouch — V1 OK / FUTURE):** dual-structure when `separateBottomWeb`; oblique scrap %; no separate pouch-family yield (waste bands/M&O cover process scrap).
 
 ---
 
@@ -17,23 +57,33 @@ If a plan checkbox says done but the file is gone or the UI differs, **code wins
 
 ---
 
-## Where we stopped (read this first next session)
+### Price list rounding + quotation PDF (2026-07-17)
 
-### Audit verification 2026-07-10 — fixed vs not
+| Piece | Status |
+|-------|--------|
+| Round control (Off / 0.5 step / 0–4 decimals) | Shipped — combined quote price list + per-estimate panel |
+| Prefs `v: 2` + `rounding` on `quotes.price_list_display_prefs` | Shipped (v1 still parses) |
+| Shared `@es/engine` `formatCommercialPrice` / `roundToHalf` | Shipped — rebuild engine after pull |
+| Quote PDF | New commercial layout: header/footer placeholders every page; ≤3 slab cols → portrait, 4+ → landscape; consumes unit/slabs/rounding prefs |
+| Assets | `packages/server/assets/quotation/header-placeholder.png` + `footer-placeholder.png` (Interplast / Harwal strips) |
 
-| Claim | Verdict | Action |
-|-------|---------|--------|
-| Engine treats display `platesPerKg`/`deliveryPerKg` as USD (live FX bug) | **False** — convert at boundary | Comments only (`types.ts`) |
-| List UIs show DB USD sale/slab under display-currency labels | **True** | Fixed: `formatSalePricePerKgDisplay` / `saleUsdToDisplayAmount` on CustomerDetail, CustomerExplorer, EstimatesList, CombinedPriceList (+ Excel) |
-| Dead `validator.ts`; `Material.wastePercent` in structure cost | **True** (misleading docs) | Deleted unused validator; waste = quantity bands only |
-| EstimateEditor: Back loses work; native alert/confirm/prompt | **True** (editor) | Dirty leave + beforeunload; ConfirmDialog / PromptDialog / inline `editorError`; mobile Draft+Save; skeleton |
-| App-wide native dialogs; TemplateDeck redesign; breadcrumbs | Not in scope | **Not done** |
-| PEBI key plain string compare | **True** | `timingSafeEqual` + SHA-256; company allowlist (`PEBI_ES_ALLOWED_COMPANY_CODES` or linked tenants) |
-| Free `companyCode` → sync wrong tenant | **Overstated** — push syncs all linked tenants; code mainly for PEBI status | Allowlist still shipped |
-| Refresh non-rotation, Redis rate limit, account lockout, JWT on `/visibility-presets` | Design / deferred | **Not changed** |
-| Migration race (two servers) | **True** | `pg_advisory_lock` in `runMigrations` |
-| Second JWT fake fallback in service-key pepper | **True** | Shared `resolveJwtSecret()` |
-| `sendCaughtError` always returns raw `detail` | **True** | `detail` omitted when `NODE_ENV=production` |
+**Verify:** rebuild `@es/engine` → hard-refresh → set Round on price list → download quote PDF. Smoke: `npx tsx packages/server/scripts/smoke-quotation-pdf.ts`.
+
+### Master Data → Assumptions (new)
+
+Read-only tab listing packaging / consumables / solvent engine rules + defaults (`EstimationAssumptionsPanel`, catalog in `engine/estimation-assumptions.ts`). Estimate packaging hovers now include live `calcHint` (e.g. Core = reel×rolls).
+
+### Consumables costing — v1.1 + cylinder repeat fix
+
+Plan: **`platform/docs/CONSUMABLES_COST.md`**.
+
+| Line | Rule |
+|------|------|
+| Mounting tape | **Flexo only**; Width × cylinder Repeat (default **550 mm**, band 500–600 — **not** product cutoff) × colors → × PEBI **$/m²** |
+| Other | **$/kg** allowance (no pcs/job) |
+| Print | Flexo/Roto **above Solvent** (no expand) |
+
+**Ops:** restart ES (+ PEBI) → **re-sync `CONSUMABLES`** → hard-refresh estimate.
 
 ### Packaging costing — code shipped; user E2E still pending
 
@@ -48,17 +98,18 @@ Plan: **`platform/docs/PACKAGING_COST.md`**. Block inside Total RM. PB **combine
 | **5** Defaults 800 kg/pallet, 20 cartons/pallet | Yes |
 | **6** Master Data Packaging tab + PEBI review | Yes |
 | **+** `packaging-carton-sleeve-600` (side ≥600); pouch → default carton | Yes |
-| **+** Structure table: Solvent / Packaging / Prepress expandable rows | Yes |
+| **+** Structure table: Solvent / Packaging / **Consumables** | Yes |
 
 Owner locks: `cartonsPerPallet` **20**; sleeve carton matched to 600 OD.
 
-**Structure costing UI (2026-07-10):** Under layers → **Solvent** → **Packaging** → **Prepress**. Collapsed = total $/kg + $/m² only. Expand Solvent = ink dilution (Flexo/Roto, ÷ ratio, solvent + cost) + cleaning + seaming. Expand Packaging = config (load/pallet, cartons/pallet, …) + lines with qty/unit/editable unit cost. Prepress = placeholder. Component: `features/estimate-editor/StructureCostingBlocks.tsx`. Engine: `unitPriceOverridesUsd` on `PackagingConfig`.
+**Structure costing UI:** Under layers → **Solvent** → **Packaging** → **Consumables**. Collapsed = total $/kg + $/m². Expand Consumables = mounting tape + other (qty/job + unit price). Component: `StructureCostingBlocks.tsx`. Engine: `consumables-costing.ts`.
 
 ### **NEXT**
 
-1. **User E2E:** hard-refresh estimate → exercise expand/collapse Solvent + Packaging; sync `PACKAGING` if unpriced banner.
-2. Optional later: remaining `alert`/`confirm`/`prompt` on MasterData, Settings, QuoteWorkspace, etc.
-3. Do **not** implement deferred auth items unless asked.
+1. Hard-refresh ES at **100% browser zoom** on laptop — confirm Master Data / editor fit (Auto density + collapsed sidebar).
+2. Restart ES/PEBI → sync `CONSUMABLES` (and `PACKAGING` if unpriced) → E2E expand UI.
+3. Optional later: remaining `alert`/`confirm`/`prompt` on MasterData, Settings, QuoteWorkspace, etc.
+4. Do **not** implement deferred auth items unless asked.
 
 ### **Solvent policy**
 

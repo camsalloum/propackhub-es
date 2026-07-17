@@ -64,6 +64,11 @@ const PACKAGING_PLATFORM_KEYS = [
   'packaging-carton-default',
 ] as const;
 
+const CONSUMABLES_PLATFORM_KEYS = [
+  'consumables-mounting-tape',
+  'consumables-other',
+] as const;
+
 /** THF + Dioxolane rows for sleeve seaming blend price. */
 export async function loadTenantSeamingSolventMaterials(
   tenantId: string
@@ -94,17 +99,32 @@ export async function loadTenantPackagingMaterials(tenantId: string): Promise<Ma
     );
 }
 
-/** Merge layer/solvent materials with seaming solvents + packaging (dedupe by id). */
+/** Process consumables (mounting tape + other averaged groups). */
+export async function loadTenantConsumablesMaterials(tenantId: string): Promise<MaterialRow[]> {
+  const db = getDatabase();
+  return db
+    .select()
+    .from(schema.materials)
+    .where(
+      and(
+        eq(schema.materials.tenantId, tenantId),
+        inArray(schema.materials.platformMasterKey, [...CONSUMABLES_PLATFORM_KEYS])
+      )
+    );
+}
+
+/** Merge layer/solvent materials with seaming solvents + packaging + consumables (dedupe by id). */
 export async function loadTenantMaterialsForEstimate(
   tenantId: string,
   materialIds: Iterable<string | null | undefined>
 ): Promise<MaterialRow[]> {
-  const [byId, seaming, packaging] = await Promise.all([
+  const [byId, seaming, packaging, consumables] = await Promise.all([
     loadTenantMaterialsByIds(tenantId, materialIds),
     loadTenantSeamingSolventMaterials(tenantId),
     loadTenantPackagingMaterials(tenantId),
+    loadTenantConsumablesMaterials(tenantId),
   ]);
   const map = new Map<string, MaterialRow>();
-  for (const row of [...byId, ...seaming, ...packaging]) map.set(row.id, row);
+  for (const row of [...byId, ...seaming, ...packaging, ...consumables]) map.set(row.id, row);
   return [...map.values()];
 }

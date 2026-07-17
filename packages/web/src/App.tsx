@@ -5,6 +5,7 @@ import { MaterialsProvider } from './contexts/MaterialsContext';
 import { CatalogRefreshCoordinator } from './components/CatalogRefreshCoordinator';
 import { ThemeProvider } from './theme/ThemeProvider';
 import { ThemeStatusToast } from './theme/ThemeStatusToast';
+import { DensityProvider } from './preferences/DensityProvider';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import EstimateEditor from './pages/EstimateEditor';
@@ -56,6 +57,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <ThemeProvider>
+      <DensityProvider>
       <ThemeStatusToast />
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
@@ -107,6 +109,7 @@ function App() {
       </Routes>
         </AuthProvider>
       </Router>
+      </DensityProvider>
     </ThemeProvider>
   );
 }

@@ -12,9 +12,16 @@ import {
   quotePriceListPrefsEqual,
   serializeQuotePriceListDisplayPrefs,
   type QuotePriceListDisplayPrefs,
+  type QuotePriceListRounding,
 } from '../lib/quotePriceListPrefs';
 
 const AUTOSAVE_MS = 300;
+
+const DEFAULT_ROUNDING: QuotePriceListRounding = {
+  enabled: false,
+  mode: 'step',
+  step: 0.05,
+};
 
 type PrefsState = {
   unit: PriceListUnit | '';
@@ -22,6 +29,7 @@ type PrefsState = {
   slabMode: SlabMode;
   selectedKeys: Set<string>;
   customSlabs: number[];
+  rounding: QuotePriceListRounding;
 };
 
 type PatchOptions = {
@@ -43,6 +51,7 @@ function readInitialState(initialPrefs: unknown): {
   slabMode: SlabMode;
   selectedKeys: Set<string>;
   customSlabs: number[];
+  rounding: QuotePriceListRounding;
   lastSaved: QuotePriceListDisplayPrefs | null;
 } {
   const parsed = parseQuotePriceListDisplayPrefs(initialPrefs);
@@ -52,6 +61,7 @@ function readInitialState(initialPrefs: unknown): {
     slabMode: parsed?.slabMode ?? 'predefined',
     selectedKeys: new Set(parsed?.selectedBandKeys ?? []),
     customSlabs: parsed?.customSlabs ?? [],
+    rounding: parsed?.rounding ?? { ...DEFAULT_ROUNDING },
     lastSaved: parsed ? serializeQuotePriceListDisplayPrefs(parsed) : null,
   };
 }
@@ -63,17 +73,24 @@ function canPersist(state: PrefsState): boolean {
 }
 
 function buildPrefsFromState(state: PrefsState): QuotePriceListDisplayPrefs | null {
-  const { unit, currency, slabMode, selectedKeys, customSlabs } = state;
-  if (!unit && !currency && selectedKeys.size === 0 && customSlabs.length === 0) {
+  const { unit, currency, slabMode, selectedKeys, customSlabs, rounding } = state;
+  if (
+    !unit &&
+    !currency &&
+    selectedKeys.size === 0 &&
+    customSlabs.length === 0 &&
+    !rounding.enabled
+  ) {
     return null;
   }
   return serializeQuotePriceListDisplayPrefs({
-    v: 1,
+    v: 2,
     ...(unit ? { unit } : {}),
     ...(currency ? { currency } : {}),
     slabMode,
     ...(selectedKeys.size > 0 ? { selectedBandKeys: [...selectedKeys].sort() } : {}),
     ...(customSlabs.length > 0 ? { customSlabs } : {}),
+    rounding,
   });
 }
 
@@ -101,6 +118,7 @@ export function useQuotePriceListPrefs({
   const [slabMode, setSlabModeState] = useState<SlabMode>(initial.slabMode);
   const [selectedKeys, setSelectedKeysState] = useState<Set<string>>(initial.selectedKeys);
   const [customSlabs, setCustomSlabsState] = useState<number[]>(initial.customSlabs);
+  const [rounding, setRoundingState] = useState<QuotePriceListRounding>(initial.rounding);
   const [hydrated, setHydrated] = useState(true);
 
   const stateRef = useRef<PrefsState>({
@@ -109,6 +127,7 @@ export function useQuotePriceListPrefs({
     slabMode: initial.slabMode,
     selectedKeys: initial.selectedKeys,
     customSlabs: initial.customSlabs,
+    rounding: initial.rounding,
   });
   const lastSavedRef = useRef<QuotePriceListDisplayPrefs | null>(initial.lastSaved);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -120,7 +139,7 @@ export function useQuotePriceListPrefs({
   quoteIdRef.current = quoteId;
   autosaveRef.current = autosave;
 
-  stateRef.current = { unit, currency, slabMode, selectedKeys, customSlabs };
+  stateRef.current = { unit, currency, slabMode, selectedKeys, customSlabs, rounding };
 
   const persistPrefs = useCallback(async (prefs: QuotePriceListDisplayPrefs | null) => {
     const id = quoteIdRef.current;
@@ -225,6 +244,28 @@ export function useQuotePriceListPrefs({
     [patchState]
   );
 
+  const setRounding = useCallback(
+    (update: SetStateAction<QuotePriceListRounding>) => {
+      setRoundingState((prev) => {
+        const next = typeof update === 'function' ? update(prev) : update;
+        patchState({ rounding: next });
+        return next;
+      });
+    },
+    [patchState]
+  );
+
+  const setRoundEnabled = useCallback(
+    (enabled: boolean) => {
+      setRounding((prev) => ({
+        enabled,
+        mode: 'step',
+        step: prev.step ?? 0.05,
+      }));
+    },
+    [setRounding]
+  );
+
   const clearSelectedBands = useCallback(() => {
     const next = new Set<string>();
     setSelectedKeysState(next);
@@ -244,12 +285,14 @@ export function useQuotePriceListPrefs({
     setSlabModeState(next.slabMode);
     setSelectedKeysState(next.selectedKeys);
     setCustomSlabsState(next.customSlabs);
+    setRoundingState(next.rounding);
     stateRef.current = {
       unit: next.unit,
       currency: next.currency,
       slabMode: next.slabMode,
       selectedKeys: next.selectedKeys,
       customSlabs: next.customSlabs,
+      rounding: next.rounding,
     };
     lastSavedRef.current = next.lastSaved;
     setHydrated(true);
@@ -281,5 +324,8 @@ export function useQuotePriceListPrefs({
     customSlabs,
     setCustomSlabs,
     clearCustomSlabs,
+    rounding,
+    setRounding,
+    setRoundEnabled,
   };
 }

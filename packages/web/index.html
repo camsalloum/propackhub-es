@@ -23,7 +23,7 @@
           var THEME_KEY = 'es.theme';
           var DENSITY_KEY = 'es.density';
           var VALID_THEMES = ['light', 'dark', 'lagoon', 'ocean', 'aurora', 'midnight', 'forest', 'frost', 'classic'];
-          var VALID_DENSITY = ['comfortable', 'compact', 'spacious'];
+          var VALID_DENSITY = ['auto', 'comfortable', 'compact', 'spacious'];
 
           // Theme
           var t = localStorage.getItem(THEME_KEY);
@@ -32,12 +32,21 @@
           }
           document.documentElement.dataset.theme = t;
 
-          // Density (defaults to comfortable)
+          // Density: one-time migrate to Auto (v2) so laptop users are not stuck on
+          // the old Comfortable default. After that, respect the user's choice.
+          if (!localStorage.getItem('es.density.v2')) {
+            localStorage.setItem(DENSITY_KEY, 'auto');
+            localStorage.setItem('es.density.v2', '1');
+          }
           var d = localStorage.getItem(DENSITY_KEY);
           if (VALID_DENSITY.indexOf(d) === -1) {
-            d = 'comfortable';
+            d = 'auto';
           }
-          document.documentElement.dataset.density = d;
+          var applied = d;
+          if (d === 'auto') {
+            applied = matchMedia('(max-width: 1535px)').matches ? 'compact' : 'comfortable';
+          }
+          document.documentElement.dataset.density = applied;
 
           // Reduced motion mirror
           if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -45,7 +54,8 @@
           }
         } catch (e) {
           document.documentElement.dataset.theme = 'light';
-          document.documentElement.dataset.density = 'comfortable';
+          document.documentElement.dataset.density =
+            matchMedia('(max-width: 1535px)').matches ? 'compact' : 'comfortable';
         }
       })();
     </script>

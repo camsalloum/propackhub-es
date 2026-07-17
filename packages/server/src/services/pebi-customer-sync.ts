@@ -16,6 +16,13 @@ export type PebiCustomerRow = {
   email: string | null;
   phone: string | null;
   notes: string | null;
+  paymentTerms: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  postalCode: string | null;
 };
 
 export type CustomerSyncResult = {
@@ -35,20 +42,26 @@ function buildNotes(row: {
   salesRep?: string | null;
   customerCode?: string | null;
 }): string | null {
+  // Internal sync metadata only — never used as quotation address.
   const parts = [
-    row.customerCode ? `PEBI ${row.customerCode}` : null,
-    row.city,
-    row.country,
+    row.customerCode ? `Code ${row.customerCode}` : null,
     row.salesRep ? `Rep: ${row.salesRep}` : null,
   ].filter(Boolean);
   return parts.length > 0 ? parts.join(' · ') : null;
+}
+
+function strOrNull(v: unknown): string | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  return s || null;
 }
 
 /** PEBI fp_customer_unified has legacy + budget-import dupes per display_name — pick one canonical row. */
 export const PEBI_CUSTOMER_CANONICAL_SQL = `
   SELECT DISTINCT ON (lower(trim(display_name)))
          customer_id, customer_code, display_name, primary_contact,
-         email, phone, mobile, city, primary_country, primary_sales_rep_name
+         email, phone, mobile, city, state, primary_country, postal_code,
+         address_line1, address_line2, payment_terms, primary_sales_rep_name
     FROM fp_customer_unified
    WHERE COALESCE(is_merged, false) = false
      AND COALESCE(is_active, true) = true
@@ -71,11 +84,14 @@ export async function fetchPebiCustomersFromDb(
       phone: string | null;
       mobile: string | null;
       city: string | null;
+      state: string | null;
       primary_country: string | null;
+      postal_code: string | null;
+      address_line1: string | null;
+      address_line2: string | null;
+      payment_terms: string | null;
       primary_sales_rep_name: string | null;
-    }>(
-      PEBI_CUSTOMER_CANONICAL_SQL
-    );
+    }>(PEBI_CUSTOMER_CANONICAL_SQL);
 
     if (rows.length === 0 && companyCode !== 'interplast') {
       // Reserved for future per-company DB routing.
@@ -87,6 +103,13 @@ export async function fetchPebiCustomersFromDb(
       contactName: r.primary_contact,
       email: r.email,
       phone: r.phone || r.mobile,
+      paymentTerms: r.payment_terms,
+      addressLine1: r.address_line1,
+      addressLine2: r.address_line2,
+      city: r.city,
+      state: r.state,
+      country: r.primary_country,
+      postalCode: r.postal_code,
       notes: buildNotes({
         customerCode: r.customer_code,
         city: r.city,
@@ -120,14 +143,29 @@ export async function fetchPebiCustomersFromApi(
     throw new Error('PEBI integration API returned an unexpected payload');
   }
 
-  return data.data.map((row) => ({
-    customerId: String(row.customerId ?? row.id ?? ''),
-    companyName: String(row.companyName ?? row.display_name ?? row.customer_name ?? ''),
-    contactName: (row.contactName as string) ?? (row.primary_contact as string) ?? null,
-    email: (row.email as string) ?? null,
-    phone: (row.phone as string) ?? (row.mobile as string) ?? null,
-    notes: (row.notes as string) ?? null,
-  }));
+  return data.data.map((row) => {
+    const city = strOrNull(row.city);
+    const country = strOrNull(row.country) ?? strOrNull(row.primary_country);
+    const customerCode = strOrNull(row.customerCode) ?? strOrNull(row.customer_code);
+    const salesRep = strOrNull(row.salesRep) ?? strOrNull(row.primary_sales_rep_name);
+    return {
+      customerId: String(row.customerId ?? row.id ?? ''),
+      companyName: String(row.companyName ?? row.display_name ?? row.customer_name ?? ''),
+      contactName: strOrNull(row.contactName) ?? strOrNull(row.primary_contact),
+      email: strOrNull(row.email),
+      phone: strOrNull(row.phone) ?? strOrNull(row.mobile),
+      paymentTerms: strOrNull(row.paymentTerms) ?? strOrNull(row.payment_terms),
+      addressLine1: strOrNull(row.addressLine1) ?? strOrNull(row.address_line1),
+      addressLine2: strOrNull(row.addressLine2) ?? strOrNull(row.address_line2),
+      city,
+      state: strOrNull(row.state),
+      country,
+      postalCode: strOrNull(row.postalCode) ?? strOrNull(row.postal_code),
+      notes:
+        strOrNull(row.notes) ??
+        buildNotes({ customerCode, city, country, salesRep }),
+    };
+  });
 }
 
 async function loadPebiCustomers(companyCode: string): Promise<{
@@ -151,6 +189,23 @@ async function loadPebiCustomers(companyCode: string): Promise<{
   throw new Error(
     'Set PEBI_DATABASE_URL (dev) or PEBI_API_URL + PEBI_ES_INTEGRATION_SECRET for customer sync'
   );
+}
+
+function customerCommercialFields(row: PebiCustomerRow) {
+  return {
+    companyName: row.companyName,
+    contactName: row.contactName,
+    email: row.email,
+    phone: row.phone,
+    notes: row.notes,
+    paymentTerms: row.paymentTerms,
+    addressLine1: row.addressLine1,
+    addressLine2: row.addressLine2,
+    city: row.city,
+    state: row.state,
+    country: row.country,
+    postalCode: row.postalCode,
+  };
 }
 
 export async function syncCustomersFromPebiForTenant(tenantId: string): Promise<CustomerSyncResult> {
@@ -193,15 +248,13 @@ export async function syncCustomersFromPebiForTenant(tenantId: string): Promise<
       )
       .limit(1);
 
+    const fields = customerCommercialFields(row);
+
     if (existing) {
       await db
         .update(schema.customers)
         .set({
-          companyName: row.companyName,
-          contactName: row.contactName,
-          email: row.email,
-          phone: row.phone,
-          notes: row.notes,
+          ...fields,
           syncedAt: now,
           updatedAt: now,
         })
@@ -210,11 +263,7 @@ export async function syncCustomersFromPebiForTenant(tenantId: string): Promise<
     } else {
       await db.insert(schema.customers).values({
         tenantId,
-        companyName: row.companyName,
-        contactName: row.contactName,
-        email: row.email,
-        phone: row.phone,
-        notes: row.notes,
+        ...fields,
         externalId: row.customerId,
         externalSource: PEBI_CUSTOMER_SOURCE,
         syncedAt: now,

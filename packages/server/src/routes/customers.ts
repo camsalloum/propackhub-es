@@ -25,6 +25,13 @@ const createCustomerSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional(),
   notes: z.string().optional(),
+  paymentTerms: z.string().max(255).optional().nullable(),
+  addressLine1: z.string().max(255).optional().nullable(),
+  addressLine2: z.string().max(255).optional().nullable(),
+  city: z.string().max(128).optional().nullable(),
+  state: z.string().max(128).optional().nullable(),
+  country: z.string().max(128).optional().nullable(),
+  postalCode: z.string().max(32).optional().nullable(),
 });
 
 const updateCustomerSchema = createCustomerSchema.partial();
@@ -152,6 +159,13 @@ async function createCustomerRoute(
         email: validated.email || null,
         phone: validated.phone,
         notes: validated.notes,
+        paymentTerms: validated.paymentTerms ?? null,
+        addressLine1: validated.addressLine1 ?? null,
+        addressLine2: validated.addressLine2 ?? null,
+        city: validated.city ?? null,
+        state: validated.state ?? null,
+        country: validated.country ?? null,
+        postalCode: validated.postalCode ?? null,
       })
       .returning();
 

@@ -1,13 +1,18 @@
 # Graph Report - apps\estimation-studio\packages\web\src  (2026-07-10)
 
 ## Corpus Check
-- 157 files · ~123,105 words
+- 157 files · ~124,453 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
 - 1070 nodes · 2389 edges · 54 communities (52 shown, 2 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `f2ffe2ca`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - [[_COMMUNITY_Community 0|Community 0]]

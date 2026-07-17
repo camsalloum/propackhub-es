@@ -37,15 +37,27 @@ export interface AccessoryMaterialOption {
 /** Default window-patch film thickness (µ) when first added. */
 const DEFAULT_WINDOW_PATCH_MICRON = 30;
 
-/** Friendly names for the view captions. */
+/** Friendly names for the view captions (v4 Family × Variant). */
 const POUCH_TYPE_LABEL: Record<string, string> = {
-  'three-side-seal': '3-Side Seal Pouch',
-  'center-seal': 'Center-Seal Pouch',
-  'four-side-seal': '4-Side Seal Pouch',
-  'stand-up': 'Stand-up Pouch',
-  'side-gusset': 'Side-Gusset Pouch',
-  'flat-bottom': 'Flat-Bottom Pouch',
+  'three-side-seal-flat': 'Three-Side-Seal — Flat',
+  'three-side-seal-standing': 'Three-Side-Seal — Standing',
+  'center-fold-seal-flat': 'Center-Fold-Seal — Flat',
+  'center-fold-seal-side-gusset': 'Center-Fold-Seal — Side Gusset',
+  'center-fold-seal-standing': 'Center-Fold-Seal — Standing',
+  'half-fold-fusion-flat': 'Half-Fold-Fusion — Flat',
+  'half-fold-fusion-standing': 'Half-Fold-Fusion — Standing',
+  'side-weld-flat': 'Side-Weld — Flat',
+  'side-weld-side-gusset': 'Side-Weld — Side Gusset',
+  'oblique-side-weld-trapezoid': 'Oblique — Trapezoid',
+  'oblique-side-weld-triangle': 'Oblique — Triangle',
+  'flat-bottom-box-standing': 'Flat-Bottom Box',
 };
+
+const TOOLING_ACCESSORIES = new Set<PouchAccessoryKind>([
+  'tear_notch',
+  'laser_score',
+  'easy_peel',
+]);
 
 function PouchInputField({
   field,
@@ -136,7 +148,26 @@ export function PouchConfigurator({
     [config, dimensions]
   );
 
-  const drawDims = useMemo(() => pouchDrawDimsFromFields(fieldVals), [fieldVals]);
+  const drawDims = useMemo(
+    () => pouchDrawDimsFromFields(fieldVals, configType),
+    [fieldVals, configType]
+  );
+
+  const cornerRounded = (dimensions.cornerRounded ?? 0) > 0;
+  const cornerRadiusMm =
+    typeof dimensions.cornerRadiusMm === 'number' && Number.isFinite(dimensions.cornerRadiusMm)
+      ? dimensions.cornerRadiusMm
+      : 6;
+  const cornerApplicable = configType != null && !configType.startsWith('oblique-side-weld');
+  const isKseal = (dimensions.bottomSealKseal ?? 0) > 0;
+  const viewTitle =
+    configType === 'three-side-seal-standing' && isKseal
+      ? 'Three-Side-Seal — Standing (K-Seal)'
+      : configType === 'three-side-seal-standing'
+        ? 'Three-Side-Seal — Standing (Doyen)'
+        : configType
+          ? (POUCH_TYPE_LABEL[configType] ?? configType)
+          : '';
 
   const applicableAccessories = useMemo(() => accessoriesForPouchType(configType), [configType]);
 
@@ -164,6 +195,9 @@ export function PouchConfigurator({
       if (kind === 'zipper') {
         base.costPerMeterUsd = mat?.costPerMeterUsd ?? undefined;
         base.weightGramPerMeter = mat?.weightGramPerMeter ?? undefined;
+        base.positionFromTopMm = prev?.positionFromTopMm ?? 40;
+        base.zipType = prev?.zipType ?? 'Push-Pull';
+        base.zipWidthMm = prev?.zipWidthMm ?? 9;
       } else if (kind === 'window') {
         base.widthMm = prev?.widthMm ?? 60;
         base.heightMm = prev?.heightMm ?? 80;
@@ -263,6 +297,50 @@ export function PouchConfigurator({
         ))}
       </div>
 
+      {/* Corner style — tooling / visualization only (v4 §3A) */}
+      {cornerApplicable && (
+        <div className="flex flex-wrap items-center justify-center gap-3 px-4 py-2 border-b border-slate bg-surface-sunken/30">
+          <span className="text-[11px] font-semibold text-navy/80">Corner</span>
+          <button
+            type="button"
+            disabled={disabled}
+            className={`text-xs px-3 py-1 rounded-md border ${!cornerRounded ? 'border-accent bg-accent-soft text-brand font-semibold' : 'border-border text-navy/70'}`}
+            onClick={() => onDimensionsChange({ cornerRounded: 0 })}
+          >
+            Square
+          </button>
+          <button
+            type="button"
+            disabled={disabled}
+            className={`text-xs px-3 py-1 rounded-md border ${cornerRounded ? 'border-accent bg-accent-soft text-brand font-semibold' : 'border-border text-navy/70'}`}
+            onClick={() => onDimensionsChange({ cornerRounded: 1, cornerRadiusMm })}
+          >
+            Rounded
+          </button>
+          {cornerRounded && (
+            <label className="flex items-center gap-1 text-[11px] text-mist">
+              R
+              <input
+                type="number"
+                min={0}
+                max={25}
+                step={1}
+                disabled={disabled}
+                className="input !min-h-[30px] !py-0.5 !px-2 text-xs w-14"
+                value={cornerRadiusMm}
+                onChange={(e) =>
+                  onDimensionsChange({
+                    cornerRounded: 1,
+                    cornerRadiusMm: Math.min(25, Math.max(0, parseFloat(e.target.value) || 0)),
+                  })
+                }
+              />
+              mm
+            </label>
+          )}
+        </div>
+      )}
+
       {/* Accessories — optional add-ons that add weight & cost (zipper/spout/valve/window/handle) */}
       {onAccessoriesChange && applicableAccessories.length > 0 && (
         <div className="px-4 py-3 border-b border-slate bg-surface-sunken/40">
@@ -289,7 +367,9 @@ export function PouchConfigurator({
                   </label>
                   {on && (
                     <>
-                      {opts.length > 0 ? (
+                      {TOOLING_ACCESSORIES.has(kind) ? (
+                        <span className="text-[11px] text-mist">Tooling / process</span>
+                      ) : opts.length > 0 ? (
                         <select
                           className="input !min-h-[30px] !py-0.5 !px-2 text-xs max-w-[12rem]"
                           value={sel?.materialId ?? ''}
@@ -304,7 +384,7 @@ export function PouchConfigurator({
                       ) : (
                         <span className="text-[11px] text-warning">No {meta.label.toLowerCase()} material in master data — add one in Raw Materials.</span>
                       )}
-                      {(kind === 'spout' || kind === 'valve' || kind === 'handle') && (
+                      {(kind === 'spout' || kind === 'valve' || kind === 'handle' || kind === 'hanging_hole') && (
                         <label className="flex items-center gap-1 text-[11px] text-mist">
                           Qty
                           <input
@@ -317,6 +397,60 @@ export function PouchConfigurator({
                             onChange={(e) => upsertAccessory({ ...buildSelection(kind, sel?.materialId, sel), count: Math.max(1, parseInt(e.target.value) || 1) })}
                           />
                         </label>
+                      )}
+                      {kind === 'zipper' && (
+                        <span className="flex flex-wrap items-center gap-1.5 text-[11px] text-mist">
+                          <select
+                            className="input !min-h-[30px] !py-0.5 !px-2 text-xs"
+                            disabled={disabled}
+                            value={sel?.zipType ?? 'Push-Pull'}
+                            onChange={(e) =>
+                              upsertAccessory({
+                                ...buildSelection(kind, sel?.materialId, sel),
+                                zipType: e.target.value,
+                              })
+                            }
+                          >
+                            <option value="Push-Pull">Push-Pull</option>
+                            <option value="Slider">Slider</option>
+                          </select>
+                          <label className="flex items-center gap-1">
+                            from top
+                            <input
+                              type="number"
+                              min={0}
+                              step={1}
+                              disabled={disabled}
+                              className="input !min-h-[30px] !py-0.5 !px-2 text-xs w-14"
+                              value={sel?.positionFromTopMm ?? 40}
+                              onChange={(e) =>
+                                upsertAccessory({
+                                  ...buildSelection(kind, sel?.materialId, sel),
+                                  positionFromTopMm: Math.max(0, parseFloat(e.target.value) || 0),
+                                })
+                              }
+                            />
+                            mm
+                          </label>
+                          <label className="flex items-center gap-1">
+                            zip W
+                            <input
+                              type="number"
+                              min={0}
+                              step={0.5}
+                              disabled={disabled}
+                              className="input !min-h-[30px] !py-0.5 !px-2 text-xs w-14"
+                              value={sel?.zipWidthMm ?? 9}
+                              onChange={(e) =>
+                                upsertAccessory({
+                                  ...buildSelection(kind, sel?.materialId, sel),
+                                  zipWidthMm: Math.max(0, parseFloat(e.target.value) || 0),
+                                })
+                              }
+                            />
+                            mm
+                          </label>
+                        </span>
                       )}
                       {kind === 'window' && (
                         <span className="flex items-center gap-1.5 text-[11px] text-mist">
@@ -401,15 +535,20 @@ export function PouchConfigurator({
       <div className="grid grid-cols-1 lg:grid-cols-2 bg-[#f8f9fb] divide-y lg:divide-y-0 lg:divide-x divide-slate">
         <div className="flex flex-col min-h-[360px]">
           <p className="px-3 pt-2 text-[11px] font-semibold text-navy/70 text-center">
-            {POUCH_TYPE_LABEL[configType] ?? configType} — open view
+            {viewTitle} — open view
           </p>
           <div className="flex-1 min-h-[320px]">
-            <PouchSchematic type={configType} vals={fieldVals} accessories={accessories} />
+            <PouchSchematic
+              type={configType}
+              vals={fieldVals}
+              accessories={accessories}
+              bottomSealKseal={isKseal}
+            />
           </div>
         </div>
         <div className="flex flex-col min-h-[360px]">
           <p className="px-3 pt-2 text-[11px] font-semibold text-navy/70 text-center">
-            {POUCH_TYPE_LABEL[configType] ?? configType} — flat blank
+            {viewTitle} — flat blank
           </p>
           <div className="flex-1 min-h-[320px]">
             <PouchFlatBlank type={configType} dims={engineDims} />

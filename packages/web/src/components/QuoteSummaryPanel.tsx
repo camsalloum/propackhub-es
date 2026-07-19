@@ -13,6 +13,7 @@ type Props = {
   deliveryTerm?: string | null;
   paymentTerms?: string | null;
   remarks?: string | null;
+  termsAndConditions?: string | null;
   validUntil?: string | null;
   onUpdated?: () => void;
 };
@@ -31,6 +32,7 @@ export default function QuoteSummaryPanel({
   deliveryTerm: initialDelivery,
   paymentTerms: initialPayment,
   remarks: initialRemarks,
+  termsAndConditions: initialTerms,
   validUntil,
   onUpdated,
 }: Props) {
@@ -38,6 +40,7 @@ export default function QuoteSummaryPanel({
   const [deliveryTerm, setDeliveryTerm] = useState(initialDelivery ?? 'EXW');
   const [paymentTerms, setPaymentTerms] = useState(initialPayment ?? '');
   const [remarks, setRemarks] = useState(initialRemarks ?? '');
+  const [termsAndConditions, setTermsAndConditions] = useState(initialTerms ?? '');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -45,7 +48,8 @@ export default function QuoteSummaryPanel({
     setDeliveryTerm(initialDelivery ?? 'EXW');
     setPaymentTerms(initialPayment ?? '');
     setRemarks(initialRemarks ?? '');
-  }, [initialRfq, initialDelivery, initialPayment, initialRemarks]);
+    setTermsAndConditions(initialTerms ?? '');
+  }, [initialRfq, initialDelivery, initialPayment, initialRemarks, initialTerms]);
 
   const save = useCallback(
     async (patch?: {
@@ -53,6 +57,7 @@ export default function QuoteSummaryPanel({
       deliveryTerm?: string;
       paymentTerms?: string;
       remarks?: string;
+      termsAndConditions?: string;
     }) => {
       if (locked || saving) return;
       setSaving(true);
@@ -60,12 +65,14 @@ export default function QuoteSummaryPanel({
       const nextDelivery = patch?.deliveryTerm ?? deliveryTerm;
       const nextPayment = patch?.paymentTerms ?? paymentTerms;
       const nextRemarks = patch?.remarks ?? remarks;
+      const nextTerms = patch?.termsAndConditions ?? termsAndConditions;
       try {
         await apiClient.updateQuote(quoteId, {
           rfqNumber: nextRfq.trim() || null,
           deliveryTerm: nextDelivery.trim() || null,
           paymentTerms: nextPayment.trim() || null,
           remarks: nextRemarks.trim() || null,
+          termsAndConditions: nextTerms.trim() || null,
         });
         onUpdated?.();
       } catch (err) {
@@ -74,7 +81,17 @@ export default function QuoteSummaryPanel({
         setSaving(false);
       }
     },
-    [locked, saving, quoteId, rfqNumber, deliveryTerm, paymentTerms, remarks, onUpdated]
+    [
+      locked,
+      saving,
+      quoteId,
+      rfqNumber,
+      deliveryTerm,
+      paymentTerms,
+      remarks,
+      termsAndConditions,
+      onUpdated,
+    ]
   );
 
   const validLabel = validUntil
@@ -145,6 +162,17 @@ export default function QuoteSummaryPanel({
         )}
         {saving && <Loader2 className="w-4 h-4 animate-spin text-mist mb-1.5" />}
       </div>
+      <label className="flex flex-col gap-1 text-xs text-mist mt-2">
+        Terms & Conditions
+        <textarea
+          className="input text-sm w-full min-h-[3rem] resize-y"
+          rows={3}
+          value={termsAndConditions}
+          disabled={locked}
+          onChange={(e) => setTermsAndConditions(e.target.value)}
+          onBlur={() => void save()}
+        />
+      </label>
       <label className="flex flex-col gap-1 text-xs text-mist mt-2">
         Remarks
         <textarea

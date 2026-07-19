@@ -1,7 +1,13 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-17 (pouch client productSubtype fix)
-**Session focus:** Fixed live pouch/bag preview understating film when subtype not injected into engine dims.
+**Last updated:** 2026-07-19 (SaaS deploy normalization plan)
+**Session focus:** Cross-app deploy/tenant plan written; ES still local-only (not on camai / landing).
+
+**Platform source of truth:** `platform/docs/SAAS_NORMALIZATION_IMPLEMENTATION_PLAN_V2.md`
+— ES go-live via `es.propackhub.com`, isolated `es-postgres`, neutral platform
+accounts, account-level entitlements, platform SSO handoff, compiled migration
+CLI, persistent uploads, strict backup/readiness/rollback, and staged activation.
+Implementation waits for owner Gate A (locks L1–L16).
 
 ---
 
@@ -24,6 +30,12 @@
 **PDF polish:** T&C spaced lower; footer note “system-generated… no signature”; ADDR no longer falls back to PEBI sync notes (`PEBI CUST-…`).
 
 **Extra charges (same day):** Quotation PDF + combined price list show **Additional charges (invoiced separately)** for Dev when billing = separate, and Freight when charge > 0 and term ≠ EXW. Film slab prices stay film-only.
+
+**PDF chrome (2026-07-19):** portrait ≤4 slabs; Interplast header/footer images in `packages/server/uploads/branding/`.
+
+**T&C / notice:** Quote **Terms & Conditions** on price-list panel → PDF terms block (per quote). Settings **Quotation notice** = optional override of the system-generated sentence above the letterhead footer (stored in `tenants.footer_text`).
+
+**Remarks (PDF):** Below Terms & Conditions, same bold + underline heading; body under it. Format default Remarks = **Show**. Quote panel order: T&C then Remarks.
 
 ### Premade pouch v4 — Family × Variant (2026-07-17)
 
@@ -64,7 +76,7 @@ If a plan checkbox says done but the file is gone or the UI differs, **code wins
 | Round control (Off / 0.5 step / 0–4 decimals) | Shipped — combined quote price list + per-estimate panel |
 | Prefs `v: 2` + `rounding` on `quotes.price_list_display_prefs` | Shipped (v1 still parses) |
 | Shared `@es/engine` `formatCommercialPrice` / `roundToHalf` | Shipped — rebuild engine after pull |
-| Quote PDF | New commercial layout: header/footer placeholders every page; ≤3 slab cols → portrait, 4+ → landscape; consumes unit/slabs/rounding prefs |
+| Quote PDF | Commercial layout; Interplast `IP Header.jpg` / `IP footer.jpg` from `uploads/branding/`; ≤4 slab cols → portrait, 5+ → landscape |
 | Assets | `packages/server/assets/quotation/header-placeholder.png` + `footer-placeholder.png` (Interplast / Harwal strips) |
 
 **Verify:** rebuild `@es/engine` → hard-refresh → set Round on price list → download quote PDF. Smoke: `npx tsx packages/server/scripts/smoke-quotation-pdf.ts`.

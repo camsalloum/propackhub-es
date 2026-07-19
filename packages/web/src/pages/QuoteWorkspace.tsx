@@ -36,6 +36,7 @@ type QuotePayload = {
   deliveryTerm?: string | null;
   paymentTerms?: string | null;
   remarks?: string | null;
+  termsAndConditions?: string | null;
   customerId?: string | null;
   isPriceCheck?: boolean;
   versionNumber?: number | null;
@@ -419,6 +420,7 @@ const QuoteWorkspace = () => {
                 deliveryTerm={quote.deliveryTerm}
                 paymentTerms={quote.paymentTerms}
                 remarks={quote.remarks}
+                termsAndConditions={quote.termsAndConditions}
                 validUntil={quote.validUntil}
                 onUpdated={() => void load()}
               />

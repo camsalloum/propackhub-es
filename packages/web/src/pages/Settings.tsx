@@ -42,8 +42,8 @@ const Settings = () => {
   const [fxLastUpdated, setFxLastUpdated] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
   const [brandPrimaryColor, setBrandPrimaryColor] = useState('#0F1F3D');
-  const [termsAndConditions, setTermsAndConditions] = useState('');
-  const [footerText, setFooterText] = useState('');
+  /** Quotation PDF notice above letterhead footer (optional override). */
+  const [quotationNotice, setQuotationNotice] = useState('');
   const [quotationFormat, setQuotationFormat] =
     useState<QuotationFormatPrefs>(DEFAULT_QUOTATION_FORMAT);
   const [settingsError, setSettingsError] = useState<string | null>(null);
@@ -70,8 +70,9 @@ const Settings = () => {
       setFxLastUpdated(settings.exchangeRateUpdatedAt || null);
       setLogoUrl(settings.logo || undefined);
       setBrandPrimaryColor(settings.primaryColor || '#0F1F3D');
-      setTermsAndConditions(settings.termsAndConditions || '');
-      setFooterText((settings.footerText as string) || (settings.footer as string) || '');
+      setQuotationNotice(
+        (settings.footerText as string) || (settings.footer as string) || ''
+      );
       setQuotationFormat(parseQuotationFormat(settings.quotationFormat));
       // BUG-7: load defaultMarkup so Save doesn't overwrite with hardcoded default
       setDefaultMarkup(Number(settings.defaultMarkupPercent) || 15);
@@ -139,8 +140,7 @@ const Settings = () => {
         exchangeRateUsdToDisplay,
         logo: logoUrl,
         primaryColor: brandPrimaryColor,
-        termsAndConditions,
-        footerText,
+        footerText: quotationNotice,
         quotationFormat,
         defaultMarkupPercent: defaultMarkup,
         operatingCostMethod,
@@ -545,22 +545,15 @@ const Settings = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-brand mb-2">Terms & Conditions</label>
+                  <label className="block text-sm font-medium text-brand mb-2">
+                    Quotation notice
+                  </label>
                   <textarea
-                    value={termsAndConditions}
-                    onChange={(e) => setTermsAndConditions(e.target.value)}
-                    rows={4}
+                    value={quotationNotice}
+                    onChange={(e) => setQuotationNotice(e.target.value)}
+                    rows={2}
                     className="input w-full"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-brand mb-2">Footer Text</label>
-                  <textarea
-                    value={footerText}
-                    onChange={(e) => setFooterText(e.target.value)}
-                    rows={3}
-                    className="input w-full"
+                    placeholder="This is a system-generated quotation and does not require a signature."
                   />
                 </div>
 

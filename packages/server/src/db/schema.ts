@@ -382,6 +382,8 @@ export const quotes = pgTable('quotes', {
   deliveryTerm: varchar('delivery_term', { length: 32 }),
   paymentTerms: varchar('payment_terms', { length: 255 }),
   remarks: text('remarks'),
+  /** Per-quote T&C for the quotation PDF (not tenant-wide). */
+  termsAndConditions: text('terms_and_conditions'),
   notes: text('notes'),
   sentAt: timestamp('sent_at', { withTimezone: true }),
 

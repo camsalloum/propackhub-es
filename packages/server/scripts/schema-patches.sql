@@ -583,6 +583,9 @@ END $$;
 CREATE INDEX IF NOT EXISTS quotes_rfq_number_idx ON quotes (tenant_id, rfq_number)
   WHERE deleted_at IS NULL AND rfq_number IS NOT NULL;
 
+-- Per-quote commercial T&C (quotation PDF; not tenant Settings)
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS terms_and_conditions TEXT;
+
 -- Quote combined price list display prefs (unit, currency, slabs — autosaved from UI)
 DO $$ BEGIN
   ALTER TABLE quotes ADD COLUMN IF NOT EXISTS price_list_display_prefs JSONB;

@@ -53,6 +53,7 @@ const QuoteCreateSchema = z.object({
   deliveryTerm: z.string().max(32).optional().nullable(),
   paymentTerms: z.string().max(255).optional().nullable(),
   remarks: z.string().optional().nullable(),
+  termsAndConditions: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   rfqNumber: z.string().max(128).optional().nullable(),
   validUntil: z.string().datetime().optional().nullable(),
@@ -300,6 +301,7 @@ async function createQuoteRoute(
       deliveryTerm: data.deliveryTerm ?? customerDefaults.deliveryTerm,
       paymentTerms: data.paymentTerms ?? customerDefaults.paymentTerms,
       remarks: data.remarks,
+      termsAndConditions: data.termsAndConditions,
       notes: data.notes,
       rfqNumber: data.rfqNumber?.trim() || null,
       validUntil: data.validUntil ? new Date(data.validUntil) : null,
@@ -373,6 +375,9 @@ async function updateQuoteRoute(
     if (data.deliveryTerm !== undefined) updates.deliveryTerm = data.deliveryTerm;
     if (data.paymentTerms !== undefined) updates.paymentTerms = data.paymentTerms;
     if (data.remarks !== undefined) updates.remarks = data.remarks;
+    if (data.termsAndConditions !== undefined) {
+      updates.termsAndConditions = data.termsAndConditions;
+    }
     if (data.notes !== undefined) updates.notes = data.notes;
     if (data.rfqNumber !== undefined) updates.rfqNumber = data.rfqNumber?.trim() || null;
     if (data.validUntil !== undefined) {

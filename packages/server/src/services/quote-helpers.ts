@@ -102,6 +102,7 @@ export type CreateQuoteInput = {
   deliveryTerm?: string | null;
   paymentTerms?: string | null;
   remarks?: string | null;
+  termsAndConditions?: string | null;
   notes?: string | null;
   rfqNumber?: string | null;
   validUntil?: Date | null;
@@ -159,6 +160,7 @@ export async function createQuote(
       deliveryTerm: input.deliveryTerm ?? null,
       paymentTerms: input.paymentTerms ?? null,
       remarks: input.remarks ?? null,
+      termsAndConditions: input.termsAndConditions ?? null,
       notes: input.notes ?? null,
       rfqNumber: input.rfqNumber?.trim() || null,
       validUntil: input.validUntil ?? null,

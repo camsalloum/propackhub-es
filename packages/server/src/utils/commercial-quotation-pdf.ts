@@ -1,6 +1,9 @@
 /**
  * Commercial quotation PDF — format-driven meta fields, aligned slab grid.
  */
+import { existsSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   fieldVisible,
   parseQuotationFormat,
@@ -42,14 +45,52 @@ export type CommercialQuotationInput = {
   rows: CommercialQuotationRow[];
   /** Dev (separate) + freight lumps — not in film $/kg */
   extraCharges?: QuotationExtraCharge[];
+  /** Per-quote T&C body */
   termsAndConditions?: string;
-  footerText?: string;
+  /** Optional override for the pinned notice above the letterhead footer */
+  quotationNotice?: string | null;
   format?: QuotationFormatPrefs | null;
 };
+
+export const DEFAULT_QUOTATION_NOTICE =
+  'This is a system-generated quotation and does not require a signature.';
 
 const MARGIN = 36;
 const HEADER_PLACEHOLDER_PT = 80;
 const FOOTER_PLACEHOLDER_PT = 48;
+
+const BRANDING_DIR = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../uploads/branding'
+);
+
+/** Prefer Interplast pack names, then generic quotation-* filenames. */
+const HEADER_CANDIDATES = [
+  'IP Header.jpg',
+  'IP Header.jpeg',
+  'IP Header.png',
+  'quotation-header.png',
+  'quotation-header.jpg',
+  'header.png',
+  'header.jpg',
+];
+const FOOTER_CANDIDATES = [
+  'IP footer.jpg',
+  'IP footer.jpeg',
+  'IP footer.png',
+  'quotation-footer.png',
+  'quotation-footer.jpg',
+  'footer.png',
+  'footer.jpg',
+];
+
+function resolveBrandingImage(candidates: string[]): string | null {
+  for (const name of candidates) {
+    const path = resolve(BRANDING_DIR, name);
+    if (existsSync(path)) return path;
+  }
+  return null;
+}
 
 function wrapLines(
   doc: { fontSize: (n: number) => unknown; widthOfString: (s: string) => number },
@@ -140,41 +181,85 @@ export async function renderCommercialQuotationPdf(
 
   const headerH = HEADER_PLACEHOLDER_PT;
   const footerH = FOOTER_PLACEHOLDER_PT;
-  const bodyTop = () => MARGIN + headerH + 8;
-  const bodyBottom = () => pageHeight() - MARGIN - footerH - 6;
+  const headerImage = resolveBrandingImage(HEADER_CANDIDATES);
+  const footerImage = resolveBrandingImage(FOOTER_CANDIDATES);
+  const SYSTEM_NOTICE =
+    input.quotationNotice?.trim() || DEFAULT_QUOTATION_NOTICE;
+  const NOTICE_H = 18;
+  /** Airier vertical rhythm when the price table is short. */
+  const skuCount = Math.max(1, input.rows.length);
+  const gapAfterHeader = skuCount <= 2 ? 28 : skuCount <= 4 ? 18 : 12;
+  const gapAfterMeta = skuCount <= 2 ? 26 : skuCount <= 4 ? 18 : 12;
+  const gapBeforeTermsMin = 36; // ~3 lines
+  const gapBeforeTermsIdeal = 48; // ~4 lines
+
+  const bodyTop = () => MARGIN + headerH + gapAfterHeader;
+  /** Leave room above footer for the pinned system notice. */
+  const bodyBottom = () => pageHeight() - MARGIN - footerH - NOTICE_H - 10;
 
   const drawChrome = () => {
     const w = contentWidth();
-    doc
-      .rect(MARGIN, MARGIN, w, headerH)
-      .strokeColor('#94a3b8')
-      .lineWidth(0.75)
-      .dash(3, { space: 2 })
-      .stroke()
-      .undash();
-    cellText(
-      doc,
-      `Header placeholder · ${Math.round(w)}×${headerH} pt  (uploads/branding/)`,
-      MARGIN,
-      MARGIN + headerH / 2 - 6,
-      { width: w, align: 'center' }
-    );
+
+    if (headerImage) {
+      try {
+        doc.image(headerImage, MARGIN, MARGIN, {
+          fit: [w, headerH],
+          align: 'center',
+          valign: 'center',
+        });
+      } catch {
+        cellText(doc, 'Header image failed to load', MARGIN, MARGIN + headerH / 2 - 6, {
+          width: w,
+          align: 'center',
+        });
+      }
+    } else {
+      doc
+        .rect(MARGIN, MARGIN, w, headerH)
+        .strokeColor('#94a3b8')
+        .lineWidth(0.75)
+        .dash(3, { space: 2 })
+        .stroke()
+        .undash();
+      cellText(
+        doc,
+        `Header placeholder · ${Math.round(w)}×${headerH} pt  (uploads/branding/)`,
+        MARGIN,
+        MARGIN + headerH / 2 - 6,
+        { width: w, align: 'center' }
+      );
+    }
 
     const fy = pageHeight() - MARGIN - footerH;
-    doc
-      .rect(MARGIN, fy, w, footerH)
-      .strokeColor('#94a3b8')
-      .lineWidth(0.75)
-      .dash(3, { space: 2 })
-      .stroke()
-      .undash();
-    cellText(
-      doc,
-      `Footer placeholder · ${Math.round(w)}×${footerH} pt  (uploads/branding/)`,
-      MARGIN,
-      fy + footerH / 2 - 6,
-      { width: w, align: 'center' }
-    );
+    if (footerImage) {
+      try {
+        doc.image(footerImage, MARGIN, fy, {
+          fit: [w, footerH],
+          align: 'center',
+          valign: 'center',
+        });
+      } catch {
+        cellText(doc, 'Footer image failed to load', MARGIN, fy + footerH / 2 - 6, {
+          width: w,
+          align: 'center',
+        });
+      }
+    } else {
+      doc
+        .rect(MARGIN, fy, w, footerH)
+        .strokeColor('#94a3b8')
+        .lineWidth(0.75)
+        .dash(3, { space: 2 })
+        .stroke()
+        .undash();
+      cellText(
+        doc,
+        `Footer placeholder · ${Math.round(w)}×${footerH} pt  (uploads/branding/)`,
+        MARGIN,
+        fy + footerH / 2 - 6,
+        { width: w, align: 'center' }
+      );
+    }
   };
 
   const addPageWithChrome = () => {
@@ -296,24 +381,14 @@ export async function renderCommercialQuotationPdf(
     ry += lineH;
   }
 
-  y = Math.max(leftBottom, ry, metaTop + 40) + 10;
+  y = Math.max(leftBottom, ry, metaTop + 40) + gapAfterMeta;
 
   if (show('quoteName') && input.quoteName) {
     ensureSpace(16);
     doc.fontSize(10).fillColor('#444444');
     cellText(doc, input.quoteName, MARGIN, y, { width: contentWidth() });
     y += 14;
-  }
-
-  if (show('remarks') && input.remarks) {
-    ensureSpace(20);
-    doc.fontSize(8).fillColor('#444444');
-    const rLines = wrapLines(doc, `Remarks: ${input.remarks}`, contentWidth(), 8);
-    for (const line of rLines) {
-      cellText(doc, line, MARGIN, y, { width: contentWidth() });
-      y += 10;
-    }
-    y += 4;
+    y += Math.round(gapAfterMeta * 0.35);
   }
 
   // —— Price table (fixed columns — no PDFKit flow drift) ——
@@ -482,20 +557,39 @@ export async function renderCommercialQuotationPdf(
     }
   }
 
-  // —— Terms ——
-  if (show('termsBlock')) {
-    y += 22;
-    ensureSpace(60);
-    doc.fontSize(10).fillColor('#111111');
-    cellText(doc, 'Terms & Conditions', MARGIN, y, { width: contentWidth() });
-    // underline manually
+  const drawSectionHeading = (title: string) => {
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('#111111');
+    cellText(doc, title, MARGIN, y, { width: contentWidth() });
+    const underlineW = Math.min(contentWidth() * 0.45, doc.widthOfString(title) + 4);
     doc
       .moveTo(MARGIN, y + 12)
-      .lineTo(MARGIN + 110, y + 12)
+      .lineTo(MARGIN + underlineW, y + 12)
       .strokeColor('#111111')
       .lineWidth(0.75)
       .stroke();
     y += 16;
+    doc.font('Helvetica');
+  };
+
+  // —— Terms then Remarks (same heading style) ——
+  const hasTermsBlock = show('termsBlock');
+  const remarksText = input.remarks?.trim() || '';
+  const hasRemarks = show('remarks') && Boolean(remarksText);
+
+  if (hasTermsBlock || hasRemarks) {
+    const roomBelow = maxY() - y;
+    let gapBeforeTerms = gapBeforeTermsIdeal;
+    if (roomBelow > 160) {
+      gapBeforeTerms = Math.min(72, Math.max(gapBeforeTermsIdeal, Math.round(roomBelow * 0.22)));
+    } else if (roomBelow < 100) {
+      gapBeforeTerms = gapBeforeTermsMin;
+    }
+    y += gapBeforeTerms;
+  }
+
+  if (hasTermsBlock) {
+    ensureSpace(60);
+    drawSectionHeading('Terms & Conditions');
 
     const terms =
       input.termsAndConditions?.trim() ||
@@ -504,8 +598,6 @@ export async function renderCommercialQuotationPdf(
         show('deliveryTerm') && input.deliveryTerm
           ? `Delivery terms: ${input.deliveryTerm}`
           : null,
-        input.footerText?.trim() || null,
-        'Standard terms apply.',
       ]
         .filter(Boolean)
         .join('\n');
@@ -519,17 +611,27 @@ export async function renderCommercialQuotationPdf(
     }
   }
 
-  // System-generated notice (no signature block)
-  y += 16;
-  ensureSpace(20);
-  doc.fontSize(7).fillColor('#666666');
-  cellText(
-    doc,
-    'This is a system-generated quotation and does not require a signature.',
-    MARGIN,
-    y,
-    { width: contentWidth(), align: 'center' }
-  );
+  if (hasRemarks) {
+    y += hasTermsBlock ? 16 : 0;
+    ensureSpace(40);
+    drawSectionHeading('Remarks');
+    const rLines = wrapLines(doc, remarksText, contentWidth(), 8);
+    ensureSpace(rLines.length * 10 + 8);
+    doc.fontSize(8).fillColor('#444444');
+    for (const line of rLines) {
+      cellText(doc, line, MARGIN, y, { width: contentWidth() });
+      y += 10;
+    }
+  }
+
+  // Pinned above footer on the last page — bold, larger
+  const noticeY = pageHeight() - MARGIN - footerH - NOTICE_H;
+  doc.font('Helvetica-Bold').fontSize(9).fillColor('#222222');
+  cellText(doc, SYSTEM_NOTICE, MARGIN, noticeY, {
+    width: contentWidth(),
+    align: 'center',
+  });
+  doc.font('Helvetica');
 
   doc.end();
 

@@ -130,9 +130,9 @@ export function formatCommercialPrice(
   return formatStepPrice(roundToStep(n, step), step);
 }
 
-/** Portrait when ≤3 slab columns; landscape when 4+. */
+/** Portrait when ≤4 slab columns; landscape when 5+. */
 export function quotationPageOrientation(
   slabColumnCount: number
 ): 'portrait' | 'landscape' {
-  return slabColumnCount >= 4 ? 'landscape' : 'portrait';
+  return slabColumnCount >= 5 ? 'landscape' : 'portrait';
 }

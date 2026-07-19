@@ -69,7 +69,7 @@ export const DEFAULT_QUOTATION_FORMAT: QuotationFormatPrefs = {
     paymentTerms: 'show',
     rfqNumber: 'hide',
     quoteName: 'show',
-    remarks: 'hide',
+    remarks: 'show',
     salesperson: 'hide',
     termsBlock: 'show',
   },

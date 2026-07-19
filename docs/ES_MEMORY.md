@@ -11,6 +11,7 @@
 | Doc | Role |
 |-----|------|
 | [LIVE_STATE.md](./LIVE_STATE.md) | **Source of truth** for what works today (prefer over plans) |
+| [SaaS normalization v2](../../platform/docs/SAAS_NORMALIZATION_IMPLEMENTATION_PLAN_V2.md) | **Cross-app authority:** ES deployment, account/subscription model, SSO handoff, DB and release gates |
 | [POUCH_SOURCE_OF_TRUTH.md](./POUCH_SOURCE_OF_TRUTH.md) | **Pouch as-built:** types, formulas, accessories, UI, gaps — matches code |
 | [POUCH_CLASSIFICATION_v4.md](./POUCH_CLASSIFICATION_v4.md) | Premade Selector v4 design reference (zip) — formulas origin |
 | [MATERIALS_CATALOG_UNIFICATION_PLAN.md](./MATERIALS_CATALOG_UNIFICATION_PLAN.md) | Phases 1–5 done (Raw Materials removed); **Phase 4 PEBI cutover** still workshop-blocked |
@@ -29,6 +30,19 @@
 
 ---
 
+## 2026-07-19 — SaaS normalization planning
+
+- Audited ES deploy/runtime prerequisites against PEBI and FS.
+- Authoritative plan:
+  `platform/docs/SAAS_NORMALIZATION_IMPLEMENTATION_PLAN_V2.md`.
+- ES remains local-only. Do not add the live landing link before private staging
+  deploy, DB backup/migration readiness, SSO, entitlement, and pilot acceptance.
+- Planned ES production additions include `es-postgres`, pm2/nginx, versioned
+  release artifacts, compiled migration CLI, persistent branding uploads,
+  `platform_account_id` tenant mapping, and single-use SSO JTI storage.
+
+---
+
 ## Product identity (fixed)
 
 - **Name:** ProPackHub Estimation Studio (ES)
@@ -36,7 +50,13 @@
 - **Users:** Independent sales / consultants — **not** PEBI plant operators
 - **Simplicity rule:** Same math and flow as **legacy Laravel** estimator — **not** PEBI MES depth
 - **Hero UI:** Laminate Stack Visualizer + slab table + branded PDF + re-quote
-- **Platform relationship:** ES and PEBI are **separate products** on the same SaaS platform (ProPackHub). Separate users, separate licenses, separate auth. No cross-app navigation, no SSO. Shared brand + domain only.
+- **Platform relationship (superseded 2026-07-19):** ES and PEBI are separate
+  products on the same ProPackHub SaaS platform with separate product DBs,
+  licenses, roles, and sessions. Production customer identity starts at
+  ProPackHub and uses a short-lived entitlement-checked SSO handoff into ES.
+  ES keeps its own user/session record after handoff. This supersedes the old
+  “no SSO / no cross-app navigation” lock only for identity handoff and the
+  platform product picker.
 
 ---
 
@@ -195,15 +215,11 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 
 ## Session log
 
-### 2026-07-17 — Quote commercial fields linked to PEBI / estimate
+### 2026-07-19 — Remarks under Terms on quotation PDF
 
-- Quote **Incoterm** = same dropdown as estimate; empty quote term filled from estimate on create/update.
-- Quote **Payment terms** = dropdown; prefilled from `customers.payment_terms` (PEBI CRM).
-- ES customers gained address + payment columns; PEBI sync + integration API return them for Interplast.
-- Quotation PDF address from structured fields; format default Address = Show.
-- **Ops:** re-sync customers after PEBI restart.
-
-## Session log
+- PDF: **Remarks** section directly under **Terms & Conditions**, same bold + underline heading; body text below.
+- Quote panel: T&C then Remarks. Format default Remarks = Show.
+- **Ops:** restart ES; if Format hid Remarks, set Show; re-download PDF.
 
 ### 2026-07-17 — Quote commercial fields linked to PEBI / estimate
 

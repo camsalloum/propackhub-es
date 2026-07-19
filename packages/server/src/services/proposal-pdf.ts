@@ -385,8 +385,9 @@ export async function buildQuoteProposalPdfBuffer(
     unitLabel: UNIT_LABELS[unit],
     rows,
     extraCharges,
-    termsAndConditions: tenant?.termsAndConditions || undefined,
-    footerText: tenant?.footerText || undefined,
+    termsAndConditions: quote.termsAndConditions?.trim() || undefined,
+    /** Tenant Settings → Quotation notice (optional); empty → default sentence */
+    quotationNotice: tenant?.footerText?.trim() || null,
     format,
   });
 }

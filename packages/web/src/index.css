@@ -1001,17 +1001,16 @@
     border-color: rgb(255 255 255 / 0.20);
   }
 
-  /* ---- Laminate stack (template card) — substrate films only ---- */
+  /* ---- Laminate stack (template card) — photorealistic render ---- */
   .lam3d {
     position: relative;
-    height: 220px;
+    height: 208px;
     display: grid;
     place-items: center;
-    background: rgb(var(--color-surface-sunken));
+    background: #ffffff;
     border-bottom: 1px solid rgb(var(--color-border));
     border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
-    perspective: 1100px;
-    overflow: visible;
+    overflow: hidden;
     touch-action: pan-y pinch-zoom;
   }
   .lam3d--tappable {
@@ -1022,62 +1021,48 @@
     outline: 2px solid rgb(var(--color-focus-ring));
     outline-offset: -2px;
   }
-  .lam3d__stack {
-    position: relative;
-    width: 212px;
-    height: 148px;
-    transform-style: preserve-3d;
-    transform: rotateX(58deg) rotateZ(-38deg);
+  .lam3d__render {
+    width: 90%;
+    max-width: 300px;
+    height: auto;
+    max-height: 184px;
+    object-fit: contain;
+    object-position: center;
+    pointer-events: none;
+    user-select: none;
     transition: transform var(--motion-enter) var(--ease-overlay);
   }
-  .lam3d__slab {
-    position: absolute;
-    inset: 0;
-    border-radius: 4px;
-    transform: translateZ(var(--slab-z));
-    transition: transform var(--motion-enter) var(--ease-spring);
+  .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__render,
+  .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__render,
+  .lam3d--expanded .lam3d__render {
+    transform: scale(1.04);
   }
-
-  .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__stack,
-  .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__stack {
-    transform: rotateX(52deg) rotateZ(-34deg);
-  }
-  .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__slab,
-  .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__slab {
-    transform: translateZ(calc(var(--slab-z) * 4.2));
-  }
-
-  /* Reduced motion — no explode animation. */
   @media (prefers-reduced-motion: reduce) {
-    .lam3d__stack, .lam3d__slab { transition: none; }
-    .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__stack,
-    .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__stack {
-      transform: rotateX(58deg) rotateZ(-38deg);
-    }
-    .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__slab,
-    .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__slab {
-      transform: translateZ(var(--slab-z));
+    .lam3d__render { transition: none; }
+    .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__render,
+    .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__render,
+    .lam3d--expanded .lam3d__render {
+      transform: none;
     }
   }
-  :root[data-reduced-motion="true"] .lam3d__stack,
-  :root[data-reduced-motion="true"] .lam3d__slab { transition: none; }
-  :root[data-reduced-motion="true"] .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__stack,
-  :root[data-reduced-motion="true"] .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__stack {
-    transform: rotateX(54deg) rotateZ(-40deg);
-  }
-  :root[data-reduced-motion="true"] .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__slab,
-  :root[data-reduced-motion="true"] .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__slab {
-    transform: translateZ(var(--slab-z));
+  :root[data-reduced-motion="true"] .lam3d__render { transition: none; }
+  :root[data-reduced-motion="true"] .card[data-interactive="true"]:where(:hover, :focus-within) .lam3d__render,
+  :root[data-reduced-motion="true"] .card[data-interactive="true"][data-stack-expanded="true"] .lam3d__render,
+  :root[data-reduced-motion="true"] .lam3d--expanded .lam3d__render {
+    transform: none;
   }
 
   /* ---- Template deck — 3D depth-stack gallery ----
      Cards stay in place; the active one is forward and neighbours recede into
-     depth. Contained (no scrollbar) and horizontal; `touch-action: pan-y` keeps
-     vertical page scroll intact while horizontal swipes drive the deck only.
-     Stage / glow / nav / dots all follow the active theme (--color-*). */
+     depth. Height fills the parent stage (Templates Scroll mode uses flex-1 /
+     remaining viewport) — no fixed min-height that pushed cards mid-page.
+     Contained (no scrollbar) and horizontal; `touch-action: pan-y` keeps
+     residual vertical gestures from fighting the deck. Stage / glow / nav /
+     dots follow the active theme (--color-*). */
   .deck {
     position: relative;
-    height: clamp(500px, 68vh, 640px);
+    height: 100%;
+    min-height: 0;
     overflow: hidden;
     outline: none;
     touch-action: pan-y;
@@ -1089,6 +1074,13 @@
     box-shadow: inset 0 0 0 2px rgb(var(--color-focus-ring) / 0.6);
     border-radius: var(--radius-2xl);
   }
+  /* Slightly shorter laminate graphic when the card sits in the viewport-fit deck. */
+  .deck .lam3d {
+    height: clamp(140px, 22vh, 208px);
+  }
+  .deck .lam3d__render {
+    max-height: clamp(120px, 18vh, 184px);
+  }
   .deck__stage {
     position: absolute;
     inset: 0;
@@ -1096,23 +1088,25 @@
     margin: 0;
     padding: 0;
     perspective: 1200px;
-    perspective-origin: 50% 44%;
+    perspective-origin: 50% 42%;
   }
   /* Soft accent glow behind the front card — theme-driven, non-interactive. */
   .deck__stage::before {
     content: '';
     position: absolute;
     left: 50%;
-    top: 46%;
-    width: 520px;
-    height: 380px;
+    top: 44%;
+    width: min(640px, 90%);
+    height: min(400px, 70%);
     transform: translate(-50%, -50%);
     background: radial-gradient(60% 60% at 50% 50%, rgb(var(--color-accent) / 0.14), transparent 70%);
     pointer-events: none;
   }
   .deck__card {
     position: absolute;
-    top: 50%;
+    /* Bias slightly above geometric center so the card sits closer to filters
+       within the remaining stage (not mid-page empty band above). */
+    top: 46%;
     left: 50%;
     transform-style: preserve-3d;
     will-change: transform, opacity;

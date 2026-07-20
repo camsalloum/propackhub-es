@@ -136,10 +136,10 @@
       "breakpoints": true
     },
     {
-      "idx": 22,
+      "idx": 23,
       "version": "5",
-      "when": 1783700000000,
-      "tag": "0022_consumables_config",
+      "when": 1783800000000,
+      "tag": "0023_platform_sso",
       "breakpoints": true
     }
   ]

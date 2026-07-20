@@ -1,7 +1,7 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-19 (SaaS deploy normalization plan)
-**Session focus:** Cross-app deploy/tenant plan written; ES still local-only (not on camai / landing).
+**Last updated:** 2026-07-20 (TemplateDeck FAN_X crash fix)
+**Session focus:** Fix `/templates` Scroll crash (`FAN_X is not defined`) after carousel size refactor.
 
 **Platform source of truth:** `platform/docs/SAAS_NORMALIZATION_IMPLEMENTATION_PLAN_V2.md`
 — ES go-live via `es.propackhub.com`, isolated `es-postgres`, neutral platform
@@ -12,6 +12,106 @@ Implementation waits for owner Gate A (locks L1–L16).
 ---
 
 ## Where we stopped (read this first next session)
+
+### 2026-07-20 — TemplateDeck FAN_X crash
+
+**Fixed:** Restored `FAN_X` (via `fanXForWidth(400)`) and width-scaled fan/drag helpers so DeckCard `useTransform` never references a removed constant. Viewport-fit Scroll layout unchanged.
+
+**Ops:** Hard-refresh `/templates` → Scroll. Console 500s on materials/master-data are separate (API); 401/403 explorer + 409 instantiate ignored for this fix.
+
+### 2026-07-20 — Templates Scroll: no mid-page gap
+
+**Fixed:**
+- Scroll mode fills remaining viewport under header/filters/tabs (`flex` + `calc(100dvh…)`); deck no longer uses `clamp(580px, 74vh, 760px)` vertical centering stage
+- Scroll|Grid toggle sits on the tabs row; Grid still page-scrolls
+- Deck laminate graphic slightly shrinks on short viewports (`clamp` via vh)
+
+**Ops:** Hard-refresh `/templates` → Scroll — card tight under filters, L/R arrows only.
+
+### 2026-07-20 — Template cards larger + two view modes
+
+**Shipped:**
+- Larger structure cards (width 400, taller laminate area) on `/templates`
+- **Scroll** = existing horizontal TemplateDeck; **Grid** = responsive wrap + browser scroll
+- Toggle top-right above the gallery; persists in `localStorage` (`es.templateBrowserView`)
+
+**Ops:** Hard-refresh web → Templates → use Scroll / Grid toggle.
+
+### 2026-07-20 — Laminate template-card stack visuals
+
+**Shipped:**
+- `LaminateStack3D` uses `/laminate-stacks/stack-{1..5}.png` by substrate count (mono→5+)
+- Style: monochrome premium isometric exploded stack (clear / chrome / frosted / opaque)
+- Cards `overflow-hidden`; graphic height ~168px — no clip over ROLL/title
+
+**See:** Estimate Start → Browse templates, or `/templates` deck. Hard-refresh web.
+
+### 2026-07-20 — Quotation PDF title + T&C removal
+
+**Fixed:**
+- **QUOTATION** title centered on full content width (portrait + landscape) — was middle-column offset
+- Commercial PDF no longer draws **Terms & Conditions** below the price table (payment / shipment already in header meta). **Remarks** still drawn when format Show + non-empty text
+- Format default `termsBlock` → hide; Settings no longer lists the T&C toggle
+
+**Ops:** Restart ES API if running; re-download quote PDF to verify.
+
+### 2026-07-20 — Quotation PDF layout (chrome + slabs)
+
+**Fixed:**
+- Header/footer letterhead stretch to full content width (no landscape side gaps from PDFKit `fit`)
+- Page margin 36 → 18 pt
+- Portrait for ≤6 price slabs; landscape only when 7+
+
+**Ops:** Restart ES API if running; re-download quote PDF with 5–6 slabs (portrait) and 7+ (landscape).
+
+### 2026-07-20 — Double login fix (local)
+
+**Cause:** PPH/ES lacked matching `ES_SSO_SECRET`; SSO failed silently and opened bare `localhost:5000` → ES native login. Vite also did not proxy `/auth` to the API.
+
+**Fixed:**
+- Matching `ES_SSO_SECRET` + `ES_PUBLIC_URL=http://localhost:5000` in PPH + ES `.env`
+- Vite proxy `/auth` → `:5001`
+- SSO success redirect → `/dashboard#token=&refresh=` (no login flash)
+- `openEstimationStudio({ requireSso: true })` from ES login skin + product picker
+- Product picker opens ES via SSO directly (no hop through `/login/es`)
+
+**Ops:** Restart PPH server + ES API + ES web.
+
+### 2026-07-20 — SSO 403 entitlement (local)
+
+**Cause:** Interplast had no `app_subscriptions` row for `es`; membership gate returned PEBI-only when `platform_user_accounts` was missing.
+
+**Fixed:**
+- Script `apps/pph/server/scripts/ensure-es-entitlement.js` — beta catalog + active ES sub + tenant mapping + link platform admins
+- `getAppsForUser`: membership deny falls through to company subscriptions (not PEBI-only)
+- Login skin: single SSO attempt (no spam on user object refresh)
+
+**Retry:** Restart PPH API to load entitlementService change. DB grants are already applied. Sign in on ProPackHub → open ES → should SSO once into dashboard.
+
+---
+
+### Phase 5 — Platform SSO (local complete, 2026-07-19)
+
+| Piece | Status |
+|-------|--------|
+| Migration `0023_platform_sso` | `sso_token_uses`, `tenants.platform_account_id`, `users.platform_user_id` + `auth_source`, SSO session columns |
+| `/auth/callback` | JWT verify (`aud=es`, `ES_SSO_SECRET`), durable JTI, JIT user by `(platform_user_id, tenant_id)` |
+| Local login gate | `PRODUCT_LOCAL_LOGIN_ENABLED`; rejects `auth_source=platform_sso` password login |
+| Registration gate | `PRODUCT_PUBLIC_REGISTRATION_ENABLED` |
+| Web hash handoff | `/dashboard#token=&refresh=` consumed on boot → dashboard |
+| PEBI `issueEsHandoffUrl` | Already in `apps/pph/server/services/ssoService.js` |
+| Interplast mapping | `apps/pph/server/scripts/ensure-es-tenant-mapping.js` + `packages/server/scripts/README-pebi-es-sso.md` |
+| Live staging SSO E2E | **Deferred** — camai apply is SSH-only |
+
+**Ops (local SSO smoke):**
+
+1. `npm run db:migrate --workspace=packages/server`
+2. Set matching `ES_SSO_SECRET` on PPH + ES
+3. `node server/scripts/ensure-es-tenant-mapping.js` (from `apps/pph`)
+4. `npm run db:provision-interplast --workspace=packages/server` if tenant missing
+5. PPH product picker → Estimation Studio → lands in ES dashboard
+
+---
 
 ### Quote commercial fields ↔ PEBI (2026-07-17)
 
@@ -31,11 +131,11 @@ Implementation waits for owner Gate A (locks L1–L16).
 
 **Extra charges (same day):** Quotation PDF + combined price list show **Additional charges (invoiced separately)** for Dev when billing = separate, and Freight when charge > 0 and term ≠ EXW. Film slab prices stay film-only.
 
-**PDF chrome (2026-07-19):** portrait ≤4 slabs; Interplast header/footer images in `packages/server/uploads/branding/`.
+**PDF chrome (2026-07-20):** portrait ≤6 slabs; margin 18 pt; header/footer stretch full content width (`uploads/branding/`).
 
-**T&C / notice:** Quote **Terms & Conditions** on price-list panel → PDF terms block (per quote). Settings **Quotation notice** = optional override of the system-generated sentence above the letterhead footer (stored in `tenants.footer_text`).
+**T&C / notice:** Quote panel still has Terms & Conditions fields for storage; commercial PDF **does not** print a T&C block below the table (payment / shipment are in the header). Settings **Quotation notice** = optional override of the system-generated sentence above the letterhead footer (stored in `tenants.footer_text`).
 
-**Remarks (PDF):** Below Terms & Conditions, same bold + underline heading; body under it. Format default Remarks = **Show**. Quote panel order: T&C then Remarks.
+**Remarks (PDF):** Below the price table when format Show and remarks text is non-empty; bold + underline heading. Format default Remarks = **Show**.
 
 ### Premade pouch v4 — Family × Variant (2026-07-17)
 

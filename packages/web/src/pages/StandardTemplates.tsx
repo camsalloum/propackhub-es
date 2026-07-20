@@ -7,7 +7,9 @@ import { SkeletonCard } from '../components/Skeleton';
 import { ClassFilterPanel, EMPTY_CLASS_FILTER } from '../components/ClassFilterPanel';
 import { TemplateStructureCard } from '../components/TemplateStructureCard';
 import { TemplateBuilder } from '../components/TemplateBuilder';
-import { TemplateDeck } from '../components/TemplateDeck';
+import { TemplateGallery } from '../components/TemplateGallery';
+import { TemplateBrowserViewToggle } from '../components/TemplateBrowserViewToggle';
+import { useTemplateBrowserView } from '../hooks/useTemplateBrowserView';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
 import { useMaterialsContextOptional } from '../contexts/MaterialsContext';
 import { filterMaterialsForTemplateLayer, materialAllowedForTemplateLayer, inferStructureTypeFromSubstrateCount } from '@es/engine';
@@ -170,6 +172,7 @@ const StandardTemplates = () => {
     return template.createdByUserId === user?.id;
   };
 
+  const { view: browserView, setView: setBrowserView } = useTemplateBrowserView();
   const [classFilter, setClassFilter] = useState<ClassFilter>(EMPTY_CLASS_FILTER);
   const [searchTerm, setSearchTerm] = useState('');
   const [standardTemplates, setStandardTemplates] = useState<StructureTemplate[]>([]);
@@ -528,9 +531,19 @@ const StandardTemplates = () => {
   const handleSaveEdit = async () => { void 0; };
   void handleSaveEdit;
 
+  const scrollFit = browserView === 'carousel';
+
   return (
-    <div className="w-full pb-24 lg:pb-8">
-      <div className="flex flex-col gap-3 mb-6 lg:flex-row lg:items-center lg:gap-4">
+    <div
+      className={
+        scrollFit
+          ? // Fill main content viewport: desktop padding only; mobile also accounts for sticky header + bottom nav.
+            'w-full flex flex-col min-h-0 overflow-hidden ' +
+            'h-[calc(100dvh-5.5rem)] lg:h-[calc(100dvh-2.5rem)] xl:h-[calc(100dvh-4rem)]'
+          : 'w-full pb-24 lg:pb-8'
+      }
+    >
+      <div className={`flex flex-col gap-3 shrink-0 lg:flex-row lg:items-center lg:gap-4 ${scrollFit ? 'mb-3' : 'mb-6'}`}>
         <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand shrink-0">Templates</h1>
         <div className="relative flex-1 min-w-0 order-last lg:order-none">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary pointer-events-none" />
@@ -561,53 +574,60 @@ const StandardTemplates = () => {
         </div>
       </div>
 
-      <ClassFilterPanel
-        title="Filter:"
-        filter={classFilter}
-        isAllActive={isAllFiltersActive}
-        countLabel={
-          isAllFiltersActive
-            ? `${activeTemplates.length} structure${activeTemplates.length === 1 ? '' : 's'}`
-            : `${activeTemplates.length} matching`
-        }
-        onReset={() => setClassFilter(EMPTY_CLASS_FILTER)}
-        onToggleMaterial={toggleMaterialClass}
-        onTogglePrinted={togglePrinted}
-        onToggleStructure={toggleStructure}
-        countWithFilter={countWithFilter}
-      />
+      <div className={`shrink-0 ${scrollFit ? '[&>div]:!mb-2' : ''}`}>
+        <ClassFilterPanel
+          title="Filter:"
+          filter={classFilter}
+          isAllActive={isAllFiltersActive}
+          countLabel={
+            isAllFiltersActive
+              ? `${activeTemplates.length} structure${activeTemplates.length === 1 ? '' : 's'}`
+              : `${activeTemplates.length} matching`
+          }
+          onReset={() => setClassFilter(EMPTY_CLASS_FILTER)}
+          onToggleMaterial={toggleMaterialClass}
+          onTogglePrinted={togglePrinted}
+          onToggleStructure={toggleStructure}
+          countWithFilter={countWithFilter}
+        />
+      </div>
 
-      <div className="flex gap-2 mb-6 border-b border-border">
-        <button
-          type="button"
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-            pickerTab === 'standard'
-              ? 'border-accent text-accent-text'
-              : 'border-transparent text-text-secondary hover:text-text-primary'
-          }`}
-          onClick={() => setPickerTab('standard')}
-        >
-          Standard Templates
-        </button>
-        <button
-          type="button"
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-            pickerTab === 'mine'
-              ? 'border-accent text-accent-text'
-              : 'border-transparent text-text-secondary hover:text-text-primary'
-          }`}
-          onClick={() => setPickerTab('mine')}
-        >
-          My Templates
-          {myTemplates.length > 0 ? (
-            <span className="ml-1.5 text-xs font-normal text-text-secondary">({myTemplates.length})</span>
-          ) : null}
-        </button>
+      <div className={`flex items-end justify-between gap-3 border-b border-border shrink-0 ${scrollFit ? 'mb-2' : 'mb-6'}`}>
+        <div className="flex gap-2 min-w-0">
+          <button
+            type="button"
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+              pickerTab === 'standard'
+                ? 'border-accent text-accent-text'
+                : 'border-transparent text-text-secondary hover:text-text-primary'
+            }`}
+            onClick={() => setPickerTab('standard')}
+          >
+            Standard Templates
+          </button>
+          <button
+            type="button"
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+              pickerTab === 'mine'
+                ? 'border-accent text-accent-text'
+                : 'border-transparent text-text-secondary hover:text-text-primary'
+            }`}
+            onClick={() => setPickerTab('mine')}
+          >
+            My Templates
+            {myTemplates.length > 0 ? (
+              <span className="ml-1.5 text-xs font-normal text-text-secondary">({myTemplates.length})</span>
+            ) : null}
+          </button>
+        </div>
+        <div className="pb-1.5 shrink-0">
+          <TemplateBrowserViewToggle value={browserView} onChange={setBrowserView} />
+        </div>
       </div>
 
       {/* Phase 5.4: unresolved-layer banner shown when instantiate returns 409 */}
       {instantiateError && (
-        <div className="card bg-warning/10 border border-warning/40 text-sm text-text-primary flex items-start justify-between gap-3 mb-4">
+        <div className="card bg-warning/10 border border-warning/40 text-sm text-text-primary flex items-start justify-between gap-3 mb-4 shrink-0">
           <div>
             <p className="font-semibold mb-1 text-warning">⚠ Template has unresolved materials</p>
             <p>{instantiateError.message}</p>
@@ -660,11 +680,11 @@ const StandardTemplates = () => {
           )}
         </div>
       ) : (
-        <TemplateDeck
+        <TemplateGallery
+          view={browserView}
           items={activeTemplates}
           getKey={(template) => template.id}
           ariaLabel={showMyGrid ? 'My templates' : 'Standard templates'}
-          itemWidth={320}
           renderItem={(template) =>
             renderTemplateCard(template, {
               badge: showMyGrid ? 'My template' : undefined,

@@ -166,12 +166,23 @@ export const platformServiceKeys = pgTable(
   })
 );
 
+// Platform SSO — single-use handoff tokens (Phase 5)
+export const ssoTokenUses = pgTable('sso_token_uses', {
+  jti: varchar('jti', { length: 64 }).primaryKey(),
+  usedAt: timestamp('used_at', { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+}, (table) => ({
+  expiresAtIdx: index('idx_sso_token_uses_expires').on(table.expiresAt),
+}));
+
 // Tenants
 export const tenants = pgTable('tenants', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: varchar('name', { length: 255 }).notNull(),
   /** PEBI propackhub_platform companies.company_code — links ES tenant to platform tenant */
   platformCompanyCode: varchar('platform_company_code', { length: 64 }),
+  /** Platform account id from propackhub_platform.accounts — SSO tenant mapping */
+  platformAccountId: integer('platform_account_id'),
   /** Who owns RM catalog prices: tenant edit, platform publish, or PEBI sync */
   catalogSource: catalogSourceEnum('catalog_source').notNull().default('tenant'),
   type: tenantTypeEnum('type').notNull().default('individual'),
@@ -218,10 +229,15 @@ export const users = pgTable('users', {
   /** Pricing method assigned by the owner/group manager: 'markup' | 'margin_per_kg'. */
   pricingMethod: varchar('pricing_method', { length: 20 }).notNull().default('markup'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  /** PEBI platform user id — SSO identity mapping */
+  platformUserId: integer('platform_user_id'),
+  /** local | platform_sso */
+  authSource: varchar('auth_source', { length: 20 }).notNull().default('local'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
   tenantIdEmailIdx: index('users_tenant_id_email_idx').on(table.tenantId, table.email),
   tenantIdIdx: index('users_tenant_id_idx').on(table.tenantId),
+  platformTenantIdx: index('users_platform_tenant_uq').on(table.platformUserId, table.tenantId),
 }));
 
 /**
@@ -798,6 +814,12 @@ export const sessions = pgTable('sessions', {
   /** SHA-256 hash of the random refresh token (never store plaintext) */
   refreshTokenHash: varchar('refresh_token_hash', { length: 128 }).notNull().unique(),
   deviceLabel: varchar('device_label', { length: 255 }),
+  /** local | platform_sso */
+  authSource: varchar('auth_source', { length: 20 }).notNull().default('local'),
+  platformAccountId: integer('platform_account_id'),
+  entitlementVersion: integer('entitlement_version'),
+  /** SSO sessions never refresh past this wall-clock time (8h from handoff). */
+  absoluteExpiresAt: timestamp('absolute_expires_at', { withTimezone: true }),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
   lastUsedAt: timestamp('last_used_at', { withTimezone: true }),

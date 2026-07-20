@@ -1,0 +1,29 @@
+# Estimation Studio — deploy workflow (stub)
+
+# Host apply is DEFERRED until camai SSH works.
+# This workflow only validates the release artifact locally in CI.
+
+name: Deploy ES (staging stub)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type deploy-es to acknowledge SSH is available'
+        required: true
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse until SSH path ready
+        if: ${{ github.event.inputs.confirm != 'deploy-es' }}
+        run: |
+          echo "Refusing deploy. Confirm with input deploy-es after SSH works."
+          exit 1
+      - name: Placeholder
+        if: ${{ github.event.inputs.confirm == 'deploy-es' }}
+        run: |
+          echo "Wire Tailscale + scripts/deploy-es.sh here (see platform/docs/SAAS_RELEASE_GOVERNANCE.md)."
+          echo "Do not auto-deploy to production from this stub."
+          exit 1

@@ -13,6 +13,12 @@ import {
   LOGIN_TIMING_DUMMY_HASH,
 } from '../utils/auth';
 import { eq } from 'drizzle-orm';
+import { verifyEsSsoToken } from '../auth/sso';
+import { ensureUserFromSso, isSsoOnlyUser, resolveTenantForSso } from '../auth/sso-user';
+import {
+  isLocalLoginEnabled,
+  isPublicRegistrationEnabled,
+} from '../utils/product-env';
 import { seedMaterialsForTenant } from '../db/seed-materials';
 import { seedTemplatesForTenant } from '../db/seed-templates';
 import { ensureCategoriesForTenant } from '../db/seed-categories';
@@ -43,7 +49,11 @@ export async function registerRoute(
   reply: FastifyReply
 ) {
   try {
-    const { email, password, displayName, tenantName, tenantType, displayCurrency } = 
+    if (!isPublicRegistrationEnabled()) {
+      return reply.status(403).send({ error: 'Registration is disabled' });
+    }
+
+    const { email, password, displayName, tenantName, tenantType, displayCurrency } =
       RegisterSchema.parse(request.body);
 
     const db = getDatabase();
@@ -168,6 +178,10 @@ export async function loginRoute(
   reply: FastifyReply
 ) {
   try {
+    if (!isLocalLoginEnabled()) {
+      return reply.status(403).send({ error: 'Local login is disabled — use ProPackHub SSO' });
+    }
+
     const { email, password } = LoginSchema.parse(request.body);
 
     const loadUserAndTenant = async () => {
@@ -218,6 +232,10 @@ export async function loginRoute(
 
     if (!user) {
       return reply.status(401).send({ error: 'Invalid credentials' });
+    }
+
+    if (isSsoOnlyUser(user)) {
+      return reply.status(403).send({ error: 'Use ProPackHub SSO to sign in' });
     }
 
     if (!tenant) {
@@ -389,9 +407,57 @@ export async function registerAuthRoutes(fastify: FastifyInstance) {
 
   fastify.get('/api/v1/auth/me', async (request, reply) => meRoute(fastify, request, reply));
 
-  // NOTE: ES and PEBI are separate products with separate users and separate licenses.
-  // No cross-app navigation, no SSO. This route is intentionally disabled (PEBI_SSO_URL not set).
-  // Kept as a stub in case platform-level entitlement checks are needed in the future.
+  /**
+   * Platform SSO callback (nginx proxies /auth/ → API).
+   * Verifies PPH handoff JWT, durable single-use jti, JIT user by platform_user_id.
+   */
+  fastify.get<{ Querystring: { token?: string; state?: string } }>(
+    '/auth/callback',
+    async (request, reply) => {
+      const token = request.query.token;
+      const state = request.query.state;
+      const webBase = (process.env.CORS_ORIGIN || 'http://localhost:5000').replace(/\/$/, '');
+
+      if (!token || !state) {
+        return reply.status(400).send({ error: 'Missing token or state' });
+      }
+
+      try {
+        const payload = await verifyEsSsoToken(token, state);
+
+        const tenant = await resolveTenantForSso(payload);
+        if (!tenant) {
+          return reply.redirect(`${webBase}/login?sso_error=tenant_not_provisioned`);
+        }
+
+        const user = await ensureUserFromSso(payload, tenant);
+
+        const accessToken = fastify.jwt.sign({
+          userId: user.id,
+          tenantId: user.tenantId,
+          email: user.email,
+          role: user.role,
+        });
+        const refreshToken = await createSession({
+          userId: user.id,
+          tenantId: user.tenantId,
+          deviceLabel: 'platform_sso',
+          authSource: 'platform_sso',
+          platformAccountId: payload.accountId ?? null,
+        });
+
+        // Land on dashboard so the SPA never flashes the native login form.
+        return reply.redirect(
+          `${webBase}/dashboard#token=${encodeURIComponent(accessToken)}&refresh=${encodeURIComponent(refreshToken)}`
+        );
+      } catch (error) {
+        request.log.warn({ err: error }, 'Platform SSO callback failed');
+        return reply.redirect(`${webBase}/login?sso_error=handoff_failed`);
+      }
+    }
+  );
+
+  // Legacy stub — product picker uses PPH POST /api/platform/sso/es instead.
   fastify.get('/api/v1/auth/sso/pebi', async (_request, reply) => {
     const baseUrl = process.env.PEBI_SSO_URL || '';
     const returnUrl = process.env.ES_PUBLIC_URL || process.env.CORS_ORIGIN || 'http://localhost:5000';

@@ -180,6 +180,9 @@ async function main() {
   console.log(`Login:    ${ADMIN_EMAIL}`);
   console.log(`Password: ${ADMIN_PASSWORD} (PEBI dev parity; change in production)`);
   console.log(`Owner:    ${PLATFORM_OWNER_EMAIL} (platform_admin — separate tenant)`);
+  console.log('\nPEBI SSO mapping (local): from apps/pph run');
+  console.log('  node server/scripts/ensure-es-tenant-mapping.js');
+  console.log('See packages/server/scripts/README-pebi-es-sso.md');
 
   await closeDatabase();
 }

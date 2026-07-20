@@ -1,0 +1,36 @@
+# Local PEBI ↔ ES SSO setup (Interplast)
+
+Platform SSO handoff (`issueEsHandoffUrl` in PPH) resolves the ES tenant slug from
+`account_app_instances` where `app_key = 'es'`. For local Interplast dev, seed that
+mapping once on the PPH platform database.
+
+## Prerequisites
+
+1. PPH Phase 1 migration applied (`platform_accounts`, `account_app_instances`).
+2. ES tenant provisioned: `npm run db:provision-interplast --workspace=packages/server`
+3. Same `ES_SSO_SECRET` in PPH `server/.env` and ES `packages/server/.env`.
+4. ES migration `0023_platform_sso` applied: `npm run db:migrate --workspace=packages/server`
+
+## Seed PEBI account → ES tenant mapping
+
+From `apps/pph`:
+
+```bash
+node server/scripts/ensure-es-tenant-mapping.js
+```
+
+Dry run:
+
+```bash
+node server/scripts/ensure-es-tenant-mapping.js --dry-run
+```
+
+This upserts `account_app_instances` for Interplast: `app_key=es`, `product_tenant_key=interplast`.
+
+## Verify end-to-end (local)
+
+1. Log in to PPH as an Interplast user with ES entitlement.
+2. Open Estimation Studio from the product picker (or `POST /api/platform/sso/es`).
+3. Browser lands on ES `/dashboard#token=…&refresh=…` and enters the app without re-entering password.
+
+Staging/camai apply remains SSH-only — not covered here.

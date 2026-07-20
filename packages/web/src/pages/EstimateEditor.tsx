@@ -1433,6 +1433,8 @@ const EstimateEditor = ({
       // create payload drops the key and the saved estimate unlocks unexpectedly.
       sourceTemplateKey: estimate?.sourceTemplateKey?.trim() || undefined,
       quoteId: estimate?.quoteId || quoteIdFromUrl || undefined,
+      // New price check has no quote yet — server auto-creates parent with this flag.
+      ...(isPriceCheck && !(estimate?.quoteId || quoteIdFromUrl) ? { isPriceCheck: true } : {}),
       layers: layers.map((l, i) => ({
         materialId: l.materialId,
         micron: Number(l.micron),

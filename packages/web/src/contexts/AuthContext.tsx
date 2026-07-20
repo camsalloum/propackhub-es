@@ -55,7 +55,6 @@ async function establishSession(): Promise<{ user: AuthUser; tenant: AuthTenant 
 }
 
 async function restoreSession(): Promise<{ user: AuthUser; tenant: AuthTenant } | null> {
-  await apiClient.init();
   const refresh = apiClient.getRefreshToken();
   const token = apiClient.getToken();
 
@@ -97,6 +96,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     void (async () => {
       try {
+        await apiClient.init();
+        const fromRedirect = await apiClient.applyAuthRedirectFromUrl();
+        if (fromRedirect) {
+          const session = await establishSession();
+          setUser(session.user);
+          setTenant(session.tenant);
+          setIsAuthenticated(true);
+          setAuthReady(true);
+          return;
+        }
+
         const session = await restoreSession();
         if (session) {
           setUser(session.user);

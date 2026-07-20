@@ -221,6 +221,43 @@ export class ApiClient {
     await tokenStore.setRefreshToken(token);
   }
 
+  /**
+   * After platform SSO redirect, read token pair from URL hash or query and persist.
+   * Strips credentials from the address bar. Returns true when tokens were applied.
+   */
+  async applyAuthRedirectFromUrl(): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+
+    const parsePair = (params: URLSearchParams) => {
+      const token = params.get('token');
+      const refresh = params.get('refresh');
+      if (token && refresh) return { token, refresh };
+      return null;
+    };
+
+    const hash = window.location.hash.startsWith('#')
+      ? window.location.hash.slice(1)
+      : window.location.hash;
+    const fromHash = parsePair(new URLSearchParams(hash));
+    if (fromHash) {
+      const search = window.location.search;
+      window.history.replaceState(null, '', `${window.location.pathname}${search}`);
+      await this.setToken(fromHash.token);
+      await this.setRefreshToken(fromHash.refresh);
+      return true;
+    }
+
+    const fromQuery = parsePair(new URLSearchParams(window.location.search));
+    if (fromQuery) {
+      window.history.replaceState(null, '', window.location.pathname);
+      await this.setToken(fromQuery.token);
+      await this.setRefreshToken(fromQuery.refresh);
+      return true;
+    }
+
+    return false;
+  }
+
   getRefreshToken() {
     if (!this.refreshTokenValue && !Capacitor.isNativePlatform()) {
       this.refreshTokenValue = localStorage.getItem('refresh_token');

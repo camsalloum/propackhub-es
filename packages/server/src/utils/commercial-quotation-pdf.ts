@@ -55,7 +55,8 @@ export type CommercialQuotationInput = {
 export const DEFAULT_QUOTATION_NOTICE =
   'This is a system-generated quotation and does not require a signature.';
 
-const MARGIN = 36;
+/** Page margin (pt) — keep header/footer close to paper edge. */
+const MARGIN = 18;
 const HEADER_PLACEHOLDER_PT = 80;
 const FOOTER_PLACEHOLDER_PT = 48;
 
@@ -190,22 +191,23 @@ export async function renderCommercialQuotationPdf(
   const skuCount = Math.max(1, input.rows.length);
   const gapAfterHeader = skuCount <= 2 ? 28 : skuCount <= 4 ? 18 : 12;
   const gapAfterMeta = skuCount <= 2 ? 26 : skuCount <= 4 ? 18 : 12;
-  const gapBeforeTermsMin = 36; // ~3 lines
-  const gapBeforeTermsIdeal = 48; // ~4 lines
+  const gapBeforeRemarksMin = 36; // ~3 lines
+  const gapBeforeRemarksIdeal = 48; // ~4 lines
 
   const bodyTop = () => MARGIN + headerH + gapAfterHeader;
   /** Leave room above footer for the pinned system notice. */
   const bodyBottom = () => pageHeight() - MARGIN - footerH - NOTICE_H - 10;
 
   const drawChrome = () => {
+    // Always use live page content width so landscape fills edge-to-edge between margins.
     const w = contentWidth();
 
     if (headerImage) {
       try {
+        // Stretch to full content box — PDFKit `fit` preserves aspect and leaves side gaps in landscape.
         doc.image(headerImage, MARGIN, MARGIN, {
-          fit: [w, headerH],
-          align: 'center',
-          valign: 'center',
+          width: w,
+          height: headerH,
         });
       } catch {
         cellText(doc, 'Header image failed to load', MARGIN, MARGIN + headerH / 2 - 6, {
@@ -234,9 +236,8 @@ export async function renderCommercialQuotationPdf(
     if (footerImage) {
       try {
         doc.image(footerImage, MARGIN, fy, {
-          fit: [w, footerH],
-          align: 'center',
-          valign: 'center',
+          width: w,
+          height: footerH,
         });
       } catch {
         cellText(doc, 'Footer image failed to load', MARGIN, fy + footerH / 2 - 6, {
@@ -286,7 +287,6 @@ export async function renderCommercialQuotationPdf(
   const metaTop = y;
   const leftW = contentWidth() * 0.42;
   const rightW = contentWidth() * 0.32;
-  const centerX = MARGIN + leftW;
   const rightX = pageWidth() - MARGIN - rightW;
   const lineH = 12;
 
@@ -325,9 +325,10 @@ export async function renderCommercialQuotationPdf(
   }
   const leftBottom = ly;
 
+  // Full page width — not the middle column between left/right meta blocks.
   doc.fontSize(16).fillColor(accent);
-  cellText(doc, 'QUOTATION', centerX, metaTop + 8, {
-    width: contentWidth() - leftW - rightW,
+  cellText(doc, 'QUOTATION', MARGIN, metaTop + 8, {
+    width: contentWidth(),
     align: 'center',
   });
 
@@ -571,48 +572,23 @@ export async function renderCommercialQuotationPdf(
     doc.font('Helvetica');
   };
 
-  // —— Terms then Remarks (same heading style) ——
-  const hasTermsBlock = show('termsBlock');
+  // —— Remarks only (T&C omitted — payment / shipment already in meta header) ——
   const remarksText = input.remarks?.trim() || '';
   const hasRemarks = show('remarks') && Boolean(remarksText);
 
-  if (hasTermsBlock || hasRemarks) {
-    const roomBelow = maxY() - y;
-    let gapBeforeTerms = gapBeforeTermsIdeal;
-    if (roomBelow > 160) {
-      gapBeforeTerms = Math.min(72, Math.max(gapBeforeTermsIdeal, Math.round(roomBelow * 0.22)));
-    } else if (roomBelow < 100) {
-      gapBeforeTerms = gapBeforeTermsMin;
-    }
-    y += gapBeforeTerms;
-  }
-
-  if (hasTermsBlock) {
-    ensureSpace(60);
-    drawSectionHeading('Terms & Conditions');
-
-    const terms =
-      input.termsAndConditions?.trim() ||
-      [
-        show('paymentTerms') && input.paymentTerms ? `Payment: ${input.paymentTerms}` : null,
-        show('deliveryTerm') && input.deliveryTerm
-          ? `Delivery terms: ${input.deliveryTerm}`
-          : null,
-      ]
-        .filter(Boolean)
-        .join('\n');
-
-    const tLines = wrapLines(doc, terms, contentWidth(), 8);
-    ensureSpace(tLines.length * 10 + 8);
-    doc.fontSize(8).fillColor('#444444');
-    for (const line of tLines) {
-      cellText(doc, line, MARGIN, y, { width: contentWidth() });
-      y += 10;
-    }
-  }
-
   if (hasRemarks) {
-    y += hasTermsBlock ? 16 : 0;
+    const roomBelow = maxY() - y;
+    let gapBeforeRemarks = gapBeforeRemarksIdeal;
+    if (roomBelow > 160) {
+      gapBeforeRemarks = Math.min(
+        72,
+        Math.max(gapBeforeRemarksIdeal, Math.round(roomBelow * 0.22))
+      );
+    } else if (roomBelow < 100) {
+      gapBeforeRemarks = gapBeforeRemarksMin;
+    }
+    y += gapBeforeRemarks;
+
     ensureSpace(40);
     drawSectionHeading('Remarks');
     const rLines = wrapLines(doc, remarksText, contentWidth(), 8);

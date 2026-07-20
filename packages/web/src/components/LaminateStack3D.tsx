@@ -1,9 +1,8 @@
-// LaminateStack3D — exploded isometric substrate stack for template cards.
-//
-// Shows substrate films only (no ink/adhesive). Flat color per material family.
+// LaminateStack3D — photorealistic exploded laminate preview for template cards.
+// Substrate count maps to pre-rendered monochrome stack assets (1–5+).
 
-import { useMemo, useRef, type CSSProperties, type PointerEvent } from 'react';
-import { isSubstrateLayerType, substrateFilmStyle } from '../lib/materialFamily';
+import { useMemo, useRef, type PointerEvent } from 'react';
+import { isSubstrateLayerType } from '../lib/materialFamily';
 
 export interface LaminateStack3DLayer {
   id: string;
@@ -15,20 +14,26 @@ export interface LaminateStack3DLayer {
 
 const TAP_THRESHOLD_PX = 8;
 
+/** Public assets — monochrome premium isometric renders. */
+const STACK_SRC: Record<number, string> = {
+  1: '/laminate-stacks/stack-1.png',
+  2: '/laminate-stacks/stack-2.png',
+  3: '/laminate-stacks/stack-3.png',
+  4: '/laminate-stacks/stack-4.png',
+  5: '/laminate-stacks/stack-5.png',
+};
+
+function stackSrcForCount(count: number): string {
+  if (count <= 1) return STACK_SRC[1];
+  if (count >= 5) return STACK_SRC[5];
+  return STACK_SRC[count] ?? STACK_SRC[4];
+}
+
 interface LaminateStack3DProps {
   layers: LaminateStack3DLayer[];
   expanded?: boolean;
   onToggle?: () => void;
   className?: string;
-}
-
-/** Z offsets — layer 1 (print side) is closest / on top. */
-function substrateZOffsets(count: number): number[] {
-  if (count === 0) return [];
-  if (count === 1) return [0];
-  const step = 26;
-  const mid = (count - 1) / 2;
-  return Array.from({ length: count }, (_, i) => (mid - i) * step);
 }
 
 export function LaminateStack3D({
@@ -41,7 +46,8 @@ export function LaminateStack3D({
     () => layers.filter((l) => isSubstrateLayerType(l.type)),
     [layers],
   );
-  const zOffsets = useMemo(() => substrateZOffsets(substrates.length), [substrates.length]);
+  const count = substrates.length;
+  const src = stackSrcForCount(count);
 
   const downRef = useRef<{ x: number; y: number } | null>(null);
   const draggedRef = useRef(false);
@@ -86,36 +92,32 @@ export function LaminateStack3D({
     }
   };
 
-  if (substrates.length === 0) return null;
+  if (count === 0) return null;
 
   return (
     <div
-      className={`lam3d${onToggle ? ' lam3d--tappable' : ''} ${className ?? ''}`}
+      className={`lam3d${onToggle ? ' lam3d--tappable' : ''}${expanded ? ' lam3d--expanded' : ''} ${className ?? ''}`}
       role={onToggle ? 'button' : undefined}
       tabIndex={onToggle ? 0 : undefined}
       aria-expanded={onToggle ? expanded : undefined}
-      aria-label={onToggle ? `Substrate stack, ${expanded ? 'collapse' : 'expand'}` : undefined}
+      aria-label={
+        onToggle
+          ? `Substrate stack, ${count} layers, ${expanded ? 'collapse' : 'expand'}`
+          : `Substrate stack, ${count} layers`
+      }
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
       onKeyDown={onKeyDown}
     >
-      <div className="lam3d__stack">
-        {substrates.map((layer, i) => (
-          <div
-            key={layer.id}
-            className="lam3d__slab"
-            style={
-              {
-                '--slab-z': `${zOffsets[i]}px`,
-                zIndex: substrates.length - i,
-                ...substrateFilmStyle(layer.material, layer.family),
-              } as CSSProperties
-            }
-          />
-        ))}
-      </div>
+      <img
+        className="lam3d__render"
+        src={src}
+        alt=""
+        draggable={false}
+        decoding="async"
+      />
     </div>
   );
 }

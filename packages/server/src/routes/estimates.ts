@@ -203,6 +203,8 @@ const EstimateCreateSchema = z.object({
   processesCustomized: z.boolean().optional(),
   // Multi-SKU quote fields
   quoteId: z.string().uuid().optional(),
+  /** When creating without quoteId: mark the auto-created parent as a price check. */
+  isPriceCheck: z.boolean().optional(),
   skuLabel: z.string().max(255).optional().nullable(),
   brand: z.string().max(255).optional().nullable(),
   specsCode: z.string().max(64).optional().nullable(),
@@ -369,6 +371,10 @@ export async function createEstimateRoute(
         sortOrder = await nextEstimateSortOrder(db, quote.id);
       }
     } else {
+      const asPriceCheck = data.isPriceCheck === true;
+      if (asPriceCheck) {
+        customerId = null;
+      }
       let paymentTerms: string | null = null;
       let deliveryTerm = data.deliveryTerm ?? 'EXW';
       if (customerId) {
@@ -386,16 +392,17 @@ export async function createEstimateRoute(
       }
       const quote = await createQuote(db, {
         tenantId,
-        customerId,
+        customerId: asPriceCheck ? null : customerId,
         name: data.jobName,
         displayCurrency,
         exchangeRateUsdToDisplay,
         status: mapEstimateStatusToQuoteStatus(data.status),
-        deliveryTerm,
-        paymentTerms,
+        deliveryTerm: asPriceCheck ? null : deliveryTerm,
+        paymentTerms: asPriceCheck ? null : paymentTerms,
         defaultPrintColorCount: printColorCount,
         defaultCostPerColor: costPerColor,
         defaultToolingBillingMode: toolingBillingMode,
+        isPriceCheck: asPriceCheck,
       });
       quoteId = quote.id;
     }
@@ -1597,7 +1604,7 @@ async function estimatesByCustomerRoute(
           ELSE NULL
         END)::int AS "draftQuoteCount"
       FROM quotes q
-      LEFT JOIN estimates e
+      INNER JOIN estimates e
         ON e.quote_id = q.id
         AND e.tenant_id = q.tenant_id
         AND e.deleted_at IS NULL

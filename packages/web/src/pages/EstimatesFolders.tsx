@@ -106,25 +106,9 @@ const EstimatesFolders = () => {
     }
   };
 
-  const startPriceCheck = async () => {
-    if (creating) return;
-    setCreating(true);
-    try {
-      const quote = await apiClient.createQuote({
-        name: `Price check · ${new Date().toLocaleDateString(undefined, {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        })}`,
-        customerId: null,
-        isPriceCheck: true,
-      });
-      navigate(`/estimate/choose?quote=${quote.id}&priceCheck=1`);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to start price check');
-    } finally {
-      setCreating(false);
-    }
+  /** Local session only — quote row is created on first Save draft / Save. */
+  const startPriceCheck = () => {
+    navigate('/estimate/choose?priceCheck=1');
   };
 
   const openRepeatOrder = (customerId: string) => {
@@ -166,10 +150,9 @@ const EstimatesFolders = () => {
           <button
             type="button"
             className="btn-secondary"
-            disabled={creating}
-            onClick={() => void startPriceCheck()}
+            onClick={() => startPriceCheck()}
           >
-            {creating ? 'Starting…' : 'Price check'}
+            Price check
           </button>
           <button
             type="button"
@@ -238,8 +221,7 @@ const EstimatesFolders = () => {
                 <button
                   type="button"
                   className="btn-secondary"
-                  disabled={creating}
-                  onClick={() => void startPriceCheck()}
+                  onClick={() => startPriceCheck()}
                 >
                   Price check
                 </button>

@@ -30,6 +30,20 @@
 
 ---
 
+## 2026-07-20 — Double login after ProPackHub SSO
+
+- **Symptom:** Sign in on ProPackHub (main or ES skin) → Estimation Studio asks for password again.
+- **Root cause:** `ES_SSO_SECRET` / `ES_PUBLIC_URL` missing locally; `openEstimationStudio` fell back to bare ES URL; Vite did not proxy `/auth/callback` to API `:5001`.
+- **Fix:** Shared secret in both `.env`s; Vite `/auth` proxy; success redirect to `/dashboard#token=`; `requireSso` so failures surface on hub instead of a second login.
+
+### Follow-up: 403 not entitled
+
+- Local ES at `:5000` with direct login was fine; hub SSO returned 403.
+- Interplast lacked `app_subscriptions` for `es`; membership gate short-circuited to PEBI-only.
+- Grant via `node server/scripts/ensure-es-entitlement.js` (from `apps/pph`); fallthrough in `entitlementService.getAppsForUser`.
+
+---
+
 ## 2026-07-19 — SaaS normalization planning
 
 - Audited ES deploy/runtime prerequisites against PEBI and FS.
@@ -40,6 +54,18 @@
 - Planned ES production additions include `es-postgres`, pm2/nginx, versioned
   release artifacts, compiled migration CLI, persistent branding uploads,
   `platform_account_id` tenant mapping, and single-use SSO JTI storage.
+
+### 2026-07-19 — Phase 5 local SSO (complete)
+
+- Migration `0023_platform_sso`: `sso_token_uses`, tenant `platform_account_id`,
+  user `platform_user_id` + `auth_source`, session SSO metadata + 8h absolute cap.
+- `/auth/callback`: verifies PPH handoff JWT, durable JTI, JIT user by
+  `(platform_user_id, tenant_id)`, issues normal access+refresh tokens.
+- `PRODUCT_LOCAL_LOGIN_ENABLED` / `PRODUCT_PUBLIC_REGISTRATION_ENABLED` gates;
+  SSO-only users cannot password-login.
+- Web consumes `#token=` / `#refresh=` on `/login` after redirect.
+- PEBI: `ensure-es-tenant-mapping.js` seeds Interplast `account_app_instances`
+  (`es` → `interplast`). Staging/camai E2E still SSH-only.
 
 ---
 
@@ -215,10 +241,59 @@ UI quick action: **Add metallized barrier** → 3 rows above PE.
 
 ## Session log
 
+### 2026-07-20 — TemplateDeck FAN_X crash (`/templates` Scroll)
+
+- Cause: carousel size refactor removed module `FAN_X` / `DRAG_STEP_PX` while DeckCard `useTransform` still needed a fan offset (HMR left a broken intermediate).
+- Fix: `fanXForWidth` / `dragStepForWidth` + restored `FAN_X = fanXForWidth(400)` fallback; DeckCard uses width-scaled fan. Viewport-fit Scroll CSS kept.
+- Secondary console noise (materials/master-data 500, explorer 401/403, instantiate 409) not same root cause — left alone.
+- **Ops:** hard-refresh `/templates`.
+
+### 2026-07-20 — Templates Scroll viewport fit (no mid-page gap)
+
+- Cause: deck stage `height: clamp(580px, 74vh, 760px)` + cards at `top: 50%` sat mid-page under filters and forced vertical scroll.
+- Fix: Scroll mode page shell `calc(100dvh…)` flex column; deck `height: 100%` / `flex-1 min-h-0`; card bias `top: 46%`; laminate slightly shrinks via vh clamp inside `.deck`.
+- Scroll|Grid toggle moved onto tabs row; Grid still page-scrolls.
+- **Ops:** hard-refresh `/templates` → Scroll.
+
+### 2026-07-20 — Template cards: larger size + Scroll/Grid views
+
+- Card width 320→400; laminate graphic area taller (~208px); deck stage taller for larger cards.
+- Two layouts on Templates: **Scroll** (existing TemplateDeck carousel) and **Grid** (responsive wrap, page scrolls).
+- Toggle top-right of gallery; preference `localStorage` key `es.templateBrowserView`.
+- Extracted `TemplateGallery` + `TemplateBrowserViewToggle` + `useTemplateBrowserView` (avoid growing StandardTemplates further).
+
+### 2026-07-20 — Laminate card stack → photorealistic assets
+
+- Replaced flat blue CSS/isometric `lam3d` slabs with monochrome premium PNG renders (clear → chrome → frosted → opaque).
+- Assets: `packages/web/public/laminate-stacks/stack-{1..5}.png`; substrate count selects asset.
+- `LaminateStack3D` + card `overflow-hidden`; graphic no longer clips title/meta.
+- **See:** Estimate Start → Browse templates / Standard Templates carousel (hard-refresh).
+
+### 2026-07-20 — Quotation PDF title center + drop T&C block
+
+- **QUOTATION** title: centered on full content width (was offset to middle column between left/right meta).
+- Removed **Terms & Conditions** section under the price table (redundant with header payment / shipment). **Remarks** kept when Show + non-empty.
+- Format: `termsBlock` default hide; removed from Settings field list.
+- **Ops:** restart ES API; re-download PDF to verify.
+
+### 2026-07-20 — Quotation PDF chrome + orientation
+
+- Header/footer images: stretch to full content width (`width`/`height`) — PDFKit `fit` left side gaps in landscape.
+- Page margin 36 → 18 pt (closer to paper edge).
+- Portrait up to **6** slab columns; landscape when **7+** (`quotationPageOrientation`).
+- **Ops:** rebuild `@es/engine` if needed; restart ES; re-download PDF with 5–6 and 7+ slabs.
+
+### 2026-07-19 — Phases 4–6 local scaffolding (deploy + SSO skeleton + hub landing)
+
+- **Deploy:** `deploy/*`, `scripts/*-es.sh`, `ES_CAMAI_DEPLOYMENT_RUNBOOK.md`; `RUN_MIGRATIONS_ON_BOOT` gate (default off prod); `src/migrate.ts` + tsup entry.
+- **SSO:** `GET /auth/callback` verifies PPH handoff (`ES_SSO_SECRET`); issues session when tenant+user exist; JIT provisioning TODO.
+- **Hub:** PPH `POST /api/platform/sso/es`, `openEstimationStudio.js`, landing ES card (coming soon), picker `es` tile. Catalog stays `coming_soon`.
+- **Ops:** camai SSH apply deferred; migrate via `npm run db:migrate --workspace=packages/server`.
+
 ### 2026-07-19 — Remarks under Terms on quotation PDF
 
-- PDF: **Remarks** section directly under **Terms & Conditions**, same bold + underline heading; body text below.
-- Quote panel: T&C then Remarks. Format default Remarks = Show.
+- PDF: **Remarks** section under the price table (T&C block later removed 2026-07-20). Format default Remarks = Show.
+- Quote panel still has T&C then Remarks fields for storage.
 - **Ops:** restart ES; if Format hid Remarks, set Show; re-download PDF.
 
 ### 2026-07-17 — Quote commercial fields linked to PEBI / estimate
@@ -1612,7 +1687,7 @@ Not every company subscribes to both PEBI and ES. **IP/FP (Interplast) is linked
 **Quotation PDF:**
 - Replaces multi-SKU fallback layout for quote PDF path (`buildQuoteProposalPdfBuffer`).
 - Header/footer placeholders: `packages/server/assets/quotation/{header,footer}-placeholder.png` (Interplast letterhead + Harwal strip) — drawn every page.
-- Orientation: ≤3 slab columns → portrait; 4+ → landscape.
+- Orientation: ≤6 slab columns → portrait; 7+ → landscape.
 - Meta block Interplast-inspired (Date / M/S / Attn / Ref / Currency / Validity); SKU × slab price matrix from prefs + rounding.
 - Smoke: `npx tsx packages/server/scripts/smoke-quotation-pdf.ts` → `packages/server/uploads/smoke-quotation-*.pdf`.
 - After pull: `npm run build` in `packages/engine` so server/web see new exports.

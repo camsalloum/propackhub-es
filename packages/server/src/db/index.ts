@@ -168,8 +168,11 @@ export async function initializeDatabase(): Promise<NodePgDatabase<typeof schema
     throw error;
   }
 
-  // Run migrations automatically in non-dev environments
-  if (process.env.NODE_ENV !== 'development') {
+  // Boot migrations: off by default in production-like envs (use migrate-es.sh / db:migrate).
+  // Development never auto-migrates on boot. Set RUN_MIGRATIONS_ON_BOOT=true to opt in.
+  const isDev = process.env.NODE_ENV === 'development';
+  const runOnBoot = parseEnvBool('RUN_MIGRATIONS_ON_BOOT', false);
+  if (!isDev && runOnBoot) {
     await runMigrations(pool);
   }
 

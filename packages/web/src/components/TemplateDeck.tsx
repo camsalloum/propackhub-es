@@ -7,9 +7,10 @@
 // from its signed distance to it.
 //
 // Contained + horizontal by design:
-//   - It never hijacks the page's vertical scroll: `touch-action: pan-y` hands
-//     vertical gestures back to the page, and a pointer move that is mostly
-//     vertical is abandoned so the page scrolls normally.
+//   - Scroll mode fills remaining viewport under filters (parent flex-1); L/R
+//     nav only — no need to scroll the page for a typical laptop height.
+//   - `touch-action: pan-y` hands residual vertical gestures back to the page,
+//     and a pointer move that is mostly vertical is abandoned.
 //   - A horizontal swipe moves between CARDS only — never pages/history: we own
 //     the horizontal gesture and `preventDefault` it, and the stage clips
 //     overflow so there is no scrollbar and nothing to navigate to.
@@ -25,15 +26,18 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, useMotionValue, useTransform, animate, type MotionValue } from 'motion/react';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 
-const FAN_X = 210; // px a neighbour fans sideways per unit of distance
-const RECEDE_Z = 260; // px a neighbour recedes into depth per unit of distance
+const RECEDE_Z = 280; // px a neighbour recedes into depth per unit of distance
 const ROT_Y = 20; // deg of turn per unit of distance
 const SCALE_STEP = 0.16;
 const OPACITY_STEP = 0.5;
-const DRAG_STEP_PX = 260; // horizontal drag distance that advances one card
 const WHEEL_STEP_PX = 200; // horizontal wheel delta that advances one card (trackpad)
 const DRAG_THRESHOLD = 8; // px before a pointer move counts as a drag
 const NEIGHBOUR_CLICK_RANGE = 2; // how many cards each side accept click-to-front
+/** Side fan (px per unit of distance) scales with card width so larger cards do not overlap. */
+const fanXForWidth = (width: number) => Math.round(width * 0.66);
+const dragStepForWidth = (width: number) => Math.max(260, Math.round(width * 0.75));
+/** Default fan offset for the default 400px card — kept so transforms never rely on a removed literal. */
+const FAN_X = fanXForWidth(400);
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
@@ -57,8 +61,9 @@ interface DeckCardProps {
 }
 
 function DeckCard({ progress, index, active, reduced, width, onSelect, children }: DeckCardProps) {
+  const fanX = width > 0 ? fanXForWidth(width) : FAN_X;
   const delta = useTransform(progress, (p) => index - p);
-  const x = useTransform(delta, (d) => d * FAN_X);
+  const x = useTransform(delta, (d) => d * fanX);
   const z = useTransform(delta, (d) => (reduced ? 0 : -Math.abs(d) * RECEDE_Z));
   const rotateY = useTransform(delta, (d) => (reduced ? 0 : d * -ROT_Y));
   const scale = useTransform(delta, (d) => Math.max(0.55, 1 - Math.abs(d) * SCALE_STEP));
@@ -111,7 +116,7 @@ export function TemplateDeck<T>({
   getKey,
   renderItem,
   ariaLabel,
-  itemWidth = 300,
+  itemWidth = 400,
   className,
 }: TemplateDeckProps<T>) {
   const reduced = useReducedMotion();
@@ -120,6 +125,7 @@ export function TemplateDeck<T>({
   const [active, setActive] = useState(0);
   const deckRef = useRef<HTMLDivElement>(null);
   const progressAnim = useRef<ReturnType<typeof animate> | null>(null);
+  const dragStepPx = dragStepForWidth(itemWidth);
 
   const setActiveClamped = useCallback((i: number) => setActive((_) => clamp(i, 0, n - 1)), [n]);
 
@@ -194,7 +200,7 @@ export function TemplateDeck<T>({
       (e.currentTarget as HTMLElement).setPointerCapture?.(d.id);
     }
     e.preventDefault();
-    progress.set(clamp(d.startProg - dx / DRAG_STEP_PX, 0, n - 1));
+    progress.set(clamp(d.startProg - dx / dragStepPx, 0, n - 1));
   };
 
   const endDrag = (e: React.PointerEvent) => {

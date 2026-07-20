@@ -49,7 +49,7 @@ export const QUOTATION_FIELD_META: Array<{
   { key: 'paymentTerms', label: 'Payment terms', group: 'commercial' },
   { key: 'remarks', label: 'Remarks', group: 'commercial' },
   { key: 'salesperson', label: 'Salesperson', group: 'commercial' },
-  { key: 'termsBlock', label: 'Terms & conditions block', group: 'commercial' },
+  // termsBlock kept on QuotationFieldKey for saved prefs; not offered in Settings (PDF omits T&C).
 ];
 
 export const DEFAULT_QUOTATION_FORMAT: QuotationFormatPrefs = {
@@ -71,7 +71,7 @@ export const DEFAULT_QUOTATION_FORMAT: QuotationFormatPrefs = {
     quoteName: 'show',
     remarks: 'show',
     salesperson: 'hide',
-    termsBlock: 'show',
+    termsBlock: 'hide',
   },
 };
 

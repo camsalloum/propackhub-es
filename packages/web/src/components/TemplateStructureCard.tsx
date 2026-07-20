@@ -69,7 +69,7 @@ export function TemplateStructureCard({
   return (
     <div
       ref={cardRef}
-      className="card !p-0 overflow-visible flex flex-col h-full"
+      className="card !p-0 overflow-hidden flex flex-col h-full"
       data-interactive="true"
       data-stack-expanded={stackExpanded ? 'true' : undefined}
     >
@@ -82,14 +82,14 @@ export function TemplateStructureCard({
       )}
 
       <div className="rounded-b-2xl bg-surface-raised overflow-hidden flex flex-col flex-1 min-h-0">
-      <div className="px-3 pt-2.5 pb-2 flex-1 min-w-0">
+      <div className="px-4 pt-3 pb-2.5 flex-1 min-w-0">
         {metaLine && (
           <div className="font-mono text-[10px] uppercase tracking-wide text-accent-text mb-0.5 truncate">
             {metaLine}
           </div>
         )}
         <div className="flex items-center gap-1.5 min-w-0">
-          <h4 className="text-sm font-semibold text-brand truncate">{name}</h4>
+          <h4 className="text-base font-semibold text-brand truncate">{name}</h4>
           {badge && (
             <span className="inline-flex items-center rounded-full bg-surface-base/80 px-1.5 py-0.5 text-[10px] font-medium text-text-secondary shrink-0">
               {badge}
@@ -98,10 +98,10 @@ export function TemplateStructureCard({
         </div>
       </div>
 
-      <div className="px-3 pb-3 pt-2 border-t border-border/80 space-y-2">
+      <div className="px-4 pb-4 pt-2.5 border-t border-border/80 space-y-2">
         <button
           type="button"
-          className="btn-primary w-full text-sm py-2"
+          className="btn-primary w-full text-sm py-2.5"
           disabled={busy}
           onClick={onCreateEstimate}
         >

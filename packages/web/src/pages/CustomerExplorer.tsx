@@ -257,25 +257,9 @@ const CustomerExplorer = () => {
     }
   };
 
-  const handleNewPriceCheck = async () => {
-    if (creating) return;
-    setCreating(true);
-    try {
-      const quote = await apiClient.createQuote({
-        name: `Price check · ${new Date().toLocaleDateString(undefined, {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        })}`,
-        customerId: null,
-        isPriceCheck: true,
-      });
-      navigate(`/estimate/choose?quote=${quote.id}&priceCheck=1`);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to start price check');
-    } finally {
-      setCreating(false);
-    }
+  /** Local session only — quote row is created on first Save draft / Save. */
+  const handleNewPriceCheck = () => {
+    navigate('/estimate/choose?priceCheck=1');
   };
 
   const handleRequote = async (
@@ -375,8 +359,12 @@ const CustomerExplorer = () => {
 
   const sections = useMemo((): ExplorerSection[] => {
     type Row = ExplorerRow;
+    // Hide historical empty price-check shells (created on "New" before deferral).
+    const listedQuotes = isPriceCheckFolder
+      ? quotes.filter((q) => (q.estimates || []).length > 0)
+      : quotes;
     const rows: Row[] = [];
-    for (const q of quotes) {
+    for (const q of listedQuotes) {
       for (const est of q.estimates || []) {
         if (!matchesStatus(est.status, statusFilter)) continue;
         rows.push({
@@ -414,7 +402,7 @@ const CustomerExplorer = () => {
       );
 
     if (groupBy === 'quote') {
-      const quoteOrder = [...quotes].sort((a, b) => {
+      const quoteOrder = [...listedQuotes].sort((a, b) => {
         const ta = new Date(a.updatedAt || 0).getTime();
         const tb = new Date(b.updatedAt || 0).getTime();
         if (sortBy === 'oldest') return ta - tb;
@@ -445,7 +433,7 @@ const CustomerExplorer = () => {
 
     if (isPriceCheckFolder && groupBy === 'date') {
       const monthQuotes = new Map<string, ExplorerQuote[]>();
-      const sortedQuotes = [...quotes].sort((a, b) => {
+      const sortedQuotes = [...listedQuotes].sort((a, b) => {
         const ta = new Date(a.updatedAt || 0).getTime();
         const tb = new Date(b.updatedAt || 0).getTime();
         return sortBy === 'oldest' ? ta - tb : tb - ta;
@@ -551,10 +539,9 @@ const CustomerExplorer = () => {
             <button
               type="button"
               className="btn-primary"
-              disabled={creating}
-              onClick={() => void handleNewPriceCheck()}
+              onClick={() => handleNewPriceCheck()}
             >
-              {creating ? 'Starting…' : 'New price check'}
+              New price check
             </button>
           )}
           {!repeatOrder && !isPriceCheckFolder && (
@@ -671,7 +658,7 @@ const CustomerExplorer = () => {
               type="button"
               className="btn-primary"
               onClick={() =>
-                void (isPriceCheckFolder ? handleNewPriceCheck() : handleNewQuote())
+                isPriceCheckFolder ? handleNewPriceCheck() : void handleNewQuote()
               }
             >
               {isPriceCheckFolder ? 'New price check' : 'New quote'}

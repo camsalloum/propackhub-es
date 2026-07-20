@@ -63,10 +63,11 @@ describe('formatCommercialPrice', () => {
 });
 
 describe('quotationPageOrientation', () => {
-  it('portrait for 1–4 columns, landscape for 5+', () => {
+  it('portrait for 1–6 columns, landscape for 7+', () => {
     expect(quotationPageOrientation(1)).toBe('portrait');
     expect(quotationPageOrientation(4)).toBe('portrait');
-    expect(quotationPageOrientation(5)).toBe('landscape');
-    expect(quotationPageOrientation(6)).toBe('landscape');
+    expect(quotationPageOrientation(5)).toBe('portrait');
+    expect(quotationPageOrientation(6)).toBe('portrait');
+    expect(quotationPageOrientation(7)).toBe('landscape');
   });
 });

@@ -17,6 +17,11 @@ export default defineConfig({
       '/api': {
         target: 'http://127.0.0.1:5001',
         changeOrigin: true
+      },
+      // Platform SSO callback is registered on the API (not the SPA).
+      '/auth': {
+        target: 'http://127.0.0.1:5001',
+        changeOrigin: true
       }
     }
   },

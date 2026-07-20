@@ -5,6 +5,7 @@ import { ensurePlatformMasterSeeded, ensureProcessesSeeded, ensureSolventCatalog
 import { bootstrapPlatformStandardCatalog } from './db/seed-platform-templates';
 import { buildApp } from './app';
 import { log } from './utils/logger';
+import { validateProductionEnv } from './utils/product-env';
 import {
   startPebiOracleSyncCoordinator,
   stopPebiOracleSyncCoordinator,
@@ -17,6 +18,7 @@ const fastify = await buildApp({ logger: true });
 
 async function start() {
   try {
+    validateProductionEnv();
     await initializeDatabase();
     await ensurePlatformMasterSeeded();
     await ensureProcessesSeeded();

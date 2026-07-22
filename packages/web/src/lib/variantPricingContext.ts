@@ -224,7 +224,13 @@ export function buildVariantPricingContext(
       pricingMethod:
         (data.pricingMethod as 'markup' | 'margin_per_kg' | undefined) ?? userPricingMethod ?? 'markup',
       marginValuePerKgUsd: parseFloat(String(data.marginValuePerKgUsd)) || 0,
-      operatingCostMethod: tenant?.operatingCostMethod,
+      operatingCostMethod:
+        (data.operatingCostMethod as 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group' | undefined) ??
+        tenant?.operatingCostMethod,
+      profitMarginPercent:
+        data.profitMarginPercent != null && data.profitMarginPercent !== ''
+          ? Number(data.profitMarginPercent)
+          : undefined,
       cormPerKgUsd: baseCormDisplay,
       cormScaleWithWaste,
       toolingChargeUsd:
@@ -293,7 +299,14 @@ export function buildVariantPricingContext(
     lmPerKgReel,
     reelWidthMm,
     rollLengthLm,
-    operatingCostMethod: tenant?.operatingCostMethod,
+    operatingCostMethod:
+      (data.operatingCostMethod as 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group' | undefined) ??
+      tenant?.operatingCostMethod,
+    mfgProcessPerKgUsd: ce.operationCostPerKg ?? 0,
+    profitMarginPercent:
+      data.profitMarginPercent != null && data.profitMarginPercent !== ''
+        ? Number(data.profitMarginPercent)
+        : undefined,
     baseCormDisplay,
     cormScaleWithWaste,
     moqKg,

@@ -4,6 +4,7 @@ import {
   DEFAULT_QUOTATION_FORMAT,
   parseQuotationFormat,
   type QuotationFormatPrefs,
+  type OperatingCostMethod,
 } from '@es/engine';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -12,9 +13,10 @@ import { ThemeSwitcher } from '../theme/ThemeSwitcher';
 import { useEntrance } from '../hooks/useEntrance';
 import { useDensity } from '../preferences/DensityProvider';
 import { QuotationFormatCard } from '../features/settings/QuotationFormatCard';
+import { OperatingCostSettingsFields } from '../features/settings/OperatingCostSettingsFields';
 
 const Settings = () => {
-  const { user } = useAuth();
+  const { user, refreshTenant } = useAuth();
   // Single-play mount entrance for the settings content; no-op under reduced motion (R23.5).
   const { ref: entranceRef } = useEntrance<HTMLDivElement>();
   // Density preference (Auto / Compact / Comfortable / Spacious); Auto is default.
@@ -34,7 +36,8 @@ const Settings = () => {
   // Controlled settings state
   const [tenantName, setTenantName] = useState('');
   const [defaultMarkup, setDefaultMarkup] = useState<number>(15);
-  const [operatingCostMethod, setOperatingCostMethod] = useState<'process_per_kg' | 'markup_over_rm' | 'fixed_per_group'>('markup_over_rm');
+  const [operatingCostMethod, setOperatingCostMethod] = useState<OperatingCostMethod>('markup_over_rm');
+  const [defaultProfitMarginPercent, setDefaultProfitMarginPercent] = useState(5);
   const [displayCurrency, setDisplayCurrency] = useState('USD');
   const [useAutoFx, setUseAutoFx] = useState(true);
   /** Neutral until settings load — never flash a regional FX default (HARDCODING_AUDIT FX1). */
@@ -82,6 +85,8 @@ const Settings = () => {
           ? settings.operatingCostMethod
           : 'markup_over_rm'
       );
+      const profit = Number(settings.defaultProfitMarginPercent);
+      setDefaultProfitMarginPercent(Number.isFinite(profit) ? profit : 5);
     } catch (err) {
       setSettingsError(err instanceof Error ? err.message : 'Failed to load settings');
       console.error('Failed to load settings:', err);
@@ -144,7 +149,14 @@ const Settings = () => {
         quotationFormat,
         defaultMarkupPercent: defaultMarkup,
         operatingCostMethod,
+        defaultProfitMarginPercent,
       });
+      // Keep AuthContext tenant in sync so EstimateEditor live calc uses the new method.
+      try {
+        await refreshTenant();
+      } catch {
+        /* settings saved; session refresh can retry on next navigation */
+      }
       alert('Settings saved');
     } catch (err) {
       console.error('Failed to save settings:', err);
@@ -222,49 +234,15 @@ const Settings = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-brand mb-2">Manufacturing &amp; Operating cost</label>
-                  <select
-                    value={operatingCostMethod}
-                    onChange={(e) => setOperatingCostMethod(e.target.value as 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group')}
-                    className="input w-full max-w-[32rem]"
-                  >
-                    <option value="process_per_kg">Per-kg process cost (Σ process × qty)</option>
-                    <option value="markup_over_rm">Markup over material (Total RM × markup %)</option>
-                    <option value="fixed_per_group">Fixed CoRM per template ({displayCurrency}/kg)</option>
-                  </select>
-                  <p className="text-sm text-text-secondary mt-2">
-                    How the operating cost is added to the price. Per-kg suits companies with defined process costs;
-                    markup-over-material suits single users. Fixed CoRM uses the per-template value
-                    set in <strong>Platform Master → CoRM</strong> (or the estimate's source template)
-                    as the M&O figure. This is the only markup applied.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-brand mb-2">
-                    {operatingCostMethod === 'markup_over_rm' ? 'Markup over material %' : 'Default Markup %'}
-                  </label>
-                  <input
-                    type="number"
-                    value={defaultMarkup}
-                    onChange={(e) => setDefaultMarkup(Number(e.target.value))}
-                    className="input w-32"
-                    disabled={operatingCostMethod !== 'markup_over_rm'}
-                  />
-                  <p className="text-sm text-text-secondary mt-2">
-                    {(() => {
-                      // Per-method hint for the markup % input.
-                      if (operatingCostMethod === 'markup_over_rm') {
-                        return 'Percentage added over Total RM as Manufacturing & Operating.';
-                      }
-                      if (operatingCostMethod === 'fixed_per_group') {
-                        return 'Not used — the per-template CoRM (set in Platform Master → CoRM) is used as M&O.';
-                      }
-                      return 'Not used while operating cost is per-kg process cost.';
-                    })()}
-                  </p>
-                </div>
+                <OperatingCostSettingsFields
+                  displayCurrency={displayCurrency}
+                  operatingCostMethod={operatingCostMethod}
+                  defaultMarkup={defaultMarkup}
+                  defaultProfitMarginPercent={defaultProfitMarginPercent}
+                  onMethodChange={setOperatingCostMethod}
+                  onMarkupChange={setDefaultMarkup}
+                  onProfitMarginChange={setDefaultProfitMarginPercent}
+                />
 
                 <div className="pt-6 border-t border-border">
                   <ThemeSwitcher />

@@ -101,7 +101,7 @@ async function autocompleteCustomersRoute(
     await request.jwtVerify();
     const tenantId = extractTenantFromRequest(request);
     const raw = (request.query.q || '').trim();
-    if (raw.length < 2) return reply.send([]);
+    if (raw.length < 1) return reply.send([]);
 
     const db = getDatabase();
     // BUG-13: escape LIKE wildcards to prevent injection/unexpected matches

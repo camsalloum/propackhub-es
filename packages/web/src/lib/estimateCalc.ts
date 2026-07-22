@@ -72,8 +72,10 @@ export interface ClientCalcInput {
   printColorCount?: number | null;
   inkSolventRatio?: number;
   orderQuantityKg?: number;
-  /** Manufacturing & Operating method (tenant setting): process_per_kg | markup_over_rm | fixed_per_group. */
+  /** Manufacturing & Operating method (tenant or estimate override). */
   operatingCostMethod?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
+  /** Process method: profit % of total cost before margin (default 5). */
+  profitMarginPercent?: number;
   /** Base CoRM for print mode (display currency per kg) — fixed_per_group only. */
   cormPerKgUsd?: number | null;
   /** CoRM tracks waste % by this factor (default 1). */
@@ -177,6 +179,7 @@ export function runClientCalculation(input: ClientCalcInput) {
     platesPerKg: toUsd(input.platesPerKg),
     deliveryPerKg: toUsd(input.deliveryPerKg),
     operatingCostMethod: input.operatingCostMethod ?? undefined,
+    profitMarginPercent: input.profitMarginPercent,
     cormPerKgUsd: input.cormPerKgUsd != null ? toUsd(input.cormPerKgUsd) : undefined,
     cormScaleWithWaste: input.cormScaleWithWaste,
     processes: (input.processes || []).map((p, i) => ({

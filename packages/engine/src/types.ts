@@ -199,14 +199,21 @@ export interface Estimate {
 
   /**
    * Manufacturing & Operating cost method (final price breakup):
-   *   'process_per_kg'  — Σ(process.costPerKgUsd × processQuantity) for enabled processes.
+   *   'process_per_kg'  — Σ(process.costPerKgUsd × processQuantity) for enabled processes,
+   *                       plus a separate profit margin % of total cost before margin.
    *                       Default for company tenants (Interplast-style, multi-user).
-   *   'markup_over_rm'  — Total RM/kg × markupPercent%. Default for individual (single-user) tenants.
-   *   'fixed_per_group' — Fixed CoRM/kg from the source template (display in storage;
+   *   'markup_over_rm'  — Total RM/kg × markupPercent% (covers conversion + margin).
+   *                       Default for individual (single-user) tenants.
+   *   'fixed_per_group' — Fixed CoRM/kg from the source template (Margin Over Raw Material;
    *                       converted to USD at the engine boundary — see `cormPerKgUsd`).
-   * This markup is the ONLY markup in the price build-up (no separate profit markup).
+   * Estimate may override the tenant default via this field when persisted.
    */
   operatingCostMethod?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
+  /**
+   * Process method only: profit % of (Total RM + process M&O + PrePress + Transport + accessory).
+   * Defaults to 5 when unset. Ignored for markup_over_rm / fixed_per_group.
+   */
+  profitMarginPercent?: number;
   /**
    * Base Fixed CoRM per kg as **USD** for engine math (Printed or Plain already
    * selected by the caller). Scaled by band waste % × `cormScaleWithWaste`.
@@ -298,6 +305,8 @@ export interface Estimate {
   rmCostPerM2?: number;
   markupAmountPerKg?: number;
   operationCostPerKg?: number;
+  /** Process method only: profit margin $/kg (see profitMarginPercent). */
+  profitMarginPerKg?: number;
   /** Pouch accessory hardware cost per kg (zipper/spout/valve/handle/window) — pass-through, outside markup. */
   accessoryCostPerKg?: number;
   /** Extra grams added per piece by accessories (hardware + window film). */
@@ -361,6 +370,8 @@ export interface Estimate {
   pricingMethodResolved?: 'markup' | 'margin_per_kg';
   /** Manufacturing & Operating method actually used by the engine. */
   operatingCostMethodResolved?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
+  /** Process method: profit % actually applied (default 5). */
+  profitMarginPercentResolved?: number;
 }
 
 export interface CalculationResult {
@@ -377,6 +388,8 @@ export interface CalculationResult {
      * processPercent branches for the third M&O method.
      */
     cormPercent?: number;
+    /** Process-method profit margin share of sale price. */
+    profitPercent?: number;
     /** Accessory hardware share of total cost (pouch zipper/spout/valve/etc.). */
     accessoryPercent?: number;
     /** Logistics (delivery) share of the sale price — new pricing model. */
@@ -429,6 +442,8 @@ export interface VisibilityProfile {
   operationCost: boolean;
   costBreakdown: boolean;
   solventMixCost: boolean;
+  /** Allow estimate-level override of Manufacturing & Operating method (+ process profit %). */
+  overrideOperatingCostMethod: boolean;
 
   // Output
   sellingPrice: boolean;

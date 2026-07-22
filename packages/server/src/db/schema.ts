@@ -196,8 +196,10 @@ export const tenants = pgTable('tenants', {
   footerText: text('footer_text'),
   defaultMarkupPercent: decimal('default_markup_percent', { precision: 5, scale: 2 }).default('15.00'),
   // Manufacturing & Operating cost method. company → process_per_kg, individual → markup_over_rm
-  // (set at registration from `type`; admin can override). This markup is the only markup.
+  // (set at registration from `type`; admin can override).
   operatingCostMethod: operatingCostMethodEnum('operating_cost_method').notNull().default('markup_over_rm'),
+  /** Process method: default profit % of total cost before margin (estimate may override). */
+  defaultProfitMarginPercent: decimal('default_profit_margin_percent', { precision: 5, scale: 2 }).notNull().default('5.00'),
   defaultSlabTemplate: varchar('default_slab_template', { length: 50 }).default('standard'),
   quotationValidDays: integer('quotation_valid_days').notNull().default(30),
   /** Which meta fields appear on commercial quotation PDF */
@@ -482,6 +484,14 @@ export const estimates = pgTable('estimates', {
   markupPercent: decimal('markup_percent', { precision: 5, scale: 2 }).notNull(),
   platesPerKg: decimal('plates_per_kg', { precision: 12, scale: 4 }).notNull().default('0'),
   deliveryPerKg: decimal('delivery_per_kg', { precision: 12, scale: 4 }).notNull().default('0'),
+  /**
+   * Estimate-level M&O method override. Null → use tenant.operatingCostMethod.
+   */
+  operatingCostMethod: operatingCostMethodEnum('operating_cost_method'),
+  /**
+   * Process method: estimate profit % override. Null → tenant.defaultProfitMarginPercent (or 5).
+   */
+  profitMarginPercent: decimal('profit_margin_percent', { precision: 5, scale: 2 }),
 
   // Pricing model v2 — when pricingMethod is set, the engine uses the
   // quantity-band waste + lump-sum tooling/delivery + margin model.

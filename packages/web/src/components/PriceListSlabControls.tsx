@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { ChevronDown, Plus, X } from 'lucide-react';
 import type { WasteBand } from '@es/engine';
+import { customSlabRangesFromBreakpoints } from '@es/engine';
 import {
   bandKey,
-  formatCustomSlabQty,
+  formatCustomSlabRange,
   predefinedSlabLabels,
   UNIT_LABELS,
   type PriceListUnit,
@@ -185,17 +186,17 @@ export default function PriceListSlabControls({
           </div>
           {customSlabs.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-0.5">
-              {customSlabs.map((qty) => (
+              {customSlabRangesFromBreakpoints(customSlabs).map((r) => (
                 <span
-                  key={qty}
+                  key={r.qty}
                   className="inline-flex items-center gap-0.5 rounded bg-slate/60 px-1.5 py-0.5 text-[11px] font-mono text-navy"
                 >
-                  {unit ? formatCustomSlabQty(qty, unit) : qty}
+                  {formatCustomSlabRange(r.from, r.to)}
                   <button
                     type="button"
-                    onClick={() => removeCustomSlab(qty)}
+                    onClick={() => removeCustomSlab(r.qty)}
                     className="text-mist hover:text-navy p-0.5"
-                    aria-label={`Remove ${qty}`}
+                    aria-label={`Remove ${formatCustomSlabRange(r.from, r.to)}`}
                   >
                     <X className="w-3 h-3" />
                   </button>

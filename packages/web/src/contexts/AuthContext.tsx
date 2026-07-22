@@ -45,6 +45,8 @@ type AuthContextValue = {
   ) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Re-fetch /me so tenant settings (e.g. operatingCostMethod) apply without re-login. */
+  refreshTenant: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -191,6 +193,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
   }, []);
 
+  const refreshTenant = useCallback(async () => {
+    const session = await establishSession();
+    setUser(session.user);
+    setTenant(session.tenant);
+    setIsAuthenticated(true);
+    setAuthReady(true);
+  }, []);
+
   const value = useMemo(
     () => ({
       isLoading,
@@ -202,8 +212,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       login,
       logout,
+      refreshTenant,
     }),
-    [isLoading, isAuthenticated, authReady, user, tenant, error, register, login, logout]
+    [
+      isLoading,
+      isAuthenticated,
+      authReady,
+      user,
+      tenant,
+      error,
+      register,
+      login,
+      logout,
+      refreshTenant,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

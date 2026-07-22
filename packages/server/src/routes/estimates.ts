@@ -118,6 +118,11 @@ const EstimateCreateSchema = z.object({
   printingWebClass: z.enum(['wide_web', 'narrow_web']).default('wide_web'),
   dimensions: z.record(z.any()),
   markupPercent: z.coerce.number().default(15),
+  operatingCostMethod: z
+    .enum(['process_per_kg', 'markup_over_rm', 'fixed_per_group'])
+    .nullable()
+    .optional(),
+  profitMarginPercent: z.coerce.number().min(0).max(100).nullable().optional(),
   platesPerKg: z.coerce.number().default(0),
   deliveryPerKg: z.coerce.number().default(0),
   layers: z.array(z.object({
@@ -472,6 +477,9 @@ export async function createEstimateRoute(
         printingWebClass,
         dimensions: data.dimensions,
         markupPercent: data.markupPercent.toString(),
+        operatingCostMethod: data.operatingCostMethod ?? undefined,
+        profitMarginPercent:
+          data.profitMarginPercent != null ? String(data.profitMarginPercent) : undefined,
         platesPerKg: data.platesPerKg.toString(),
         deliveryPerKg: data.deliveryPerKg.toString(),
         displayCurrency,
@@ -863,6 +871,13 @@ async function updateEstimateRoute(
     if (data.productType !== undefined) updates.productType = data.productType;
     if (data.productSubtype !== undefined) updates.productSubtype = data.productSubtype;
     if (data.markupPercent !== undefined) updates.markupPercent = data.markupPercent.toString();
+    if (data.operatingCostMethod !== undefined) {
+      updates.operatingCostMethod = data.operatingCostMethod;
+    }
+    if (data.profitMarginPercent !== undefined) {
+      updates.profitMarginPercent =
+        data.profitMarginPercent == null ? null : String(data.profitMarginPercent);
+    }
     if (data.platesPerKg !== undefined) updates.platesPerKg = data.platesPerKg.toString();
     if (data.deliveryPerKg !== undefined) updates.deliveryPerKg = data.deliveryPerKg.toString();
     if (data.dimensions !== undefined) {

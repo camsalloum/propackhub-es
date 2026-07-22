@@ -8,7 +8,7 @@ export const VISIBILITY_PROFILE_KEYS: Array<keyof VisibilityProfile> = [
   'yieldConversions', 'rollAfterSlitting', 'orderQtyUnitBreakdown', 'alternatePriceUnits',
   'materialCostPerKg', 'costPerSqm', 'rmCostPerKg', 'markupPercent', 'markupAmount',
   'platesPerKg', 'deliveryPerKg', 'operationCost', 'costBreakdown', 'solventMixCost',
-  'sellingPrice', 'slabTable', 'proposalPdf',
+  'overrideOperatingCostMethod', 'sellingPrice', 'slabTable', 'proposalPdf',
 ];
 
 export const VISIBILITY_LABELS: Record<keyof VisibilityProfile, string> = {
@@ -35,6 +35,7 @@ export const VISIBILITY_LABELS: Record<keyof VisibilityProfile, string> = {
   operationCost: 'Operation cost',
   costBreakdown: 'Cost breakdown',
   solventMixCost: 'Solvent mix',
+  overrideOperatingCostMethod: 'Override M&O method',
   sellingPrice: 'Selling price',
   slabTable: 'Slab table',
   proposalPdf: 'Proposal PDF',
@@ -64,6 +65,7 @@ export const DEFAULT_SALES_REP_PROFILE: VisibilityProfile = {
   operationCost: false,
   costBreakdown: false,
   solventMixCost: false,
+  overrideOperatingCostMethod: false,
   sellingPrice: true,
   slabTable: true,
   proposalPdf: true,
@@ -93,6 +95,7 @@ export const DEFAULT_ADMIN_PROFILE: VisibilityProfile = {
   operationCost: true,
   costBreakdown: true,
   solventMixCost: true,
+  overrideOperatingCostMethod: true,
   sellingPrice: true,
   slabTable: true,
   proposalPdf: true,
@@ -235,6 +238,12 @@ export function stripEstimateRow(row: any, profile: VisibilityProfile): any {
 
   if (profile.costBreakdown) {
     visible.costBreakdown = row.costBreakdown ?? null;
+  }
+
+  // Estimate-scoped M&O override (needed for reload + admin selector).
+  if (profile.costBreakdown || profile.overrideOperatingCostMethod) {
+    visible.operatingCostMethod = row.operatingCostMethod ?? null;
+    visible.profitMarginPercent = row.profitMarginPercent ?? null;
   }
 
   return visible;

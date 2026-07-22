@@ -1,12 +1,13 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
-import { eq, desc, and, isNull } from 'drizzle-orm';
+import { eq, desc, and, isNull, inArray } from 'drizzle-orm';
 import { getEffectiveProfile, stripEstimateRow } from '../utils/visibility';
 import { usdToDisplay } from '../utils/currency';
 import { sendCaughtError } from '../utils/errors';
 
 type EstimateRow = typeof schema.estimates.$inferSelect;
+type QuoteRow = typeof schema.quotes.$inferSelect;
 
 async function getUserVisibilityProfile(db: ReturnType<typeof getDatabase>, userId: string) {
   const [userRecord] = await db
@@ -26,6 +27,10 @@ function estimateTotalDisplay(est: {
   const qty = firstSlabQty ?? 0;
   const lineTotal = usdToDisplay(saleUsd, fx) * qty;
   return { totalPrice: lineTotal, displayCurrency: est.displayCurrency };
+}
+
+function packageKey(est: EstimateRow): string {
+  return est.quoteId ? `q:${est.quoteId}` : `e:${est.id}`;
 }
 
 export async function getDashboardSummaryRoute(
@@ -102,6 +107,72 @@ export async function getDashboardSummaryRoute(
 
     const recent = allEstimates.slice(0, 5).map(toSummaryRow);
 
+    // Group by quote (PKG): top packages by newest estimate activity, include all SKUs on each.
+    const grouped = new Map<string, EstimateRow[]>();
+    for (const est of allEstimates) {
+      const key = packageKey(est);
+      const list = grouped.get(key);
+      if (list) list.push(est);
+      else grouped.set(key, [est]);
+    }
+
+    const sortedGroups = [...grouped.entries()].sort(([, a], [, b]) => {
+      const ta = a[0]?.createdAt ? new Date(a[0].createdAt).getTime() : 0;
+      const tb = b[0]?.createdAt ? new Date(b[0].createdAt).getTime() : 0;
+      return tb - ta;
+    });
+
+    const topGroups = sortedGroups.slice(0, 5);
+    const quoteIds = topGroups
+      .map(([, ests]) => ests[0]?.quoteId)
+      .filter((id): id is string => Boolean(id));
+
+    const quoteMap = new Map<string, QuoteRow>();
+    if (quoteIds.length > 0) {
+      const quoteRows = await db
+        .select()
+        .from(schema.quotes)
+        .where(
+          and(
+            eq(schema.quotes.tenantId, tenantId),
+            isNull(schema.quotes.deletedAt),
+            inArray(schema.quotes.id, quoteIds)
+          )
+        );
+      for (const q of quoteRows) quoteMap.set(q.id, q);
+    }
+
+    const recentPackages = topGroups.map(([, ests]) => {
+      const ordered = [...ests].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      const children = ordered.map(toSummaryRow);
+      const quoteId = ordered[0]?.quoteId ?? null;
+      const quote = quoteId ? quoteMap.get(quoteId) : undefined;
+      const totalPrice = children.reduce((sum, c) => sum + (c.totalPrice || 0), 0);
+      const displayCurrency =
+        quote?.displayCurrency || children[0]?.displayCurrency || 'USD';
+      const customerId = quote?.customerId ?? ordered[0]?.customerId ?? null;
+      const newest = ordered.reduce((best, e) => {
+        const t = e.createdAt ? new Date(e.createdAt).getTime() : 0;
+        const bt = best?.createdAt ? new Date(best.createdAt).getTime() : 0;
+        return t >= bt ? e : best;
+      }, ordered[0]);
+
+      return {
+        quoteId,
+        refNumber: quote?.refNumber ?? children[0]?.refNumber ?? '—',
+        name: quote?.name ?? children[0]?.jobName ?? null,
+        customerName: customerId ? customerMap.get(customerId) ?? null : null,
+        status: quote?.status ?? children[0]?.status ?? 'draft',
+        createdAt: newest?.createdAt
+          ? new Date(newest.createdAt).toISOString()
+          : new Date().toISOString(),
+        totalPrice,
+        displayCurrency,
+        estimateCount: children.length,
+        estimates: children,
+      };
+    });
+
     const expiringProposals = allEstimates
       .filter((e: EstimateRow) => {
         if (e.status !== 'sent') return false;
@@ -132,6 +203,7 @@ export async function getDashboardSummaryRoute(
       sent,
       won,
       recent,
+      recentPackages,
       expiringProposals,
       quotationValidDays: validDays,
     });

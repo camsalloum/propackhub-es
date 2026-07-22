@@ -1,7 +1,7 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-20 (TemplateDeck FAN_X crash fix)
-**Session focus:** Fix `/templates` Scroll crash (`FAN_X is not defined`) after carousel size refactor.
+**Last updated:** 2026-07-21 (Dashboard recent quotes by PKG)
+**Session focus:** Dashboard “Recent quotes” lists one row per package (PKG), with expandable multi-SKU children — not flat QT rows.
 
 **Platform source of truth:** `platform/docs/SAAS_NORMALIZATION_IMPLEMENTATION_PLAN_V2.md`
 — ES go-live via `es.propackhub.com`, isolated `es-postgres`, neutral platform
@@ -12,6 +12,111 @@ Implementation waits for owner Gate A (locks L1–L16).
 ---
 
 ## Where we stopped (read this first next session)
+
+### 2026-07-21 — Dashboard recent quotes by PKG
+
+**Shipped:** Dashboard recent list groups by quote/`quoteId` (PKG). Parent row = PKG ref, customer, status, date, combined total; multi-SKU shows “N estimates” + chevron expand (SKU name · QT ref). Open → quote workspace. API: `recentPackages` on `/api/v1/dashboard/summary` (keeps flat `recent` for sparklines).
+
+**Do now:** Restart ES API if running, hard-refresh Dashboard (Ctrl+Shift+R). Dahman multi-SKU should be one PKG row (e.g. `PKG-2026-00005 · 2 estimates`), not two QT rows.
+
+### 2026-07-21 — Multi-SKU vs Dashboard QT rows
+
+**Finding:** Two QT rows for Dahman on Dashboard = two **estimates**, not two broken quotes. Same inquiry’s SKUs live under one **PKG** (e.g. `PKG-2026-00005 · 2 estimates`).
+
+**Shipped previously:** Dashboard hint “Latest estimates”. **Superseded** by PKG grouping above.
+
+### 2026-07-21 — Custom slab quantity ranges
+
+**Shipped:** Custom slab source still stores fixed breakpoints; chips, price-list table, Excel, and quote PDF headers show auto-derived ranges (`0 – 1,000`, `1,001 – 2,000`, …). First band starts at **0** (same as predefined waste bands). Amortize/pricing qty remains the entered upper breakpoint. Predefined slab source unchanged.
+
+**Do now:** Hard-refresh estimate / quote price list (Ctrl+Shift+R). Set Slab source = Custom, enter e.g. 1000 / 2000 / 3000 — chips and columns should show ranges, not only `1,000`.
+
+### 2026-07-21 — Cost breakdown override x.xx + spinners
+
+**Shipped:** CoRM / Markup % / Profit % display as `x.xx`, `step={0.01}`, native number spinners visible; blur normalizes to 2 decimals; draft-while-focused + live recalc kept.
+
+**Do now:** Hard-refresh estimate (Ctrl+Shift+R). Confirm fields show `8.00`-style values and up/down arrows.
+
+### 2026-07-21 — Cost breakdown overrides live recalc
+
+**Bug:** Changing CoRM / Markup % / Profit % did not update selling price / breakdown (draft-only until blur; blur could miss commit).
+
+**Shipped:** Debounced live commit (~250ms) while typing + reliable blur/Enter flush from DOM value; draft-while-focused typing UX kept.
+
+**Do now:** Hard-refresh estimate (Ctrl+Shift+R). Change CoRM or Markup % — prices should move within ~0.3s and again on blur.
+
+### 2026-07-21 — Cost breakdown override typing UX
+
+**Shipped:** CoRM / Markup % / Profit % use draft-while-focused (`DraftNumberInput`); commit on blur/Enter; select-all on focus. No mid-keystroke parent rewrite. (Superseded live-recalc fix above.)
+
+**Do now:** Hard-refresh estimate (Ctrl+Shift+R).
+
+### 2026-07-21 — Cost breakdown method value fields
+
+**Shipped:** Beside Manufacturing & Operating method dropdown (same users who can override method):
+- Fixed CoRM → **CoRM (AED/kg)** edits estimate CoRM (Printed/Plain by structure); recalc Margin Over Raw Material + selling
+- Markup over material → **Markup %** edits estimate markup; recalc Markup Over Material + selling
+- Per-kg process → **Profit %** (existing)
+
+Persist: `corm_per_kg_*`, `markup_percent`, `profit_margin_percent`. Reset restores tenant method + defaults + template CoRM.
+
+**Do now:** Hard-refresh estimate (Ctrl+Shift+R).
+
+### 2026-07-21 — M&O method selector + process profit margin
+
+**Shipped:**
+- Cost breakdown: method selector (Fixed CoRM / Markup over material / Per-kg process) for platform_admin, tenant_admin, or visibility `overrideOperatingCostMethod`
+- Estimate override persisted (`estimates.operating_cost_method`, `profit_margin_percent`); falls back to tenant
+- Labels: Fixed CoRM → **Margin Over Raw Material**; Markup → **Markup Over Material**; Process → **Manufacturing & Operating** + **Profit margin**
+- Process profit = `defaultProfitMarginPercent`% (default 5) × (Total RM + process + PrePress + Transport + accessory)
+- Settings: **Default profit margin %** (enabled when process method)
+- Material card / selling price / price list stay on the same engine breakup
+
+**Do now:** Hard-refresh (Ctrl+Shift+R). Restart ES API if migration/patch not yet applied (`db:patch` / migrate 0024).
+
+### 2026-07-21 — Costing cards vs Fixed CoRM (printed sleeve)
+
+**Bugs:**
+1. Material cost card showed pre-waste RM (`materialCostPerKg` / `rmCostPerM2`) while Cost breakdown Total RM used waste-adjusted figures.
+2. M&O showed ~1.43 AED (process/markup path) while Settings had Fixed CoRM and Shrink Sleeves template CoRM = **10 AED** (expect ~11.80 with waste). Cause: live calc used stale AuthContext `operatingCostMethod` after Settings change.
+
+**Fixed:** Material card = Total RM (waste-adjusted); Total RM /m² from kg×GSM; editor loads method from settings + Auth refresh on Settings save.
+
+**Do now:** Hard-refresh the estimate (Ctrl+Shift+R). With Fixed CoRM, M&O ≈ template CoRM × (1 + waste%). Selling price rises accordingly.
+
+### 2026-07-21 — PACKAGING / CONSUMABLES prices synced (Interplast)
+
+**Why orange warnings:** Pack/Consumables rows showed 0.0000 because tenant materials existed but unit prices were $0 after earlier PEBI sync gaps. Not a quote bug — costing needs priced `PACKAGING` / `CONSUMABLES` families.
+
+**Done:** Direct PEBI DB sync (`source: pebi_db`) updated 8 packaging + 2 consumables rows; all priced now. PEBI HTTP health was down; DB path worked.
+
+**Do now:** Hard-refresh the open estimate — banners should clear.
+
+### 2026-07-21 — Riad Syria names title-cased (PEBI + ES)
+
+**Change:** 9 seeded Syria customers were ALL CAPS; PEBI seed now applies INITCAP-style title case; ES re-synced (700 updated). New quote shows e.g. `Dahman Co.` not `DAHMAN CO.`
+
+### 2026-07-21 — admin@propackhub.com → Interplast (fixed in DB)
+
+**Change:** Moved `admin@propackhub.com` onto Interplast ES tenant (kept `platform_admin`). Email is unique globally so this is the one home. Seed now prefers Interplast when provisioned; script `db:link-admin-interplast`.
+
+**Verified:** admin tenant = Interplast; 700 customers; Dahman Co. present. Autocomplete does not call live PEBI — PEBI down is irrelevant for search.
+
+**Do now:** Log out of ES (or hard-refresh) → sign in as `admin@propackhub.com` (same password) → New quote → type `d` or `Dahman`.
+
+**Same-day UI fix (still apply if dropdown blank):** Search from 1 character; dropdown stays open — hard-refresh web.
+
+### 2026-07-20 — Price check: defer DB create until save
+
+**Decision:** Clicking **New price check** must not create an empty PKG draft in the DB.
+
+**Shipped:**
+- Navigate to `/estimate/choose?priceCheck=1` only (no `POST /quotes`)
+- First **Save draft** / **Save** creates quote+estimate with `isPriceCheck: true`
+- List hides 0-structure price-check shells; folder count ignores empty shells
+- Existing saved price checks / Add structure (with quote id) unchanged
+
+**Ops:** Hard-refresh web; restart ES API if running. Open Price checks → New → leave without save → list should not gain a ghost draft.
 
 ### 2026-07-20 — TemplateDeck FAN_X crash
 
@@ -417,7 +522,7 @@ Legacy aliases: `ldpe-natural` → commercial, `ldpe-white` → industrial, `ldp
 
 - **Company tenant:** `Interplast` (`platform_company_code=interplast`, AED, `process_per_kg`)
 - **Tenant admin:** `camille@interplast-uae.com` / `Admin@123` (PEBI dev parity)
-- **Platform owner:** `admin@propackhub.com` / `Pph654883!` (`platform_admin`, separate tenant)
+- **Platform owner:** `admin@propackhub.com` / `Pph654883!` (`platform_admin`, **on Interplast** for local estimation — PEBI customers)
 - **Provision:** `npm run db:provision-interplast --workspace=packages/server` (idempotent)
 - **Schema:** `tenants.platform_company_code` — future PEBI ↔ ES link key
 

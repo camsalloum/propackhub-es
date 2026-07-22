@@ -141,6 +141,13 @@
       "when": 1783800000000,
       "tag": "0023_platform_sso",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1783900000000,
+      "tag": "0024_operating_cost_override",
+      "breakpoints": true
     }
   ]
 }

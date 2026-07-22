@@ -75,9 +75,31 @@ export async function calculateEstimateFromDatabase(
     .orderBy(schema.slabs.quantityKg);
 
   const [tenantRow] = await db
-    .select({ operatingCostMethod: schema.tenants.operatingCostMethod })
+    .select({
+      operatingCostMethod: schema.tenants.operatingCostMethod,
+      defaultProfitMarginPercent: schema.tenants.defaultProfitMarginPercent,
+    })
     .from(schema.tenants)
     .where(eq(schema.tenants.id, tenantId));
+
+  const estimateMethod = estimate.operatingCostMethod as
+    | 'process_per_kg'
+    | 'markup_over_rm'
+    | 'fixed_per_group'
+    | null
+    | undefined;
+  const resolvedOperatingCostMethod =
+    estimateMethod ?? tenantRow?.operatingCostMethod ?? 'markup_over_rm';
+  const tenantProfit = tenantRow?.defaultProfitMarginPercent != null
+    ? parseFloat(tenantRow.defaultProfitMarginPercent)
+    : 5;
+  const estimateProfit =
+    estimate.profitMarginPercent != null ? parseFloat(estimate.profitMarginPercent) : NaN;
+  const resolvedProfitMarginPercent = Number.isFinite(estimateProfit)
+    ? estimateProfit
+    : Number.isFinite(tenantProfit)
+      ? tenantProfit
+      : 5;
 
   const materialTypeById = new Map(materials.map((m) => [m.id, m.type]));
   const printMode = structureIsPrinted(
@@ -92,7 +114,7 @@ export async function calculateEstimateFromDatabase(
   const wasteBands = wasteBandsForPrintMode(wasteBandsByMode, printMode);
 
   let cormPerKgUsd: number | null = 0;
-  if (tenantRow?.operatingCostMethod === 'fixed_per_group') {
+  if (resolvedOperatingCostMethod === 'fixed_per_group') {
     const fx = parseFloat(estimate.exchangeRateUsdToDisplay) || 1;
     let cormPrinted = estimate.cormPerKgUsd != null ? parseFloat(estimate.cormPerKgUsd) : NaN;
     let cormPlain = estimate.cormPerKgPlain != null ? parseFloat(estimate.cormPerKgPlain) : NaN;
@@ -131,7 +153,7 @@ export async function calculateEstimateFromDatabase(
     processes,
     slabs,
     layerPriceOverrides,
-    operatingCostMethod: tenantRow?.operatingCostMethod ?? 'markup_over_rm',
+    operatingCostMethod: resolvedOperatingCostMethod,
     cormPerKgUsd,
     cormScaleWithWaste,
     orderQuantityUnitDef: await resolveOrderUnitDef(
@@ -141,6 +163,10 @@ export async function calculateEstimateFromDatabase(
     ),
     wasteBands,
   });
+
+  if (resolvedOperatingCostMethod === 'process_per_kg') {
+    estimateForEngine.profitMarginPercent = resolvedProfitMarginPercent;
+  }
 
   const layerRefs = layers.map((l) => ({
     materialId: layerPriceOverrides.has(l.materialId) ? l.id : l.materialId,

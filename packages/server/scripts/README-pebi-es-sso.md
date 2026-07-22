@@ -8,8 +8,10 @@ mapping once on the PPH platform database.
 
 1. PPH Phase 1 migration applied (`platform_accounts`, `account_app_instances`).
 2. ES tenant provisioned: `npm run db:provision-interplast --workspace=packages/server`
-3. Same `ES_SSO_SECRET` in PPH `server/.env` and ES `packages/server/.env`.
-4. ES migration `0023_platform_sso` applied: `npm run db:migrate --workspace=packages/server`
+3. Link local platform admin onto Interplast (so `admin@propackhub.com` sees PEBI customers):
+   `npm run db:link-admin-interplast --workspace=packages/server`
+4. Same `ES_SSO_SECRET` in PPH `server/.env` and ES `packages/server/.env`.
+5. ES migration `0023_platform_sso` applied: `npm run db:migrate --workspace=packages/server`
 
 ## Seed PEBI account → ES tenant mapping
 

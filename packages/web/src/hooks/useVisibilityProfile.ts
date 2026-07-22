@@ -11,7 +11,7 @@ const ADMIN_PROFILE: VisibilityProfile = {
   orderQtyUnitBreakdown: true, alternatePriceUnits: true, materialCostPerKg: true,
   costPerSqm: true, rmCostPerKg: true, markupPercent: true, markupAmount: true,
   platesPerKg: true, deliveryPerKg: true, operationCost: true, costBreakdown: true,
-  solventMixCost: true, sellingPrice: true, slabTable: true, proposalPdf: true,
+  solventMixCost: true, overrideOperatingCostMethod: true, sellingPrice: true, slabTable: true, proposalPdf: true,
 };
 
 const SALES_REP_PROFILE: VisibilityProfile = {
@@ -21,7 +21,7 @@ const SALES_REP_PROFILE: VisibilityProfile = {
   orderQtyUnitBreakdown: false, alternatePriceUnits: false, materialCostPerKg: false,
   costPerSqm: false, rmCostPerKg: false, markupPercent: false, markupAmount: false,
   platesPerKg: false, deliveryPerKg: false, operationCost: false, costBreakdown: false,
-  solventMixCost: false, sellingPrice: true, slabTable: true, proposalPdf: true,
+  solventMixCost: false, overrideOperatingCostMethod: false, sellingPrice: true, slabTable: true, proposalPdf: true,
 };
 
 export function useVisibilityProfile(userRole?: string) {
@@ -86,5 +86,5 @@ export const VISIBILITY_KEYS = [
   'yieldConversions', 'rollAfterSlitting', 'orderQtyUnitBreakdown', 'alternatePriceUnits',
   'materialCostPerKg', 'costPerSqm', 'rmCostPerKg', 'markupPercent', 'markupAmount',
   'platesPerKg', 'deliveryPerKg', 'operationCost', 'costBreakdown', 'solventMixCost',
-  'sellingPrice', 'slabTable', 'proposalPdf',
+  'overrideOperatingCostMethod', 'sellingPrice', 'slabTable', 'proposalPdf',
 ] as const;

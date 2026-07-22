@@ -72,6 +72,8 @@ export default function PriceListPanel({
   baseCormDisplay = 0,
   cormScaleWithWaste,
   moqKg = null,
+  mfgProcessPerKgUsd = 0,
+  profitMarginPercent = 5,
 }: PriceListPanelProps) {
   const { user } = useAuth();
   const activeBands = useMemo(
@@ -139,6 +141,8 @@ export default function PriceListPanel({
       baseCormDisplay,
       cormScaleWithWaste,
       moqKg,
+      mfgProcessPerKgUsd,
+      profitMarginPercent,
     };
 
     if (slabMode === 'custom') {
@@ -200,6 +204,8 @@ export default function PriceListPanel({
     baseCormDisplay,
     cormScaleWithWaste,
     moqKg,
+    mfgProcessPerKgUsd,
+    profitMarginPercent,
     rounding,
   ]);
 

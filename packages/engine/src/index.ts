@@ -19,6 +19,8 @@ export * from './pouch-flat-sheet';
 export * from './pouch-accessories';
 export * from './unit-conversion';
 export * from './waste-bands';
+export * from './custom-slab-ranges';
+export * from './price-buildup';
 export * from './derive-processes';
 export * from './structure-signature';
 export * from './roll-after-slitting';

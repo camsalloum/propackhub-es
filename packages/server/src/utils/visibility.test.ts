@@ -19,6 +19,7 @@ describe('Visibility profiles', () => {
     expect(DEFAULT_SALES_REP_PROFILE.rmCostPerKg).toBe(false);
     expect(DEFAULT_SALES_REP_PROFILE.markupPercent).toBe(false);
     expect(DEFAULT_SALES_REP_PROFILE.operationCost).toBe(false);
+    expect(DEFAULT_SALES_REP_PROFILE.overrideOperatingCostMethod).toBe(false);
     
     // Output should be true
     expect(DEFAULT_SALES_REP_PROFILE.sellingPrice).toBe(true);
@@ -37,5 +38,6 @@ describe('Visibility profiles', () => {
     const merged = getEffectiveProfile('tenant_admin', { markupPercent: false });
     expect(merged.markupPercent).toBe(false);
     expect(merged.solventMixCost).toBe(true);
+    expect(merged.overrideOperatingCostMethod).toBe(true);
   });
 });

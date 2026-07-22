@@ -21,13 +21,22 @@ ALTER TABLE tenants ADD COLUMN IF NOT EXISTS primary_color VARCHAR(7) DEFAULT '#
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS terms_and_conditions TEXT;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS footer_text TEXT;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS default_markup_percent DECIMAL(5, 2) DEFAULT 15.00;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS default_profit_margin_percent DECIMAL(5, 2) NOT NULL DEFAULT 5.00;
 -- Manufacturing & Operating cost method (company → process_per_kg, individual → markup_over_rm).
 DO $$ BEGIN
   CREATE TYPE operating_cost_method AS ENUM ('process_per_kg', 'markup_over_rm');
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
+-- Ensure Fixed CoRM enum value exists (idempotent).
+DO $$ BEGIN
+  ALTER TYPE operating_cost_method ADD VALUE IF NOT EXISTS 'fixed_per_group';
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS operating_cost_method operating_cost_method NOT NULL DEFAULT 'markup_over_rm';
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS operating_cost_method operating_cost_method;
+ALTER TABLE estimates ADD COLUMN IF NOT EXISTS profit_margin_percent DECIMAL(5, 2);
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS platform_company_code VARCHAR(64);
 CREATE UNIQUE INDEX IF NOT EXISTS tenants_platform_company_code_uq
   ON tenants(platform_company_code)

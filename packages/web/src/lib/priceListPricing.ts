@@ -1,4 +1,5 @@
 import {
+  customSlabRangesFromBreakpoints,
   effectiveCormPerKg,
   DEFAULT_CORM_SCALE_WITH_WASTE,
   wastePercentForQuantity,
@@ -43,6 +44,10 @@ export type PriceListPricingInput = {
   reelWidthMm: number;
   rollLengthLm: number;
   operatingCostMethod?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
+  /** Process method: mfg process cost $/kg (USD) for price list bands. */
+  mfgProcessPerKgUsd?: number;
+  /** Process method: profit % of total cost before margin. */
+  profitMarginPercent?: number;
   baseCormDisplay?: number;
   cormScaleWithWaste?: number;
   moqKg?: number | null;
@@ -194,6 +199,21 @@ export function formatCustomSlabQty(qty: number, _unit: PriceListUnit): string {
   return formatSlabQty(qty);
 }
 
+/** Inclusive from–to label (UI: spaced en dash), matching predefined bands. */
+export function formatCustomSlabRange(from: number, to: number): string {
+  return `${formatSlabQty(from)} – ${formatSlabQty(to)}`;
+}
+
+/**
+ * Labels for custom breakpoints in order — ranges auto-derived
+ * (0 → first, then previous+1 → next). Pricing still uses each breakpoint qty.
+ */
+export function customSlabRangeLabels(quantities: number[]): string[] {
+  return customSlabRangesFromBreakpoints(quantities).map((r) =>
+    formatCustomSlabRange(r.from, r.to)
+  );
+}
+
 export function kgToUnit(kg: number, u: PriceListUnit, input: UnitConversionInput): number | null {
   switch (u) {
     case 'kg':
@@ -264,23 +284,28 @@ function priceUsdPerKgForBand(input: PriceListPricingInput, band: WasteBand): nu
   const wasteAdj = input.materialPerKgUsd * (1 + band.wastePercent / 100);
   const baseCormUsd = displayToUsd(input.baseCormDisplay ?? 0, input.estimateFxRate);
   const cormScale = input.cormScaleWithWaste ?? DEFAULT_CORM_SCALE_WITH_WASTE;
-  const cormUsd =
-    input.operatingCostMethod === 'fixed_per_group'
+  const method = input.operatingCostMethod ?? 'markup_over_rm';
+
+  const mfgUsd =
+    method === 'fixed_per_group'
       ? effectiveCormPerKg(baseCormUsd, band.wastePercent, cormScale)
-      : 0;
-  const costBase =
+      : method === 'process_per_kg'
+        ? input.mfgProcessPerKgUsd ?? 0
+        : wasteAdj * (input.markupPercent / 100);
+
+  const costBeforeProfit =
     wasteAdj +
+    mfgUsd +
     input.logisticsPerKgUsd +
     input.developmentPerKgUsd +
-    input.accessoryPerKgUsd +
-    cormUsd;
-  const marginUsd =
-    input.operatingCostMethod === 'fixed_per_group'
-      ? 0
-      : input.pricingMethod === 'margin_per_kg'
-        ? displayToUsd(input.marginValuePerKgDisplay, input.estimateFxRate)
-        : costBase * (input.markupPercent / 100);
-  return costBase + marginUsd;
+    input.accessoryPerKgUsd;
+
+  const profitUsd =
+    method === 'process_per_kg'
+      ? costBeforeProfit * ((input.profitMarginPercent ?? 5) / 100)
+      : 0;
+
+  return costBeforeProfit + profitUsd;
 }
 
 function priceUsdInUnit(
@@ -357,7 +382,9 @@ export function buildCustomSlabPrice(
   input: PriceListPricingInput,
   qtyInUnit: number,
   unit: PriceListUnit,
-  currency: string
+  currency: string,
+  /** Optional display range; defaults to point qty label when omitted. */
+  rangeLabel?: string
 ): CustomSlabPriceRow {
   const quantityKg = unitToKg(qtyInUnit, unit, input);
   const bands = activeWasteBands(input.wasteBands, input.moqKg);
@@ -375,7 +402,7 @@ export function buildCustomSlabPrice(
   const belowMoq = isQuantityBelowMoq(quantityKg, input.moqKg);
   return {
     bandKey: customSlabKey(qtyInUnit),
-    slab: formatCustomSlabQty(qtyInUnit, unit),
+    slab: rangeLabel ?? formatCustomSlabQty(qtyInUnit, unit),
     meters: null,
     price: priceNum == null ? '—' : formatSmartPrice(priceNum),
     priceNum,
@@ -391,10 +418,10 @@ export function buildCustomSlabPrices(
   currency: string,
   quantities: number[]
 ): CustomSlabPriceRow[] {
-  const unique = [...new Set(quantities.filter((q) => Number.isFinite(q) && q > 0))].sort(
-    (a, b) => a - b
+  const ranges = customSlabRangesFromBreakpoints(quantities);
+  return ranges.map((r) =>
+    buildCustomSlabPrice(input, r.qty, unit, currency, formatCustomSlabRange(r.from, r.to))
   );
-  return unique.map((qty) => buildCustomSlabPrice(input, qty, unit, currency));
 }
 
 export function buildPriceListRows(

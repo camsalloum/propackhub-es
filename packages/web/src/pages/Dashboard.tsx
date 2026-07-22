@@ -1,7 +1,5 @@
 // Feature: es-ui-revamp — Dashboard (PREMIUM v2).
-// Display-tier typography, bigger and visible NumberTicker count-up, taller
-// sparklines, animated entrance with clear stagger, EmptyState for first-run,
-// and View-Transitions on every list-link.
+// Display-tier typography, NumberTicker, sparklines, staggered entrance.
 
 import { Link } from 'react-router-dom';
 import { PlusCircle, FileText, Users, TrendingUp, AlertTriangle, ArrowUpRight } from 'lucide-react';
@@ -17,29 +15,8 @@ import Sparkline, { type SparklineTone } from '../components/Sparkline';
 import EmptyState from '../components/EmptyState';
 import { SectionTitle } from '../components/SectionTitle';
 import { MES_OUTCOME_ENABLED } from '../lib/estimateStatus';
-
-interface SummaryEstimate {
-  id: string;
-  quoteId?: string | null;
-  refNumber: string;
-  jobName?: string;
-  customerName?: string | null;
-  status: 'draft' | 'sent' | 'won' | 'lost';
-  totalPrice: number;
-  displayCurrency?: string;
-  createdAt: string;
-  daysLeft?: number;
-  validUntil?: string | null;
-}
-
-interface DashboardSummary {
-  estimatesThisMonth: number;
-  drafts: number;
-  sent: number;
-  won: number;
-  recent: SummaryEstimate[];
-  expiringProposals: SummaryEstimate[];
-}
+import { RecentPackagesTable } from '../features/dashboard/RecentPackagesTable';
+import type { DashboardSummary, RecentPackage, SummaryEstimate } from '../features/dashboard/types';
 
 interface StatDef {
   key: string;
@@ -75,8 +52,6 @@ const STAT_DEFS: StatDef[] = [
     series: (e) => e.status === 'sent' || e.status === 'won' || e.status === 'lost',
     getValue: (s) => s.sent + s.won,
   },
-  // Won — only surfaced once the MES outcome flow is wired. Until then the tile
-  // stays hidden; the code is kept for the MES integration to flip on.
   ...(MES_OUTCOME_ENABLED
     ? ([
         {
@@ -120,6 +95,31 @@ function resolveStat(def: StatDef, summary: DashboardSummary | null): ResolvedSt
   }
 }
 
+/** Fallback when API has not yet returned recentPackages (older server). */
+function packagesFromFlatRecent(recent: SummaryEstimate[]): RecentPackage[] {
+  const map = new Map<string, SummaryEstimate[]>();
+  for (const est of recent) {
+    const key = est.quoteId ? `q:${est.quoteId}` : `e:${est.id}`;
+    const list = map.get(key);
+    if (list) list.push(est);
+    else map.set(key, [est]);
+  }
+  return [...map.entries()].map(([, estimates]) => {
+    const first = estimates[0]!;
+    return {
+      quoteId: first.quoteId ?? null,
+      refNumber: first.refNumber,
+      customerName: first.customerName,
+      status: first.status,
+      createdAt: first.createdAt,
+      totalPrice: estimates.reduce((s, e) => s + (e.totalPrice || 0), 0),
+      displayCurrency: first.displayCurrency,
+      estimateCount: estimates.length,
+      estimates,
+    };
+  });
+}
+
 const StatCard = ({
   def,
   summary,
@@ -144,7 +144,6 @@ const StatCard = ({
     );
   }
 
-  // Trend: compare last 2 buckets vs prior 2 buckets, derive a delta indicator.
   const trend = (() => {
     const s = resolved.series;
     if (s.length < 4) return null;
@@ -215,7 +214,7 @@ const Dashboard = () => {
   const navigate = useViewTransition();
 
   useEffect(() => {
-    fetchSummary();
+    void fetchSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -233,10 +232,12 @@ const Dashboard = () => {
     }
   };
 
-  const formatTotal = (e: SummaryEstimate) =>
-    `${e.displayCurrency || 'USD'} ${(e.totalPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-
   const sectionDelay = useMemo(() => getDelay(STAT_DEFS.length), [getDelay]);
+
+  const recentPackages = useMemo(() => {
+    if (summary?.recentPackages?.length) return summary.recentPackages;
+    return packagesFromFlatRecent(summary?.recent ?? []);
+  }, [summary]);
 
   if (loading && !summary) {
     return (
@@ -251,19 +252,17 @@ const Dashboard = () => {
       <div className="card bg-danger-soft border border-danger/30 max-w-2xl mx-auto">
         <p className="text-danger font-medium">Error loading dashboard</p>
         <p className="text-danger/80 text-sm mt-1">{error}</p>
-        <button type="button" className="btn-primary mt-4" onClick={fetchSummary}>
+        <button type="button" className="btn-primary mt-4" onClick={() => void fetchSummary()}>
           Retry
         </button>
       </div>
     );
   }
 
-  const recentEstimates = summary?.recent ?? [];
   const expiring = summary?.expiringProposals ?? [];
 
   return (
     <div className="max-w-7xl mx-auto">
-      {/* Hero header — large display title, eyebrow, primary CTA */}
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between mb-10 gap-4">
         <div>
           <p className="eyebrow">Workspace overview</p>
@@ -278,7 +277,6 @@ const Dashboard = () => {
         </Link>
       </div>
 
-      {/* KPI grid with staggered entrance */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
         {STAT_DEFS.map((def, index) => (
           <StatCard key={def.key} def={def} summary={summary} delay={getDelay(index)} />
@@ -333,72 +331,8 @@ const Dashboard = () => {
         </EntranceCard>
       )}
 
-      {recentEstimates.length > 0 ? (
-        <EntranceCard delay={sectionDelay} className="card !p-0 overflow-hidden">
-          <div className="flex items-center justify-between p-6 pb-4">
-            <div>
-              <SectionTitle as="h2" className="section-title" hint="Latest quotes across your workspace">
-                Recent estimates
-              </SectionTitle>
-            </div>
-            <Link to="/estimates" className="text-sm text-accent-text font-medium hover:underline inline-flex items-center gap-1">
-              View all
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <div className="table-wrap">
-            <table className="data-table w-full">
-              <thead>
-                <tr>
-                  <th>Ref #</th>
-                  <th>Customer</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th className="text-right">Total</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentEstimates.map((estimate) => (
-                  <tr key={estimate.id}>
-                    <td>
-                      <span className="font-mono text-sm font-medium">{estimate.refNumber}</span>
-                    </td>
-                    <td className="font-medium">{estimate.customerName || 'Unknown Customer'}</td>
-                    <td>
-                      <span className={`badge badge-${estimate.status}`}>
-                        {estimate.status.charAt(0).toUpperCase() + estimate.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="text-text-secondary">
-                      {new Date(estimate.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="text-right font-display font-semibold tabular">
-                      {formatTotal(estimate)}
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          navigate(
-                            estimate.quoteId
-                              ? `/quotes/${estimate.quoteId}/estimates/${estimate.id}`
-                              : `/estimate/${estimate.id}`
-                          )
-                        }
-                        className="text-sm text-accent-text font-medium hover:underline inline-flex items-center gap-1"
-                      >
-                        Open
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </EntranceCard>
+      {recentPackages.length > 0 ? (
+        <RecentPackagesTable packages={recentPackages} navigate={navigate} />
       ) : (
         <EmptyState
           icon={FileText}
@@ -410,7 +344,15 @@ const Dashboard = () => {
               <span>Create first quote</span>
             </Link>
           }
-          secondary={<>Browse the <Link to="/templates" className="text-accent-text hover:underline">templates library</Link> first if you're not sure where to start.</>}
+          secondary={
+            <>
+              Browse the{' '}
+              <Link to="/templates" className="text-accent-text hover:underline">
+                templates library
+              </Link>{' '}
+              first if you&apos;re not sure where to start.
+            </>
+          }
         />
       )}
     </div>

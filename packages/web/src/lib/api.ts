@@ -462,8 +462,17 @@ export class ApiClient {
         displayName: string;
         role: 'user' | 'tenant_admin' | 'platform_admin';
         visibilityProfile: Record<string, boolean>;
+        pricingMethod?: 'markup' | 'margin_per_kg';
       };
-      tenant: { id: string; name: string; type: 'individual' | 'company'; displayCurrency: string };
+      tenant: {
+        id: string;
+        name: string;
+        type: 'individual' | 'company';
+        displayCurrency: string;
+        operatingCostMethod?: 'process_per_kg' | 'markup_over_rm' | 'fixed_per_group';
+        customerAccess?: unknown;
+        catalogAccess?: unknown;
+      };
     }>('GET', '/api/v1/auth/me');
   }
 
@@ -761,6 +770,7 @@ export class ApiClient {
       sent: number;
       won: number;
       recent: any[];
+      recentPackages?: any[];
       expiringProposals: any[];
       quotationValidDays: number;
     }>('GET', '/api/v1/dashboard/summary');

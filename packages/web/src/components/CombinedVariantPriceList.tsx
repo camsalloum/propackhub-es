@@ -7,7 +7,7 @@ import { useQuotePriceListPrefs } from '../hooks/useQuotePriceListPrefs';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
 import { buildVariantPricingContext, type VariantPricingContext } from '../lib/variantPricingContext';
 import type { ClientCalcMaterial } from '../lib/estimateCalc';
-import { formatCommercialPrice, roundCommercialPrice } from '@es/engine';
+import { formatCommercialPrice, roundCommercialPrice, customSlabRangesFromBreakpoints } from '@es/engine';
 import {
   activeWasteBands,
   bandKey,
@@ -15,7 +15,8 @@ import {
   buildPriceListRows,
   customSlabKey,
   findMatchingBand,
-  formatCustomSlabQty,
+  customSlabRangeLabels,
+  formatCustomSlabRange,
   intersectPriceListUnits,
   kgToUnit,
   pickUnitConversionInput,
@@ -295,7 +296,7 @@ export default function CombinedVariantPriceList({
   const columnHeaders = useMemo(() => {
     if (!unit) return columnKeys.map(String);
     if (slabMode === 'custom') {
-      return customSlabs.map((q) => formatCustomSlabQty(q, unit));
+      return customSlabRangeLabels(customSlabs);
     }
     return predefinedSlabLabels(selectedBands, unit, slabLabelContext);
   }, [columnKeys, slabMode, customSlabs, unit, selectedBands, slabLabelContext]);
@@ -308,15 +309,22 @@ export default function CombinedVariantPriceList({
         { price: string; priceNum: number | null; kgHint: string | null; belowMoq: boolean }
       >();
       if (slabMode === 'custom') {
-        for (const qty of customSlabs) {
-          const row = buildCustomSlabPrice(ctx, qty, unit, currency);
+        const ranges = customSlabRangesFromBreakpoints(customSlabs);
+        for (const r of ranges) {
+          const row = buildCustomSlabPrice(
+            ctx,
+            r.qty,
+            unit,
+            currency,
+            formatCustomSlabRange(r.from, r.to)
+          );
           const kgHint =
             row.quantityKg != null && unit !== 'kg'
               ? `${Math.round(row.quantityKg).toLocaleString()} kg`
               : null;
           const priceNum =
             row.priceNum == null ? null : roundCommercialPrice(row.priceNum, rounding);
-          prices.set(customSlabKey(qty), {
+          prices.set(customSlabKey(r.qty), {
             price:
               row.priceNum == null ? '—' : formatCommercialPrice(row.priceNum, rounding),
             priceNum,

@@ -106,20 +106,23 @@ export default function CustomerAutocomplete({
     setQuery(q);
     if (!value) onDraftChange?.(q);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (q.length < 2) {
+    const trimmed = q.trim();
+    if (trimmed.length < 1) {
       setOptions([]);
-      setOpen(q.length === 0);
+      setOpen(true);
       return;
     }
+    setOpen(true);
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
         const { apiClient } = await import('../lib/api');
-        const results = await apiClient.autocompleteCustomers(q);
-        setOptions(results);
+        const results = await apiClient.autocompleteCustomers(trimmed);
+        setOptions(Array.isArray(results) ? results : []);
         setOpen(true);
       } catch {
         setOptions([]);
+        setOpen(true);
       } finally {
         setLoading(false);
       }
@@ -129,7 +132,7 @@ export default function CustomerAutocomplete({
   const trimmedQuery = query.trim();
   const showCreateOption =
     canCreateCustomers &&
-    trimmedQuery.length >= 2 &&
+    trimmedQuery.length >= 1 &&
     !options.some((c) => c.companyName.toLowerCase() === trimmedQuery.toLowerCase());
 
   return (
@@ -143,11 +146,8 @@ export default function CustomerAutocomplete({
         value={open ? query : selectedLabel || query}
         onChange={(e) => search(e.target.value)}
         onFocus={() => {
-          if (query.length >= 2) setOpen(true);
-          else {
-            setOptions([]);
-            setOpen(true);
-          }
+          setOpen(true);
+          if (query.trim().length >= 1) search(query);
         }}
         onBlur={() => setTimeout(() => setOpen(false), 200)}
         onKeyDown={(e) => {
@@ -159,7 +159,7 @@ export default function CustomerAutocomplete({
         autoComplete="off"
       />
       {open && (
-        <ul className="absolute z-20 mt-1 w-full min-w-[12rem] bg-surface-raised border border-border rounded-lg shadow-lg max-h-52 overflow-auto">
+        <ul className="absolute z-[60] mt-1 w-full min-w-[12rem] bg-surface-raised border border-border rounded-lg shadow-lg max-h-52 overflow-auto">
           {showCreateOption && (
             <li className="border-b border-border">
               <button
@@ -177,13 +177,13 @@ export default function CustomerAutocomplete({
           )}
           {!loading && options.length === 0 && !showCreateOption && (
             <li className="px-3 py-2 text-sm text-mist">
-              {query.length >= 2
+              {trimmedQuery.length >= 1
                 ? canCreateCustomers
                   ? 'No matching customer — use Add above'
                   : 'No matching customer'
                 : totalCustomers != null
-                  ? `${totalCustomers} customers — type 2+ letters to search`
-                  : 'Type 2+ letters to search'}
+                  ? `${totalCustomers} customers — type to search`
+                  : 'Type to search'}
             </li>
           )}
           {options.map((c) => (

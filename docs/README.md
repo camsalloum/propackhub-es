@@ -50,9 +50,10 @@ npm test               # Engine 19/19 ✅ + Integration 7/7 ✅
 2. Check [ES_PRD_v3_FINAL_BUILD_SPEC.md](ES_PRD_v3_FINAL_BUILD_SPEC.md) for what's implemented
 3. Review [LOCKED_DECISIONS.md](LOCKED_DECISIONS.md) for architectural choices
 4. Run `npm run start:servers` and open http://localhost:5000
-5. Login: `admin@propackhub.com` / `Admin@123`
+5. **Default estimation login:** `admin@propackhub.com` (same password as before) → **Interplast** tenant (~700 PEBI customers, type DAHMAN)
+6. Optional: `camille@interplast-uae.com` / `Admin@123` (also Interplast). Hub SSO from an Interplast account with ES entitlement also lands on Interplast.
 
 ---
 
-**Last Updated:** 2026-06-19  
+**Last Updated:** 2026-07-21  
 **Next Phase:** Phase 3 planning (PDF exports, advanced UI, integrations)

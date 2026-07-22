@@ -21,6 +21,7 @@ describe('Laravel golden reference rows', () => {
     const breakup =
       (e.wasteAdjustedMaterialPerKg ?? e.materialCostPerKg ?? 0) +
       (e.operationCostPerKg ?? 0) +
+      (e.profitMarginPerKg ?? 0) +
       (e.developmentCostPerKg ?? 0) +
       (e.logisticsCostPerKg ?? 0) +
       (e.accessoryCostPerKg ?? 0);

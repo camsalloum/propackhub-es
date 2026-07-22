@@ -28,12 +28,16 @@ import { seedSleeveDimensionPatch } from '../lib/sleeveConfiguratorCatalog';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { runClientCalculation } from '../lib/estimateCalc';
+import { buildRmTotals } from '../features/estimate-editor/costSummaryMetrics';
+import { CostBreakdownCard } from '../features/estimate-editor/CostBreakdownCard';
 import {
+  DEFAULT_PROFIT_MARGIN_PERCENT,
   DEFAULT_LOAD_PER_PALLET_KG,
   DEFAULT_CARTONS_PER_PALLET,
   DEFAULT_PCS_PER_CARTON,
   mergePackagingConfigDefaults,
   mergeConsumablesConfigDefaults,
+  type OperatingCostMethod,
   type PackagingConfig,
   type ConsumablesConfig,
 } from '@es/engine';
@@ -183,7 +187,26 @@ const EstimateEditor = ({
   const { id: routeId } = useParams<{ id: string }>();
   const id = estimateIdOverride ?? routeId;
   const { user, tenant } = useAuth();
+  const [tenantOperatingCostMethod, setTenantOperatingCostMethod] = useState<
+    OperatingCostMethod | undefined
+  >(tenant?.operatingCostMethod);
+  /** Null = follow tenant setting; set = estimate-scoped override. */
+  const [operatingCostMethodOverride, setOperatingCostMethodOverride] =
+    useState<OperatingCostMethod | null>(null);
+  const [tenantProfitMarginPercent, setTenantProfitMarginPercent] = useState(
+    DEFAULT_PROFIT_MARGIN_PERCENT
+  );
+  const [tenantMarkupPercent, setTenantMarkupPercent] = useState(15);
+  const [profitMarginPercent, setProfitMarginPercent] = useState(DEFAULT_PROFIT_MARGIN_PERCENT);
+  /** Template CoRM snapshot at load — restore when clearing method override. */
+  const templateCormRef = useRef<{ printed: number; plain: number }>({ printed: 0, plain: 0 });
+  const operatingCostMethod: OperatingCostMethod =
+    operatingCostMethodOverride ?? tenantOperatingCostMethod ?? 'markup_over_rm';
   const { can } = useVisibilityProfile(user?.role);
+  const canOverrideOperatingCostMethod =
+    user?.role === 'platform_admin' ||
+    user?.role === 'tenant_admin' ||
+    can('overrideOperatingCostMethod');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const quoteIdFromUrl = searchParams.get('quote')?.trim() || '';
@@ -714,6 +737,44 @@ const EstimateEditor = ({
     setOrderQuantityUnit((prev) => normalizeUnitValue(prev, unitOptions));
   }, [productTypeOptions, unitOptions]);
 
+  // Keep tenant M&O defaults current (AuthContext can lag after Settings save).
+  useEffect(() => {
+    if (tenant?.operatingCostMethod) {
+      setTenantOperatingCostMethod(tenant.operatingCostMethod);
+    }
+  }, [tenant?.operatingCostMethod]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void apiClient
+      .getSettings()
+      .then((settings) => {
+        if (cancelled) return;
+        const method = settings.operatingCostMethod;
+        if (
+          method === 'process_per_kg' ||
+          method === 'markup_over_rm' ||
+          method === 'fixed_per_group'
+        ) {
+          setTenantOperatingCostMethod(method);
+        }
+        const profit = Number(settings.defaultProfitMarginPercent);
+        if (Number.isFinite(profit)) {
+          setTenantProfitMarginPercent(profit);
+        }
+        const markup = Number(settings.defaultMarkupPercent);
+        if (Number.isFinite(markup)) {
+          setTenantMarkupPercent(markup);
+        }
+      })
+      .catch(() => {
+        /* Auth tenant fallback remains */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Seed bag schematic defaults when subtype selects a configurator-backed bag type.
   useEffect(() => {
     if (!bagConfiguratorActive || !bagConfiguratorType) return;
@@ -1016,13 +1077,14 @@ const EstimateEditor = ({
     setMarginValuePerKgUsd(parseFloat((pe as { marginValuePerKgUsd?: string }).marginValuePerKgUsd ?? '') || 0);
     {
       const printed = parseFloat((pe as { cormPerKgUsd?: string }).cormPerKgUsd ?? '') || 0;
-      setCormPerKgUsd(printed);
       const plainRaw = (pe as { cormPerKgPlain?: string }).cormPerKgPlain;
-      setCormPerKgPlain(
+      const plain =
         plainRaw != null && plainRaw !== ''
           ? parseFloat(plainRaw) || 0
-          : plainCormFromPrinted(printed)
-      );
+          : plainCormFromPrinted(printed);
+      setCormPerKgUsd(printed);
+      setCormPerKgPlain(plain);
+      templateCormRef.current = { printed, plain };
       const moqRaw = (pe as { moqKg?: string }).moqKg;
       setMoqKg(moqRaw != null && moqRaw !== '' ? parseFloat(moqRaw) || null : null);
     }
@@ -1121,6 +1183,25 @@ const EstimateEditor = ({
       setCustomerId(data.customerId || '');
       setNotes(typeof data.notes === 'string' ? data.notes : '');
       setMarkupPercent(parseFloat(data.markupPercent) || 15);
+      {
+        const method = data.operatingCostMethod;
+        if (
+          method === 'process_per_kg' ||
+          method === 'markup_over_rm' ||
+          method === 'fixed_per_group'
+        ) {
+          setOperatingCostMethodOverride(method);
+        } else {
+          setOperatingCostMethodOverride(null);
+        }
+        const profit =
+          data.profitMarginPercent != null && data.profitMarginPercent !== ''
+            ? Number(data.profitMarginPercent)
+            : NaN;
+        setProfitMarginPercent(
+          Number.isFinite(profit) ? profit : tenantProfitMarginPercent
+        );
+      }
       setPlatesPerKg(parseFloat(data.platesPerKg) || 0);
       setDeliveryPerKg(parseFloat(data.deliveryPerKg) || 0);
       // Pricing model v2 — adopt the user's assigned method when a (legacy) estimate has none.
@@ -1131,12 +1212,13 @@ const EstimateEditor = ({
       setMarginValuePerKgUsd(parseFloat(data.marginValuePerKgUsd) || 0);
       {
         const printed = parseFloat(data.cormPerKgUsd) || 0;
-        setCormPerKgUsd(printed);
-        setCormPerKgPlain(
+        const plain =
           data.cormPerKgPlain != null && data.cormPerKgPlain !== ''
             ? parseFloat(data.cormPerKgPlain) || 0
-            : plainCormFromPrinted(printed)
-        );
+            : plainCormFromPrinted(printed);
+        setCormPerKgUsd(printed);
+        setCormPerKgPlain(plain);
+        templateCormRef.current = { printed, plain };
         setMoqKg(
           data.moqKg != null && data.moqKg !== '' ? parseFloat(data.moqKg) || null : null
         );
@@ -1374,6 +1456,8 @@ const EstimateEditor = ({
         accessories: productFamily === 'pouch' ? accessories : [],
       },
       markupPercent,
+      operatingCostMethod: operatingCostMethodOverride,
+      profitMarginPercent,
       platesPerKg,
       deliveryPerKg,
       pricingMethod,
@@ -1458,7 +1542,7 @@ const EstimateEditor = ({
       if (slabs.length > 0) payload.slabs = slabs;
     }
     return sanitizeEstimateSavePayload(payload);
-  }, [isPriceCheck, multiOnQuote, jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, estimate?.quoteId, quoteIdFromUrl, productType, productTypeOptions, productSubtype, needsSolventMix, hasSleeveSubstrate, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, cormPerKgPlain, moqKg, toolingChargeUsd, skuLabel, brand, specsCode, printColorCount, costPerColor, toolingBillingMode, toolingScenario, billableColorCount, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, sleeveSeamingSolventGsm, packagingConfig, consumablesConfig, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
+  }, [isPriceCheck, multiOnQuote, jobName, customerId, notes, estimate?.productType, estimate?.sourceTemplateKey, estimate?.quoteId, quoteIdFromUrl, productType, productTypeOptions, productSubtype, needsSolventMix, hasSleeveSubstrate, hasSbInk, effectiveInkPrintingProcess, effectiveInkSolventRatio, dimensions, accessories, productFamily, markupPercent, operatingCostMethodOverride, profitMarginPercent, platesPerKg, deliveryPerKg, pricingMethod, marginValuePerKgUsd, cormPerKgUsd, cormPerKgPlain, moqKg, toolingChargeUsd, skuLabel, brand, specsCode, printColorCount, costPerColor, toolingBillingMode, toolingScenario, billableColorCount, deliveryTerm, deliveryChargeUsd, solventMaterialId, resolvedSolventCostPerKgUsd, laminationRecipeOverrides, cleaningSolventKgPerJob, sleeveSeamingSolventGsm, packagingConfig, consumablesConfig, orderQuantity, orderQuantityUnit, layers, slabsState, processesState]);
 
   /** Link estimate to a customer row — create customer record if user typed a new name. */
   const ensureCustomerForSave = async (): Promise<string | undefined> => {
@@ -1549,7 +1633,8 @@ const EstimateEditor = ({
         inkSolventRatio: hasSbInk ? effectiveInkSolventRatio : undefined,
         pricingMethod,
         marginValuePerKgUsd,
-        operatingCostMethod: tenant?.operatingCostMethod ?? undefined,
+        operatingCostMethod: operatingCostMethod ?? tenant?.operatingCostMethod ?? undefined,
+        profitMarginPercent,
         cormPerKgUsd: baseCormDisplay,
         cormScaleWithWaste,
         toolingChargeUsd:
@@ -1588,7 +1673,7 @@ const EstimateEditor = ({
     pricingMethod, marginValuePerKgUsd, baseCormDisplay, cormScaleWithWaste, toolingChargeUsd,
     printColorCount, costPerColor, toolingBillingMode, toolingScenario, billableColorCount,
     deliveryTerm, deliveryChargeUsd,
-    tenant?.operatingCostMethod, processesState,
+    operatingCostMethod, tenant?.operatingCostMethod, profitMarginPercent, processesState,
   ]);
 
   const solventCostLines = useMemo(() => {
@@ -1737,17 +1822,11 @@ const EstimateEditor = ({
   const showPackagingCosting = Boolean(productType);
 
   const rmTotals = useMemo(() => {
-    const e = clientCalcResult?.estimate;
-    if (!e) return null;
-    const layerPerM2 =
-      e.layerRmCostPerM2 ??
-      e.layers?.reduce((sum, layer) => sum + (layer.costPerM2 ?? 0), 0) ??
-      0;
-    const solventPerM2 = e.solventMixCostPerM2 ?? solventTotalPerM2Usd;
-    const packagingPerM2 = e.packagingCostPerM2 ?? packagingTotalPerM2Usd;
-    const rmPerKg = e.materialCostPerKg ?? 0;
-    const rmPerM2 = e.rmCostPerM2 ?? layerPerM2 + solventPerM2 + packagingPerM2;
-    return { rmPerKg, rmPerM2, layerPerM2, solventPerM2, packagingPerM2 };
+    return buildRmTotals(
+      clientCalcResult?.estimate,
+      solventTotalPerM2Usd,
+      packagingTotalPerM2Usd
+    );
   }, [clientCalcResult, solventTotalPerM2Usd, packagingTotalPerM2Usd]);
 
   const structureMetrics = useMemo(() => {
@@ -3531,12 +3610,12 @@ const EstimateEditor = ({
                         <>
                           <div className="structure-grid__cell py-3 font-mono text-[11px] font-bold text-navy tabular-nums" role="cell">
                             {rmTotals
-                              ? usdToDisplayPrecise(rmTotals.rmPerKg, fxRate).toFixed(4)
+                              ? usdToDisplayPrecise(rmTotals.totalRmPerKg, fxRate).toFixed(4)
                               : '—'}
                           </div>
                           <div className="structure-grid__cell py-3 font-mono text-[11px] font-bold text-navy tabular-nums" role="cell">
                             {rmTotals
-                              ? usdToDisplayPrecise(rmTotals.rmPerM2, fxRate).toFixed(4)
+                              ? usdToDisplayPrecise(rmTotals.totalRmPerM2, fxRate).toFixed(4)
                               : '—'}
                           </div>
                         </>
@@ -3687,9 +3766,9 @@ const EstimateEditor = ({
                     Material cost
                   </SectionTitle>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {statTile('RM cost', `${estimate?.displayCurrency || 'USD'} ${usdToDisplayPrecise(rmTotals.rmPerKg, fxRate).toFixed(2)}`, '/kg')}
-                    {(can('costPerSqm') || can('rmCostPerKg')) && rmTotals.rmPerM2 > 0 &&
-                      statTile('RM cost', `${estimate?.displayCurrency || 'USD'} ${usdToDisplayPrecise(rmTotals.rmPerM2, fxRate).toFixed(4)}`, '/m²')}
+                    {statTile('RM cost', `${estimate?.displayCurrency || 'USD'} ${usdToDisplayPrecise(rmTotals.totalRmPerKg, fxRate).toFixed(2)}`, '/kg')}
+                    {(can('costPerSqm') || can('rmCostPerKg')) && rmTotals.totalRmPerM2 > 0 &&
+                      statTile('RM cost', `${estimate?.displayCurrency || 'USD'} ${usdToDisplayPrecise(rmTotals.totalRmPerM2, fxRate).toFixed(4)}`, '/m²')}
                   </div>
                 </div>
               )}
@@ -3738,7 +3817,9 @@ const EstimateEditor = ({
                     reelWidthMm={dimensions?.reelWidthMm ?? 0}
                     rollLengthLm={rollLengthLm}
                     availableUnits={priceListUnits}
-                    operatingCostMethod={tenant?.operatingCostMethod}
+                    operatingCostMethod={operatingCostMethod ?? tenant?.operatingCostMethod}
+                    mfgProcessPerKgUsd={ce.operationCostPerKg ?? 0}
+                    profitMarginPercent={profitMarginPercent}
                     baseCormDisplay={baseCormDisplay}
                     cormScaleWithWaste={cormScaleWithWaste}
                     moqKg={moqKg}
@@ -3782,137 +3863,58 @@ const EstimateEditor = ({
             </div>
 
             {can('costBreakdown') && (
-              <div className="card h-full min-w-0">
-                <h3 className="font-display font-semibold text-brand mb-4">Cost breakdown</h3>
-                {(() => {
-                  const ce = clientCalcResult?.estimate;
-                  const cur = estimate?.displayCurrency || 'USD';
-                  const gsmLocal = ce?.totalGsm ?? totalGsm ?? 0;
-                  const widthM = (dimensions?.reelWidthMm ?? 0) / 1000;
-                  const rollLengthLm = Number(dimensions?.orderUnitMultiplier) || 0;
-                  const showM2 = gsmLocal > 0;
-                  const showLm = allowedUnitBases.has('lm') && widthM > 0;
-                  // Per-roll column only when Roll (custom length) is selected and length is set.
-                  const showRoll = requiresRollLength && rollLengthLm > 0 && showLm;
-                  const m2ToKg = (v: number) => (gsmLocal > 0 ? (v / gsmLocal) * 1000 : 0);
-                  const kgToM2 = (v: number) => (showM2 ? v * (gsmLocal / 1000) : 0);
-                  const m2ToLm = (v: number) => (showLm ? v * widthM : 0);
-                  const m2ToRoll = (v: number) => (showRoll ? m2ToLm(v) * rollLengthLm : 0);
-                  const fmtKg = (v: number) => usdToDisplayPrecise(v, fxRate).toFixed(2);
-                  const fmtM2 = (v: number) => usdToDisplayPrecise(v, fxRate).toFixed(4);
-                  const fmtLm = (v: number) => usdToDisplayPrecise(v, fxRate).toFixed(4);
-                  const fmtRoll = (v: number) => usdToDisplayPrecise(v, fxRate).toFixed(2);
-
-                  // Per-family raw-material split (per m²) from the current layer stack.
-                  let subM2 = 0, inkAdhM2 = 0, pkgM2 = 0;
-                  for (const l of layers) {
-                    const mat = materials.find((m) => m.id === l.materialId);
-                    const fam = (mat?.substrateFamily ?? '').toLowerCase();
-                    const t = (l.materialType || mat?.type || 'substrate') as string;
-                    const lineM2 = ((l.gsm || 0) / 1000) * (l.costPerKgUsd || 0);
-                    if (t === 'substrate') {
-                      if (fam === 'packaging') pkgM2 += lineM2; else subM2 += lineM2;
-                    } else if (t === 'ink' || t === 'adhesive') {
-                      inkAdhM2 += lineM2;
-                    }
+              <CostBreakdownCard
+                estimate={clientCalcResult?.estimate}
+                layers={layers}
+                materials={materials}
+                solventTotalPerM2Usd={solventTotalPerM2Usd}
+                packagingTotalPerKgUsd={packagingTotalPerKgUsd}
+                packagingTotalPerM2Usd={packagingTotalPerM2Usd}
+                consumablesTotalPerKgUsd={consumablesTotalPerKgUsd}
+                consumablesTotalPerM2Usd={consumablesTotalPerM2Usd}
+                displayCurrency={estimate?.displayCurrency || 'USD'}
+                fxRate={fxRate}
+                reelWidthMm={dimensions?.reelWidthMm ?? 0}
+                rollLengthLm={Number(dimensions?.orderUnitMultiplier) || 0}
+                allowedUnitBases={allowedUnitBases}
+                requiresRollLength={requiresRollLength}
+                operatingCostMethod={operatingCostMethod}
+                tenantOperatingCostMethod={tenantOperatingCostMethod ?? 'markup_over_rm'}
+                cormPerKgDisplay={baseCormDisplay}
+                markupPercent={markupPercent}
+                profitMarginPercent={profitMarginPercent}
+                canOverrideMethod={canOverrideOperatingCostMethod}
+                readOnly={readOnly}
+                fallbackSalePerKg={Number(estimate?.salePricePerKg) || 0}
+                onMethodChange={(method) => {
+                  setOperatingCostMethodOverride(method);
+                  if (method === 'process_per_kg') {
+                    setProfitMarginPercent((prev: number) =>
+                      Number.isFinite(prev) ? prev : tenantProfitMarginPercent
+                    );
+                  } else if (method === 'markup_over_rm') {
+                    setMarkupPercent((prev: number) =>
+                      Number.isFinite(prev) && prev > 0 ? prev : tenantMarkupPercent
+                    );
                   }
-                  inkAdhM2 += solventTotalPerM2Usd; // Ink, Solvent, Adhesive & Coating family
-
-                  const substratesKg = m2ToKg(subM2);
-                  const inkAdhKg = m2ToKg(inkAdhM2);
-                  const packagingKg = m2ToKg(pkgM2);
-                  const materialNoWasteKg = ce?.materialCostPerKg ?? (substratesKg + inkAdhKg + packagingKg);
-                  const totalRmKg = ce?.wasteAdjustedMaterialPerKg ?? materialNoWasteKg;
-                  const wasteKg = Math.max(0, totalRmKg - materialNoWasteKg);
-                  const wastePct = ce?.wastePercentApplied ?? 0;
-                  const baseM2 = subM2 + inkAdhM2 + pkgM2;
-                  const wasteM2 = baseM2 * (wastePct / 100);
-                  const totalRmM2 = baseM2 + wasteM2;
-
-                  // Manufacturing & Operating — resolved by the tenant method.
-                  const processSumPerKgUsd = (processesState ?? [])
-                    .filter((p: any) => p.enabled !== false)
-                    .reduce((sum: number, p: any) => {
-                      const qty = Math.max(1, Number(p.processQuantity) || 1);
-                      return sum + resolveProcessPerKgUsd(p, processCostCatalog) * qty;
-                    }, 0);
-                  const mfgOpKg = ce?.operationCostPerKg ?? processSumPerKgUsd;
-                  const prepressKg = ce?.developmentCostPerKg ?? 0;
-                  const transportKg = ce?.logisticsCostPerKg ?? 0;
-                  const accessoryKg = ce?.accessoryCostPerKg ?? 0;
-                  const saleKg = ce?.salePricePerKg ?? Number(estimate?.salePricePerKg) ?? 0;
-
-                  type CostRow = { label: string; kgVal: number; m2Val?: number; strong?: boolean; show?: boolean };
-                  const rows: CostRow[] = [
-                    { label: 'Substrates', kgVal: substratesKg, m2Val: subM2 },
-                    { label: 'Ink, Solvent, Adhesive & Coating', kgVal: inkAdhKg, m2Val: inkAdhM2 },
-                    { label: 'Waste', kgVal: wasteKg, m2Val: wasteM2 },
-                    { label: 'Packaging', kgVal: packagingTotalPerKgUsd || packagingKg, m2Val: packagingTotalPerM2Usd || pkgM2, show: (packagingTotalPerKgUsd || packagingKg) > 0 },
-                    { label: 'Consumables', kgVal: consumablesTotalPerKgUsd, m2Val: consumablesTotalPerM2Usd, show: consumablesTotalPerKgUsd > 0 },
-                    { label: 'Total RM', kgVal: totalRmKg, m2Val: totalRmM2, strong: true },
-                    { label: 'Manufacturing & Operating', kgVal: mfgOpKg, m2Val: kgToM2(mfgOpKg) },
-                    { label: 'PrePress', kgVal: prepressKg, m2Val: kgToM2(prepressKg), show: prepressKg > 0 },
-                    { label: 'Transportation', kgVal: transportKg, m2Val: kgToM2(transportKg), show: transportKg > 0 },
-                    { label: 'Accessories', kgVal: accessoryKg, m2Val: kgToM2(accessoryKg), show: accessoryKg > 0 },
-                    { label: 'Selling price', kgVal: saleKg, m2Val: kgToM2(saleKg), strong: true },
-                  ];
-
-                  return (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-border">
-                            <th className="text-left py-2 px-3 text-xs font-medium text-mist"> </th>
-                            <th className="text-right py-2 px-3 text-xs font-medium text-mist whitespace-nowrap">{cur} / kg</th>
-                            {showM2 && <th className="text-right py-2 px-3 text-xs font-medium text-mist whitespace-nowrap">{cur} / m²</th>}
-                            {showLm && <th className="text-right py-2 px-3 text-xs font-medium text-mist whitespace-nowrap">{cur} / LM</th>}
-                            {showRoll && (
-                              <th
-                                className="text-right py-2 px-3 text-xs font-medium text-mist whitespace-nowrap"
-                                title={`Per roll of ${rollLengthLm} LM`}
-                              >
-                                {cur} / roll
-                              </th>
-                            )}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {rows
-                            .filter((r) => r.show !== false)
-                            .map((r, i) => (
-                              <tr
-                                key={r.label}
-                                className={`${r.strong ? 'border-t border-border' : ''} ${i % 2 === 1 ? 'bg-slate/40' : ''}`}
-                              >
-                                <td className={`py-2 px-3 ${r.strong ? 'font-semibold text-text-primary' : 'text-text-secondary'}`}>
-                                  {r.label}
-                                </td>
-                                <td className={`py-2 px-3 text-right font-mono tabular whitespace-nowrap ${r.strong ? 'font-semibold text-text-primary' : ''}`}>
-                                  {fmtKg(r.kgVal)}
-                                </td>
-                                {showM2 && (
-                                  <td className={`py-2 px-3 text-right font-mono tabular whitespace-nowrap ${r.strong ? 'font-semibold text-text-primary' : ''}`}>
-                                    {fmtM2(r.m2Val ?? 0)}
-                                  </td>
-                                )}
-                                {showLm && (
-                                  <td className={`py-2 px-3 text-right font-mono tabular whitespace-nowrap ${r.strong ? 'font-semibold text-text-primary' : ''}`}>
-                                    {fmtLm(m2ToLm(r.m2Val ?? 0))}
-                                  </td>
-                                )}
-                                {showRoll && (
-                                  <td className={`py-2 px-3 text-right font-mono tabular whitespace-nowrap ${r.strong ? 'font-semibold text-text-primary' : ''}`}>
-                                    {fmtRoll(m2ToRoll(r.m2Val ?? kgToM2(r.kgVal)))}
-                                  </td>
-                                )}
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  );
-                })()}
-              </div>
+                }}
+                onCormChange={(value) => {
+                  const n = Number.isFinite(value) && value >= 0 ? value : 0;
+                  if (wastePrintMode === 'printed') setCormPerKgUsd(n);
+                  else setCormPerKgPlain(n);
+                }}
+                onMarkupChange={(pct) => {
+                  setMarkupPercent(Number.isFinite(pct) && pct >= 0 ? pct : tenantMarkupPercent);
+                }}
+                onProfitMarginChange={setProfitMarginPercent}
+                onResetToTenantDefault={() => {
+                  setOperatingCostMethodOverride(null);
+                  setProfitMarginPercent(tenantProfitMarginPercent);
+                  setMarkupPercent(tenantMarkupPercent);
+                  setCormPerKgUsd(templateCormRef.current.printed);
+                  setCormPerKgPlain(templateCormRef.current.plain);
+                }}
+              />
             )}
 
           </div>

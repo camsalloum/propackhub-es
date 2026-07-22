@@ -30,6 +30,108 @@
 
 ---
 
+## 2026-07-21 — Dashboard recent quotes grouped by PKG
+
+- Dashboard “Recent quotes” is **one row per package** (`quoteId` / `PKG-…`), not per QT.
+- Parent: PKG ref, customer, quote status, date, **sum of estimate line totals**; multi-SKU shows “N estimates” + expand to SKU/job · QT ref.
+- Open (parent) → quote workspace; child Open → that estimate on the quote.
+- API: `GET /api/v1/dashboard/summary` adds `recentPackages` (top 5 packages by newest estimate activity, all SKUs included). Flat `recent` kept for KPI sparklines.
+- UI: `features/dashboard/RecentPackagesTable.tsx` (Dashboard page stays under line budget).
+
+## 2026-07-21 — Multi-SKU vs Dashboard QT rows (investigation)
+
+- **Intended model:** Quote (`PKG-…`) = commercial package; Estimate (`QT-…`) = one SKU/structure. Multi-SKU = many estimates on one quote.
+- **Not a create bug:** `PKG-2026-00005 · 2 estimates` (PVC 40 + PET 45) is correct.
+- **Creates new PKG:** New quote (folders, explorer, dialog). **Adds SKU to same PKG:** open quote → **New structure** or **Duplicate** (price-check explorer also has **Add structure** on the card).
+- **Re-quote** → new quote (by design).
+- **Superseded for Dashboard:** recent list now groups by PKG (see above). All estimates / explorer remain estimate-aware as before.
+
+## 2026-07-21 — Custom slab quantity ranges (auto from breakpoints)
+
+- Custom slab source still stores **fixed breakpoints** (`number[]`); pricing amortize qty = entered breakpoint (upper bound).
+- UI + PDF now **auto-derive inclusive ranges**: first band `0 → first`, then `previous+1 → next` (matches predefined waste bands e.g. `0–80`, `601–1,500`).
+- Chips / table / Excel headers: `0 – 1,000`, `1,001 – 2,000`, … (spaced en dash). Quote PDF headers: compact `0–1,000` (same as predefined PDF).
+- Shared: `customSlabRangesFromBreakpoints` in engine; wired in `PriceListSlabControls`, `priceListPricing`, `CombinedVariantPriceList`, `quotation-matrix`.
+
+## 2026-07-21 — Cost breakdown override inputs (x.xx + spinners)
+
+- CoRM / Markup % / Profit %: display + commit as **2 decimals** (`8` → `8.00`); `type="number"` `step={0.01}` with visible native spinners (`.draft-number-input`).
+- Draft-while-focused + debounced live recalc unchanged.
+
+## 2026-07-21 — Cost breakdown overrides live recalc
+
+- Bug: CoRM / Markup % / Profit % draft inputs did not push parent state until blur, and blur used a possibly stale `draft` closure — prices looked frozen.
+- Fix: `DraftNumberInput` debounced live `onCommit` (~250ms) when draft parses as a number; blur/Enter flush from **DOM** `currentTarget.value`; local draft kept while focused (cursor safe).
+- Parent handlers (`setCorm*`, `setMarkupPercent`, `setProfitMarginPercent`) already feed `clientCalcResult` → breakdown + selling + slabs.
+
+## 2026-07-21 — Cost breakdown override inputs (draft-while-focused)
+
+- CoRM / Markup % / Profit % use `DraftNumberInput`: local string draft while focused; commit on blur / Enter; select-all on focus.
+- Fixes controlled `type="number"` rewriting mid-keystroke (had to select-all before typing).
+
+## 2026-07-21 — Cost breakdown method value fields (CoRM / Markup % / Profit %)
+
+- Same row as method dropdown: **Fixed CoRM** → CoRM (display currency/kg); **Markup over material** → Markup %; **Per-kg process** → Profit % (unchanged).
+- Editable only when method selector is visible (platform/tenant admin or `overrideOperatingCostMethod`).
+- Persist via existing estimate fields (`corm_per_kg_*`, `markup_percent`, `profit_margin_percent`); CoRM defaults from template snapshot; Markup % from estimate (tenant default at create / Settings reset); Profit % falls back to tenant `defaultProfitMarginPercent`.
+- **Use tenant default** restores method + profit/markup tenant defaults + template CoRM snapshot.
+
+## 2026-07-21 — M&O method selector + process profit margin
+
+- **Selector** above Cost breakdown: Fixed CoRM / Markup over material / Per-kg process. Default = tenant `operatingCostMethod`; estimate override persisted (`estimates.operating_cost_method`).
+- **Who sees it:** `platform_admin` | `tenant_admin` | visibility `overrideOperatingCostMethod` (Team & Visibility). Others: tenant method only; labels still follow active method.
+- **Labels:** Fixed CoRM → **Margin Over Raw Material**; Markup → **Markup Over Material**; Process → **Manufacturing & Operating** + new **Profit margin**.
+- **Process profit:** `profit = % × (Total RM + process M&O + PrePress + Transport + accessory)` — default **5%** from tenant `defaultProfitMarginPercent` (Settings); estimate can override when selector is available.
+- Engine: `price-buildup.ts`; Material / Selling / price list use same breakup. Prior Material=Total RM + Fixed CoRM session-settings fix retained.
+
+## 2026-07-21 — Costing display: Material card = Total RM; Fixed CoRM M&O
+
+- **Material cost card** previously used pre-waste `materialCostPerKg` / `rmCostPerM2` (e.g. 8.22) while Cost breakdown **Total RM** used `wasteAdjustedMaterialPerKg` (e.g. 9.70). Now both use Total RM (waste-adjusted); /m² from Total RM × GSM/1000.
+- **Fixed CoRM M&O ~1.43 bug:** Settings had `fixed_per_group` and Shrink Sleeves CoRM = **10 AED**, but live editor still used stale AuthContext method → process/markup path (~1.40). Fix: `refreshTenant` after Settings save; EstimateEditor loads `operatingCostMethod` from `/settings`; shared `buildRmTotals` helper + tests.
+- Expected printed sleeve M&O ≈ 10 × (1 + waste%) AED (e.g. ~11.80 at 18% waste), not process sum.
+
+## 2026-07-21 — PACKAGING / CONSUMABLES unpriced warnings
+
+- Orange banners in estimate costing when `packagingNeedsReview` / `consumablesNeedsReview` (engine: missing or ≤0 unit price on recipe materials).
+- Interplast had PEBI-synced PACKAGING/CONSUMABLES rows at **$0** (placeholders); PEBI HTTP was down but `PEBI_DATABASE_URL` worked.
+- Synced via `syncFamilyMaterialsFromPebiForTenant` — PACKAGING 8 updated, CONSUMABLES 2 updated; all priced. Hard-refresh estimate to clear banners.
+
+## 2026-07-21 — Riad Syria customer title case
+
+- PEBI seed `seed-riad-syria-prospects.js` now writes INITCAP-style display names (`Dahman Co.`, not `DAHMAN CO.`)
+- ES `customers.company_name` updated via `db:sync-customers-pebi` (700 rows refreshed; 9 Syria names fixed)
+
+## 2026-07-21 — admin@ moved onto Interplast (real fix)
+
+- **User:** “nothing is changing” — telling them to use `camille@…` was not acceptable; they use `admin@propackhub.com`.
+- **Fix (DB):** Moved `admin@propackhub.com` → Interplast tenant (`platform_company_code=interplast`). Kept `platform_admin`. Cleared refresh sessions.
+- **Verified:** admin `tenant_id` = Interplast; **700** customers; **Dahman Co.** present (title case after 2026-07-21 casing fix). Email globally unique → one home only (cannot dual-tenant same email).
+- **Seed:** `seed-admin.ts` prefers Interplast when provisioned; `npm run db:link-admin-interplast` for re-link.
+- **PEBI down:** still irrelevant for autocomplete (local ES `customers` only).
+- **Do now:** Log out / hard-refresh → login `admin@propackhub.com` (same password) → New quote → type `d` / `Dahman`.
+
+### Earlier same day — New quote shows only Test Corp (wrong tenant)
+
+- Autocomplete = ES `customers` by `tenantId` only. ProPackHub demo had 2 rows; Interplast had 700 PEBI.
+- Prior advice (use Camille login) superseded by move above.
+
+### Earlier same day — autocomplete UI empty (min-length)
+
+- **Symptom:** No suggestions when typing (dropdown closed after 1 char).
+- **Cause:** FE min query length 2 + `setOpen(q.length === 0)`; BE rejected `q` length &lt; 2.
+- **Fix:** Autocomplete from 1 character (web + API); keep list open; modal overflow/z-index.
+
+---
+
+## 2026-07-20 — Price check: no DB row until Save
+
+- **User decision:** Price checks must not be saved/created in the DB unless the user clicks **Save draft** or **Save**.
+- **Was:** New price check immediately `POST /quotes` → empty PKG folder (Draft · 0 structures).
+- **Now:** Local session via `?priceCheck=1`; first estimate create auto-creates parent quote with `isPriceCheck: true`.
+- List ignores historical empty 0-structure price-check shells; by-customer folder count uses INNER JOIN so empties do not inflate counts.
+
+---
+
 ## 2026-07-20 — Double login after ProPackHub SSO
 
 - **Symptom:** Sign in on ProPackHub (main or ES skin) → Estimation Studio asks for password again.

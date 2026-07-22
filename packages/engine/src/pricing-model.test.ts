@@ -149,9 +149,10 @@ describe('final price breakup — markup over RM (M&O = markup)', () => {
   });
 });
 
-describe('final price breakup — per-kg process cost (M&O = Σ process/kg)', () => {
-  it('adds the process cost/kg as M&O (the only markup)', () => {
-    // Total RM 2.14 + M&O (0.5 × ×2 = 1.0) + PrePress 0.5 + Transport 0.2 = 3.84
+describe('final price breakup — per-kg process cost (M&O = Σ process/kg + profit)', () => {
+  it('adds process cost/kg as M&O plus default 5% profit on cost before margin', () => {
+    // Total RM 2.14 + M&O (0.5 × ×2 = 1.0) + PrePress 0.5 + Transport 0.2 = 3.84 cost-before
+    // Profit 5% × 3.84 = 0.192 → sale = 4.032
     const result = calculateEstimate(
       baseEstimate({
         operatingCostMethod: 'process_per_kg',
@@ -166,8 +167,29 @@ describe('final price breakup — per-kg process cost (M&O = Σ process/kg)', ()
     );
     const e = result.estimate;
     expect(e.operationCostPerKg).toBeCloseTo(1.0, 6);
-    expect(e.salePricePerKg).toBeCloseTo(3.84, 6);
+    expect(e.profitMarginPerKg).toBeCloseTo(0.192, 6);
+    expect(e.salePricePerKg).toBeCloseTo(4.032, 6);
     expect(e.operatingCostMethodResolved).toBe('process_per_kg');
+    expect(e.profitMarginPercentResolved).toBe(5);
+  });
+
+  it('respects profitMarginPercent override (0 = no profit row amount)', () => {
+    const result = calculateEstimate(
+      baseEstimate({
+        operatingCostMethod: 'process_per_kg',
+        profitMarginPercent: 0,
+        processes: [
+          { id: 'p1', name: 'Lamination', enabled: true, costPerKgUsd: 0.5, processQuantity: 2 },
+        ],
+        toolingChargeUsd: 500,
+        toolingBilledToCustomer: true,
+        deliveryChargeUsd: 200,
+      }),
+      materials
+    );
+    const e = result.estimate;
+    expect(e.profitMarginPerKg).toBeCloseTo(0, 6);
+    expect(e.salePricePerKg).toBeCloseTo(3.84, 6);
   });
 });
 
@@ -225,17 +247,27 @@ describe('final price breakup — fixed CoRM per template (M&O = cormPerKgUsd)',
     expect(e.salePricePerKg).toBeCloseTo(2.14, 6);
   });
 
-  it('cormPercent branch is populated in the cost breakdown', () => {
+  it('uses template Fixed CoRM (not process sum) when operatingCostMethod is fixed_per_group', () => {
+    // Sleeve-like stack: processes would sum to 1.40, but Fixed CoRM must win.
     const result = calculateEstimate(
       baseEstimate({
         operatingCostMethod: 'fixed_per_group',
-        cormPerKgUsd: 0.5,
+        cormPerKgUsd: 2.7248, // 10 AED @ FX 3.67
+        markupPercent: 15, // must be ignored
+        processes: [
+          { id: 'p1', name: 'Printing', enabled: true, costPerKgUsd: 0.8, processQuantity: 1 },
+          { id: 'p2', name: 'Seaming', enabled: true, costPerKgUsd: 0.5, processQuantity: 1 },
+          { id: 'p3', name: 'Slitting', enabled: true, costPerKgUsd: 0.1, processQuantity: 1 },
+        ],
       }),
       materials
     );
-    expect(result.costBreakdown.cormPercent).toBeGreaterThan(0);
-    expect(result.costBreakdown.markupPercent).toBe(0);
-    expect(result.costBreakdown.processPercent).toBe(0);
+    const e = result.estimate;
+    // order 1000kg → waste 7% → CoRM = 2.7248 × 1.07
+    expect(e.operationCostPerKg).toBeCloseTo(2.7248 * 1.07, 4);
+    expect(e.operatingCostMethodResolved).toBe('fixed_per_group');
+    // Must not equal process sum (1.4)
+    expect(e.operationCostPerKg).not.toBeCloseTo(1.4, 1);
   });
 });
 
@@ -265,6 +297,7 @@ describe('final price breakup — slab ladder', () => {
     const result = calculateEstimate(
       baseEstimate({
         operatingCostMethod: 'process_per_kg',
+        profitMarginPercent: 0,
         processes: [
           { id: 'p1', name: 'Lamination', enabled: true, costPerKgUsd: 1.0, processQuantity: 1 },
         ],

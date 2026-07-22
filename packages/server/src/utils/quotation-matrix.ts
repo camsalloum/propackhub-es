@@ -3,6 +3,7 @@
  * other units when structure metrics exist on the calc result).
  */
 import {
+  customSlabRangesFromBreakpoints,
   DEFAULT_CORM_SCALE_WITH_WASTE,
   effectiveCormPerKg,
   formatCommercialPrice,
@@ -144,7 +145,10 @@ export function quotationColumnHeaders(params: {
 }): string[] {
   const { slabMode, customSlabs, unit, wasteBands } = params;
   if (slabMode === 'custom') {
-    return [...customSlabs].sort((a, b) => a - b).map((q) => formatSlabQty(q));
+    // Compact en dash (no spaces) — matches predefined PDF headers like 601–1,500.
+    return customSlabRangesFromBreakpoints(customSlabs).map(
+      (r) => `${formatSlabQty(r.from)}–${formatSlabQty(r.to)}`
+    );
   }
   const selectedBandKeys = sortBandKeys(params.selectedBandKeys);
   return selectedBandKeys.map((key) => {

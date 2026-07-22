@@ -1252,6 +1252,18 @@
   }
   .input-compact { @apply min-h-[36px] py-1.5 px-3 text-sm; }
 
+  /* Cost breakdown CoRM / Markup % / Profit % — keep native number spinners */
+  .draft-number-input {
+    -moz-appearance: auto;
+    appearance: auto;
+  }
+  .draft-number-input::-webkit-outer-spin-button,
+  .draft-number-input::-webkit-inner-spin-button {
+    -webkit-appearance: auto;
+    opacity: 1;
+    margin: 0;
+  }
+
   /* ---- Tables ---- */
   .table-wrap {
     @apply w-full overflow-x-auto;

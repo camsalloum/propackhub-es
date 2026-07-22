@@ -44,9 +44,9 @@ export default function NewQuoteDialog({
       aria-modal="true"
       aria-label="New quote"
     >
-      <div className="card w-full max-w-md p-5 space-y-4">
+      <div className="card w-full max-w-md p-5 space-y-4 overflow-visible">
         <h2 className="font-display font-semibold text-lg text-brand">New quote</h2>
-        <div>
+        <div className="relative z-10 overflow-visible">
           <label className="text-sm text-text-secondary block mb-1">Customer</label>
           <CustomerAutocomplete value={customerId} onChange={setCustomerId} />
         </div>

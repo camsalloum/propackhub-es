@@ -1,9 +1,12 @@
 /**
  * Idempotent provision of Interplast (IP/FP) as an ES company tenant.
- * Camille = tenant_admin; PPH platform owner (admin@propackhub.com) stays separate.
+ * Camille = tenant_admin. Platform owner (admin@propackhub.com) is kept as
+ * platform_admin; after Interplast exists, seed/link moves that login onto
+ * Interplast so New quote shows PEBI customers (email is globally unique).
  *
  * Usage:
  *   npm run db:provision-interplast --workspace=packages/server
+ *   npm run db:link-admin-interplast --workspace=packages/server
  *
  * Env overrides (optional):
  *   INTERPLAST_TENANT_NAME=Interplast
@@ -179,8 +182,9 @@ async function main() {
   console.log(`Tenant:   ${TENANT_NAME} (platform_company_code=${PLATFORM_COMPANY_CODE})`);
   console.log(`Login:    ${ADMIN_EMAIL}`);
   console.log(`Password: ${ADMIN_PASSWORD} (PEBI dev parity; change in production)`);
-  console.log(`Owner:    ${PLATFORM_OWNER_EMAIL} (platform_admin — separate tenant)`);
-  console.log('\nPEBI SSO mapping (local): from apps/pph run');
+  console.log(`Owner:    ${PLATFORM_OWNER_EMAIL} (platform_admin — link to Interplast via db:link-admin-interplast)`);
+  console.log('\nNext: npm run db:link-admin-interplast --workspace=packages/server');
+  console.log('PEBI SSO mapping (local): from apps/pph run');
   console.log('  node server/scripts/ensure-es-tenant-mapping.js');
   console.log('See packages/server/scripts/README-pebi-es-sso.md');
 

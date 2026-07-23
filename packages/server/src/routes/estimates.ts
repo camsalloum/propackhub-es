@@ -2,7 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { getDatabase, schema } from '../db';
 import { extractTenantFromRequest, extractUserFromRequest } from '../utils/auth';
-import { eq, and, desc, sql, isNull, asc, count as drizzleCount } from 'drizzle-orm';
+import { eq, and, desc, sql, isNull, asc, inArray, count as drizzleCount } from 'drizzle-orm';
 import { type VisibilityProfile, derivePrintingWebClass, defaultOrderQuantityUnit, mergePackagingConfigDefaults, mergeConsumablesConfigDefaults } from '@es/engine';
 import { getEffectiveProfile, stripEstimateRow, stripCalculationResult } from '../utils/visibility';
 import { calculateAndPersistEstimate, buildEngineMaterialMap, type MaterialRow } from '../services/estimate-calculation';
@@ -275,17 +275,59 @@ export async function getEstimatesRoute(
       .limit(limit)
       .offset(offset);
 
-    // Enrich with customer names
+    // Enrich with customer names + parent quote (PKG) refs for All-estimates grouping
     const customers = await db
       .select({ id: schema.customers.id, companyName: schema.customers.companyName })
       .from(schema.customers)
       .where(eq(schema.customers.tenantId, tenantId));
     const customerMap = new Map(customers.map((c: (typeof customers)[number]) => [c.id, c.companyName]));
 
-    const visibleEstimates = estimates.map((est: (typeof estimates)[number]) => ({
-      ...stripEstimateRow(est, profile),
-      customerName: est.customerId ? (customerMap.get(est.customerId) ?? null) : null,
-    }));
+    const quoteIds = [
+      ...new Set(
+        estimates
+          .map((est: (typeof estimates)[number]) => est.quoteId)
+          .filter((id): id is string => Boolean(id))
+      ),
+    ];
+    const quoteMap = new Map<
+      string,
+      { refNumber: string; status: string; name: string | null }
+    >();
+    if (quoteIds.length > 0) {
+      const quoteRows = await db
+        .select({
+          id: schema.quotes.id,
+          refNumber: schema.quotes.refNumber,
+          status: schema.quotes.status,
+          name: schema.quotes.name,
+        })
+        .from(schema.quotes)
+        .where(
+          and(
+            eq(schema.quotes.tenantId, tenantId),
+            isNull(schema.quotes.deletedAt),
+            inArray(schema.quotes.id, quoteIds)
+          )
+        );
+      for (const q of quoteRows) {
+        quoteMap.set(q.id, {
+          refNumber: q.refNumber,
+          status: q.status,
+          name: q.name ?? null,
+        });
+      }
+    }
+
+    const visibleEstimates = estimates.map((est: (typeof estimates)[number]) => {
+      const quote = est.quoteId ? quoteMap.get(est.quoteId) : undefined;
+      return {
+        ...stripEstimateRow(est, profile),
+        customerName: est.customerId ? (customerMap.get(est.customerId) ?? null) : null,
+        quoteRefNumber: quote?.refNumber ?? null,
+        quoteStatus: quote?.status ?? null,
+        quoteName: quote?.name ?? null,
+      };
+    });
 
     return reply.send(paginate(visibleEstimates, Number(total), limit, offset));
   } catch (error: unknown) {

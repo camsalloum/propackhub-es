@@ -557,6 +557,22 @@ export async function registerMaterialRoutes(fastify: FastifyInstance) {
     }
   });
 
+  /** Pack/consumables $0 price health — not a dashboard; CLI: db:check-sync-health */
+  fastify.get('/api/v1/materials/sync-health', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+      const tenantId = extractTenantFromRequest(request);
+      const { getTenantSyncHealth } = await import('../services/sync-health');
+      const health = await getTenantSyncHealth(tenantId);
+      if (!health) {
+        return reply.status(404).send({ error: 'Tenant not found' });
+      }
+      return reply.send(health);
+    } catch (error: unknown) {
+      return sendCaughtError(reply, error, 'Failed to load sync health', 'Sync health error:');
+    }
+  });
+
   // Refresh market prices from free futures feeds (market column only)
   fastify.post('/api/v1/materials/refresh-prices', async (request, reply) => {
     try {

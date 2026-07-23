@@ -30,6 +30,58 @@
 
 ---
 
+## 2026-07-22 — ES templates = PEBI PG → variants (Decision #17 superseded)
+
+- Seed **v4**: 11 parent PGs × **24** PEBI variant cards (`structure-templates-seed.json`). Lamination Film excluded.
+- Rules: PE origin → one PE substrate; Printed → Ink SB; Plain → no ink. Defaults provisional.
+- `deriveStandardTemplateKey` includes variant name (unique keys). Bootstrap deactivates legacy parent-only / `·` tier rows.
+- UI: `TemplatePgGroupedGallery` groups Standard Templates by `pebiParentPg`.
+- Docs: `LOCKED_DECISIONS` #17, PEBI `PRESALES_PG_CROSSWALK.md`.
+- **Ops:** restart ES API (bootstrap) then `npm run db:seed-templates --workspace=packages/server` so tenants pick up variants.
+
+---
+
+
+- **In-repo go-live:** `ES_GO_LIVE_GATES.md`, `validate:go-live-env`, `smoke:ultra-gates`, `verify-backup-es.sh`, CI env+smoke steps, PPH `smoke-es-sso-gates.js`
+- **Empty-tenant SSO:** prefer Interplast when mapped company empty; PEBI-linked empty → `empty_tenant` login error
+- **Sync health:** API + `db:check-sync-health` for $0 PACKAGING/CONSUMABLES (no dashboard UI)
+- **FX:** `requireTenantAedPerUsd` — PEBI sync/market-ref throw if FX missing; Settings rejects ≤0
+- **M&O:** `price-buildup.test.ts` goldens + `PRICING_METHOD_CHEAT_SHEET.md`
+- **BLOCKED:** camai SSH staging SSO E2E + host backup (commands in GO_LIVE_GATES)
+
+## 2026-07-22 — SSO Decision #24 + All estimates PKG + process-fork Phase 3
+
+- **Locked #24:** SSO hands off identity only; access = tenant + module subscription. Multi-module tenants get entitled apps; single-module → 403 on other apps. Supersedes “no SSO” / “SSO opens both.”
+- Docs: `LOCKED_DECISIONS.md`, `AGENT.md`, platform v2 **L16**, PEBI `PROJECT_MAP` §2.3.1.
+- **All estimates:** default group by PKG (`quoteRefNumber` from API); Flat toggle; `features/estimates-list/`.
+- **Phase 3:** `ConfirmProcessesModal` + `useStructureProcessFork` — live re-derive before save, fork unlocks structure, snap-back to template signature, stale → Re-derive; save persists fork/customized flags.
+- **Next:** staging/SSO go-live on camai (SSH); browser smoke fork + PKG list.
+
+## 2026-07-22 — EstimateEditor controller hook (View ≤1200)
+
+- Extracted `hooks/useEstimateEditorController.tsx` (~2965) — cut-paste of all useState/effects/save/hydrate/client-calc; returns `{ phase: loading|error|missing|ready, ... }`.
+- `EstimateEditorView.tsx` ≈ **656** wiring shell (gates + section props). Page re-export unchanged.
+- Derived hook + section files unchanged from prior pass. No costing formula rewrites.
+- Typecheck: no new `estimate-editor/*` errors.
+
+## 2026-07-22 — EstimateEditor safe split (continued — sections + derived)
+
+- Extracted presentational sections (behavior-identical cut-paste): JobDetails, Dimensions, Structure (+ Yield inside), PriceList, MobilePriceBar, Dialogs, Notices.
+- `hooks/useEstimateEditorDerived.tsx` — structureColumns, stackLabel, orderQtyMetrics, sellingPricesByUnit, displaySalePrice, etc.
+- `pages/EstimateEditor.tsx` still 2-line re-export; App / QuoteWorkspace unchanged.
+- **Line counts:** View ≈2970 (state/save/hydrate still here); StructureSection ≈672; JobDetails ≈155; Yield ≈210; Dialogs ≈232; derived hook ≈286; others 60–130.
+- **Next:** cut-paste save/hydrate/state into `useEstimateEditorController` (no formula rewrites) to push View toward ≤1200 wiring shell.
+- Typecheck: no new `estimate-editor/*` errors (pre-existing web tsc failures elsewhere).
+
+## 2026-07-22 — EstimateEditor safe split (no behavior change)
+
+- Goal: shrink `pages/EstimateEditor.tsx` toward ≤400 shell policy without touching calc/save/hydrate.
+- Extracted: `features/estimate-editor/types.ts`, `constants.ts`, `sections/EstimateEditorStickyHeader.tsx`, `sections/EstimateEditorPricingPanels.tsx`.
+- Body moved to `features/estimate-editor/EstimateEditorView.tsx` (~3.8k); page is default + `EstimateEditorProps` re-export — App / QuoteWorkspace imports unchanged.
+- No costing formula or UX redesign; sticky header + desktop pricing panels are presentational with explicit props.
+- **Remains in View (next splits):** JobHeaderFields card, structure/layers table, dimensions/configurators, price-list tab, mobile sticky bar, dialogs, hydrate/save/client calc.
+- Typecheck: no new EstimateEditor errors (pre-existing web tsc failures elsewhere unchanged).
+
 ## 2026-07-21 — Dashboard recent quotes grouped by PKG
 
 - Dashboard “Recent quotes” is **one row per package** (`quoteId` / `PKG-…`), not per QT.
@@ -89,6 +141,19 @@
 - **Material cost card** previously used pre-waste `materialCostPerKg` / `rmCostPerM2` (e.g. 8.22) while Cost breakdown **Total RM** used `wasteAdjustedMaterialPerKg` (e.g. 9.70). Now both use Total RM (waste-adjusted); /m² from Total RM × GSM/1000.
 - **Fixed CoRM M&O ~1.43 bug:** Settings had `fixed_per_group` and Shrink Sleeves CoRM = **10 AED**, but live editor still used stale AuthContext method → process/markup path (~1.40). Fix: `refreshTenant` after Settings save; EstimateEditor loads `operatingCostMethod` from `/settings`; shared `buildRmTotals` helper + tests.
 - Expected printed sleeve M&O ≈ 10 × (1 + waste%) AED (e.g. ~11.80 at 18% waste), not process sum.
+
+## 2026-07-22 — Pack/consumables banners persist (platform wipe)
+
+- **Symptom:** Orange “Packaging/Consumables unpriced” still after PEBI re-price + prior PEBI $0 guard.
+- **Not the bug:** Client `toMaterial` / GET materials already pass `unitPriceUsd` + `platformMasterKey`.
+- **Actual:** ES DB rows were $0 again. PEBI catalog still had live prices (e.g. pallet $7.53, stretch $7.90, tape $17.72).
+- **Wipe path:** `syncMaterialsForTenant` (Excel / sync-from-platform) always wrote seed `unitPriceUsd: 0` over PEBI prices. PEBI guard alone could not protect against that.
+- **Fix:** Re-sync 8+2 from PEBI; guard platform sync to preserve priced pack/consumables; editor mirrors MaterialsContext refresh into calc materials.
+
+## 2026-07-22 — PACKAGING/CONSUMABLES prices wiped by later sync
+
+- Good prices from earlier Jul-21 sync were overwritten ~15:36 same day with `$0` unit prices (10 of 13 rows).
+- Re-synced from PEBI DB; all priced again. Guard in `pebi-material-sync`: skip pack/consumables updates when incoming unit price ≤ 0.
 
 ## 2026-07-21 — PACKAGING / CONSUMABLES unpriced warnings
 

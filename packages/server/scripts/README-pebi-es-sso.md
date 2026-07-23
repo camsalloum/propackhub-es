@@ -34,5 +34,23 @@ This upserts `account_app_instances` for Interplast: `app_key=es`, `product_tena
 1. Log in to PPH as an Interplast user with ES entitlement.
 2. Open Estimation Studio from the product picker (or `POST /api/platform/sso/es`).
 3. Browser lands on ES `/dashboard#token=…&refresh=…` and enters the app without re-entering password.
+4. New quote autocomplete must show PEBI customers (not an empty demo tenant). Empty PEBI-linked tenants are **refused** with `sso_error=empty_tenant`.
+
+### Script gates (no browser)
+
+```bash
+# From apps/pph
+node server/scripts/ensure-es-entitlement.js
+node server/scripts/ensure-es-tenant-mapping.js
+node server/scripts/smoke-es-entitlement.js
+node server/scripts/smoke-es-sso-gates.js
+
+# From apps/estimation-studio
+npm run validate:go-live-env --workspace=packages/server
+npm run db:link-admin-interplast --workspace=packages/server
+npm run db:check-sync-health --workspace=packages/server -- --tenant-code interplast --fail
+```
+
+Full checklist: `docs/ES_GO_LIVE_GATES.md`
 
 Staging/camai apply remains SSH-only — not covered here.

@@ -127,7 +127,7 @@
       "label": "isGsmDirectSubstrate()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L263",
+      "source_location": "L266",
       "_origin": "ast",
       "id": "calculator_isgsmdirectsubstrate",
       "community": 1,
@@ -137,7 +137,7 @@
       "label": "calculateLayer()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L267",
+      "source_location": "L270",
       "_origin": "ast",
       "id": "calculator_calculatelayer",
       "community": 1,
@@ -147,7 +147,7 @@
       "label": "calculatePrintingWebWidth()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L301",
+      "source_location": "L304",
       "_origin": "ast",
       "id": "calculator_calculateprintingwebwidth",
       "community": 1,
@@ -157,31 +157,11 @@
       "label": "calculateProductMetrics()",
       "file_type": "code",
       "source_file": "calculator.ts",
-      "source_location": "L322",
+      "source_location": "L325",
       "_origin": "ast",
       "id": "calculator_calculateproductmetrics",
       "community": 1,
       "norm_label": "calculateproductmetrics()"
-    },
-    {
-      "label": "computeMfgProcessCosts()",
-      "file_type": "code",
-      "source_file": "calculator.ts",
-      "source_location": "L473",
-      "_origin": "ast",
-      "id": "calculator_computemfgprocesscosts",
-      "community": 1,
-      "norm_label": "computemfgprocesscosts()"
-    },
-    {
-      "label": "priceWithNewModel()",
-      "file_type": "code",
-      "source_file": "calculator.ts",
-      "source_location": "L511",
-      "_origin": "ast",
-      "id": "calculator_pricewithnewmodel",
-      "community": 1,
-      "norm_label": "pricewithnewmodel()"
     },
     {
       "label": "commercial-price-round.test.ts",
@@ -524,6 +504,46 @@
       "norm_label": "calculateconsumablescosts()"
     },
     {
+      "label": "custom-slab-ranges.test.ts",
+      "file_type": "code",
+      "source_file": "custom-slab-ranges.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "custom_slab_ranges_test",
+      "community": 11,
+      "norm_label": "custom-slab-ranges.test.ts"
+    },
+    {
+      "label": "custom-slab-ranges.ts",
+      "file_type": "code",
+      "source_file": "custom-slab-ranges.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "custom_slab_ranges",
+      "community": 11,
+      "norm_label": "custom-slab-ranges.ts"
+    },
+    {
+      "label": "CustomSlabRange",
+      "file_type": "code",
+      "source_file": "custom-slab-ranges.ts",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "custom_slab_ranges_customslabrange",
+      "community": 11,
+      "norm_label": "customslabrange"
+    },
+    {
+      "label": "customSlabRangesFromBreakpoints()",
+      "file_type": "code",
+      "source_file": "custom-slab-ranges.ts",
+      "source_location": "L18",
+      "_origin": "ast",
+      "id": "custom_slab_ranges_customslabrangesfrombreakpoints",
+      "community": 11,
+      "norm_label": "customslabrangesfrombreakpoints()"
+    },
+    {
       "label": "derive-processes.test.ts",
       "file_type": "code",
       "source_file": "derive-processes.test.ts",
@@ -750,7 +770,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "estimation_assumptions",
-      "community": 11,
+      "community": 5,
       "norm_label": "estimation-assumptions.ts"
     },
     {
@@ -760,7 +780,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "estimation_assumptions_assumptioncategory",
-      "community": 11,
+      "community": 5,
       "norm_label": "assumptioncategory"
     },
     {
@@ -770,7 +790,7 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "estimation_assumptions_assumptioneditability",
-      "community": 11,
+      "community": 5,
       "norm_label": "assumptioneditability"
     },
     {
@@ -780,7 +800,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "estimation_assumptions_estimationassumption",
-      "community": 11,
+      "community": 5,
       "norm_label": "estimationassumption"
     },
     {
@@ -790,7 +810,7 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "estimation_assumptions_estimation_assumptions",
-      "community": 11,
+      "community": 5,
       "norm_label": "estimation_assumptions"
     },
     {
@@ -800,7 +820,7 @@
       "source_location": "L175",
       "_origin": "ast",
       "id": "estimation_assumptions_assumption_category_labels",
-      "community": 11,
+      "community": 5,
       "norm_label": "assumption_category_labels"
     },
     {
@@ -810,7 +830,7 @@
       "source_location": "L182",
       "_origin": "ast",
       "id": "estimation_assumptions_assumption_edit_labels",
-      "community": 11,
+      "community": 5,
       "norm_label": "assumption_edit_labels"
     },
     {
@@ -1820,7 +1840,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "pouch_accessories_test",
-      "community": 1,
+      "community": 12,
       "norm_label": "pouch-accessories.test.ts"
     },
     {
@@ -1830,7 +1850,7 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "pouch_accessories_test_nomaterials",
-      "community": 1,
+      "community": 12,
       "norm_label": "nomaterials"
     },
     {
@@ -1840,7 +1860,7 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "pouch_accessories_test_dims",
-      "community": 1,
+      "community": 12,
       "norm_label": "dims()"
     },
     {
@@ -1850,7 +1870,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "pouch_accessories",
-      "community": 1,
+      "community": 12,
       "norm_label": "pouch-accessories.ts"
     },
     {
@@ -1860,7 +1880,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "pouch_accessories_pouchaccessorykind",
-      "community": 1,
+      "community": 12,
       "norm_label": "pouchaccessorykind"
     },
     {
@@ -1870,7 +1890,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "pouch_accessories_pouchaccessoryselection",
-      "community": 1,
+      "community": 12,
       "norm_label": "pouchaccessoryselection"
     },
     {
@@ -1880,7 +1900,7 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "pouch_accessories_pouchaccessoryresult",
-      "community": 1,
+      "community": 12,
       "norm_label": "pouchaccessoryresult"
     },
     {
@@ -1890,7 +1910,7 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "pouch_accessories_empty",
-      "community": 1,
+      "community": 12,
       "norm_label": "empty"
     },
     {
@@ -2034,6 +2054,76 @@
       "norm_label": "calculatepouchflatsheetaream2()"
     },
     {
+      "label": "price-buildup.ts",
+      "file_type": "code",
+      "source_file": "price-buildup.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "price_buildup",
+      "community": 1,
+      "norm_label": "price-buildup.ts"
+    },
+    {
+      "label": "OperatingCostMethod",
+      "file_type": "code",
+      "source_file": "price-buildup.ts",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "price_buildup_operatingcostmethod",
+      "community": 1,
+      "norm_label": "operatingcostmethod"
+    },
+    {
+      "label": "operatingCostMethodRowLabel()",
+      "file_type": "code",
+      "source_file": "price-buildup.ts",
+      "source_location": "L21",
+      "_origin": "ast",
+      "id": "price_buildup_operatingcostmethodrowlabel",
+      "community": 1,
+      "norm_label": "operatingcostmethodrowlabel()"
+    },
+    {
+      "label": "computeMfgProcessCosts()",
+      "file_type": "code",
+      "source_file": "price-buildup.ts",
+      "source_location": "L37",
+      "_origin": "ast",
+      "id": "price_buildup_computemfgprocesscosts",
+      "community": 1,
+      "norm_label": "computemfgprocesscosts()"
+    },
+    {
+      "label": "PriceBuildupParams",
+      "file_type": "code",
+      "source_file": "price-buildup.ts",
+      "source_location": "L62",
+      "_origin": "ast",
+      "id": "price_buildup_pricebuildupparams",
+      "community": 1,
+      "norm_label": "pricebuildupparams"
+    },
+    {
+      "label": "PriceBuildupResult",
+      "file_type": "code",
+      "source_file": "price-buildup.ts",
+      "source_location": "L89",
+      "_origin": "ast",
+      "id": "price_buildup_pricebuildupresult",
+      "community": 1,
+      "norm_label": "pricebuildupresult"
+    },
+    {
+      "label": "priceWithNewModel()",
+      "file_type": "code",
+      "source_file": "price-buildup.ts",
+      "source_location": "L110",
+      "_origin": "ast",
+      "id": "price_buildup_pricewithnewmodel",
+      "community": 1,
+      "norm_label": "pricewithnewmodel()"
+    },
+    {
       "label": "pricing-model.test.ts",
       "file_type": "code",
       "source_file": "pricing-model.test.ts",
@@ -2170,7 +2260,7 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "roll_after_slitting_core_inside_mm_by_inch",
-      "community": 4,
+      "community": 7,
       "norm_label": "core_inside_mm_by_inch"
     },
     {
@@ -2210,7 +2300,7 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "roll_after_slitting_rollspecresult",
-      "community": 4,
+      "community": 7,
       "norm_label": "rollspecresult"
     },
     {
@@ -2970,7 +3060,7 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "types_estimatedimensions",
-      "community": 1,
+      "community": 12,
       "norm_label": "estimatedimensions"
     },
     {
@@ -3007,7 +3097,7 @@
       "label": "CalculationResult",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L366",
+      "source_location": "L377",
       "_origin": "ast",
       "id": "types_calculationresult",
       "community": 1,
@@ -3017,7 +3107,7 @@
       "label": "MissingMaterialsError",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L391",
+      "source_location": "L404",
       "_origin": "ast",
       "id": "types_missingmaterialserror",
       "community": 1,
@@ -3027,7 +3117,7 @@
       "label": ".constructor()",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L394",
+      "source_location": "L407",
       "_origin": "ast",
       "id": "types_missingmaterialserror_constructor",
       "community": 1,
@@ -3037,7 +3127,7 @@
       "label": "VisibilityProfile",
       "file_type": "code",
       "source_file": "types.ts",
-      "source_location": "L401",
+      "source_location": "L414",
       "_origin": "ast",
       "id": "types_visibilityprofile",
       "community": 1,
@@ -3320,7 +3410,7 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "packaging_costing_sleeve_pack_target_od_mm",
-      "community": 11,
+      "community": 5,
       "norm_label": "sleeve_pack_target_od_mm"
     }
   ],
@@ -3726,31 +3816,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "calculator.ts",
-      "source_location": "L412",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "calculator",
-      "target": "calculator_computemfgprocesscosts"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "calculator.ts",
       "source_location": "L229",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "calculator",
       "target": "calculator_isgsmdirectsubstrate"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "calculator.ts",
-      "source_location": "L548",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "calculator",
-      "target": "calculator_pricewithnewmodel"
     },
     {
       "relation": "imports_from",
@@ -3759,9 +3829,9 @@
       "source_file": "calculator.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "consumables_costing",
-      "confidence_score": 1.0
+      "target": "consumables_costing"
     },
     {
       "relation": "imports",
@@ -3770,9 +3840,9 @@
       "source_file": "calculator.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "calculator",
-      "target": "consumables_costing_calculateconsumablescosts",
-      "confidence_score": 1.0
+      "target": "consumables_costing_calculateconsumablescosts"
     },
     {
       "relation": "imports_from",
@@ -3839,6 +3909,39 @@
       "confidence_score": 1.0,
       "source": "calculator",
       "target": "pouch_flat_sheet_calculatepouchflatsheetaream2"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "calculator.ts",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "calculator",
+      "target": "price_buildup",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "calculator.ts",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "calculator",
+      "target": "price_buildup_computemfgprocesscosts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "calculator.ts",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "calculator",
+      "target": "price_buildup_pricewithnewmodel",
+      "confidence_score": 1.0
     },
     {
       "relation": "imports_from",
@@ -4119,28 +4222,6 @@
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
-      "source_file": "calculator.ts",
-      "source_location": "L93",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "calculator_calculateestimate",
-      "target": "calculator_computemfgprocesscosts"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "calculator.ts",
-      "source_location": "L142",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "calculator_calculateestimate",
-      "target": "calculator_pricewithnewmodel"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "calculator.ts",
       "source_location": "L107",
@@ -4158,6 +4239,28 @@
       "weight": 1.0,
       "source": "calculator_calculateestimate",
       "target": "packaging_costing_calculatepackagingcosts"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "calculator.ts",
+      "source_location": "L118",
+      "weight": 1.0,
+      "source": "calculator_calculateestimate",
+      "target": "price_buildup_computemfgprocesscosts"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "calculator.ts",
+      "source_location": "L151",
+      "weight": 1.0,
+      "source": "calculator_calculateestimate",
+      "target": "price_buildup_pricewithnewmodel"
     },
     {
       "relation": "calls",
@@ -4281,37 +4384,15 @@
       "target": "pouch_flat_sheet_calculatepouchflatsheetaream2"
     },
     {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "calculator.ts",
-      "source_location": "L505",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "calculator_pricewithnewmodel",
-      "target": "waste_bands_effectivecormperkg"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "calculator.ts",
-      "source_location": "L569",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "calculator_pricewithnewmodel",
-      "target": "waste_bands_wastepercentforquantity"
-    },
-    {
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "commercial-price-round.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round_test",
-      "target": "commercial_price_round",
-      "confidence_score": 1.0
+      "target": "commercial_price_round"
     },
     {
       "relation": "imports",
@@ -4320,9 +4401,9 @@
       "source_file": "commercial-price-round.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round_test",
-      "target": "commercial_price_round_formatcommercialprice",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_formatcommercialprice"
     },
     {
       "relation": "imports",
@@ -4331,9 +4412,9 @@
       "source_file": "commercial-price-round.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round_test",
-      "target": "commercial_price_round_quotationpageorientation",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_quotationpageorientation"
     },
     {
       "relation": "imports",
@@ -4342,9 +4423,9 @@
       "source_file": "commercial-price-round.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round_test",
-      "target": "commercial_price_round_roundcommercialprice",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_roundcommercialprice"
     },
     {
       "relation": "imports",
@@ -4353,9 +4434,9 @@
       "source_file": "commercial-price-round.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round_test",
-      "target": "commercial_price_round_roundtohalf",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_roundtohalf"
     },
     {
       "relation": "imports",
@@ -4364,9 +4445,9 @@
       "source_file": "commercial-price-round.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round_test",
-      "target": "commercial_price_round_roundtostep",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_roundtostep"
     },
     {
       "relation": "contains",
@@ -4374,9 +4455,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L19",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round",
-      "target": "commercial_price_round_commercial_round_steps",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_commercial_round_steps"
     },
     {
       "relation": "contains",
@@ -4384,9 +4465,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round",
-      "target": "commercial_price_round_commercialroundingprefs",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_commercialroundingprefs"
     },
     {
       "relation": "contains",
@@ -4394,9 +4475,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round",
-      "target": "commercial_price_round_commercialroundstep",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_commercialroundstep"
     },
     {
       "relation": "contains",
@@ -4404,9 +4485,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L21",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round",
-      "target": "commercial_price_round_default_commercial_rounding",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_default_commercial_rounding"
     },
     {
       "relation": "contains",
@@ -4414,9 +4495,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L123",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round",
-      "target": "commercial_price_round_formatcommercialprice",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_formatcommercialprice"
     },
     {
       "relation": "contains",
@@ -4424,9 +4505,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L72",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round",
-      "target": "commercial_price_round_formatsmartprice",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_formatsmartprice"
     },
     {
       "relation": "contains",
@@ -4434,9 +4515,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L101",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round",
-      "target": "commercial_price_round_formatstepprice",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_formatstepprice"
     },
     {
       "relation": "contains",
@@ -4444,9 +4525,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L134",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round",
-      "target": "commercial_price_round_quotationpageorientation",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_quotationpageorientation"
     },
     {
       "relation": "contains",
@@ -4454,9 +4535,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L48",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round",
-      "target": "commercial_price_round_resolvecommercialroundstep",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_resolvecommercialroundstep"
     },
     {
       "relation": "contains",
@@ -4464,9 +4545,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L63",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round",
-      "target": "commercial_price_round_roundcommercialprice",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_roundcommercialprice"
     },
     {
       "relation": "contains",
@@ -4474,9 +4555,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L43",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round",
-      "target": "commercial_price_round_roundtodecimals",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_roundtodecimals"
     },
     {
       "relation": "contains",
@@ -4484,9 +4565,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L39",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round",
-      "target": "commercial_price_round_roundtohalf",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_roundtohalf"
     },
     {
       "relation": "contains",
@@ -4494,9 +4575,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round",
-      "target": "commercial_price_round_roundtostep",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_roundtostep"
     },
     {
       "relation": "re_exports",
@@ -4505,9 +4586,9 @@
       "source_file": "index.ts",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "commercial_price_round",
-      "confidence_score": 1.0
+      "target": "commercial_price_round"
     },
     {
       "relation": "calls",
@@ -4516,9 +4597,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L130",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round_formatcommercialprice",
-      "target": "commercial_price_round_roundtostep",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_roundtostep"
     },
     {
       "relation": "calls",
@@ -4527,9 +4608,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L69",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round_roundcommercialprice",
-      "target": "commercial_price_round_roundtostep",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_roundtostep"
     },
     {
       "relation": "calls",
@@ -4538,9 +4619,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L40",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round_roundtohalf",
-      "target": "commercial_price_round_roundtostep",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_roundtostep"
     },
     {
       "relation": "calls",
@@ -4549,9 +4630,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L129",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round_formatcommercialprice",
-      "target": "commercial_price_round_resolvecommercialroundstep",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_resolvecommercialroundstep"
     },
     {
       "relation": "calls",
@@ -4560,9 +4641,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L69",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round_roundcommercialprice",
-      "target": "commercial_price_round_resolvecommercialroundstep",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_resolvecommercialroundstep"
     },
     {
       "relation": "calls",
@@ -4571,9 +4652,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L128",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round_formatcommercialprice",
-      "target": "commercial_price_round_formatsmartprice",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_formatsmartprice"
     },
     {
       "relation": "calls",
@@ -4582,9 +4663,9 @@
       "source_file": "commercial-price-round.ts",
       "source_location": "L130",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "commercial_price_round_formatcommercialprice",
-      "target": "commercial_price_round_formatstepprice",
-      "confidence_score": 1.0
+      "target": "commercial_price_round_formatstepprice"
     },
     {
       "relation": "imports_from",
@@ -4593,9 +4674,9 @@
       "source_file": "consumables-costing.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_test",
-      "target": "consumables_costing",
-      "confidence_score": 1.0
+      "target": "consumables_costing"
     },
     {
       "relation": "imports",
@@ -4604,9 +4685,9 @@
       "source_file": "consumables-costing.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_test",
-      "target": "consumables_costing_calculateconsumablescosts",
-      "confidence_score": 1.0
+      "target": "consumables_costing_calculateconsumablescosts"
     },
     {
       "relation": "imports",
@@ -4615,9 +4696,9 @@
       "source_file": "consumables-costing.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_test",
-      "target": "consumables_costing_consumablesconfig",
-      "confidence_score": 1.0
+      "target": "consumables_costing_consumablesconfig"
     },
     {
       "relation": "contains",
@@ -4625,9 +4706,9 @@
       "source_file": "consumables-costing.test.ts",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_test",
-      "target": "consumables_costing_test_baseestimate",
-      "confidence_score": 1.0
+      "target": "consumables_costing_test_baseestimate"
     },
     {
       "relation": "contains",
@@ -4635,9 +4716,9 @@
       "source_file": "consumables-costing.test.ts",
       "source_location": "L9",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_test",
-      "target": "consumables_costing_test_mat",
-      "confidence_score": 1.0
+      "target": "consumables_costing_test_mat"
     },
     {
       "relation": "imports_from",
@@ -4646,9 +4727,9 @@
       "source_file": "consumables-costing.test.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_test",
-      "target": "types",
-      "confidence_score": 1.0
+      "target": "types"
     },
     {
       "relation": "imports",
@@ -4657,9 +4738,9 @@
       "source_file": "consumables-costing.test.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_test",
-      "target": "types_estimate",
-      "confidence_score": 1.0
+      "target": "types_estimate"
     },
     {
       "relation": "imports",
@@ -4668,9 +4749,9 @@
       "source_file": "consumables-costing.test.ts",
       "source_location": "L7",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_test",
-      "target": "types_material",
-      "confidence_score": 1.0
+      "target": "types_material"
     },
     {
       "relation": "contains",
@@ -4678,9 +4759,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L182",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "consumables_costing_calculateconsumablescosts",
-      "confidence_score": 1.0
+      "target": "consumables_costing_calculateconsumablescosts"
     },
     {
       "relation": "contains",
@@ -4688,9 +4769,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "consumables_costing_consumables_platform_keys",
-      "confidence_score": 1.0
+      "target": "consumables_costing_consumables_platform_keys"
     },
     {
       "relation": "contains",
@@ -4698,9 +4779,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "consumables_costing_consumablesconfig",
-      "confidence_score": 1.0
+      "target": "consumables_costing_consumablesconfig"
     },
     {
       "relation": "contains",
@@ -4708,9 +4789,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L56",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "consumables_costing_consumablescostdetail",
-      "confidence_score": 1.0
+      "target": "consumables_costing_consumablescostdetail"
     },
     {
       "relation": "contains",
@@ -4718,9 +4799,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L41",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "consumables_costing_consumablescostline",
-      "confidence_score": 1.0
+      "target": "consumables_costing_consumablescostline"
     },
     {
       "relation": "contains",
@@ -4728,9 +4809,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L8",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "consumables_costing_consumablesrole",
-      "confidence_score": 1.0
+      "target": "consumables_costing_consumablesrole"
     },
     {
       "relation": "contains",
@@ -4738,9 +4819,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L90",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "consumables_costing_defaultrepeatmfromestimate",
-      "confidence_score": 1.0
+      "target": "consumables_costing_defaultrepeatmfromestimate"
     },
     {
       "relation": "contains",
@@ -4748,9 +4829,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L178",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "consumables_costing_emptydetail",
-      "confidence_score": 1.0
+      "target": "consumables_costing_emptydetail"
     },
     {
       "relation": "contains",
@@ -4758,9 +4839,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L157",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "consumables_costing_findbyplatformkey",
-      "confidence_score": 1.0
+      "target": "consumables_costing_findbyplatformkey"
     },
     {
       "relation": "contains",
@@ -4768,9 +4849,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L71",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "consumables_costing_mergeconsumablesconfigdefaults",
-      "confidence_score": 1.0
+      "target": "consumables_costing_mergeconsumablesconfigdefaults"
     },
     {
       "relation": "contains",
@@ -4778,9 +4859,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L67",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "consumables_costing_num",
-      "confidence_score": 1.0
+      "target": "consumables_costing_num"
     },
     {
       "relation": "contains",
@@ -4788,9 +4869,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L63",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "consumables_costing_positive",
-      "confidence_score": 1.0
+      "target": "consumables_costing_positive"
     },
     {
       "relation": "contains",
@@ -4798,9 +4879,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L122",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "consumables_costing_resolveconsumablesunitprice",
-      "confidence_score": 1.0
+      "target": "consumables_costing_resolveconsumablesunitprice"
     },
     {
       "relation": "contains",
@@ -4808,9 +4889,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L167",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "consumables_costing_resolvematerial",
-      "confidence_score": 1.0
+      "target": "consumables_costing_resolvematerial"
     },
     {
       "relation": "contains",
@@ -4818,9 +4899,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L100",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "consumables_costing_resolvemountingtaperepeatm",
-      "confidence_score": 1.0
+      "target": "consumables_costing_resolvemountingtaperepeatm"
     },
     {
       "relation": "imports_from",
@@ -4829,9 +4910,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "types",
-      "confidence_score": 1.0
+      "target": "types"
     },
     {
       "relation": "imports",
@@ -4840,9 +4921,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "types_estimate",
-      "confidence_score": 1.0
+      "target": "types_estimate"
     },
     {
       "relation": "imports",
@@ -4851,9 +4932,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L6",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing",
-      "target": "types_material",
-      "confidence_score": 1.0
+      "target": "types_material"
     },
     {
       "relation": "imports_from",
@@ -4862,9 +4943,9 @@
       "source_file": "estimation-assumptions.ts",
       "source_location": "L18",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "estimation_assumptions",
-      "target": "consumables_costing",
-      "confidence_score": 1.0
+      "target": "consumables_costing"
     },
     {
       "relation": "re_exports",
@@ -4873,9 +4954,9 @@
       "source_file": "index.ts",
       "source_location": "L12",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "consumables_costing",
-      "confidence_score": 1.0
+      "target": "consumables_costing"
     },
     {
       "relation": "calls",
@@ -4884,9 +4965,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L218",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_calculateconsumablescosts",
-      "target": "consumables_costing_positive",
-      "confidence_score": 1.0
+      "target": "consumables_costing_positive"
     },
     {
       "relation": "calls",
@@ -4895,9 +4976,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L135",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_resolveconsumablesunitprice",
-      "target": "consumables_costing_positive",
-      "confidence_score": 1.0
+      "target": "consumables_costing_positive"
     },
     {
       "relation": "calls",
@@ -4906,9 +4987,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L104",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_resolvemountingtaperepeatm",
-      "target": "consumables_costing_positive",
-      "confidence_score": 1.0
+      "target": "consumables_costing_positive"
     },
     {
       "relation": "calls",
@@ -4917,9 +4998,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L205",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_calculateconsumablescosts",
-      "target": "consumables_costing_num",
-      "confidence_score": 1.0
+      "target": "consumables_costing_num"
     },
     {
       "relation": "calls",
@@ -4928,9 +5009,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L195",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_calculateconsumablescosts",
-      "target": "consumables_costing_mergeconsumablesconfigdefaults",
-      "confidence_score": 1.0
+      "target": "consumables_costing_mergeconsumablesconfigdefaults"
     },
     {
       "relation": "calls",
@@ -4939,9 +5020,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L115",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_resolvemountingtaperepeatm",
-      "target": "consumables_costing_defaultrepeatmfromestimate",
-      "confidence_score": 1.0
+      "target": "consumables_costing_defaultrepeatmfromestimate"
     },
     {
       "relation": "calls",
@@ -4950,9 +5031,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L209",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_calculateconsumablescosts",
-      "target": "consumables_costing_resolvemountingtaperepeatm",
-      "confidence_score": 1.0
+      "target": "consumables_costing_resolvemountingtaperepeatm"
     },
     {
       "relation": "calls",
@@ -4961,9 +5042,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L217",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_calculateconsumablescosts",
-      "target": "consumables_costing_resolveconsumablesunitprice",
-      "confidence_score": 1.0
+      "target": "consumables_costing_resolveconsumablesunitprice"
     },
     {
       "relation": "calls",
@@ -4972,9 +5053,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L175",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_resolvematerial",
-      "target": "consumables_costing_findbyplatformkey",
-      "confidence_score": 1.0
+      "target": "consumables_costing_findbyplatformkey"
     },
     {
       "relation": "calls",
@@ -4983,9 +5064,9 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L216",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_calculateconsumablescosts",
-      "target": "consumables_costing_resolvematerial",
-      "confidence_score": 1.0
+      "target": "consumables_costing_resolvematerial"
     },
     {
       "relation": "calls",
@@ -4994,8 +5075,61 @@
       "source_file": "consumables-costing.ts",
       "source_location": "L193",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "consumables_costing_calculateconsumablescosts",
-      "target": "consumables_costing_emptydetail",
+      "target": "consumables_costing_emptydetail"
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "custom-slab-ranges.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "custom_slab_ranges_test",
+      "target": "custom_slab_ranges",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "custom-slab-ranges.test.ts",
+      "source_location": "L2",
+      "weight": 1.0,
+      "source": "custom_slab_ranges_test",
+      "target": "custom_slab_ranges_customslabrangesfrombreakpoints",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "custom-slab-ranges.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "custom_slab_ranges",
+      "target": "custom_slab_ranges_customslabrange",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "custom-slab-ranges.ts",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "custom_slab_ranges",
+      "target": "custom_slab_ranges_customslabrangesfrombreakpoints",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "index.ts",
+      "source_location": "L22",
+      "weight": 1.0,
+      "source": "index",
+      "target": "custom_slab_ranges",
       "confidence_score": 1.0
     },
     {
@@ -5303,9 +5437,9 @@
       "source_file": "estimation-assumptions.ts",
       "source_location": "L175",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "estimation_assumptions",
-      "target": "estimation_assumptions_assumption_category_labels",
-      "confidence_score": 1.0
+      "target": "estimation_assumptions_assumption_category_labels"
     },
     {
       "relation": "contains",
@@ -5313,9 +5447,9 @@
       "source_file": "estimation-assumptions.ts",
       "source_location": "L182",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "estimation_assumptions",
-      "target": "estimation_assumptions_assumption_edit_labels",
-      "confidence_score": 1.0
+      "target": "estimation_assumptions_assumption_edit_labels"
     },
     {
       "relation": "contains",
@@ -5323,9 +5457,9 @@
       "source_file": "estimation-assumptions.ts",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "estimation_assumptions",
-      "target": "estimation_assumptions_assumptioncategory",
-      "confidence_score": 1.0
+      "target": "estimation_assumptions_assumptioncategory"
     },
     {
       "relation": "contains",
@@ -5333,9 +5467,9 @@
       "source_file": "estimation-assumptions.ts",
       "source_location": "L30",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "estimation_assumptions",
-      "target": "estimation_assumptions_assumptioneditability",
-      "confidence_score": 1.0
+      "target": "estimation_assumptions_assumptioneditability"
     },
     {
       "relation": "contains",
@@ -5343,9 +5477,9 @@
       "source_file": "estimation-assumptions.ts",
       "source_location": "L44",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "estimation_assumptions",
-      "target": "estimation_assumptions_estimation_assumptions",
-      "confidence_score": 1.0
+      "target": "estimation_assumptions_estimation_assumptions"
     },
     {
       "relation": "contains",
@@ -5353,9 +5487,9 @@
       "source_file": "estimation-assumptions.ts",
       "source_location": "L32",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "estimation_assumptions",
-      "target": "estimation_assumptions_estimationassumption",
-      "confidence_score": 1.0
+      "target": "estimation_assumptions_estimationassumption"
     },
     {
       "relation": "imports_from",
@@ -5364,9 +5498,9 @@
       "source_file": "estimation-assumptions.ts",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "estimation_assumptions",
-      "target": "ink_printing",
-      "confidence_score": 1.0
+      "target": "ink_printing"
     },
     {
       "relation": "imports_from",
@@ -5375,9 +5509,9 @@
       "source_file": "estimation-assumptions.ts",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "estimation_assumptions",
-      "target": "lamination_recipe",
-      "confidence_score": 1.0
+      "target": "lamination_recipe"
     },
     {
       "relation": "imports_from",
@@ -5386,9 +5520,9 @@
       "source_file": "estimation-assumptions.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "estimation_assumptions",
-      "target": "packaging_costing",
-      "confidence_score": 1.0
+      "target": "packaging_costing"
     },
     {
       "relation": "imports",
@@ -5397,9 +5531,9 @@
       "source_file": "estimation-assumptions.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "estimation_assumptions",
-      "target": "packaging_costing_sleeve_pack_target_od_mm",
-      "confidence_score": 1.0
+      "target": "packaging_costing_sleeve_pack_target_od_mm"
     },
     {
       "relation": "imports_from",
@@ -5408,9 +5542,9 @@
       "source_file": "estimation-assumptions.ts",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "estimation_assumptions",
-      "target": "sleeve_seaming",
-      "confidence_score": 1.0
+      "target": "sleeve_seaming"
     },
     {
       "relation": "re_exports",
@@ -5419,9 +5553,9 @@
       "source_file": "index.ts",
       "source_location": "L13",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "index",
-      "target": "estimation_assumptions",
-      "confidence_score": 1.0
+      "target": "estimation_assumptions"
     },
     {
       "relation": "contains",
@@ -5665,11 +5799,22 @@
       "context": "export",
       "confidence": "EXTRACTED",
       "source_file": "index.ts",
-      "source_location": "L27",
+      "source_location": "L23",
       "weight": 1.0,
       "source": "index",
-      "target": "quotation_format",
+      "target": "price_buildup",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "re_exports",
+      "context": "export",
+      "confidence": "EXTRACTED",
+      "source_file": "index.ts",
+      "source_location": "L27",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "index",
+      "target": "quotation_format"
     },
     {
       "relation": "re_exports",
@@ -8328,9 +8473,9 @@
       "source_file": "pouch-flat-sheet.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pouch_flat_sheet_test",
-      "target": "pouch_flat_sheet_calculatepouchflatgeom",
-      "confidence_score": 1.0
+      "target": "pouch_flat_sheet_calculatepouchflatgeom"
     },
     {
       "relation": "imports",
@@ -8350,9 +8495,9 @@
       "source_file": "pouch-flat-sheet.test.ts",
       "source_location": "L2",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pouch_flat_sheet_test",
-      "target": "pouch_flat_sheet_familyforpouchtype",
-      "confidence_score": 1.0
+      "target": "pouch_flat_sheet_familyforpouchtype"
     },
     {
       "relation": "imports",
@@ -8404,9 +8549,9 @@
       "source_file": "pouch-flat-sheet.ts",
       "source_location": "L158",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pouch_flat_sheet",
-      "target": "pouch_flat_sheet_calculatepouchflatgeom",
-      "confidence_score": 1.0
+      "target": "pouch_flat_sheet_calculatepouchflatgeom"
     },
     {
       "relation": "contains",
@@ -8424,9 +8569,9 @@
       "source_file": "pouch-flat-sheet.ts",
       "source_location": "L111",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pouch_flat_sheet",
-      "target": "pouch_flat_sheet_familyforpouchtype",
-      "confidence_score": 1.0
+      "target": "pouch_flat_sheet_familyforpouchtype"
     },
     {
       "relation": "contains",
@@ -8434,9 +8579,9 @@
       "source_file": "pouch-flat-sheet.ts",
       "source_location": "L87",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pouch_flat_sheet",
-      "target": "pouch_flat_sheet_legacy_pouch_subtype_strings",
-      "confidence_score": 1.0
+      "target": "pouch_flat_sheet_legacy_pouch_subtype_strings"
     },
     {
       "relation": "contains",
@@ -8474,9 +8619,9 @@
       "source_file": "pouch-flat-sheet.ts",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pouch_flat_sheet",
-      "target": "pouch_flat_sheet_pouchfamily",
-      "confidence_score": 1.0
+      "target": "pouch_flat_sheet_pouchfamily"
     },
     {
       "relation": "contains",
@@ -8484,9 +8629,9 @@
       "source_file": "pouch-flat-sheet.ts",
       "source_location": "L37",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pouch_flat_sheet",
-      "target": "pouch_flat_sheet_pouchflatgeom",
-      "confidence_score": 1.0
+      "target": "pouch_flat_sheet_pouchflatgeom"
     },
     {
       "relation": "contains",
@@ -8548,9 +8693,157 @@
       "source_file": "pouch-flat-sheet.ts",
       "source_location": "L288",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "pouch_flat_sheet_calculatepouchflatsheetaream2",
-      "target": "pouch_flat_sheet_calculatepouchflatgeom",
+      "target": "pouch_flat_sheet_calculatepouchflatgeom"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "price-buildup.ts",
+      "source_location": "L37",
+      "weight": 1.0,
+      "source": "price_buildup",
+      "target": "price_buildup_computemfgprocesscosts",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "price-buildup.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "price_buildup",
+      "target": "price_buildup_operatingcostmethod",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "price-buildup.ts",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "price_buildup",
+      "target": "price_buildup_operatingcostmethodrowlabel",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "price-buildup.ts",
+      "source_location": "L62",
+      "weight": 1.0,
+      "source": "price_buildup",
+      "target": "price_buildup_pricebuildupparams",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "price-buildup.ts",
+      "source_location": "L89",
+      "weight": 1.0,
+      "source": "price_buildup",
+      "target": "price_buildup_pricebuildupresult",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "price-buildup.ts",
+      "source_location": "L110",
+      "weight": 1.0,
+      "source": "price_buildup",
+      "target": "price_buildup_pricewithnewmodel",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "price-buildup.ts",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "price_buildup",
+      "target": "types",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "price-buildup.ts",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "price_buildup",
+      "target": "types_process",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "price-buildup.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "price_buildup",
+      "target": "waste_bands",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "price-buildup.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "price_buildup",
+      "target": "waste_bands_effectivecormperkg",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "price-buildup.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "price_buildup",
+      "target": "waste_bands_wasteband",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "price-buildup.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "price_buildup",
+      "target": "waste_bands_wastepercentforquantity",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "price-buildup.ts",
+      "source_location": "L125",
+      "weight": 1.0,
+      "source": "price_buildup_pricewithnewmodel",
+      "target": "waste_bands_effectivecormperkg"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "price-buildup.ts",
+      "source_location": "L111",
+      "weight": 1.0,
+      "source": "price_buildup_pricewithnewmodel",
+      "target": "waste_bands_wastepercentforquantity"
     },
     {
       "relation": "contains",
@@ -8732,9 +9025,9 @@
       "source_file": "quotation-format.ts",
       "source_location": "L55",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "quotation_format",
-      "target": "quotation_format_default_quotation_format",
-      "confidence_score": 1.0
+      "target": "quotation_format_default_quotation_format"
     },
     {
       "relation": "contains",
@@ -8742,9 +9035,9 @@
       "source_file": "quotation-format.ts",
       "source_location": "L101",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "quotation_format",
-      "target": "quotation_format_fieldvisible",
-      "confidence_score": 1.0
+      "target": "quotation_format_fieldvisible"
     },
     {
       "relation": "contains",
@@ -8752,9 +9045,9 @@
       "source_file": "quotation-format.ts",
       "source_location": "L78",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "quotation_format",
-      "target": "quotation_format_parsequotationformat",
-      "confidence_score": 1.0
+      "target": "quotation_format_parsequotationformat"
     },
     {
       "relation": "contains",
@@ -8762,9 +9055,9 @@
       "source_file": "quotation-format.ts",
       "source_location": "L32",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "quotation_format",
-      "target": "quotation_format_quotation_field_meta",
-      "confidence_score": 1.0
+      "target": "quotation_format_quotation_field_meta"
     },
     {
       "relation": "contains",
@@ -8772,9 +9065,9 @@
       "source_file": "quotation-format.ts",
       "source_location": "L5",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "quotation_format",
-      "target": "quotation_format_quotationfieldkey",
-      "confidence_score": 1.0
+      "target": "quotation_format_quotationfieldkey"
     },
     {
       "relation": "contains",
@@ -8782,9 +9075,9 @@
       "source_file": "quotation-format.ts",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "quotation_format",
-      "target": "quotation_format_quotationfieldvisibility",
-      "confidence_score": 1.0
+      "target": "quotation_format_quotationfieldvisibility"
     },
     {
       "relation": "contains",
@@ -8792,9 +9085,9 @@
       "source_file": "quotation-format.ts",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "quotation_format",
-      "target": "quotation_format_quotationformatprefs",
-      "confidence_score": 1.0
+      "target": "quotation_format_quotationformatprefs"
     },
     {
       "relation": "imports_from",
@@ -10821,5 +11114,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "b299d86f96a38972b72578db5605a43bea8e9f0e"
+  "built_at_commit": "bb148f2d563a1a38753897b6c67a0bfd772e59ad"
 }

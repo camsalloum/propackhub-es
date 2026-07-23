@@ -14,7 +14,11 @@ function nameTierSlug(name: string): string | null {
   return null;
 }
 
-/** Standard template compound key — uses name tier (Duplex/Triplex) when structure_type alone collides. */
+/**
+ * Standard template compound key.
+ * Legacy `Parent · Tier` names use the tier slug (Decision #17 laminate style).
+ * PEBI variants use parent + class + structure + variant name when name ≠ parent.
+ */
 export function deriveStandardTemplateKey(template: {
   pebiParentPg: string;
   name?: string;
@@ -23,9 +27,18 @@ export function deriveStandardTemplateKey(template: {
 }): string {
   const parts = [slugPart(template.pebiParentPg)];
   if (template.materialClass) parts.push(slugPart(template.materialClass));
-  const tierFromName = template.name ? nameTierSlug(template.name) : null;
-  if (tierFromName) parts.push(tierFromName);
-  else if (template.structureType) parts.push(slugPart(template.structureType));
+
+  const name = (template.name || '').trim();
+  const tierFromName = name ? nameTierSlug(name) : null;
+  if (tierFromName) {
+    parts.push(tierFromName);
+  } else {
+    if (template.structureType) parts.push(slugPart(template.structureType));
+    const nameSlug = name ? slugPart(name) : '';
+    const parentSlug = slugPart(template.pebiParentPg);
+    if (nameSlug && nameSlug !== parentSlug) parts.push(nameSlug);
+  }
+
   return parts.filter(Boolean).join('-');
 }
 
@@ -110,6 +123,7 @@ export function deriveSourceTemplateKey(template: {
   }
   return deriveStandardTemplateKey({
     pebiParentPg: template.pebiParentPg,
+    name: template.name,
     materialClass: template.materialClass,
     structureType: template.structureType,
   });

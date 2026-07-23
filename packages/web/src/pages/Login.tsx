@@ -26,6 +26,8 @@ const Login = () => {
       const messages: Record<string, string> = {
         handoff_failed: 'Sign-in with ProPackHub failed. Try again.',
         tenant_not_provisioned: 'Your company is not provisioned in Estimation Studio yet.',
+        empty_tenant:
+          'Your Estimation Studio workspace has no customers yet. Link to Interplast and sync PEBI customers, then try again.',
         user_not_provisioned: 'Your user is not provisioned in Estimation Studio yet.',
         missing_email: 'Sign-in token was missing an email address.',
       };

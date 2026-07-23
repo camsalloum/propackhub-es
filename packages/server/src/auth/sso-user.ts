@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { getDatabase, schema } from '../db';
 import { hashPassword } from '../utils/auth';
 import { parsePlatformUserId } from './sso';
@@ -9,6 +9,67 @@ type DbUser = typeof schema.users.$inferSelect;
 type DbTenant = typeof schema.tenants.$inferSelect;
 
 const SSO_AUTH_SOURCE = 'platform_sso';
+const PILOT_COMPANY_CODE = 'interplast';
+
+export class EmptyTenantSsoError extends Error {
+  readonly code = 'empty_tenant' as const;
+  constructor(message: string) {
+    super(message);
+    this.name = 'EmptyTenantSsoError';
+  }
+}
+
+async function countCustomers(tenantId: string): Promise<number> {
+  const db = getDatabase();
+  const [row] = await db
+    .select({ value: count() })
+    .from(schema.customers)
+    .where(eq(schema.customers.tenantId, tenantId));
+  return Number(row?.value ?? 0);
+}
+
+async function findTenantByCompanyCode(code: string): Promise<DbTenant | null> {
+  const db = getDatabase();
+  const [row] = await db
+    .select()
+    .from(schema.tenants)
+    .where(eq(schema.tenants.platformCompanyCode, code.toLowerCase()))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * PEBI-linked company tenants must not hand off into an empty customer list
+ * (silent blank New-quote picker). Pilot: prefer Interplast when the mapped
+ * tenant is empty and Interplast has customers.
+ */
+export async function ensureNonEmptyTenantForSso(tenant: DbTenant): Promise<DbTenant> {
+  if (tenant.type !== 'company') return tenant;
+
+  let active = tenant;
+  let customers = await countCustomers(active.id);
+  if (customers > 0) return active;
+
+  // Empty demo / wrong mapping → prefer Interplast for pilot when it has data
+  const code = (active.platformCompanyCode || '').toLowerCase();
+  if (code !== PILOT_COMPANY_CODE) {
+    const interplast = await findTenantByCompanyCode(PILOT_COMPANY_CODE);
+    if (interplast && interplast.id !== active.id) {
+      const ipCount = await countCustomers(interplast.id);
+      if (ipCount > 0) return interplast;
+    }
+  }
+
+  // PEBI-linked company with still-empty customers → refuse silent empty handoff
+  if (active.platformCompanyCode) {
+    throw new EmptyTenantSsoError(
+      `Estimation Studio tenant "${active.name}" has no customers. ` +
+        `Run PEBI customer sync and ensure SSO maps to Interplast before opening ES.`
+    );
+  }
+
+  return active;
+}
 
 export async function resolveTenantForSso(payload: EsSsoPayload): Promise<DbTenant | null> {
   const db = getDatabase();

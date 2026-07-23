@@ -59,6 +59,18 @@ jobs:
       - name: Typecheck web
         run: npm run typecheck --workspace packages/web
 
+      - name: Go-live env gate (schema)
+        env:
+          DATABASE_URL: postgresql://es_user:es_password@localhost:5432/estimation_studio_test
+          JWT_SECRET: ci-test-secret
+          CORS_ORIGIN: http://localhost:5000
+          ES_PUBLIC_URL: http://localhost:5000
+          ES_SSO_SECRET: ci-es-sso-secret
+        run: npm run validate:go-live-env --workspace packages/server
+
+      - name: Ultra audit offline smoke (process-fork + M&O + slabs)
+        run: npm run smoke:ultra-gates --workspace packages/server
+
       # ── Database: migrate only (no db:push, no db:patch) ──────────────────
       # This is the Phase 1 acceptance criterion: a fresh DB must be fully
       # provisioned by db:migrate alone — no manual patching needed.

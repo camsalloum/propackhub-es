@@ -1,7 +1,7 @@
 # ProPackHub Estimation Studio — Locked Decisions Log
 
 **Purpose:** Running record of strategic decisions for PRD v3.0.  
-**Updated:** 2026-06-12 (Decisions #17–#19 added)
+**Updated:** 2026-07-22 (Decision #24 — SSO + tenant module entitlements)
 
 ---
 
@@ -15,8 +15,10 @@
 | **Customer type** | Packaging sales professionals |
 | **Primary users** | **Independent consultant**, **independent sales professional** — not enterprise org workflows in V1 |
 | **User model** | **Individual-first SaaS** — anyone can register; not plant/PEBI-tenant-only |
-| **Relationship to PEBI** | ES is **standalone**; PEBI has its own internal `/estimator` — different product, different users, different license |
-| **Platform** | ProPackHub hosts PEBI + FS + ES as separate products; **no cross-app navigation, no SSO** — each app has its own auth and user base; shared brand + domain only |
+| **Relationship to PEBI** | ES is a **separate product** with its own DB, sessions, and licensing; PEBI keeps its own internal `/estimator`. Shared ProPackHub identity only via SSO handoff (Decision #24) |
+| **Platform** | ProPackHub hosts PEBI + FS + ES as separate products. **SSO hands off identity only;** which apps open is decided by **tenant + module subscription** (`app_subscriptions` / entitlements) — see **Locked Decision #24**. Each app keeps its own data and sessions. |
+
+> **Superseded (do not follow):** older baseline wording “no SSO / no cross-app navigation” and any rule that SSO always opens both PEBI and ES. Replaced by Decision #24 (2026-07-22).
 
 ### Hero features (locked)
 
@@ -256,48 +258,40 @@ One estimate, multiple quantity tiers (1T / 2T / 5T / 10T…) in a single propos
 
 ---
 
-## Locked Decision #17 — Standard Templates = Parent Product Groups Only
+## Locked Decision #17 — Standard Templates = Parent PG → Variants (BOM2)
 
-**ES standard structures map to PEBI MES parent product groups only — no PG variants.**
+> **Superseded 2026-07-22 (owner):** parent-only catalog is **retired**. ES mirrors PEBI BOM2: **11 parent product groups** with **variant subcards** under each. Seed v4 in `structure-templates-seed.json`.
 
-When a user picks **Start from Template**, the platform-seeded catalog is the **11 active parent groups** from PEBI `crm_product_groups` (not `crm_product_group_variants`):
+**ES standard structures = PEBI `crm_product_groups` → `crm_product_group_variants`.**
 
-| # | Parent product group |
-|---|----------------------|
-| 1 | Commercial Items Plain |
-| 2 | Commercial Items Printed |
-| 3 | Industrial Items Plain |
-| 4 | Industrial Items Printed |
-| 5 | Laminates |
-| 6 | Mono Layer Printed |
-| 7 | Shrink Film Plain |
-| 8 | Shrink Film Printed |
-| 9 | Shrink Sleeves |
-| 10 | Wide Film |
-| 11 | Labels |
-
-**Excluded from standard catalog:** inactive PGs (Services Charges, Others, Pof Films Products, Wrap Around Label, Not in PG), **Lamination Film** (MES SFG / internal), and all **variant-level** names (e.g. Duplex PE, Garbage Bags, Shrink Film Plain Rolls).
+| Layer | PEBI | ES Templates UI |
+|-------|------|-----------------|
+| Parent | 11 inquiry PGs | Group header on `/templates` |
+| Child | Active variants | Structure template card (name = variant) |
+| Excluded | Lamination Film (SFG) + inactive PGs | Not seeded |
 
 **User flow:**
 
 ```
-New Estimate → Start from Template → pick parent PG (grouped PE Mono / Non PE Mono / Multilayer) → adjust → quote
+New Estimate → Templates → pick Product Group → pick Variant subcard → adjust → quote
               or Blank Canvas (fully custom)
 ```
 
-**Parent classification (locked — synced from PEBI `crm_product_groups`):**
+**Parent classification (unchanged):**
 
 | Material | Structure | Parent PGs |
 |----------|-----------|------------|
-| **PE** | **Mono** | Commercial Items Plain, Commercial Items Printed, Industrial Items Plain, Industrial Items Printed, Shrink Film Plain, Shrink Film Printed, Wide Film |
+| **PE** | **Mono** | Commercial Items Plain/Printed, Industrial Items Plain/Printed, Shrink Film Plain/Printed, Wide Film |
 | **Non PE** | **Mono** | Mono Layer Printed, Shrink Sleeves, Labels |
 | **Non PE** | **Multilayer** | Laminates |
 
-**Substrate at parent level:** fixed **PE** for all PE Mono groups. **Shrink Sleeves** and **Labels** are Mono but substrate is **not fixed at parent** — user picks **PVC or PET** (sleeves) or appropriate face stock (labels) at variant or estimate level. Parent `substrate_origin` = NULL.
+**Structure rules (owner 2026-07-22):**
+- **Substrate Origin = PE** → exactly **one** PE substrate layer (mono PE).
+- **Printed** variants → Ink SB (wide web default); **Plain/Unprinted** → no ink.
+- Laminates may include PE only as sealant after adhesive (multilayer).
+- Defaults are provisional — owner will refine stacks later; all PG × variant cards must exist now.
 
-Owner confirmed **2026-06-11:** Commercial Plain, Industrial Plain, Industrial Printed are **Mono PE** (not multilayer at parent level).
-
-Each seeded template stores `pebi_parent_pg` + `material_class` + `structure_type` + default layer stack + default process toggles. User **My Templates** remain private and may be named freely (Snack Pouch, etc.) — they are not tied to PEBI variants.
+Each seeded template stores `pebi_parent_pg` + variant `name` + `material_class` + `structure_type` + default layers/processes. User **My Templates** remain private and may be named freely.
 
 ---
 
@@ -384,6 +378,34 @@ Engine computes full price server-side; API strips fields the user's profile dis
 
 ---
 
+## Locked Decision #24 — Platform SSO + tenant module entitlements (2026-07-22)
+
+**Owner model (locked):** SSO ≠ automatic access to every ProPackHub app.
+
+| Concept | Meaning |
+|---------|---------|
+| **Tenant** | Account / company group of users (e.g. Interplast). A tenant may be one user or many. |
+| **Module (subscription)** | Which product(s) that tenant bought: PEBI (`pebi`), Estimation Studio (`es`), Formulation Studio (`fs`), etc. Stored as `app_subscriptions` / account entitlements. |
+| **SSO** | Short-lived **identity handoff** from ProPackHub into a product. Proves who the user is and which tenant they belong to. |
+
+**Access rules:**
+
+1. Same tenant with a **full / multi-module** subscription → users on that tenant may open each entitled app (e.g. PEBI **and** ES).
+2. Tenant (including single-user) that bought **only one module** → users get **only that app**. The other app is blocked (**403 / not entitled**) even when SSO identity handoff would otherwise succeed.
+3. SSO never grants modules by itself. **Entitlements decide which modules open.**
+
+**Still true (not superseded):**
+
+- Each product keeps its **own database, sessions, and licensing**.
+- No shared in-app navigation that bypasses entitlement checks.
+- ES remains a separate commercial product from PEBI MES `/estimator`.
+
+**Supersedes:** product-baseline “no SSO”; platform plan note that SSO alone equals product selection without module gating; any agent rule that “SSO always opens both apps.”
+
+**Authority:** also `platform/docs/SAAS_NORMALIZATION_IMPLEMENTATION_PLAN_V2.md` lock **L16** (amended 2026-07-22 to match this decision).
+
+---
+
 ## Commercial workflow (locked — revised after Decision #13)
 
 ```
@@ -432,13 +454,14 @@ Customer → Structure → Estimate → Proposal → Share → Customer Response
 | 14 | Admin-seeded library |
 | 15 | Quantity slab pricing |
 | 16 | Flexible Packaging Cost Estimator |
-| 17 | Standard templates = 11 PEBI parent PGs only (no variants); PE/Mono/Multilayer classification locked |
+| 17 | Standard templates = 11 PEBI parent PGs → variant subcards (BOM2); PE mono = 1 PE substrate; Printed→ink |
 | 18 | Operation cost UI admin-only |
 | 19 | **Printing web class:** Wide Web = Ink SB; Narrow Web = Ink UV. Laminate Alu insert confirmed. |
 | 20 | **Cost visibility:** Sales rep sees selling price only (no markup/RM/cost breakdown). Same webapp on mobile (PWA). Admin configures per-user visibility in Settings. |
 | 21 | **Dimensions:** **Reel width ≠ printing web width.** Web = `(reel × ups) + trim`. Pieces/kg & LM orders use reel width; press LM/kg & print run meters use web width. Full chain in PRD §6.9 + COSTING_NOTES §7. Field visibility per admin/sales rep profile. |
 | 22 | **Global currency:** Material library **always USD** (`cost_per_kg_usd`). User picks **display currency** at registration. **Default:** auto-fetch **USD → display** rate from web FX API; **optional manual override** in Settings. Engine in USD; UI/PDF/slabs in display currency; rate frozen on each estimate. |
 | 23 | **Client-side engine V1:** `packages/engine` bundled in **web + server** — instant UI calc (0ms perceived); server debounced reconcile for persist/PDF/audit. Offline draft sync remains Phase 2. |
+| 24 | **SSO + entitlements:** SSO = identity handoff only. Access = **tenant + module subscription**. Multi-module tenants get entitled apps; single-module tenants are blocked (403) from apps they did not buy. |
 
 **Full PRD (build from this):** [ES_PRD_v3_FINAL_BUILD_SPEC.md](./ES_PRD_v3_FINAL_BUILD_SPEC.md)  
 **Project memory (session log):** [ES_MEMORY.md](./ES_MEMORY.md)  

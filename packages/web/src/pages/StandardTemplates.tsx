@@ -8,6 +8,7 @@ import { ClassFilterPanel, EMPTY_CLASS_FILTER } from '../components/ClassFilterP
 import { TemplateStructureCard } from '../components/TemplateStructureCard';
 import { TemplateBuilder } from '../components/TemplateBuilder';
 import { TemplateGallery } from '../components/TemplateGallery';
+import { TemplatePgGroupedGallery } from '../components/TemplatePgGroupedGallery';
 import { TemplateBrowserViewToggle } from '../components/TemplateBrowserViewToggle';
 import { useTemplateBrowserView } from '../hooks/useTemplateBrowserView';
 import { useMasterDataReference } from '../hooks/useMasterDataReference';
@@ -679,17 +680,24 @@ const StandardTemplates = () => {
             <p className="text-text-secondary text-sm">Try another filter or clear the search.</p>
           )}
         </div>
-      ) : (
+      ) : showMyGrid ? (
         <TemplateGallery
           view={browserView}
           items={activeTemplates}
           getKey={(template) => template.id}
-          ariaLabel={showMyGrid ? 'My templates' : 'Standard templates'}
+          ariaLabel="My templates"
           renderItem={(template) =>
             renderTemplateCard(template, {
-              badge: showMyGrid ? 'My template' : undefined,
+              badge: 'My template',
             })
           }
+        />
+      ) : (
+        <TemplatePgGroupedGallery
+          view={browserView}
+          items={activeTemplates}
+          ariaLabel="Standard templates by product group"
+          renderItem={(template) => renderTemplateCard(template, {})}
         />
       )}
 

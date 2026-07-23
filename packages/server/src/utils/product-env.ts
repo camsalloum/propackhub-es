@@ -20,4 +20,10 @@ export function validateProductionEnv(): void {
   if (process.env.PRODUCT_PUBLIC_REGISTRATION_ENABLED === undefined) {
     throw new Error('PRODUCT_PUBLIC_REGISTRATION_ENABLED must be set in production');
   }
+  if (!process.env.ES_SSO_SECRET?.trim()) {
+    throw new Error('ES_SSO_SECRET must be set in production (match PPH)');
+  }
+  if (!process.env.ES_PUBLIC_URL?.trim()) {
+    throw new Error('ES_PUBLIC_URL must be set in production');
+  }
 }

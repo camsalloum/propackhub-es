@@ -52,6 +52,18 @@
 | `scripts/backup-es.sh` | `pg_dump` backup |
 | `scripts/restore-es.sh` | Restore from backup |
 | `scripts/verify-es.sh` | Post-deploy health checks |
+| `scripts/verify-backup-es.sh` | Gzip integrity of latest backup |
+| `docs/ES_GO_LIVE_GATES.md` | In-repo + SSH-blocked go-live checklist |
+
+### In-repo gates (no SSH)
+
+```bash
+npm run validate:go-live-env --workspace=packages/server
+npm run smoke:ultra-gates --workspace=packages/server
+npm run db:check-sync-health --workspace=packages/server -- --tenant-code interplast --fail
+# From apps/pph:
+node server/scripts/smoke-es-sso-gates.js
+```
 
 ---
 

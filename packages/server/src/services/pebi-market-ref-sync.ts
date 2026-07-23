@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { and, eq } from 'drizzle-orm';
 import { getDatabase, schema } from '../db/index.js';
+import { requireTenantAedPerUsd } from '../utils/tenant-fx';
 
 export async function syncMaterialMarketRefToPebi(
   tenantId: string,
@@ -16,6 +17,7 @@ export async function syncMaterialMarketRefToPebi(
   const db = getDatabase();
   const [tenant] = await db
     .select({
+      name: schema.tenants.name,
       platformCompanyCode: schema.tenants.platformCompanyCode,
       exchangeRateUsdToDisplay: schema.tenants.exchangeRateUsdToDisplay,
     })
@@ -44,8 +46,7 @@ export async function syncMaterialMarketRefToPebi(
     throw new Error('Material substrateGrade is required for market_ref sync');
   }
 
-  const fx = Number(tenant.exchangeRateUsdToDisplay);
-  const aedPerUsd = Number.isFinite(fx) && fx > 0 ? fx : 3.6725;
+  const aedPerUsd = requireTenantAedPerUsd(tenant, 'market_ref sync');
   const marketPriceAed = Math.round(marketPriceUsd * aedPerUsd * 10000) / 10000;
 
   const base = apiUrl.replace(/\/$/, '');

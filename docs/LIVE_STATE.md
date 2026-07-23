@@ -1,17 +1,126 @@
 # LIVE STATE — Estimation Studio
 
-**Last updated:** 2026-07-21 (Dashboard recent quotes by PKG)
-**Session focus:** Dashboard “Recent quotes” lists one row per package (PKG), with expandable multi-SKU children — not flat QT rows.
+**Last updated:** 2026-07-22 (ES templates PG→variants seed v4 + Decision #17 supersession)
+**Session focus:** PEBI-aligned structure templates — all product groups with variant subcards.
 
 **Platform source of truth:** `platform/docs/SAAS_NORMALIZATION_IMPLEMENTATION_PLAN_V2.md`
 — ES go-live via `es.propackhub.com`, isolated `es-postgres`, neutral platform
 accounts, account-level entitlements, platform SSO handoff, compiled migration
 CLI, persistent uploads, strict backup/readiness/rollback, and staged activation.
-Implementation waits for owner Gate A (locks L1–L16).
+Implementation waits for owner Gate A (locks L1–L16). **L16** = SSO identity only;
+access = tenant + module subscription (ES Locked Decision #24).
 
 ---
 
 ## Where we stopped (read this first next session)
+
+### 2026-07-22 — Standard templates = BOM2 PG → variants (DONE in code)
+
+**Shipped:**
+1. **Seed v4** — 24 variant templates under 11 PGs in `structure-templates-seed.json` (PE mono / Printed→ink rules; provisional microns).
+2. **Unique keys** — `deriveStandardTemplateKey` appends variant name; bootstrap retires Decision #17 parent-only rows.
+3. **UI** — `/templates` Standard tab groups by `pebiParentPg` (`TemplatePgGroupedGallery`).
+4. **Docs** — Decision #17 superseded; `PRESALES_PG_CROSSWALK.md` filled with ES variant names (QC profiles still pending).
+
+**Do now:** Restart ES API + `npm run db:seed-templates --workspace=packages/server`; hard-refresh `/templates`. Owner can refine default stacks later.
+
+**Still next (presales Path A/B):** Phase 0 QC profile mapping; invert CSE approval; MES estimator removal; ES handoff context — see PEBI `PRESALES_ES_SAR_QC_IMPLEMENTATION_PLAN.md`.
+
+### 2026-07-22 — Ultra audit remaining queue (in-repo DONE)
+
+**Shipped this pass:**
+1. **#6 Go-live gates (no SSH):** `docs/ES_GO_LIVE_GATES.md`, `validate:go-live-env`, `smoke:ultra-gates`, `verify-backup-es.sh`, CI steps, PPH `smoke-es-sso-gates.js`
+2. **Empty-tenant SSO:** `ensureNonEmptyTenantForSso` prefers Interplast when mapped tenant empty; PEBI-linked empty → `sso_error=empty_tenant`
+3. **Sync health:** `GET /api/v1/materials/sync-health` + `db:check-sync-health` (pack/consumables $0)
+4. **FX fail-visible:** no silent `3.6725` in PEBI sync/market-ref; Settings rejects ≤0 rate
+5. **M&O goldens + cheat sheet:** `price-buildup.test.ts`, `docs/PRICING_METHOD_CHEAT_SHEET.md`
+
+**BLOCKED (human/SSH):** camai staging SSO E2E, host nginx/tunnel, live backup cron — exact commands in `ES_GO_LIVE_GATES.md` § BLOCKED.
+
+**Still deferred (not this wave):** MasterData split, native dialogs → modals, materials Phase 4 workshop, offline queue, `corm_per_kg_usd` rename.
+
+**Do now:** Run checklist in `docs/ES_GO_LIVE_GATES.md` locally; when SSH available, execute BLOCKED section.
+
+
+### 2026-07-22 — SSO Decision #24 + Ultra #4/#5
+
+**Locked:** SSO ≠ both apps. Access = **tenant + module** (`app_subscriptions`). Multi-module → entitled apps; single-module → other app 403. Docs: `LOCKED_DECISIONS` #24, `AGENT.md`, platform L16, PEBI `PROJECT_MAP` §2.3.1.
+
+**Shipped:**
+1. **All estimates PKG grouping** — default “By package”; Flat toggle; API enriches `quoteRefNumber` / `quoteStatus` / `quoteName`; `features/estimates-list/*`.
+2. **Process-fork Phase 3** — `ConfirmProcessesModal`, `useStructureProcessFork` (live re-derive, fork unlock, snap-back, stale → Re-derive), save sends `structureForked` / `processesCustomized`.
+
+**Still next (after this wave):** Staging / SSO go-live on camai (**SSH** — see `ES_GO_LIVE_GATES.md`); browser smoke of PKG list + fork modal.
+
+**Do now:** Restart ES API + hard-refresh. All estimates → By package. Template estimate → add ink / change stack → confirm processes modal.
+
+### 2026-07-22 — Pack/consumables banners still showing (fixed)
+
+**Root cause:** Not client field stripping. Interplast PACKAGING/CONSUMABLES `unit_price_usd` were **$0 in ES DB** again. PEBI catalog still had live prices. Earlier PEBI-sync guard only blocks $0 *writes from PEBI*; **platform `syncMaterialsForTenant`** still overwrote PEBI prices with master-seed `$0`.
+
+**Fixed:**
+1. Re-synced PACKAGING (8) + CONSUMABLES (2) from PEBI DB — all recipe keys priced.
+2. `syncMaterialsForTenant`: never replace priced pack/consumables `unitPriceUsd` with seed ≤0.
+3. Estimate editor applies MaterialsContext updates so client calc sees refreshed prices after catalog poll.
+
+**Do now:** Hard-refresh any open estimate (Ctrl+Shift+R). Orange “Packaging/Consumables unpriced” banners should clear.
+
+### 2026-07-22 — PACKAGING/CONSUMABLES unpriced again (fixed + guard)
+
+**Why it came back:** Not the estimate editor. Interplast materials were **re-synced later on 2026-07-21 (~15:36)** and most PACKAGING/CONSUMABLES `unit_price_usd` were written as **$0**, wiping the earlier good prices. Engine correctly showed needsReview again.
+
+**Fixed now:** Re-synced from PEBI DB — all 13 priced. Added sync guard: never apply a PACKAGING/CONSUMABLES update with ≤0 unit price.
+
+**Do now:** Hard-refresh the open estimate (Ctrl+Shift+R).
+
+### 2026-07-22 — Hooks-order crash (fixed)
+
+**Bug:** Controller returned `phase: loading|error|missing` **before** `useEstimateEditorDerived` → "Rendered more hooks" / hooks order warning.
+
+**Fix:** Always run `useEstimateEditorDerived` first; phase early-returns only after all hooks.
+
+**Do now:** Hard-refresh estimate / quote workspace (Ctrl+Shift+R).
+
+### 2026-07-22 — EstimateEditor split complete (View wiring shell)
+
+**Shipped:**
+- `hooks/useEstimateEditorController.tsx` (~2965) — all state / hydrate / save / client calc (cut-paste)
+- `EstimateEditorView.tsx` ≈ **656** — loading/error gates + section wiring only
+- Sections + `useEstimateEditorDerived` from prior pass kept
+- `pages/EstimateEditor.tsx` 2-line re-export (App / QuoteWorkspace unchanged)
+
+**Do now:** Smoke-open estimate (standalone + quote-embedded): load, edit structure, save draft/final, price list, mobile bar, leave/template dialogs.
+
+### 2026-07-22 — EstimateEditor sections extracted (View still holds state)
+
+**Shipped (this pass):**
+- `sections/EstimateEditorJobDetails.tsx` (~155)
+- `sections/EstimateEditorDimensionsSection.tsx` (~89)
+- `sections/EstimateEditorStructureSection.tsx` (~672) — includes Yield/Order via `EstimateEditorYieldAndOrder`
+- `sections/EstimateEditorYieldAndOrder.tsx` (~210)
+- `sections/EstimateEditorPriceListSection.tsx` (~117)
+- `sections/EstimateEditorMobilePriceBar.tsx` (~63)
+- `sections/EstimateEditorDialogs.tsx` (~232)
+- `sections/EstimateEditorNotices.tsx` (~123)
+- `hooks/useEstimateEditorDerived.tsx` (~286) — structureColumns, sellingPricesByUnit, orderQtyMetrics, etc.
+- Prior: StickyHeader, PricingPanels, types, constants; page re-export unchanged
+
+**Line counts:** `EstimateEditorView.tsx` ≈ **2970** (hydrate/save/client-calc/state remain). Target ≤1200 needs controller-hook cut-paste next — do **not** rewrite costing.
+
+**Do now:** Smoke-open estimate (standalone + quote-embedded): job details, structure table/mobile cards, yield tiles, price list, mobile price bar, leave/snap-back/template dialogs.
+
+### 2026-07-22 — EstimateEditor safe split (no behavior change)
+
+**Shipped:**
+- `features/estimate-editor/types.ts` — MaterialItem, LayerItem, DimensionState, EstimateEditorProps
+- `features/estimate-editor/constants.ts` — DEFAULT_*, LEGACY_UNIT_BASIS, isExwDelivery, LAYER_TYPE_*
+- `sections/EstimateEditorStickyHeader.tsx` — Back / title / Save toolbar (presentational)
+- `sections/EstimateEditorPricingPanels.tsx` — Selling price + CostBreakdownCard + outcome/proposal history
+- Logic moved to `features/estimate-editor/EstimateEditorView.tsx`; `pages/EstimateEditor.tsx` is a 2-line re-export (App / QuoteWorkspace unchanged)
+
+**Still in EstimateEditorView (~3.8k lines — next safe splits):** Job details / JobHeaderFields, structure table + layers, dimensions/configurators, price-list tab, mobile sticky price bar, dialogs, all calc/save/hydrate (do not rewrite those yet).
+
+**Do now:** Smoke-open an estimate (standalone + quote-embedded): sticky header actions, selling price / cost breakdown, Save draft — should match prior UX.
 
 ### 2026-07-21 — Dashboard recent quotes by PKG
 
@@ -687,7 +796,7 @@ Part B handoff: `docs/PROCESS_COSTING_AND_ESTIMATE_FLOW_HANDOFF.md`. Phases 0–
 | 0 — shared derivation engine | ✅ Done | `derive-processes.ts`, 7/7 golden tests |
 | 1 — schema columns | ✅ Done | `structure_forked`, `processes_customized`, `structure_signature` |
 | 2 — server authority | ✅ Done | Live fork recompute on read |
-| 3 — web fork UX | ⚠️ Partial | No confirmation modal; no live client re-derivation before Save |
+| 3 — web fork UX | ✅ Done (2026-07-22) | ConfirmProcessesModal + live client re-derive + fork unlock + stale re-derive |
 | 4 — template builder | ✅ Done | Shared `deriveProcessesFromStructure` |
 | 5 — backfill + verification | ✅ Script done | `db:backfill-processes`; live recompute remains source of truth |
 
@@ -964,6 +1073,7 @@ Numeric columns (density, cost, market) format to 2 decimals; widened inputs, st
 
 ## To-do / known open items
 
+- [ ] **BLOCKED SSH:** camai staging SSO E2E + host backup — see `docs/ES_GO_LIVE_GATES.md`
 - [ ] **User E2E:** packaging sync + Roll/Sleeve/Pouch estimates (migrations through `0021` exist in repo).
 - [ ] Native `alert()`/`confirm()`/`prompt()` still on non-editor pages (MasterData, Settings, QuoteWorkspace, EstimatesList, Customer*, TemplateBuilder, …). EstimateEditor is cleaned up.
 - [ ] GSM-direct density via hoover still fragile; zipper subtype / process-aware waste / lamination preview math — not touched 2026-07-10.
@@ -971,8 +1081,9 @@ Numeric columns (density, cost, market) format to 2 decimals; widened inputs, st
 - [ ] Materials catalog Phase 4 PEBI cutover still workshop-blocked (`MATERIALS_CATALOG_UNIFICATION_PLAN` — Raw Materials `/library` already removed; single Master Data surface).
 - [ ] Verify pouch open-view dimension labels after landscape rotation (may need re-anchoring).
 - [ ] Platform units may lack `metadata: { basis, multiplier }` — `LEGACY_UNIT_METADATA` fallback; optional backfill.
-- [ ] `Settings.tsx` default FX 3.6725 if tenant rate missing — low priority.
+- [x] ~~`Settings.tsx` default FX 3.6725 if tenant rate missing~~ — fail-visible via `tenant-fx` + Settings validation (2026-07-22).
 - [ ] Price-scraper paper → LDPE futures map — advisory only, not costing-critical.
+- [ ] MasterData / CustomerExplorer line-count split (P2 after EstimateEditor).
 
 ---
 

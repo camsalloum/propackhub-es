@@ -14,7 +14,13 @@ import {
 } from '../utils/auth';
 import { eq } from 'drizzle-orm';
 import { verifyEsSsoToken } from '../auth/sso';
-import { ensureUserFromSso, isSsoOnlyUser, resolveTenantForSso } from '../auth/sso-user';
+import {
+  EmptyTenantSsoError,
+  ensureNonEmptyTenantForSso,
+  ensureUserFromSso,
+  isSsoOnlyUser,
+  resolveTenantForSso,
+} from '../auth/sso-user';
 import {
   isLocalLoginEnabled,
   isPublicRegistrationEnabled,
@@ -425,9 +431,20 @@ export async function registerAuthRoutes(fastify: FastifyInstance) {
       try {
         const payload = await verifyEsSsoToken(token, state);
 
-        const tenant = await resolveTenantForSso(payload);
-        if (!tenant) {
+        const resolved = await resolveTenantForSso(payload);
+        if (!resolved) {
           return reply.redirect(`${webBase}/login?sso_error=tenant_not_provisioned`);
+        }
+
+        let tenant;
+        try {
+          tenant = await ensureNonEmptyTenantForSso(resolved);
+        } catch (err) {
+          if (err instanceof EmptyTenantSsoError) {
+            request.log.warn({ err, tenantId: resolved.id }, 'SSO refused empty tenant handoff');
+            return reply.redirect(`${webBase}/login?sso_error=empty_tenant`);
+          }
+          throw err;
         }
 
         const user = await ensureUserFromSso(payload, tenant);

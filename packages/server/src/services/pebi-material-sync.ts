@@ -11,6 +11,7 @@ import { and, eq } from 'drizzle-orm';
 import { deriveBinderConcentrateStats, type LaminationRecipe } from '@es/engine';
 import { getDatabase, schema } from '../db/index.js';
 import { computeSolventCommonAverage } from '../utils/solvent-common.js';
+import { requireTenantAedPerUsd } from '../utils/tenant-fx';
 
 export const PEBI_MATERIAL_SOURCE = 'pebi';
 export const PEBI_SYNC_FAMILIES = [
@@ -590,10 +591,11 @@ async function getLinkedTenant(tenantId: string) {
   return tenant;
 }
 
-function tenantAedPerUsd(tenant: { exchangeRateUsdToDisplay: string | null }): number {
-  return Number(tenant.exchangeRateUsdToDisplay) > 0
-    ? Number(tenant.exchangeRateUsdToDisplay)
-    : 3.6725;
+function tenantAedPerUsd(tenant: {
+  exchangeRateUsdToDisplay: string | null;
+  name?: string | null;
+}): number {
+  return requireTenantAedPerUsd(tenant, 'PEBI material sync');
 }
 
 async function applyCatalogToTenant(
@@ -789,6 +791,15 @@ async function applyCatalogToTenant(
     const packagingFields = isPackagingFamily
       ? packagingPriceFields(row, resolvedCost)
       : null;
+
+    // Never wipe PACKAGING/CONSUMABLES with $0 (bad PEBI payloads / partial syncs).
+    if (isPackagingFamily) {
+      const incomingUnit = Number(packagingFields?.unitPriceUsd ?? 0);
+      if (!(incomingUnit > 0)) {
+        skipped++;
+        continue;
+      }
+    }
 
     const patch: Record<string, unknown> = {
       substrateFamily: row.substrateFamily,

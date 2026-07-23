@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findExistingMatch } from './seed-materials';
+import { findExistingMatch, isUnitPriceCatalogMaterial } from './seed-materials';
 import type { MasterMaterial } from './master-materials-io';
 import { schema } from './index';
 
@@ -100,5 +100,31 @@ describe('findExistingMatch — platform key first (MES Phase A)', () => {
     ];
 
     expect(findExistingMatch(existing, ldpeMaster)).toBeUndefined();
+  });
+});
+
+describe('isUnitPriceCatalogMaterial', () => {
+  it('detects packaging type and PEBI keys', () => {
+    expect(
+      isUnitPriceCatalogMaterial({
+        key: 'packaging-pallet-wood',
+        type: 'packaging',
+        substrateFamily: 'Packaging',
+      })
+    ).toBe(true);
+    expect(
+      isUnitPriceCatalogMaterial({
+        key: 'consumables-mounting-tape',
+        type: 'packaging',
+        substrateFamily: 'Consumables',
+      })
+    ).toBe(true);
+    expect(
+      isUnitPriceCatalogMaterial({
+        key: 'pet-transparent',
+        type: 'substrate',
+        substrateFamily: 'PET',
+      })
+    ).toBe(false);
   });
 });

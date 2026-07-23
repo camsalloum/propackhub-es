@@ -138,6 +138,10 @@ const Settings = () => {
 
   const saveSettings = async () => {
     try {
+      if (!(Number(exchangeRateUsdToDisplay) > 0)) {
+        setFxRefreshError('Set a positive USD→display exchange rate before saving.');
+        return;
+      }
       await apiClient.updateSettings({
         name: tenantName,
         displayCurrency,
@@ -157,6 +161,7 @@ const Settings = () => {
       } catch {
         /* settings saved; session refresh can retry on next navigation */
       }
+      setFxRefreshError(null);
       alert('Settings saved');
     } catch (err) {
       console.error('Failed to save settings:', err);
@@ -452,6 +457,11 @@ const Settings = () => {
                     )}
                     {fxRefreshError && (
                       <p className="text-sm text-danger">{fxRefreshError}</p>
+                    )}
+                    {!(Number(exchangeRateUsdToDisplay) > 0) && (
+                      <p className="text-sm text-danger">
+                        Exchange rate missing — set a positive rate (no silent AED default).
+                      </p>
                     )}
                     <div>
                       <label className="block text-sm font-medium text-brand mb-2">1 USD =</label>

@@ -16,7 +16,8 @@
 
 - **Name:** ProPackHub Estimation Studio
 - **Not** PEBI MES `/estimator` — mirrors legacy Laravel estimator only
-- **Separate product from PEBI** — different users, different licenses, different auth. No SSO, no cross-app navigation. Shared brand + domain only.
+- **Separate product from PEBI** — own DB, sessions, and licensing. Shared brand + domain via ProPackHub.
+- **SSO + access (Decision #24):** Platform SSO hands off **identity only**. Opening ES (or PEBI) requires the user’s **tenant** to have an active **module subscription** (`app_subscriptions` / entitlements). Multi-module tenants can use both apps; single-module tenants get only that app (403 / not entitled for the other) even if SSO works. SSO never means automatic access to every app.
 - **Repo:** `https://github.com/camsalloum/propackhub-es.git` (main — docs pushed 2026-06-13)
 
 ## Session end (automatic)

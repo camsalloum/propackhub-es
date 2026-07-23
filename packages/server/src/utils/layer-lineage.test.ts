@@ -60,6 +60,17 @@ describe('deriveStandardTemplateKey', () => {
       })
     ).toBe('laminates-non-pe-duplex');
   });
+
+  it('includes PEBI variant name under parent PG', () => {
+    expect(
+      deriveStandardTemplateKey({
+        pebiParentPg: 'Commercial Items Plain',
+        name: 'Garbage Bags',
+        materialClass: 'PE',
+        structureType: 'Mono',
+      })
+    ).toBe('commercial-items-plain-pe-mono-garbage-bags');
+  });
 });
 
 describe('resolveTemplateKeyAssignments', () => {
@@ -114,7 +125,7 @@ describe('deriveSourceTemplateKey', () => {
         structureType: 'Mono',
         isStandard: true,
       })
-    ).toBe('commercial-items-pe-mono');
+    ).toBe('commercial-items-pe-printed');
   });
 
   it('prefixes tenant templates', () => {

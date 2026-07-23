@@ -6,6 +6,7 @@ import { fetchExchangeRate } from '../utils/fx-rates';
 import { filterSupportedCurrencies } from '../utils/supported-currencies';
 import { ensureSlabTemplatesForTenant } from '../db/seed-slab-templates';
 import { sendCaughtError } from '../utils/errors';
+import { parsePositiveFx } from '../utils/tenant-fx';
 
 // Get tenant settings
 async function getTenantSettingsRoute(
@@ -67,7 +68,14 @@ async function updateTenantSettingsRoute(
       updates.useAutoFx = request.body.useAutoFx;
     }
     if (request.body.exchangeRateUsdToDisplay !== undefined) {
-      updates.exchangeRateUsdToDisplay = request.body.exchangeRateUsdToDisplay.toString();
+      const fx = parsePositiveFx(request.body.exchangeRateUsdToDisplay);
+      if (fx == null) {
+        return reply.status(400).send({
+          error: 'Invalid exchange rate — set a positive USD→display rate (no silent default).',
+        });
+      }
+      updates.exchangeRateUsdToDisplay = fx.toString();
+      updates.exchangeRateUpdatedAt = new Date();
     }
     if (request.body.logo !== undefined) {
       updates.logo = request.body.logo;

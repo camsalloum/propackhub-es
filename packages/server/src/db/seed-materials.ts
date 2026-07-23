@@ -11,6 +11,19 @@ import { listPlatformMasterMaterials } from './platform-master-data';
 
 type DbMaterial = typeof schema.materials.$inferSelect;
 
+/** PACKAGING / CONSUMABLES — priced via unitPriceUsd from PEBI, not platform seed $0. */
+export function isUnitPriceCatalogMaterial(
+  material: Pick<MasterMaterial, 'key' | 'type' | 'substrateFamily'>
+): boolean {
+  const family = String(material.substrateFamily || '').toUpperCase();
+  if (family === 'PACKAGING' || family === 'CONSUMABLES' || family === PACKAGING_FAMILY.toUpperCase()) {
+    return true;
+  }
+  if (material.type === 'packaging') return true;
+  const key = String(material.key || '');
+  return key.startsWith('packaging-') || key.startsWith('consumables-');
+}
+
 /** Retired adhesive platform keys → replacement key (plant-sheet cutover). */
 export const ADHESIVE_RETIREMENT_MAP: Record<string, string> = {
   'adhesive-sb-gp': 'adhesive-sb-mp',
@@ -376,6 +389,28 @@ export async function syncMaterialsForTenant(
       patch.costPerKgUsd = row.costPerKgUsd;
       patch.marketPriceUsd = row.marketPriceUsd;
       patch.priceSource = 'platform';
+
+      // PACKAGING/CONSUMABLES live prices come from PEBI (unitPriceUsd + priceUnit).
+      // Platform seed placeholders are $0 — never wipe a priced PEBI row on Excel/platform sync.
+      if (isUnitPriceCatalogMaterial(material)) {
+        const incomingUnit = Number(row.unitPriceUsd);
+        if (!(incomingUnit > 0)) {
+          const existingUnit = Number(match.unitPriceUsd);
+          if (existingUnit > 0) {
+            patch.unitPriceUsd = match.unitPriceUsd;
+            patch.priceUnit = match.priceUnit ?? row.priceUnit;
+            patch.costPerMeterUsd = match.costPerMeterUsd;
+            patch.costPerPieceUsd = match.costPerPieceUsd;
+            patch.costPerKgUsd = match.costPerKgUsd;
+            patch.marketPriceUsd = match.marketPriceUsd;
+            if (match.priceSource === 'pebi') patch.priceSource = 'pebi';
+          } else {
+            // Both unpriced: keep existing unit fields (may be null) rather than forcing seed 0.
+            patch.unitPriceUsd = match.unitPriceUsd ?? row.unitPriceUsd;
+            if (match.priceUnit) patch.priceUnit = match.priceUnit;
+          }
+        }
+      }
 
       const [updatedRow] = await db
         .update(schema.materials)
